@@ -27,7 +27,7 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
       classeId,
       pontos: {
         vigor: 5,
-        mente: 0,
+        sorte: 0,
         forca: 5,
         vitalidade: 0,
         arcano: 0,
@@ -330,7 +330,7 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
     expect(charAposReset.pontosDisponiveis).toBe(6);
     expect(charAposReset.pontosAlocadosPorNivel).toEqual({
       vigor: 0,
-      mente: 0,
+      sorte: 0,
       forca: 0,
       vitalidade: 0,
       arcano: 0,

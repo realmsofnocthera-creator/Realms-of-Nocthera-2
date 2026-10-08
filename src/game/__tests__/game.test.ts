@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   calcularHpMax,
-  calcularManaMax,
+  calcularBonusChanceDrop,
+  calcularChanceCritico,
   calcularSobreescudoMax,
   calcularPoderTotal,
   xpParaProximoNivel,
@@ -11,18 +12,24 @@ import { GAME_CONFIG } from '@/rules/config';
 
 describe('Realms of Nocthera - Regras do Jogo e Lógica Pura', () => {
   describe('Atributos e Status Iniciais', () => {
-    it('personagem novo deve iniciar com 10 HP e 10 Mana com base nos atributos iniciais', () => {
+    it('personagem novo deve iniciar com 10 HP e 2,2% de crítico com base nos atributos iniciais', () => {
       const vigorBase = GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vigor;
-      const menteBase = GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente;
+      const sorteBase = GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte;
 
       expect(vigorBase).toBe(2);
-      expect(menteBase).toBe(2);
+      expect(sorteBase).toBe(2);
 
-      const hpInicial = calcularHpMax(vigorBase);
-      const manaInicial = calcularManaMax(menteBase);
+      expect(calcularHpMax(vigorBase)).toBe(10);
+      expect(calcularChanceCritico(sorteBase)).toBe(2.2);
+    });
 
-      expect(hpInicial).toBe(10);
-      expect(manaInicial).toBe(10);
+    it('Sorte: crítico = 2% + 0,1% por ponto e drop = +0,1% por ponto', () => {
+      expect(calcularChanceCritico(0)).toBe(2);
+      expect(calcularChanceCritico(20)).toBe(4);
+      expect(calcularChanceCritico(-5)).toBe(2);
+      expect(calcularChanceCritico(5000)).toBe(100);
+      expect(calcularBonusChanceDrop(0)).toBe(0);
+      expect(calcularBonusChanceDrop(15)).toBe(1.5);
     });
 
     it('10 pontos extras em Vigor devem resultar em 60 HP no total', () => {
@@ -46,7 +53,7 @@ describe('Realms of Nocthera - Regras do Jogo e Lógica Pura', () => {
     it('calcularPoderTotal soma exatamente os 7 atributos finais do personagem', () => {
       const atributosFinais = {
         vigor: 7,
-        mente: 5,
+        sorte: 5,
         forca: 6,
         vitalidade: 4,
         arcano: 2,

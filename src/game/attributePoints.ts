@@ -2,7 +2,7 @@ import { ATTRIBUTES, AttributeName, Attributes } from '@/rules/attributes';
 
 export const ZEROS_ATRIBUTOS: Attributes = {
   vigor: 0,
-  mente: 0,
+  sorte: 0,
   forca: 0,
   vitalidade: 0,
   arcano: 0,

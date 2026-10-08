@@ -262,7 +262,7 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
         mitigacao: 10,
         atributos: {
           vigor: 20,
-          mente: 2,
+          sorte: 2,
           forca: 3, // calcularDanoFisico(3) = 3 -> mata o Rato da Peste (12 HP) em 4 rodadas (1 ataque por rodada)
           vitalidade: 50,
           arcano: 0,
@@ -314,7 +314,7 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
         mitigacao: 20, // Mitigação alta -> ataque físico do Cavaleiro (9) causa apenas 1 de dano no Sobreescudo (80 -> 79)
         atributos: {
           vigor: 20,
-          mente: 2,
+          sorte: 2,
           forca: 100, // Mata no contra-ataque da rodada 1
           vitalidade: 40,
           arcano: 0,
@@ -349,7 +349,7 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
         sobreescudo: 10,
         atributos: {
           vigor: 12,
-          mente: 2,
+          sorte: 2,
           forca: 4,
           vitalidade: 5,
           arcano: 0,
@@ -386,13 +386,11 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
         nivel: 1,
         hp: 3, // 3 HP restantes de 100 HP máx
         hpMax: 100,
-        mana: 5,
-        manaMax: 25,
         sobreescudo: 100, // Sobreescudo absorve 100% do ataque normal do Rato da Peste
         ouro: 35, // Menos de 50 para testar também que não fica negativo
         atributos: {
           vigor: 20, // 20 * 5 = 100 HP máx
-          mente: 5, // 5 * 5 = 25 Mana máx
+          sorte: 5, // 5 * 5 = 25 Mana máx
           forca: 2,
           vitalidade: 50,
           arcano: 0,
@@ -410,7 +408,6 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
       expect(resultado.ouroPerdido).toBe(35);
       expect(resultado.personagemFinal.ouro).toBe(0);
       expect(resultado.personagemFinal.hp).toBe(100);
-      expect(resultado.personagemFinal.mana).toBe(25);
 
       // Testa também com 120 de ouro (perde exatamente 50)
       const resultadoRico = resolverCombate(
@@ -432,7 +429,7 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
         classeId: 'barbaro',
         pontos: {
           vigor: 4,
-          mente: 0,
+          sorte: 0,
           forca: 4,
           vitalidade: 1,
           arcano: 0,
@@ -478,7 +475,7 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
         sobreescudo: 30,
         atributos: {
           vigor: 24,
-          mente: 4,
+          sorte: 4,
           forca: 4,
           vitalidade: 15,
           arcano: 0,
@@ -506,12 +503,10 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
         nivel: 5,
         hp: 100,
         hpMax: 100,
-        mana: 100,
-        manaMax: 100,
         sobreescudo: 50,
         atributos: {
           vigor: 20,
-          mente: 20,
+          sorte: 20,
           forca: 0,
           vitalidade: 25,
           arcano: 5,
@@ -557,13 +552,11 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
         nivel: 30,
         hp: 150,
         hpMax: 200,
-        mana: 150,
-        manaMax: 200,
         sobreescudo: 50,
         contadorMilagreDivino: 6, // Próxima ação do Profeta é o 7º ataque -> Milagre Divino
         atributos: {
           vigor: 20,
-          mente: 20,
+          sorte: 20,
           forca: 0,
           vitalidade: 25,
           arcano: 10,

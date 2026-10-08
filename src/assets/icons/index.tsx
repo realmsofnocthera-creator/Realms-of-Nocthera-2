@@ -18,7 +18,7 @@ import classProfetaImg from './class-profeta.webp';
 import classSamuraiImg from './class-samurai.webp';
 
 import attrVigorImg from './attr-vigor.png';
-import attrMenteImg from './attr-mente.png';
+import attrSorteImg from './attr-sorte.png';
 import attrForcaImg from './attr-forca.png';
 import attrVitalidadeImg from './attr-vitalidade.png';
 import attrArcanoImg from './attr-arcano.png';
@@ -26,7 +26,6 @@ import attrInteligenciaImg from './attr-inteligencia.png';
 import attrAgilidadeImg from './attr-agilidade.png';
 
 import resourceHpImg from './resource-hp.png';
-import resourceManaImg from './resource-mana.png';
 import resourceSobreescudoImg from './resource-sobreescudo.webp';
 import { srcDaImagem } from '@/assets/srcDaImagem';
 
@@ -74,7 +73,7 @@ export const CLASS_ICONS: Readonly<Record<string, string>> = {
  * Ícones reais dos 7 Atributos (salvos em src/assets/icons/)
  * Referências originais:
  * - Vigor: https://i.ibb.co/Ld7kLqMr/Constitution-Score-Icon.png
- * - Mente: https://i.ibb.co/6024J43h/Wisdom-Score-Icon.png
+ * - Sorte: provisório, usa a arte antiga da Mente (https://i.ibb.co/6024J43h/Wisdom-Score-Icon.png)
  * - Força: https://i.ibb.co/Q7nCJwGx/Strength-Score-Icon.png
  * - Vitalidade: https://i.ibb.co/20kG0Hx3/Expertise.png
  * - Arcano: https://i.ibb.co/2YYPv37y/Charisma-Score-Icon.png
@@ -83,7 +82,7 @@ export const CLASS_ICONS: Readonly<Record<string, string>> = {
  */
 export const ATTRIBUTE_ICONS: Readonly<Record<AttributeName, string>> = {
   vigor: srcDaImagem(attrVigorImg),
-  mente: srcDaImagem(attrMenteImg),
+  sorte: srcDaImagem(attrSorteImg),
   forca: srcDaImagem(attrForcaImg),
   vitalidade: srcDaImagem(attrVitalidadeImg),
   arcano: srcDaImagem(attrArcanoImg),
@@ -95,12 +94,10 @@ export const ATTRIBUTE_ICONS: Readonly<Record<AttributeName, string>> = {
  * Ícones reais de Recursos (salvos em src/assets/icons/)
  * Referências originais:
  * - HP: https://i.ibb.co/ZRBC99PC/HP-Icon.png
- * - Mana ("The Pointy Hat", resolvido de https://ibb.co/jZf2z41m): https://i.ibb.co/Fq3MX7j2/60px-The-Pointy-Hat-Unfaded-Icon-png.webp
  * - Sobreescudo: https://i.ibb.co/d0f8QZ3p/Heavily-Armoured.webp
  */
 export const RESOURCE_ICONS = {
   hp: srcDaImagem(resourceHpImg),
-  mana: srcDaImagem(resourceManaImg),
   sobreescudo: srcDaImagem(resourceSobreescudoImg),
 } as const;
 

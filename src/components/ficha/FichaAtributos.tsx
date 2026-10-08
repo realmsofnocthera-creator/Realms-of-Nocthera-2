@@ -4,6 +4,7 @@ import React from 'react';
 import { CharacterDocument } from '@/server/characterService';
 import { FICHA_ASSETS } from '@/rules/fichaAssets';
 import { ATTRIBUTE_ICONS, RESOURCE_ICONS } from '@/assets/icons';
+import { calcularChanceCritico } from '@/game';
 
 interface FichaAtributosProps {
   character: CharacterDocument;
@@ -33,19 +34,16 @@ export function FichaAtributos({
       max: character.sobreescudoMax,
       corValor: 'text-[#F5C542]',
     },
-    {
-      id: 'mana',
-      nome: 'Mana',
-      icone: RESOURCE_ICONS.mana,
-      atual: character.manaMax,
-      max: character.manaMax,
-      corValor: 'text-[#93C5FD]',
-    },
   ];
+
+  // Chance de crítico (2% de base + 0,1% por ponto de Sorte)
+  const chanceCritico = `${String(
+    character.chanceCritico ?? calcularChanceCritico(character.atributos.sorte)
+  ).replace('.', ',')}%`;
 
   const atributos = [
     { id: 'vigor', nome: 'Vigor', icone: ATTRIBUTE_ICONS.vigor, valor: character.atributos.vigor },
-    { id: 'mente', nome: 'Mente', icone: ATTRIBUTE_ICONS.mente, valor: character.atributos.mente },
+    { id: 'sorte', nome: 'Sorte', icone: ATTRIBUTE_ICONS.sorte, valor: character.atributos.sorte },
     { id: 'forca', nome: 'Força', icone: ATTRIBUTE_ICONS.forca, valor: character.atributos.forca },
     { id: 'vitalidade', nome: 'Vitalidade', icone: ATTRIBUTE_ICONS.vitalidade, valor: character.atributos.vitalidade },
     { id: 'arcano', nome: 'Arcano', icone: ATTRIBUTE_ICONS.arcano, valor: character.atributos.arcano },
@@ -83,7 +81,7 @@ export function FichaAtributos({
 
       {/* Conteúdo com padding equilibrado para a nova moldura: top 13%, bottom 6%, left 9%, right 12% */}
       <div className="absolute inset-0 pt-[13%] pb-[6%] pl-[9%] pr-[12%] flex flex-col justify-between text-[#F5F3E0] font-cinzel text-[9.5px] sm:text-[10.5px]">
-        {/* 3 Linhas de Recursos (HP, Sobreescudo, Mana) */}
+        {/* 3 Linhas de Recursos (HP, Sobreescudo, Crítico) */}
         <div className="flex flex-col justify-around flex-1">
           {recursos.map((rec) => (
             <div
@@ -107,6 +105,19 @@ export function FichaAtributos({
               </span>
             </div>
           ))}
+          <div className="flex items-center justify-between gap-1 py-[1px]">
+            <div className="flex items-center gap-1.5 min-w-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={ATTRIBUTE_ICONS.sorte}
+                alt=""
+                aria-hidden="true"
+                className="w-3.5 h-3.5 sm:w-4 sm:h-4 object-contain shrink-0"
+              />
+              <span className="font-bold tracking-wide truncate text-[#E2D6B6]">Crítico</span>
+            </div>
+            <span className="font-bold tabular-nums text-[#C4B5FD] shrink-0">{chanceCritico}</span>
+          </div>
         </div>
 
         {/* Linha divisória fina */}

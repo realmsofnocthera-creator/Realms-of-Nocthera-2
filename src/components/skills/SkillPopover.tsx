@@ -15,7 +15,6 @@ export interface SkillPopoverProps {
   descricao: string;
   nivelRequerido?: number;
   bloqueada?: boolean;
-  custoMana?: number;
   recargaTurnos?: number;
   duracaoTurnos?: number;
   zIndex?: number | string;
@@ -33,7 +32,6 @@ export function SkillPopover({
   descricao,
   nivelRequerido,
   bloqueada,
-  custoMana,
   recargaTurnos,
   duracaoTurnos,
   zIndex,
@@ -220,22 +218,14 @@ export function SkillPopover({
             {descFinal}
           </p>
 
-          {/* Detalhes de combate se existirem (Custo MP, Recarga, Duração) */}
-          {(custoMana !== undefined || recargaTurnos !== undefined || duracaoTurnos !== undefined) && (
+          {/* Detalhes de combate se existirem (Recarga, Duração) */}
+          {(recargaTurnos !== undefined || duracaoTurnos !== undefined) && (
             <div className="pt-1.5 border-t border-[#B2A66C]/20 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-[#D5C7A4] font-cinzel">
-              {custoMana !== undefined && (
-                <span>
-                  Custo:{' '}
-                  <strong className="text-[#8FB3DE]">
-                    {custoMana === 0 ? '0 Mana' : `${custoMana} MP`}
-                  </strong>
-                </span>
-              )}
               {recargaTurnos !== undefined && (
                 <span>
                   Recarga:{' '}
                   <strong className="text-[#ED8A0C]">
-                    {recargaTurnos} {recargaTurnos === 1 ? 'turno' : 'turnos'}
+                    {recargaTurnos} {recargaTurnos === 1 ? 'rodada' : 'rodadas'}
                   </strong>
                 </span>
               )}

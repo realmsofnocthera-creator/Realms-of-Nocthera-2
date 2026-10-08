@@ -21,14 +21,14 @@ import { AttributeName, Attributes } from '@/rules/attributes';
  * - Monstros: os 3 monstros cadastrados em MONSTERS (rato-da-peste, cultista-das-sombras, cavaleiro-do-vazio).
  *
  * Distribuição fixa de atributos:
- * 1. Base: GAME_CONFIG.VALOR_BASE_ATRIBUTOS (vigor: 2, mente: 2, demais 0).
+ * 1. Base: GAME_CONFIG.VALOR_BASE_ATRIBUTOS (vigor: 2, sorte: 2, demais 0).
  * 2. Bônus racial de cada raça (RACES).
  * 3. Bônus de classe de cada classe (CLASSES).
  * 4. Pontos iniciais de criação (10 pontos fixos):
- *    forca: 3, agilidade: 2, vigor: 2, vitalidade: 1, inteligencia: 1, mente: 1, arcano: 0.
+ *    forca: 3, agilidade: 2, vigor: 2, vitalidade: 1, inteligencia: 1, sorte: 1, arcano: 0.
  * 5. Pontos por nível (para níveis > 1, cada nível concede GAME_CONFIG.PONTOS_POR_NIVEL = 3 pontos):
  *    Total de pontos alocados: (nivel - 1) * 3, distribuídos ciclicamente na ordem:
- *    ['forca', 'agilidade', 'vigor', 'vitalidade', 'inteligencia', 'mente', 'arcano'].
+ *    ['forca', 'agilidade', 'vigor', 'vitalidade', 'inteligencia', 'sorte', 'arcano'].
  * 6. HP máximo e Sobreescudo máximo derivados com calcularHpMax e calcularSobreescudoMax.
  * 7. Seed fixa: 42 para todas as lutas.
  */
@@ -39,7 +39,7 @@ const PONTOS_INICIAIS_FIXOS: Attributes = {
   vigor: 2,
   vitalidade: 1,
   inteligencia: 1,
-  mente: 1,
+  sorte: 1,
   arcano: 0,
 };
 
@@ -49,7 +49,7 @@ const CICLO_ATRIBUTOS: readonly AttributeName[] = [
   'vigor',
   'vitalidade',
   'inteligencia',
-  'mente',
+  'sorte',
   'arcano',
 ];
 
@@ -69,7 +69,7 @@ function criarCombatenteTeste(racaId: string, classeId: string, nivel: number): 
     vigor: 0,
     vitalidade: 0,
     inteligencia: 0,
-    mente: 0,
+    sorte: 0,
     arcano: 0,
   };
 
@@ -86,12 +86,12 @@ function criarCombatenteTeste(racaId: string, classeId: string, nivel: number): 
       classe.bonusAtributos.vigor +
       PONTOS_INICIAIS_FIXOS.vigor +
       pontosNivel.vigor,
-    mente:
-      GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente +
-      raca.bonusAtributos.mente +
-      classe.bonusAtributos.mente +
-      PONTOS_INICIAIS_FIXOS.mente +
-      pontosNivel.mente,
+    sorte:
+      GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte +
+      raca.bonusAtributos.sorte +
+      classe.bonusAtributos.sorte +
+      PONTOS_INICIAIS_FIXOS.sorte +
+      pontosNivel.sorte,
     forca:
       GAME_CONFIG.VALOR_BASE_ATRIBUTOS.forca +
       raca.bonusAtributos.forca +
@@ -154,8 +154,6 @@ describe('ORDEM 45 — Rede de Segurança do Combate (Snapshot das 540 Lutas)', 
         personagemFinal: {
           hp: number;
           hpMax: number;
-          mana: number;
-          manaMax: number;
           ouro: number;
         };
         totalTurnos: number;

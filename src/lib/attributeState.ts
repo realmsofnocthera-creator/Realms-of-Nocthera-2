@@ -4,7 +4,7 @@ export type PendingAttributes = Record<AttributeName, number>;
 
 export const ZEROS_PENDENTE: PendingAttributes = {
   vigor: 0,
-  mente: 0,
+  sorte: 0,
   forca: 0,
   vitalidade: 0,
   arcano: 0,

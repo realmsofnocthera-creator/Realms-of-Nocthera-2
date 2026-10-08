@@ -14,10 +14,10 @@ import {
   calcularAgilidadeEfetiva,
   calcularDefesaFisica,
   calcularHpMax,
-  calcularManaMax,
+  calcularChanceCritico,
   calcularSobreescudoMax,
 } from '@/game';
-import { calcularDanoFisico } from '@/game/combat';
+import { calcularDanoFisico, calcularDanoMagico } from '@/game/combat';
 import { GAME_CONFIG } from '@/rules/config';
 import { RACES, RACES_MAP, getRaceById } from '@/rules/races';
 import { CLASSES, getClassById } from '@/rules/classes';
@@ -37,7 +37,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
           racaId: 'humano',
           pontos: {
             vigor: 5,
-            mente: 0,
+            sorte: 0,
             forca: 0,
             vitalidade: 0,
             arcano: 0,
@@ -54,7 +54,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
           racaId: 'humano',
           pontos: {
             vigor: 10,
-            mente: 5,
+            sorte: 5,
             forca: 0,
             vitalidade: 0,
             arcano: 0,
@@ -72,7 +72,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
           racaId: 'humano',
           pontos: {
             vigor: -2,
-            mente: 12, // Soma matemática seria 10, mas há valor negativo
+            sorte: 12, // Soma matemática seria 10, mas há valor negativo
             forca: 0,
             vitalidade: 0,
             arcano: 0,
@@ -90,7 +90,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
           racaId: 'humano',
           pontos: {
             vigor: 10,
-            mente: 0,
+            sorte: 0,
             forca: 0,
             vitalidade: 0,
             arcano: 0,
@@ -112,7 +112,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
         racaId: 'humano',
         pontos: {
           vigor: 4,
-          mente: 2,
+          sorte: 2,
           forca: 2,
           vitalidade: 2,
           arcano: 0,
@@ -130,7 +130,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
           racaId: 'humano',
           pontos: {
             vigor: 2,
-            mente: 2,
+            sorte: 2,
             forca: 2,
             vitalidade: 2,
             arcano: 2,
@@ -149,11 +149,11 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
 
       // Distribuição de 10 pontos:
       // vigor extra = 4 (base 2 + raça 1 + 4 = 7)
-      // mente extra = 3 (base 2 + raça 1 + 3 = 6)
+      // sorte extra = 3 (base 2 + raça 1 + 3 = 6)
       // forca extra = 3 (base 0 + raça 1 + 3 = 4)
       const pontos = {
         vigor: 4,
-        mente: 3,
+        sorte: 3,
         forca: 3,
         vitalidade: 0,
         arcano: 0,
@@ -171,28 +171,28 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(char.atributos.vigor).toBe(
         GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vigor + racaHumano.bonusAtributos.vigor + 4
       ); // 2 + 1 + 4 = 7
-      expect(char.atributos.mente).toBe(
-        GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente + racaHumano.bonusAtributos.mente + 3
+      expect(char.atributos.sorte).toBe(
+        GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte + racaHumano.bonusAtributos.sorte + 3
       ); // 2 + 1 + 3 = 6
       expect(char.atributos.forca).toBe(
         GAME_CONFIG.VALOR_BASE_ATRIBUTOS.forca + racaHumano.bonusAtributos.forca + 3
       ); // 0 + 1 + 3 = 4
 
-      // HP e Mana esperados chamando as funções de src/game/
+      // HP e crítico esperados chamando as funções de src/game/
       const hpEsperado = calcularHpMax(char.atributos.vigor);
-      const manaEsperada = calcularManaMax(char.atributos.mente);
+      const criticoEsperado = calcularChanceCritico(char.atributos.sorte);
 
       expect(char.hpMax).toBe(hpEsperado);
       expect(char.hpMax).toBe(35); // 7 * 5
 
-      expect(char.manaMax).toBe(manaEsperada);
-      expect(char.manaMax).toBe(30); // 6 * 5
+      expect(char.chanceCritico).toBe(criticoEsperado);
+      expect(char.chanceCritico).toBe(2.6); // 2% de base + 6 × 0,1%
 
       // Recuperar pelo serviço getCharacterByUid e verificar integridade
       const carregado = await getCharacterByUid(uid);
       expect(carregado).not.toBeNull();
       expect(carregado?.hpMax).toBe(hpEsperado);
-      expect(carregado?.manaMax).toBe(manaEsperada);
+      expect(carregado?.chanceCritico).toBe(criticoEsperado);
     });
   });
 
@@ -236,7 +236,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       const uid = 'user_humano_test';
       const pontos = {
         vigor: 2,
-        mente: 1,
+        sorte: 1,
         forca: 3,
         vitalidade: 1,
         arcano: 1,
@@ -254,7 +254,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       // Base (2,2,0,0,0,0,0) + Humano (1,1,1,1,0,0,1) + Pontos (2,1,3,1,1,1,1)
       expect(char.atributos).toEqual({
         vigor: 2 + 1 + 2, // 5
-        mente: 2 + 1 + 1, // 4
+        sorte: 2 + 1 + 1, // 4
         forca: 0 + 1 + 3, // 4
         vitalidade: 0 + 1 + 1, // 2
         arcano: 0 + 0 + 1, // 1
@@ -262,7 +262,6 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
         agilidade: 0 + 1 + 1, // 2
       });
       expect(char.hpMax).toBe(calcularHpMax(5)); // 25
-      expect(char.manaMax).toBe(calcularManaMax(4)); // 20
       expect(char.sobreescudoMax).toBe(calcularSobreescudoMax(2)); // 4
     });
 
@@ -279,7 +278,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
     it('criar personagem com racaId inválido é rejeitado', async () => {
       const pontosValidos = {
         vigor: 2,
-        mente: 2,
+        sorte: 2,
         forca: 2,
         vitalidade: 2,
         arcano: 2,
@@ -315,7 +314,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(anao?.iconeUrl).toBeNull();
       expect(anao?.bonusAtributos).toEqual({
         vigor: 2,
-        mente: 0,
+        sorte: 0,
         forca: 1,
         vitalidade: 2,
         arcano: 0,
@@ -333,8 +332,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(anao?.habilidadeRacial).toEqual({
         nome: 'Fúria da Forja',
         tipo: 'ativa',
-        custoMana: 0,
-        recargaTurnos: 6,
+        recargaTurnos: GAME_CONFIG.RECARGA_HABILIDADE_RACIAL_RODADAS, // 8 rodadas, sem custo
         duracaoTurnos: 3,
         efeito: '+3 Força, +2 Vitalidade, -20% dano físico recebido, -2 Agilidade',
       });
@@ -346,7 +344,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       const uid = 'user_anao_nidavellir';
       const pontos = {
         vigor: 3,
-        mente: 1,
+        sorte: 1,
         forca: 3,
         vitalidade: 2,
         arcano: 0,
@@ -364,7 +362,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       // Base (2,2,0,0,0,0,0) + Anão (2,0,1,2,0,0,0) + Pontos (3,1,3,2,0,0,1)
       expect(char.atributos).toEqual({
         vigor: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vigor + 2 + 3, // 2 + 2 + 3 = 7
-        mente: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente + 0 + 1, // 2 + 0 + 1 = 3
+        sorte: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte + 0 + 1, // 2 + 0 + 1 = 3
         forca: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.forca + 1 + 3, // 0 + 1 + 3 = 4
         vitalidade: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vitalidade + 2 + 2, // 0 + 2 + 2 = 4
         arcano: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.arcano + 0 + 0, // 0
@@ -372,7 +370,6 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
         agilidade: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.agilidade + 0 + 1, // 0 + 0 + 1 = 1
       });
       expect(char.hpMax).toBe(calcularHpMax(7)); // 35
-      expect(char.manaMax).toBe(calcularManaMax(3)); // 15
       expect(char.sobreescudoMax).toBe(calcularSobreescudoMax(4)); // 8
     });
 
@@ -383,7 +380,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
         racaId: 'anao',
         pontos: {
           vigor: 0,
-          mente: 0,
+          sorte: 0,
           forca: 5,
           vitalidade: 5,
           arcano: 0,
@@ -393,7 +390,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       });
 
       expect(char.atributos.vigor).toBe(4); // 2 base + 2 bônus racial Anão
-      expect(char.atributos.mente).toBe(2); // 2 base + 0 bônus racial Anão
+      expect(char.atributos.sorte).toBe(2); // 2 base + 0 bônus racial Anão
       expect(char.atributos.forca).toBe(6); // 0 base + 1 bônus racial Anão + 5 pontos
       expect(char.atributos.vitalidade).toBe(7); // 0 base + 2 bônus racial Anão + 5 pontos
     });
@@ -409,7 +406,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(elfo?.iconeUrl).toBeNull();
       expect(elfo?.bonusAtributos).toEqual({
         vigor: 0,
-        mente: 1,
+        sorte: 1,
         forca: 0,
         vitalidade: 0,
         arcano: 1,
@@ -420,15 +417,14 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(somaBonus).toBe(5);
       expect(elfo?.passivaRacial).toEqual({
         nome: 'Herança Arcana',
-        descricao: '+10% de eficiência na recuperação de Mana.',
-        efeito: 'bonusEficienciaRecuperacaoMana',
-        valor: 10,
+        descricao: '+1 de Sorte.',
+        efeito: 'bonusSorte',
+        valor: 1,
       });
       expect(elfo?.habilidadeRacial).toEqual({
         nome: 'Graça de Alfheim',
         tipo: 'ativa',
-        custoMana: 10,
-        recargaTurnos: 5,
+        recargaTurnos: GAME_CONFIG.RECARGA_HABILIDADE_RACIAL_RODADAS, // 8 rodadas, sem custo
         duracaoTurnos: 3,
         efeito:
           '+3 Inteligência, +2 Agilidade, +2 Arcano; próximo ataque/habilidade mágica no efeito recebe +15% de dano mágico',
@@ -441,7 +437,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       const uid = 'user_elfo_alfheim';
       const pontos = {
         vigor: 1,
-        mente: 2,
+        sorte: 2,
         forca: 0,
         vitalidade: 0,
         arcano: 2,
@@ -459,7 +455,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       // Base (2,2,0,0,0,0,0) + Elfo (0,1,0,0,1,2,1) + Pontos (1,2,0,0,2,4,1)
       expect(char.atributos).toEqual({
         vigor: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vigor + 0 + 1, // 2 + 0 + 1 = 3
-        mente: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente + 1 + 2, // 2 + 1 + 2 = 5
+        sorte: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte + 1 + 1 + 2, // 2 + 1 + Herança Arcana 1 + 2 = 6
         forca: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.forca + 0 + 0, // 0
         vitalidade: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vitalidade + 0 + 0, // 0
         arcano: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.arcano + 1 + 2, // 0 + 1 + 2 = 3
@@ -469,7 +465,6 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       // Conferência explícita de Inteligência +2 sobre base 0 + 4 pontos do jogador = 6
       expect(char.atributos.inteligencia).toBe(6);
       expect(char.hpMax).toBe(calcularHpMax(3)); // 15
-      expect(char.manaMax).toBe(calcularManaMax(5)); // 25
       expect(char.sobreescudoMax).toBe(calcularSobreescudoMax(0)); // 0
     });
 
@@ -480,7 +475,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
         racaId: 'elfo',
         pontos: {
           vigor: 5,
-          mente: 5,
+          sorte: 5,
           forca: 0,
           vitalidade: 0,
           arcano: 0,
@@ -490,7 +485,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       });
 
       expect(char.atributos.inteligencia).toBe(2); // 0 base + 2 bônus racial Elfo
-      expect(char.atributos.mente).toBe(8); // 2 base + 1 bônus racial Elfo + 5 pontos
+      expect(char.atributos.sorte).toBe(9); // 2 base + 1 bônus racial Elfo + 1 Herança Arcana + 5 pontos
       expect(char.atributos.arcano).toBe(1); // 0 base + 1 bônus racial Elfo
       expect(char.atributos.agilidade).toBe(1); // 0 base + 1 bônus racial Elfo
     });
@@ -506,7 +501,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(orc?.iconeUrl).toBeNull();
       expect(orc?.bonusAtributos).toEqual({
         vigor: 2,
-        mente: 0,
+        sorte: 0,
         forca: 2,
         vitalidade: 1,
         arcano: 0,
@@ -524,8 +519,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(orc?.habilidadeRacial).toEqual({
         nome: 'Fúria Orc',
         tipo: 'ativa',
-        custoMana: 0,
-        recargaTurnos: 6,
+        recargaTurnos: GAME_CONFIG.RECARGA_HABILIDADE_RACIAL_RODADAS, // 8 rodadas, sem custo
         duracaoTurnos: 3,
         efeito: '+4 Força, +2 Vigor, +10% de dano físico, -2 Agilidade',
       });
@@ -537,7 +531,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       const uid = 'user_orc_warclan';
       const pontos = {
         vigor: 3,
-        mente: 0,
+        sorte: 0,
         forca: 5,
         vitalidade: 2,
         arcano: 0,
@@ -555,7 +549,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       // Base (2,2,0,0,0,0,0) + Orc (2,0,2,1,0,0,0) + Pontos (3,0,5,2,0,0,0)
       expect(char.atributos).toEqual({
         vigor: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vigor + 2 + 3, // 2 + 2 + 3 = 7
-        mente: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente + 0 + 0, // 2 + 0 + 0 = 2
+        sorte: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte + 0 + 0, // 2 + 0 + 0 = 2
         forca: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.forca + 2 + 5, // 0 + 2 + 5 = 7
         vitalidade: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vitalidade + 1 + 2, // 0 + 1 + 2 = 3
         arcano: 0,
@@ -563,7 +557,6 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
         agilidade: 0,
       });
       expect(char.hpMax).toBe(calcularHpMax(7)); // 35
-      expect(char.manaMax).toBe(calcularManaMax(2)); // 10
       expect(char.sobreescudoMax).toBe(calcularSobreescudoMax(3)); // 6
     });
   });
@@ -578,7 +571,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(vampiro?.iconeUrl).toBeNull();
       expect(vampiro?.bonusAtributos).toEqual({
         vigor: 1,
-        mente: 1,
+        sorte: 1,
         forca: 1,
         vitalidade: 0,
         arcano: 1,
@@ -596,8 +589,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(vampiro?.habilidadeRacial).toEqual({
         nome: 'Drenar Sangue',
         tipo: 'ativa',
-        custoMana: 10,
-        recargaTurnos: 5,
+        recargaTurnos: GAME_CONFIG.RECARGA_HABILIDADE_RACIAL_RODADAS, // 8 rodadas, sem custo
         efeito:
           'dano mágico por Inteligência; cura 50% do dano causado, ou 75% se o alvo estiver abaixo de 30% HP',
       });
@@ -615,7 +607,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       const uid = 'user_vampiro_nocthera';
       const pontos = {
         vigor: 2,
-        mente: 1,
+        sorte: 1,
         forca: 3,
         vitalidade: 0,
         arcano: 2,
@@ -633,7 +625,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       // Base (2,2,0,0,0,0,0) + Vampiro (1,1,1,0,1,0,1) + Pontos (2,1,3,0,2,0,2)
       expect(char.atributos).toEqual({
         vigor: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vigor + 1 + 2, // 2 + 1 + 2 = 5
-        mente: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente + 1 + 1, // 2 + 1 + 1 = 4
+        sorte: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte + 1 + 1, // 2 + 1 + 1 = 4
         forca: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.forca + 1 + 3, // 0 + 1 + 3 = 4
         vitalidade: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vitalidade + 0 + 0, // 0
         arcano: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.arcano + 1 + 2, // 0 + 1 + 2 = 3
@@ -641,7 +633,6 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
         agilidade: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.agilidade + 1 + 2, // 0 + 1 + 2 = 3
       });
       expect(char.hpMax).toBe(calcularHpMax(5)); // 25
-      expect(char.manaMax).toBe(calcularManaMax(4)); // 20
       expect(char.sobreescudoMax).toBe(calcularSobreescudoMax(0)); // 0
     });
   });
@@ -649,7 +640,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
   describe('10. ORDEM 9 - Sistema de Raças (Draconiano)', () => {
     const pontosValidos = {
       vigor: 2,
-      mente: 0,
+      sorte: 0,
       forca: 4,
       vitalidade: 2,
       arcano: 2,
@@ -683,7 +674,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(draconiano?.linhagens).toEqual(['fogo', 'gelo', 'relampago', 'terra', 'vento']);
       expect(draconiano?.bonusAtributos).toEqual({
         vigor: 1,
-        mente: 0,
+        sorte: 0,
         forca: 2,
         vitalidade: 1,
         arcano: 1,
@@ -702,8 +693,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(draconiano?.habilidadeRacial).toEqual({
         nome: 'Sopro Dracônico',
         tipo: 'ativa',
-        custoMana: 15,
-        recargaTurnos: 5,
+        recargaTurnos: GAME_CONFIG.RECARGA_HABILIDADE_RACIAL_RODADAS, // 8 rodadas, sem custo
         efeito:
           'dano elemental por Inteligência; efeito extra varia por linhagem (fogo: queimadura; gelo: reduz Agilidade do alvo; relâmpago: atinge um segundo alvo; terra: reduz Defesa Física do alvo; vento: aumenta a Agilidade do draconiano)',
       });
@@ -751,7 +741,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       // Base (2,2,0,0,0,0,0) + Draconiano (1,0,2,1,1,0,0) + Pontos (2,0,4,2,2,0,0)
       expect(char.atributos).toEqual({
         vigor: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vigor + 1 + 2, // 2 + 1 + 2 = 5
-        mente: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente + 0 + 0, // 2 + 0 + 0 = 2
+        sorte: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte + 0 + 0, // 2 + 0 + 0 = 2
         forca: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.forca + 2 + 4, // 0 + 2 + 4 = 6
         vitalidade: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vitalidade + 1 + 2, // 0 + 1 + 2 = 3
         arcano: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.arcano + 1 + 2, // 0 + 1 + 2 = 3
@@ -759,7 +749,6 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
         agilidade: 0,
       });
       expect(char.hpMax).toBe(calcularHpMax(5)); // 25
-      expect(char.manaMax).toBe(calcularManaMax(2)); // 10
       expect(char.sobreescudoMax).toBe(calcularSobreescudoMax(3)); // 6
 
       const carregado = await getCharacterByUid(uid);
@@ -784,7 +773,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
   describe('11. ORDEM 10 - Sistema de Classes (Bárbaro)', () => {
     const pontosValidos = {
       vigor: 3,
-      mente: 0,
+      sorte: 0,
       forca: 4,
       vitalidade: 2,
       arcano: 0,
@@ -799,7 +788,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(barbaro?.nome).toBe('Bárbaro');
       expect(barbaro?.bonusAtributos).toEqual({
         vigor: 1,
-        mente: 0,
+        sorte: 0,
         forca: 1,
         vitalidade: 1,
         arcano: 0,
@@ -835,7 +824,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       // Base (2,2,0,0,0,0,0) + Orc (2,0,2,1,0,0,0) + Bárbaro (1,0,1,1,0,0,0) + Pontos (3,0,4,2,0,0,1)
       expect(char.atributos).toEqual({
         vigor: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vigor + 2 + 1 + 3, // 2 + 2 + 1 + 3 = 8
-        mente: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente + 0 + 0 + 0, // 2
+        sorte: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte + 0 + 0 + 0, // 2
         forca: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.forca + 2 + 1 + 4, // 0 + 2 + 1 + 4 = 7
         vitalidade: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vitalidade + 1 + 1 + 2, // 0 + 1 + 1 + 2 = 4
         arcano: 0,
@@ -843,7 +832,6 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
         agilidade: 1,
       });
       expect(char.hpMax).toBe(calcularHpMax(8, { classeId: 'barbaro', nivel: 1 })); // 40
-      expect(char.manaMax).toBe(calcularManaMax(2)); // 10
       expect(char.sobreescudoMax).toBe(calcularSobreescudoMax(4, { classeId: 'barbaro', nivel: 1 })); // 8
     });
 
@@ -886,7 +874,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
   describe('12. ORDEM 11 - Sistema de Classes (Cavaleiro)', () => {
     const pontosValidos = {
       vigor: 2,
-      mente: 0,
+      sorte: 0,
       forca: 2,
       vitalidade: 6,
       arcano: 0,
@@ -902,7 +890,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(cavaleiro?.nome).toBe('Cavaleiro');
       expect(cavaleiro?.bonusAtributos).toEqual({
         vigor: 1,
-        mente: 0,
+        sorte: 0,
         forca: 0,
         vitalidade: 2,
         arcano: 0,
@@ -938,7 +926,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       // Base (2,2,0,0,0,0,0) + Anão (2,0,1,2,0,0,0) + Cavaleiro (1,0,0,2,0,0,0) + Pontos (2,0,2,6,0,0,0)
       expect(char.atributos).toEqual({
         vigor: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vigor + 2 + 1 + 2, // 2 + 2 + 1 + 2 = 7
-        mente: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente + 0 + 0 + 0, // 2
+        sorte: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte + 0 + 0 + 0, // 2
         forca: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.forca + 1 + 0 + 2, // 0 + 1 + 0 + 2 = 3
         vitalidade: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vitalidade + 2 + 2 + 6, // 0 + 2 + 2 + 6 = 10
         arcano: 0,
@@ -946,7 +934,6 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
         agilidade: 0,
       });
       expect(char.hpMax).toBe(calcularHpMax(7, { classeId: 'cavaleiro', nivel: 1 })); // 35
-      expect(char.manaMax).toBe(calcularManaMax(2)); // 10
       expect(char.sobreescudoMax).toBe(
         calcularSobreescudoMax(10, { classeId: 'cavaleiro', nivel: 1 })
       ); // 20
@@ -981,7 +968,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
   describe('13. ORDEM 12 - Sistema de Classes (Feiticeiro)', () => {
     const pontosValidos = {
       vigor: 1,
-      mente: 3,
+      sorte: 3,
       forca: 0,
       vitalidade: 0,
       arcano: 2,
@@ -989,7 +976,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       agilidade: 0,
     }; // Soma = 10
 
-    it('a classe Feiticeiro está cadastrada em src/rules/classes.ts com bônus Mente+1, Arcano+1, Inteligência+1', () => {
+    it('a classe Feiticeiro está cadastrada em src/rules/classes.ts com bônus Sorte+1, Arcano+1, Inteligência+1', () => {
       expect(CLASSES.map((c) => c.id)).toContain('feiticeiro');
 
       const feiticeiro = getClassById('feiticeiro');
@@ -997,7 +984,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(feiticeiro?.nome).toBe('Feiticeiro');
       expect(feiticeiro?.bonusAtributos).toEqual({
         vigor: 0,
-        mente: 1,
+        sorte: 1,
         forca: 0,
         vitalidade: 0,
         arcano: 1,
@@ -1019,7 +1006,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(feiticeiro?.progressao.ultimate.nome).toBe('Cataclismo Arcano');
     });
 
-    it('personagem Feiticeiro criado tem atributos corretos (Mente+1, Arcano+1, Inteligência+1 de classe)', async () => {
+    it('personagem Feiticeiro criado tem atributos corretos (Sorte+1, Arcano+1, Inteligência+1 de classe)', async () => {
       const uid = 'user_feiticeiro_elfo_1';
       const char = await createCharacter(uid, {
         nome: 'Aelindor Arcano',
@@ -1033,7 +1020,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       // Base (2,2,0,0,0,0,0) + Elfo (0,1,0,0,1,2,1) + Feiticeiro (0,1,0,0,1,1,0) + Pontos (1,3,0,0,2,4,0)
       expect(char.atributos).toEqual({
         vigor: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vigor + 0 + 0 + 1, // 3
-        mente: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente + 1 + 1 + 3, // 2 + 1 + 1 + 3 = 7
+        sorte: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte + 1 + 1 + 1 + 3, // 2 + 1 + Herança Arcana 1 + 1 + 3 = 8
         forca: 0,
         vitalidade: 0,
         arcano: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.arcano + 1 + 1 + 2, // 0 + 1 + 1 + 2 = 4
@@ -1041,10 +1028,9 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
         agilidade: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.agilidade + 1 + 0 + 0, // 1
       });
       expect(char.hpMax).toBe(calcularHpMax(3, { classeId: 'feiticeiro', nivel: 1 })); // 15
-      expect(char.manaMax).toBe(calcularManaMax(7, { classeId: 'feiticeiro', nivel: 1 })); // 35
     });
 
-    it('Feiticeiro nível 12+ tem Mana máxima maior que nível 11 (Fluxo Arcano permanente)', async () => {
+    it('Feiticeiro nível 12+ tem dano mágico maior que nível 11 (Fluxo Arcano permanente)', async () => {
       const charLv11 = await createCharacter('user_feiticeiro_lv11', {
         nome: 'Feiticeiro Nv11',
         racaId: 'elfo',
@@ -1062,15 +1048,16 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       const atualizado12 = await updateCharacter(charLv12.uid, { nivel: 12 });
 
       expect(atualizado12.atributos).toEqual(atualizado11.atributos);
-      expect(atualizado12.manaMax).toBeGreaterThan(atualizado11.manaMax);
-      expect(atualizado12.manaMax).toBe(Math.ceil((atualizado11.manaMax * 110) / 100));
+      const int = atualizado11.atributos.inteligencia;
+      expect(calcularDanoMagico(int, { classeId: 'feiticeiro', nivel: 12 })).toBe(Math.ceil((int * 110) / 100));
+      expect(calcularDanoMagico(int, { classeId: 'feiticeiro', nivel: 11 })).toBe(int);
     });
   });
 
   describe('14. ORDEM 13 - Sistema de Classes (Bandido)', () => {
     const pontosValidos = {
       vigor: 2,
-      mente: 0,
+      sorte: 0,
       forca: 4,
       vitalidade: 0,
       arcano: 0,
@@ -1086,7 +1073,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(bandido?.nome).toBe('Bandido');
       expect(bandido?.bonusAtributos).toEqual({
         vigor: 0,
-        mente: 0,
+        sorte: 0,
         forca: 1,
         vitalidade: 0,
         arcano: 0,
@@ -1122,7 +1109,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       // Base (2,2,0,0,0,0,0) + Vampiro (1,1,1,0,1,0,1) + Bandido (0,0,1,0,0,0,2) + Pontos (2,0,4,0,0,0,4)
       expect(char.atributos).toEqual({
         vigor: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vigor + 1 + 0 + 2, // 2 + 1 + 0 + 2 = 5
-        mente: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente + 1 + 0 + 0, // 2 + 1 + 0 + 0 = 3
+        sorte: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte + 1 + 0 + 0, // 2 + 1 + 0 + 0 = 3
         forca: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.forca + 1 + 1 + 4, // 0 + 1 + 1 + 4 = 6
         vitalidade: 0,
         arcano: 1,
@@ -1160,7 +1147,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
   describe('15. ORDEM 14 - Sistema de Classes (Profeta)', () => {
     const pontosValidos = {
       vigor: 2,
-      mente: 3,
+      sorte: 3,
       forca: 0,
       vitalidade: 0,
       arcano: 2,
@@ -1168,7 +1155,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       agilidade: 0,
     }; // Soma = 10
 
-    it('a classe Profeta está cadastrada em src/rules/classes.ts com bônus Mente+1, Arcano+1, Inteligência+1', () => {
+    it('a classe Profeta está cadastrada em src/rules/classes.ts com bônus Sorte+1, Arcano+1, Inteligência+1', () => {
       expect(CLASSES.map((c) => c.id)).toContain('profeta');
 
       const profeta = getClassById('profeta');
@@ -1176,7 +1163,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(profeta?.nome).toBe('Profeta');
       expect(profeta?.bonusAtributos).toEqual({
         vigor: 0,
-        mente: 1,
+        sorte: 1,
         forca: 0,
         vitalidade: 0,
         arcano: 1,
@@ -1198,7 +1185,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(profeta?.progressao.ultimate.nome).toBe('Milagre Divino');
     });
 
-    it('personagem Profeta criado tem atributos corretos (Mente+1, Arcano+1, Inteligência+1 de classe)', async () => {
+    it('personagem Profeta criado tem atributos corretos (Sorte+1, Arcano+1, Inteligência+1 de classe)', async () => {
       const uid = 'user_profeta_humano_1';
       const char = await createCharacter(uid, {
         nome: 'Solarius de Yggdrasil',
@@ -1212,7 +1199,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       // Base (2,2,0,0,0,0,0) + Humano (1,1,1,1,0,0,1) + Profeta (0,1,0,0,1,1,0) + Pontos (2,3,0,0,2,3,0)
       expect(char.atributos).toEqual({
         vigor: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vigor + 1 + 0 + 2, // 2 + 1 + 0 + 2 = 5
-        mente: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente + 1 + 1 + 3, // 2 + 1 + 1 + 3 = 7
+        sorte: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte + 1 + 1 + 3, // 2 + 1 + 1 + 3 = 7
         forca: 1,
         vitalidade: 1,
         arcano: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.arcano + 0 + 1 + 2, // 0 + 0 + 1 + 2 = 3
@@ -1220,7 +1207,6 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
         agilidade: 1,
       });
       expect(char.hpMax).toBe(calcularHpMax(5, { classeId: 'profeta', nivel: 1 })); // 25
-      expect(char.manaMax).toBe(calcularManaMax(7, { classeId: 'profeta', nivel: 1 })); // 35
     });
 
     it('Profeta nível 12+ tem HP máximo e MP máximo maiores que nível 11 (Graça Divina permanente)', async () => {
@@ -1242,16 +1228,14 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
 
       expect(atualizado12.atributos).toEqual(atualizado11.atributos);
       expect(atualizado12.hpMax).toBeGreaterThan(atualizado11.hpMax);
-      expect(atualizado12.manaMax).toBeGreaterThan(atualizado11.manaMax);
       expect(atualizado12.hpMax).toBe(Math.ceil((atualizado11.hpMax * 110) / 100));
-      expect(atualizado12.manaMax).toBe(Math.ceil((atualizado11.manaMax * 110) / 100));
     });
   });
 
   describe('16. ORDEM 15 - Sistema de Classes (Samurai)', () => {
     const pontosValidos = {
       vigor: 2,
-      mente: 0,
+      sorte: 0,
       forca: 4,
       vitalidade: 0,
       arcano: 0,
@@ -1275,7 +1259,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(samurai?.nome).toBe('Samurai');
       expect(samurai?.bonusAtributos).toEqual({
         vigor: 0,
-        mente: 0,
+        sorte: 0,
         forca: 1,
         vitalidade: 0,
         arcano: 0,
@@ -1311,7 +1295,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       // Base (2,2,0,0,0,0,0) + Humano (1,1,1,1,0,0,1) + Samurai (0,0,1,0,0,0,2) + Pontos (2,0,4,0,0,0,4)
       expect(char.atributos).toEqual({
         vigor: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vigor + 1 + 0 + 2, // 2 + 1 + 0 + 2 = 5
-        mente: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente + 1 + 0 + 0, // 2 + 1 + 0 + 0 = 3
+        sorte: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte + 1 + 0 + 0, // 2 + 1 + 0 + 0 = 3
         forca: GAME_CONFIG.VALOR_BASE_ATRIBUTOS.forca + 1 + 1 + 4, // 0 + 1 + 1 + 4 = 6
         vitalidade: 1,
         arcano: 0,
@@ -1353,7 +1337,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
   describe('17. ORDEM 30 - Unicidade Global do Nome do Personagem', () => {
     const pontosValidos = {
       vigor: 4,
-      mente: 2,
+      sorte: 2,
       forca: 2,
       vitalidade: 2,
       arcano: 0,
@@ -1395,7 +1379,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
   describe('18. ORDEM 31 - Avatar de Perfil (AVATARES_DISPONIVEIS, Persistência e Atualização)', () => {
     const pontosValidos = {
       vigor: 4,
-      mente: 2,
+      sorte: 2,
       forca: 2,
       vitalidade: 2,
       arcano: 0,
@@ -1467,7 +1451,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
   describe('19. ORDEM 32 - Perfil Público (Busca por Nome, Poder Total, Sobre e Privacidade)', () => {
     const pontosValidos = {
       vigor: 4,
-      mente: 2,
+      sorte: 2,
       forca: 2,
       vitalidade: 2,
       arcano: 0,
@@ -1492,7 +1476,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(publicProfile?.classe).toBe('Feiticeiro');
       expect(publicProfile?.avatarId).toBe('feiticeiro');
       expect(publicProfile?.sobre).toBe('Maga das Torres Cinzentas.');
-      expect(publicProfile?.poderTotal).toBe(22); // Base 4 + Elfo 5 + Feiticeiro 3 + 10 pontos = 22
+      expect(publicProfile?.poderTotal).toBe(23); // Base 4 + Elfo 5 + Herança Arcana 1 + Feiticeiro 3 + 10 pontos = 23
 
       // Verifica que nenhum dado privado é retornado no objeto público
       const rawObj = publicProfile as unknown as Record<string, unknown>;

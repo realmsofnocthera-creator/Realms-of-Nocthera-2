@@ -3,7 +3,7 @@ import { GAME_CONFIG } from './config';
 
 export const ATTRIBUTE_DISPLAY_NAMES: Record<AttributeName, string> = {
   vigor: 'Vigor',
-  mente: 'Mente',
+  sorte: 'Sorte',
   forca: 'Força',
   vitalidade: 'Vitalidade',
   arcano: 'Arcano',
@@ -17,12 +17,16 @@ const MITIGACAO_FISICA_POR_PONTO_VITALIDADE = 1;
 const MITIGACAO_MAGICA_POR_PONTO_ARCANO = 1;
 const DANO_MAGICO_POR_PONTO_INTELIGENCIA = 1;
 
+function formatarPercentual(valor: number): string {
+  return `${String(valor).replace('.', ',')}%`;
+}
+
 export function getAttributeExplanation(attr: AttributeName): string {
   switch (attr) {
     case 'vigor':
       return `Cada ponto de Vigor aumenta seu HP máximo em ${GAME_CONFIG.HP_POR_PONTO_VIGOR}.`;
-    case 'mente':
-      return `Cada ponto de Mente aumenta sua Mana máxima em ${GAME_CONFIG.MANA_POR_PONTO_MENTE}.`;
+    case 'sorte':
+      return `Cada ponto de Sorte aumenta a chance de acerto crítico em ${formatarPercentual(GAME_CONFIG.CHANCE_CRITICO_POR_PONTO_SORTE)} (base de ${GAME_CONFIG.CHANCE_CRITICO_BASE_PERCENTUAL}%; o crítico causa ${GAME_CONFIG.MULTIPLICADOR_CRITICO}x de dano) e a chance de drops em ${formatarPercentual(GAME_CONFIG.CHANCE_DROP_POR_PONTO_SORTE)}.`;
     case 'forca':
       return `Cada ponto de Força aumenta seu dano físico em ${DANO_FISICO_POR_PONTO_FORCA}.`;
     case 'vitalidade':

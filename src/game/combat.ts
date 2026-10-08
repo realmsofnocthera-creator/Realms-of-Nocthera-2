@@ -38,7 +38,7 @@ import {
   calcularAgilidadeEfetiva,
   calcularDefesaFisica,
   calcularHpMax,
-  calcularManaMax,
+  calcularChanceCritico,
   OpcoesCalculoStatus,
 } from './index';
 import {
@@ -83,8 +83,6 @@ export interface Combatente {
   nome: string;
   hp: number;
   hpMax: number;
-  mana?: number;
-  manaMax?: number;
   sobreescudo: number;
   atributos: Attributes;
   racaId?: string;
@@ -165,9 +163,7 @@ export interface AtaqueLog {
   cargasSedeSangueBandidoRestantes?: number;
   ignorarDefesaFisicaPercentual?: number;
   curaHp?: number;
-  curaMana?: number;
   atacanteHpRestante?: number;
-  atacanteManaRestante?: number;
   cargasFeInabalavelConsumidas?: number;
   cargasFeInabalavelRestantes?: number;
   cargasFocoAbsolutoConsumidas?: number;
@@ -201,8 +197,6 @@ export interface ResultadoCombate {
   personagemFinal: {
     hp: number;
     hpMax: number;
-    mana: number;
-    manaMax: number;
     ouro: number;
   };
 }
@@ -251,7 +245,7 @@ export function calcularDanoMagico(inteligencia: number, opcoes?: OpcoesCalculoS
   const classeNormalizada = opcoes?.classeId?.trim().toLowerCase();
   const nivel = opcoes?.nivel ?? 1;
   if (classeNormalizada === 'feiticeiro' && nivel >= 12) {
-    return aplicarFluxoArcano(0, base, nivel, opcoes!.classeId).danoMagico;
+    return aplicarFluxoArcano(base, nivel, opcoes!.classeId).danoMagico;
   }
   return base;
 }
@@ -1342,7 +1336,7 @@ export function calcularGolpeBandido(params: {
  * Habilidade Especial do Profeta (Nível 5+) — Bênção Divina (Contador A):
  * Função pura que gerencia o contador A de ataques básicos do Profeta.
  * A cada 3 ataques básicos (3º, 6º, 9º...), ao invés de atacar, o Profeta usa "Bênção Divina":
- * recupera 15% do HP máximo, 10% do MP máximo (sem ultrapassar os tetos), remove 1 efeito negativo ativo e reinicia o contador A.
+ * recupera 15% do HP máximo (sem ultrapassar o teto), remove 1 efeito negativo ativo e reinicia o contador A.
  */
 export function processarBencaoDivina(
   contadorAtual: number,
@@ -1351,14 +1345,12 @@ export function processarBencaoDivina(
   acionada: boolean;
   novoContador: number;
   percentualCuraHp: number;
-  percentualCuraMana: number;
 } {
   if (nivel < 5) {
     return {
       acionada: false,
       novoContador: 0,
       percentualCuraHp: 0,
-      percentualCuraMana: 0,
     };
   }
 
@@ -1368,7 +1360,6 @@ export function processarBencaoDivina(
       acionada: true,
       novoContador: 0,
       percentualCuraHp: 15,
-      percentualCuraMana: 10,
     };
   }
 
@@ -1376,7 +1367,6 @@ export function processarBencaoDivina(
     acionada: false,
     novoContador: proximo,
     percentualCuraHp: 0,
-    percentualCuraMana: 0,
   };
 }
 
@@ -1430,13 +1420,11 @@ export function processarFeInabalavel(
  */
 export function aplicarCargasFeInabalavel(
   curaHpBase: number,
-  curaManaBase: number,
   cargasAtuais: number,
   nivel: number = 20,
   ehEfeitoCura: boolean = true
 ): {
   curaHpFinal: number;
-  curaManaFinal: number;
   cargasConsumidas: number;
   cargasRestantes: number;
   percentualBonusEficacia: number;
@@ -1445,7 +1433,6 @@ export function aplicarCargasFeInabalavel(
   if (nivel < 20 || cargasNormalizadas <= 0) {
     return {
       curaHpFinal: curaHpBase,
-      curaManaFinal: curaManaBase,
       cargasConsumidas: 0,
       cargasRestantes: 0,
       percentualBonusEficacia: 0,
@@ -1455,7 +1442,6 @@ export function aplicarCargasFeInabalavel(
   if (!ehEfeitoCura) {
     return {
       curaHpFinal: curaHpBase,
-      curaManaFinal: curaManaBase,
       cargasConsumidas: 0,
       cargasRestantes: cargasNormalizadas,
       percentualBonusEficacia: 0,
@@ -1464,13 +1450,9 @@ export function aplicarCargasFeInabalavel(
 
   const percentualBonusEficacia = cargasNormalizadas * 15;
   const curaHpFinal = Number(((curaHpBase * (100 + percentualBonusEficacia)) / 100).toFixed(4));
-  const curaManaFinal = Number(
-    ((curaManaBase * (100 + percentualBonusEficacia)) / 100).toFixed(4)
-  );
 
   return {
     curaHpFinal,
-    curaManaFinal,
     cargasConsumidas: cargasNormalizadas,
     cargasRestantes: 0,
     percentualBonusEficacia,
@@ -1481,7 +1463,7 @@ export function aplicarCargasFeInabalavel(
  * Ultimate do Profeta (Nível 30) — Milagre Divino (Contador C):
  * Função pura que gerencia o contador C de ataques básicos (independente dos contadores A e B).
  * A cada 7 ataques básicos, ativa "Milagre Divino" no lugar de um ataque comum:
- * recupera 30% do HP máximo e 25% do MP máximo (sem ultrapassar tetos), remove todos os efeitos negativos ativos
+ * recupera 30% do HP máximo (sem ultrapassar o teto), remove todos os efeitos negativos ativos
  * e causa 150% do dano mágico normal contra o inimigo no mesmo turno. Reinicia o contador C.
  * // aguardando sistema de efeitos/resistências (bônus temporário de +15% dano/Defesa nos turnos seguintes)
  */
@@ -1492,7 +1474,6 @@ export function processarMilagreDivino(
   acionada: boolean;
   novoContador: number;
   percentualCuraHp: number;
-  percentualCuraMana: number;
   multiplicadorDanoMagicoPercentual: number;
 } {
   if (nivel < 30) {
@@ -1500,7 +1481,6 @@ export function processarMilagreDivino(
       acionada: false,
       novoContador: 0,
       percentualCuraHp: 0,
-      percentualCuraMana: 0,
       multiplicadorDanoMagicoPercentual: 100,
     };
   }
@@ -1512,7 +1492,6 @@ export function processarMilagreDivino(
       acionada: true,
       novoContador: 0,
       percentualCuraHp: 30,
-      percentualCuraMana: 25,
       multiplicadorDanoMagicoPercentual: 150,
     };
   }
@@ -1521,7 +1500,6 @@ export function processarMilagreDivino(
     acionada: false,
     novoContador: proximo,
     percentualCuraHp: 0,
-    percentualCuraMana: 0,
     multiplicadorDanoMagicoPercentual: 100,
   };
 }
@@ -1529,19 +1507,17 @@ export function processarMilagreDivino(
 /**
  * Calcula uma ação completa do Profeta de forma pura, integrando:
  * - Nível 1+: Luz Sagrada (ataque básico de dano mágico por Inteligência)
- * - Nível 5+: Bênção Divina no contador A (a cada 3 ataques, ao invés de atacar, recupera 15% HP máx e 10% MP máx sem ultrapassar tetos)
- * - Nível 12+: Graça Divina (+10% HP máximo e +10% MP máximo permanentes no cálculo de status)
+ * - Nível 5+: Bênção Divina no contador A (a cada 3 ataques, ao invés de atacar, recupera 15% HP máx sem ultrapassar o teto)
+ * - Nível 12+: Graça Divina (+10% HP máximo permanente no cálculo de status)
  * - Nível 20+: Fé Inabalável no contador B independente (a cada 3 ataques acumula 1 carga de +15% eficácia de cura até 2 cargas;
  *   aplicada e consumida no próximo efeito de cura do Profeta)
- * - Nível 30: Milagre Divino no contador C independente (a cada 7 ataques, recupera 30% HP máx e 25% MP máx sem ultrapassar tetos
+ * - Nível 30: Milagre Divino no contador C independente (a cada 7 ataques, recupera 30% HP máx sem ultrapassar o teto
  *   e causa 150% do dano mágico normal no mesmo turno)
  */
 export function calcularAcaoProfeta(params: {
   inteligenciaBase: number;
   hpAtual: number;
   hpMax: number;
-  manaAtual: number;
-  manaMax: number;
   nivel: number;
   contadorBencao: number;
   contadorFeInabalavel: number;
@@ -1553,9 +1529,7 @@ export function calcularAcaoProfeta(params: {
   danoMagicoBase: number;
   danoBruto: number;
   curaHp: number;
-  curaMana: number;
   novoHp: number;
-  novaMana: number;
   novoContadorBencao: number;
   novoContadorFeInabalavel: number;
   novasCargasFeInabalavel: number;
@@ -1566,8 +1540,6 @@ export function calcularAcaoProfeta(params: {
     inteligenciaBase,
     hpAtual,
     hpMax,
-    manaAtual,
-    manaMax,
     nivel,
     contadorBencao,
     contadorFeInabalavel,
@@ -1588,7 +1560,6 @@ export function calcularAcaoProfeta(params: {
   let causaDano = true;
   let danoBruto = Math.max(GAME_CONFIG.DANO_MINIMO, danoMagicoBase);
   let curaHpBase = 0;
-  let curaManaBase = 0;
 
   if (milagre.acionada) {
     habilidadeAcionada = 'Milagre Divino';
@@ -1598,13 +1569,11 @@ export function calcularAcaoProfeta(params: {
       Math.ceil((danoMagicoBase * milagre.multiplicadorDanoMagicoPercentual) / 100)
     );
     curaHpBase = (hpMax * milagre.percentualCuraHp) / 100;
-    curaManaBase = (manaMax * milagre.percentualCuraMana) / 100;
   } else if (bencao.acionada) {
     habilidadeAcionada = 'Bênção Divina';
     causaDano = false;
     danoBruto = 0;
     curaHpBase = (hpMax * bencao.percentualCuraHp) / 100;
-    curaManaBase = (manaMax * bencao.percentualCuraMana) / 100;
   }
 
   const ehEfeitoCura = milagre.acionada || bencao.acionada;
@@ -1612,7 +1581,6 @@ export function calcularAcaoProfeta(params: {
   // Se este turno tem efeito de cura (Bênção Divina ou Milagre Divino), aplica e consome as cargas acumuladas de Fé Inabalável
   const consumo = aplicarCargasFeInabalavel(
     curaHpBase,
-    curaManaBase,
     cargasFeInabalavel,
     nivel,
     ehEfeitoCura
@@ -1628,9 +1596,6 @@ export function calcularAcaoProfeta(params: {
   const novoHp = ehEfeitoCura
     ? Math.min(hpMax, Number((hpAtual + consumo.curaHpFinal).toFixed(4)))
     : Math.min(hpMax, hpAtual);
-  const novaMana = ehEfeitoCura
-    ? Math.min(manaMax, Number((manaAtual + consumo.curaManaFinal).toFixed(4)))
-    : Math.min(manaMax, manaAtual);
 
   return {
     habilidadeAcionada,
@@ -1638,9 +1603,7 @@ export function calcularAcaoProfeta(params: {
     danoMagicoBase,
     danoBruto,
     curaHp: consumo.curaHpFinal,
-    curaMana: consumo.curaManaFinal,
     novoHp,
-    novaMana,
     novoContadorBencao: bencao.novoContador,
     novoContadorFeInabalavel: feInabalavel.novoContador,
     novasCargasFeInabalavel: feInabalavel.novasCargas,
@@ -1937,7 +1900,6 @@ export function turnoDeCombate(
   defensorHp: number;
   defensorSobreescudo: number;
   atacanteHp: number;
-  atacanteMana: number;
 } {
   const nivelAtacante = atacante.nivel ?? 1;
   const nivelDefensor = defensor.nivel ?? 1;
@@ -1995,17 +1957,9 @@ export function turnoDeCombate(
   const mitigacao = defensor.mitigacao ?? 0;
   const ataques: AtaqueLog[] = [];
 
-  const manaMaxAtacante =
-    atacante.manaMax ??
-    calcularManaMax(atacante.atributos.mente, {
-      classeId: atacante.classeId,
-      nivel: nivelAtacante,
-    });
-
   let hpAtual = defensor.hp;
   let sobreescudoAtual = defensor.sobreescudo;
   let hpAtacanteAtual = atacante.hp;
-  let manaAtacanteAtual = atacante.mana ?? manaMaxAtacante;
   let contadorFuria = atacante.contadorFuriaSelvagem ?? 0;
   let contadorIra = atacante.contadorIraBarbaro ?? 0;
   let contadorPostura = atacante.contadorPosturaGuardiao ?? 0;
@@ -2054,7 +2008,6 @@ export function turnoDeCombate(
     let cargasSedeSangueBandidoRestantes: number | undefined;
     let ignorarDefesaFisicaPercentual: number | undefined;
     let curaHp: number | undefined;
-    let curaMana: number | undefined;
     let cargasFeInabalavelConsumidas: number | undefined;
     let cargasFeInabalavelRestantes: number | undefined;
     let cargasFocoAbsolutoConsumidas: number | undefined;
@@ -2158,8 +2111,6 @@ export function turnoDeCombate(
         inteligenciaBase: atacante.atributos.inteligencia,
         hpAtual: hpAtacanteAtual,
         hpMax: atacante.hpMax,
-        manaAtual: manaAtacanteAtual,
-        manaMax: manaMaxAtacante,
         nivel: nivelAtacante,
         contadorBencao,
         contadorFeInabalavel: contadorFe,
@@ -2169,14 +2120,12 @@ export function turnoDeCombate(
       danoBruto = acaoProfeta.danoBruto;
       acaoCausaDano = acaoProfeta.causaDano;
       hpAtacanteAtual = acaoProfeta.novoHp;
-      manaAtacanteAtual = acaoProfeta.novaMana;
       contadorBencao = acaoProfeta.novoContadorBencao;
       contadorFe = acaoProfeta.novoContadorFeInabalavel;
       cargasFe = acaoProfeta.novasCargasFeInabalavel;
       contadorMilagre = acaoProfeta.novoContadorMilagre;
       habilidadeAcionada = acaoProfeta.habilidadeAcionada;
       curaHp = acaoProfeta.curaHp;
-      curaMana = acaoProfeta.curaMana;
       cargasFeInabalavelConsumidas = acaoProfeta.cargasConsumidas;
       cargasFeInabalavelRestantes = acaoProfeta.novasCargasFeInabalavel;
     } else if (ehSamuraiAtacante) {
@@ -2261,7 +2210,6 @@ export function turnoDeCombate(
         numeroGolpes = undefined;
         danoPorGolpe = undefined;
         curaHp = undefined;
-        curaMana = undefined;
         instintoSobrevivenciaAtivo = undefined;
         iraAbaixo30Ativo = undefined;
         cargasAcumuloConsumidas = undefined;
@@ -2515,7 +2463,7 @@ export function turnoDeCombate(
           : ` (elemento: ${elementoGolpe})`
         : '';
     const mensagem = !acaoCausaDano
-      ? `${atacante.nome} canaliza${sufixoHabilidade}${sufixoDuplo} restaurando +${curaHp ?? 0} HP e +${curaMana ?? 0} MP! (${atacante.nome} HP: ${hpAtacanteAtual}/${atacante.hpMax}, MP: ${manaAtacanteAtual}/${manaMaxAtacante})`
+      ? `${atacante.nome} canaliza${sufixoHabilidade}${sufixoDuplo} restaurando +${curaHp ?? 0} HP! (${atacante.nome} HP: ${hpAtacanteAtual}/${atacante.hpMax})`
       : `${atacante.nome} ataca ${defensor.nome}${sufixoHabilidade}${sufixoDuplo} causando ${danoEfetivo} de dano${sufixoElemental}! (${defensor.nome} HP: ${hpAtual}/${defensor.hpMax})`;
 
     ataques.push({
@@ -2549,12 +2497,8 @@ export function turnoDeCombate(
         : {}),
       ...(ignorarDefesaFisicaPercentual !== undefined ? { ignorarDefesaFisicaPercentual } : {}),
       ...(curaHp !== undefined ? { curaHp } : {}),
-      ...(curaMana !== undefined ? { curaMana } : {}),
       ...(ehProfetaAtacante || (resultadoHabilidadeInterceptada && (resultadoHabilidadeInterceptada.curaPercentualDanoCausado > 0 || resultadoHabilidadeInterceptada.curaPercentualHpMax > 0))
-        ? {
-            atacanteHpRestante: hpAtacanteAtual,
-            ...(ehProfetaAtacante ? { atacanteManaRestante: manaAtacanteAtual } : {}),
-          }
+        ? { atacanteHpRestante: hpAtacanteAtual }
         : {}),
       ...(cargasFeInabalavelConsumidas !== undefined ? { cargasFeInabalavelConsumidas } : {}),
       ...(cargasFeInabalavelRestantes !== undefined ? { cargasFeInabalavelRestantes } : {}),
@@ -2583,8 +2527,6 @@ export function turnoDeCombate(
   defensor.hp = hpAtual;
   defensor.sobreescudo = sobreescudoAtual;
   atacante.hp = hpAtacanteAtual;
-  atacante.mana = manaAtacanteAtual;
-  atacante.manaMax = manaMaxAtacante;
   if (ehBarbaroAtacante) {
     atacante.contadorFuriaSelvagem = contadorFuria;
     atacante.contadorIraBarbaro = contadorIra;
@@ -2633,7 +2575,6 @@ export function turnoDeCombate(
     defensorHp: hpAtual,
     defensorSobreescudo: sobreescudoAtual,
     atacanteHp: hpAtacanteAtual,
-    atacanteMana: manaAtacanteAtual,
   };
 }
 
@@ -2646,19 +2587,11 @@ export function resolverCombate(
   seed: number = 42,
   opcoes?: OpcoesResolverCombate
 ): ResultadoCombate {
-  const manaMaxInicial =
-    personagem.manaMax ??
-    calcularManaMax(personagem.atributos.mente, {
-      classeId: personagem.classeId,
-      nivel: personagem.nivel,
-    });
   // Clona instâncias para manter função 100% pura
   const p: Combatente = {
     nome: personagem.nome,
     hp: personagem.hp,
     hpMax: personagem.hpMax,
-    mana: personagem.mana ?? manaMaxInicial,
-    manaMax: manaMaxInicial,
     sobreescudo: personagem.sobreescudo,
     atributos: { ...personagem.atributos },
     racaId: personagem.racaId,
@@ -2885,13 +2818,6 @@ export function resolverCombate(
       `Vitória gloriosa! ${p.nome} derrotou ${m.nome}! Recompensas: +${xpGanho} XP e +${ouroGanho} Ouro.`
     );
 
-    const manaMaxFinal =
-      p.manaMax ??
-      calcularManaMax(p.atributos.mente, {
-        classeId: p.classeId,
-        nivel: p.nivel,
-      });
-
     return {
       vencedor: 'personagem',
       logTurnos,
@@ -2902,8 +2828,6 @@ export function resolverCombate(
       personagemFinal: {
         hp: p.hp,
         hpMax: p.hpMax,
-        mana: Math.min(manaMaxFinal, p.mana ?? manaMaxFinal),
-        manaMax: manaMaxFinal,
         ouro: (p.ouro ?? 0) + ouroGanho,
       },
     };
@@ -2917,13 +2841,9 @@ export function resolverCombate(
       classeId: p.classeId,
       nivel: p.nivel,
     });
-    const manaMaxima = calcularManaMax(p.atributos.mente, {
-      classeId: p.classeId,
-      nivel: p.nivel,
-    });
 
     mensagens.push(
-      `${p.nome} sucumbiu perante ${m.nome}... A morte cobra seu preço: -${ouroPerdido} de ouro. Vitalidade e Mana foram restauradas ao máximo.`
+      `${p.nome} sucumbiu perante ${m.nome}... A morte cobra seu preço: -${ouroPerdido} de ouro. A vida foi restaurada ao máximo.`
     );
 
     return {
@@ -2936,8 +2856,6 @@ export function resolverCombate(
       personagemFinal: {
         hp: hpMaximo,
         hpMax: hpMaximo,
-        mana: manaMaxima,
-        manaMax: manaMaxima,
         ouro: ouroFinal,
       },
     };

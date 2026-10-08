@@ -59,7 +59,7 @@ export function aplicarBonusSubclasse(
 ): Attributes {
   return {
     vigor: atributos.vigor + (bonus.vigor || 0),
-    mente: atributos.mente + (bonus.mente || 0),
+    sorte: atributos.sorte + (bonus.sorte || 0),
     forca: atributos.forca + (bonus.forca || 0),
     vitalidade: atributos.vitalidade + (bonus.vitalidade || 0),
     arcano: atributos.arcano + (bonus.arcano || 0),
@@ -78,7 +78,7 @@ export function removerBonusSubclasse(
 ): Attributes {
   const resultado: Attributes = {
     vigor: atributos.vigor - (bonus.vigor || 0),
-    mente: atributos.mente - (bonus.mente || 0),
+    sorte: atributos.sorte - (bonus.sorte || 0),
     forca: atributos.forca - (bonus.forca || 0),
     vitalidade: atributos.vitalidade - (bonus.vitalidade || 0),
     arcano: atributos.arcano - (bonus.arcano || 0),

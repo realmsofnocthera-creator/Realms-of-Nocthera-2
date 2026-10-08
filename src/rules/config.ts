@@ -6,7 +6,7 @@ export const GAME_CONFIG = {
   PONTOS_POR_NIVEL: 3,
   VALOR_BASE_ATRIBUTOS: {
     vigor: 2,
-    mente: 2,
+    sorte: 2,
     forca: 0,
     vitalidade: 0,
     arcano: 0,
@@ -19,7 +19,13 @@ export const GAME_CONFIG = {
   // Regra 1.2.2: reduções de dano recebido somadas nunca passam deste teto (só Imortalidade Breve zera o dano)
   TETO_REDUCAO_DANO_PERCENTUAL: 80,
   HP_POR_PONTO_VIGOR: 5,
-  MANA_POR_PONTO_MENTE: 5,
+  // Sorte: crítico (dobra o dano depois da defesa) e chance de drop
+  CHANCE_CRITICO_BASE_PERCENTUAL: 2,
+  CHANCE_CRITICO_POR_PONTO_SORTE: 0.1,
+  MULTIPLICADOR_CRITICO: 2,
+  CHANCE_DROP_POR_PONTO_SORTE: 0.1,
+  // Habilidades raciais ativas: sem custo, só recarga
+  RECARGA_HABILIDADE_RACIAL_RODADAS: 8,
   SOBREESCUDO_POR_PONTO_VITALIDADE: 2,
   CUSTO_RESET_ATRIBUTOS_DIAMANTES: 100,
   SUBCLASSE_NIVEL_MINIMO: 20,

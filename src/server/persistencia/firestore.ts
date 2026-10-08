@@ -40,7 +40,8 @@ function esperar(ms: number): Promise<void> {
 function lerAtributos(origem: Record<string, unknown> | undefined, padrao: Attributes): Attributes {
   return {
     vigor: Number(origem?.vigor ?? padrao.vigor),
-    mente: Number(origem?.mente ?? padrao.mente),
+    // Documentos salvos antes da troca Mente → Sorte ainda guardam o valor em "mente"
+    sorte: Number(origem?.sorte ?? origem?.mente ?? padrao.sorte),
     forca: Number(origem?.forca ?? padrao.forca),
     vitalidade: Number(origem?.vitalidade ?? padrao.vitalidade),
     arcano: Number(origem?.arcano ?? padrao.arcano),
@@ -51,7 +52,7 @@ function lerAtributos(origem: Record<string, unknown> | undefined, padrao: Attri
 
 const ATRIBUTOS_PADRAO_LEGADO: Attributes = {
   vigor: 2,
-  mente: 2,
+  sorte: 2,
   forca: 0,
   vitalidade: 0,
   arcano: 0,
@@ -96,7 +97,6 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
       ? { bonusSubclasseAplicado: lerAtributos(data.bonusSubclasseAplicado, ZEROS_ATRIBUTOS) }
       : {}),
     hpMax: 0,
-    manaMax: 0,
     sobreescudoMax: 0,
     criadoEm: data.criadoEm || new Date().toISOString(),
     atributos: lerAtributos(data.atributos, ATRIBUTOS_PADRAO_LEGADO),
@@ -124,7 +124,6 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     subclasseTiers: char.subclasseTiers ?? {},
     ...(char.bonusSubclasseAplicado ? { bonusSubclasseAplicado: char.bonusSubclasseAplicado } : {}),
     hpMax: char.hpMax,
-    manaMax: char.manaMax,
     sobreescudoMax: char.sobreescudoMax,
     criadoEm: char.criadoEm,
     atributos: char.atributos,

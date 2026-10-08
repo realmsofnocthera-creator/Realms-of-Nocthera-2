@@ -44,7 +44,7 @@ describe('ORDEM 43 — Dados e Funções Puras de Subclasses', () => {
     for (const sub of SUBCLASSES) {
       const soma =
         sub.bonusAtributos.vigor +
-        sub.bonusAtributos.mente +
+        sub.bonusAtributos.sorte +
         sub.bonusAtributos.forca +
         sub.bonusAtributos.vitalidade +
         sub.bonusAtributos.arcano +
@@ -61,62 +61,62 @@ describe('ORDEM 43 — Dados e Funções Puras de Subclasses', () => {
       berserker: {
         classeId: 'barbaro',
         nome: 'Berserker',
-        bonus: { vigor: 12, mente: 0, forca: 20, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 8 },
+        bonus: { vigor: 12, sorte: 0, forca: 20, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 8 },
       },
       colosso: {
         classeId: 'barbaro',
         nome: 'Colosso',
-        bonus: { vigor: 18, mente: 0, forca: 6, vitalidade: 16, arcano: 0, inteligencia: 0, agilidade: 0 },
+        bonus: { vigor: 18, sorte: 0, forca: 6, vitalidade: 16, arcano: 0, inteligencia: 0, agilidade: 0 },
       },
       vanguarda: {
         classeId: 'cavaleiro',
         nome: 'Vanguarda',
-        bonus: { vigor: 10, mente: 0, forca: 16, vitalidade: 14, arcano: 0, inteligencia: 0, agilidade: 0 },
+        bonus: { vigor: 10, sorte: 0, forca: 16, vitalidade: 14, arcano: 0, inteligencia: 0, agilidade: 0 },
       },
       bastiao: {
         classeId: 'cavaleiro',
         nome: 'Bastião',
-        bonus: { vigor: 14, mente: 0, forca: 0, vitalidade: 22, arcano: 4, inteligencia: 0, agilidade: 0 },
+        bonus: { vigor: 14, sorte: 0, forca: 0, vitalidade: 22, arcano: 4, inteligencia: 0, agilidade: 0 },
       },
       arquimago: {
         classeId: 'feiticeiro',
         nome: 'Arquimago',
-        bonus: { vigor: 0, mente: 12, forca: 0, vitalidade: 0, arcano: 4, inteligencia: 24, agilidade: 0 },
+        bonus: { vigor: 0, sorte: 12, forca: 0, vitalidade: 0, arcano: 4, inteligencia: 24, agilidade: 0 },
       },
       sabio_arcano: {
         classeId: 'feiticeiro',
         nome: 'Sábio Arcano',
-        bonus: { vigor: 0, mente: 18, forca: 0, vitalidade: 0, arcano: 12, inteligencia: 10, agilidade: 0 },
+        bonus: { vigor: 0, sorte: 18, forca: 0, vitalidade: 0, arcano: 12, inteligencia: 10, agilidade: 0 },
       },
       assassino: {
         classeId: 'bandido',
         nome: 'Assassino',
-        bonus: { vigor: 4, mente: 0, forca: 22, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 14 },
+        bonus: { vigor: 4, sorte: 0, forca: 22, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 14 },
       },
       duelista: {
         classeId: 'bandido',
         nome: 'Duelista',
-        bonus: { vigor: 4, mente: 0, forca: 14, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 22 },
+        bonus: { vigor: 4, sorte: 0, forca: 14, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 22 },
       },
       sacerdote: {
         classeId: 'profeta',
         nome: 'Sacerdote',
-        bonus: { vigor: 12, mente: 18, forca: 0, vitalidade: 0, arcano: 10, inteligencia: 0, agilidade: 0 },
+        bonus: { vigor: 12, sorte: 18, forca: 0, vitalidade: 0, arcano: 10, inteligencia: 0, agilidade: 0 },
       },
       inquisidor: {
         classeId: 'profeta',
         nome: 'Inquisidor',
-        bonus: { vigor: 6, mente: 12, forca: 0, vitalidade: 0, arcano: 0, inteligencia: 22, agilidade: 0 },
+        bonus: { vigor: 6, sorte: 12, forca: 0, vitalidade: 0, arcano: 0, inteligencia: 22, agilidade: 0 },
       },
       kensei: {
         classeId: 'samurai',
         nome: 'Kensei',
-        bonus: { vigor: 6, mente: 0, forca: 24, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 10 },
+        bonus: { vigor: 6, sorte: 0, forca: 24, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 10 },
       },
       ronin: {
         classeId: 'samurai',
         nome: 'Ronin',
-        bonus: { vigor: 10, mente: 0, forca: 12, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 18 },
+        bonus: { vigor: 10, sorte: 0, forca: 12, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 18 },
       },
     };
 
@@ -183,7 +183,7 @@ describe('ORDEM 43 — Dados e Funções Puras de Subclasses', () => {
   it('(f) aplicar e depois remover o mesmo bônus devolve os atributos originais', () => {
     const atributosBase: Attributes = {
       vigor: 15,
-      mente: 10,
+      sorte: 10,
       forca: 20,
       vitalidade: 12,
       arcano: 5,
@@ -217,7 +217,7 @@ describe('ORDEM 43 — Dados e Funções Puras de Subclasses', () => {
   it('(g) remover um bônus maior que os atributos lança erro', () => {
     const atributosBaixos: Attributes = {
       vigor: 2,
-      mente: 2,
+      sorte: 2,
       forca: 5, // menor que o bônus de 20 do berserker
       vitalidade: 0,
       arcano: 0,

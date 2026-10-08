@@ -22,7 +22,7 @@ const PONTOS_INICIAIS_FIXOS: Attributes = {
   vigor: 2,
   vitalidade: 1,
   inteligencia: 1,
-  mente: 1,
+  sorte: 1,
   arcano: 0,
 };
 
@@ -32,7 +32,7 @@ const CICLO_ATRIBUTOS: readonly AttributeName[] = [
   'vigor',
   'vitalidade',
   'inteligencia',
-  'mente',
+  'sorte',
   'arcano',
 ];
 
@@ -50,7 +50,7 @@ const MONSTRO_SINTETICO_ULTIMATE: MonsterDefinition = {
   hp: 100000,
   atributos: {
     vigor: 100,
-    mente: 10,
+    sorte: 10,
     forca: 0,
     vitalidade: 10,
     arcano: 0,
@@ -86,7 +86,7 @@ function criarCombatenteTeste(classeId: string): Combatente {
     vigor: 0,
     vitalidade: 0,
     inteligencia: 0,
-    mente: 0,
+    sorte: 0,
     arcano: 0,
   };
 
@@ -103,12 +103,12 @@ function criarCombatenteTeste(classeId: string): Combatente {
       classe.bonusAtributos.vigor +
       PONTOS_INICIAIS_FIXOS.vigor +
       pontosNivel.vigor,
-    mente:
-      GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente +
-      raca.bonusAtributos.mente +
-      classe.bonusAtributos.mente +
-      PONTOS_INICIAIS_FIXOS.mente +
-      pontosNivel.mente,
+    sorte:
+      GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte +
+      raca.bonusAtributos.sorte +
+      classe.bonusAtributos.sorte +
+      PONTOS_INICIAIS_FIXOS.sorte +
+      pontosNivel.sorte,
     forca:
       GAME_CONFIG.VALOR_BASE_ATRIBUTOS.forca +
       raca.bonusAtributos.forca +

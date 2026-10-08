@@ -56,7 +56,7 @@ describe('0.5-A3 — rate limiting', () => {
         nome: 'Limitada',
         racaId: 'humano',
         classeId: 'barbaro',
-        pontos: { vigor: 4, mente: 0, forca: 4, vitalidade: 1, arcano: 0, inteligencia: 0, agilidade: 1 },
+        pontos: { vigor: 4, sorte: 0, forca: 4, vitalidade: 1, arcano: 0, inteligencia: 0, agilidade: 1 },
       });
 
       const pedir = (i: number) =>

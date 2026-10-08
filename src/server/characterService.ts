@@ -1,6 +1,6 @@
 import { ATTRIBUTES, AttributeName, Attributes } from '@/rules/attributes';
 import { GAME_CONFIG } from '@/rules/config';
-import { getRaceById } from '@/rules/races';
+import { bonusSortePassivaRacial, getRaceById } from '@/rules/races';
 import { getClassById } from '@/rules/classes';
 import { getAvatarById } from '@/rules/avatars';
 import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
@@ -9,8 +9,9 @@ import { MONSTERS_MAP } from '@/rules/monsters';
 import {
   calcularAgilidadeEfetiva,
   calcularDefesaFisica,
+  calcularBonusChanceDrop,
+  calcularChanceCritico,
   calcularHpMax,
-  calcularManaMax,
   calcularPoderTotal,
   calcularSobreescudoMax,
   xpParaProximoNivel,
@@ -63,8 +64,11 @@ export interface CharacterDocument {
   ouro: number;
   diamantes?: number;
   hpMax: number;
-  manaMax: number;
   sobreescudoMax: number;
+  /** Chance de crítico em % (base + Sorte). Derivado, não é gravado. */
+  chanceCritico?: number;
+  /** Bônus na chance de drop em % (Sorte). Derivado, não é gravado. */
+  bonusChanceDrop?: number;
   defesaFisica?: number;
   agilidadeEfetiva?: number;
   danoFisicoBase?: number;
@@ -145,15 +149,15 @@ export function calcularAtributosDerivados(
   subclasse?: { subclasseAtualId?: string | null; subclasseTiers?: Record<string, number> }
 ): {
   hpMax: number;
-  manaMax: number;
   sobreescudoMax: number;
+  chanceCritico: number;
+  bonusChanceDrop: number;
   defesaFisica: number;
   agilidadeEfetiva: number;
   danoFisicoBase: number;
 } {
   return {
     hpMax: calcularHpMax(atributos.vigor, { classeId, nivel }),
-    manaMax: calcularManaMax(atributos.mente, { classeId, nivel }),
     // A passiva da subclasse (Casca de Pedra) entra no Sobreescudo máximo junto com a da classe
     sobreescudoMax: calcularSobreescudoMax(atributos.vitalidade, {
       classeId,
@@ -161,6 +165,8 @@ export function calcularAtributosDerivados(
       subclasseAtualId: subclasse?.subclasseAtualId,
       subclasseTiers: subclasse?.subclasseTiers,
     }),
+    chanceCritico: calcularChanceCritico(atributos.sorte),
+    bonusChanceDrop: calcularBonusChanceDrop(atributos.sorte),
     defesaFisica: calcularDefesaFisica(atributos.vitalidade, { classeId, nivel }),
     agilidadeEfetiva: calcularAgilidadeEfetiva(atributos.agilidade, { classeId, nivel }),
     danoFisicoBase: calcularDanoFisico(atributos.forca, { classeId, nivel }),
@@ -393,7 +399,7 @@ export async function createCharacter(
     ? classe.bonusAtributos
     : {
         vigor: 0,
-        mente: 0,
+        sorte: 0,
         forca: 0,
         vitalidade: 0,
         arcano: 0,
@@ -447,11 +453,12 @@ export async function createCharacter(
       raca.bonusAtributos.vigor +
       bonusClasse.vigor +
       input.pontos.vigor,
-    mente:
-      GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente +
-      raca.bonusAtributos.mente +
-      bonusClasse.mente +
-      input.pontos.mente,
+    sorte:
+      GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte +
+      raca.bonusAtributos.sorte +
+      bonusSortePassivaRacial(raca) +
+      bonusClasse.sorte +
+      input.pontos.sorte,
     forca:
       GAME_CONFIG.VALOR_BASE_ATRIBUTOS.forca +
       raca.bonusAtributos.forca +

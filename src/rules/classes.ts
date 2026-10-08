@@ -37,7 +37,7 @@ export const CLASSES: readonly ClassDefinition[] = [
       'Surgiu nas regiões selvagens de Yggdrasil, onde monstros e forças do Caos exigiam força para sobreviver; hoje encontrado entre diferentes povos, unidos pela filosofia de que quem permanece de pé é quem sobreviveu.',
     bonusAtributos: {
       vigor: 1,
-      mente: 0,
+      sorte: 0,
       forca: 1,
       vitalidade: 1,
       arcano: 0,
@@ -94,7 +94,7 @@ export const CLASSES: readonly ClassDefinition[] = [
       'Surgiu na Era de Prata, quando ordens de guerreiros juraram proteger reinos, cidades e viajantes; apesar de servirem a diferentes causas, todos seguem o princípio de proteger quem está atrás deles.',
     bonusAtributos: {
       vigor: 1,
-      mente: 0,
+      sorte: 0,
       forca: 0,
       vitalidade: 2,
       arcano: 0,
@@ -153,7 +153,7 @@ export const CLASSES: readonly ClassDefinition[] = [
       'Surgiu na Era de Prata, quando mortais descobriram forças remanescentes dos antigos deuses; até hoje debate-se se o poder dos Feiticeiros vem dos deuses ou do próprio Caos.',
     bonusAtributos: {
       vigor: 0,
-      mente: 1,
+      sorte: 1,
       forca: 0,
       vitalidade: 0,
       arcano: 1,
@@ -211,7 +211,7 @@ export const CLASSES: readonly ClassDefinition[] = [
       'Surgiu nas estradas da Era de Bronze, entre ladrões, mercenários e sobreviventes fora das leis dos reinos; muitos abandonaram esse caminho e viraram caçadores, exploradores ou aventureiros, mas a reputação de serem vistos primeiro pelo Bandido permaneceu.',
     bonusAtributos: {
       vigor: 0,
-      mente: 0,
+      sorte: 0,
       forca: 1,
       vitalidade: 0,
       arcano: 0,
@@ -271,7 +271,7 @@ export const CLASSES: readonly ClassDefinition[] = [
       'Surgiu na transição entre a Era de Ouro e a Era de Prata, quando seguidores dos deuses ausentes passaram a receber visões e sinais; nunca houve resposta definitiva se essas mensagens vêm realmente dos deuses ou de algo além deles.',
     bonusAtributos: {
       vigor: 0,
-      mente: 1,
+      sorte: 1,
       forca: 0,
       vitalidade: 0,
       arcano: 1,
@@ -332,7 +332,7 @@ export const CLASSES: readonly ClassDefinition[] = [
       'Surgiu em clãs isolados de Yggdrasil na Era de Prata, onde disciplina era tão valorizada quanto força; com a queda de muitos reinos, os Samurais se espalharam, mas todos carregam a ideia de que força sem disciplina é apenas destruição.',
     bonusAtributos: {
       vigor: 0,
-      mente: 0,
+      sorte: 0,
       forca: 1,
       vitalidade: 0,
       arcano: 0,

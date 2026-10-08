@@ -1,4 +1,5 @@
 import { Attributes } from './attributes';
+import { GAME_CONFIG } from './config';
 
 export type DraconianLineage = 'fogo' | 'gelo' | 'relampago' | 'terra' | 'vento';
 
@@ -6,11 +7,10 @@ export interface RacialPassive {
   nome: string;
   descricao?: string;
   // aguardando sistema de efeitos/resistências para 'resistenciaEfeitosFisicos' e 'instintoDeGuerraAbaixo30Hp'
-  // aguardando sistema de regeneração de Mana em combate para 'bonusEficienciaRecuperacaoMana'
   efeito:
     | 'bonusXpPercentual'
     | 'resistenciaEfeitosFisicos'
-    | 'bonusEficienciaRecuperacaoMana'
+    | 'bonusSorte'
     | 'instintoDeGuerraAbaixo30Hp'
     | 'roubarVidaDanoFisico'
     | 'resistenciaElementoLinhagem'
@@ -21,7 +21,7 @@ export interface RacialPassive {
 export interface RacialSkill {
   nome: string;
   tipo: 'ativa';
-  custoMana: number;
+  /** Recarga em rodadas (todas as raciais ativas: GAME_CONFIG.RECARGA_HABILIDADE_RACIAL_RODADAS). */
   recargaTurnos: number;
   duracaoTurnos?: number;
   // aguardando sistema de efeitos/resistências
@@ -76,7 +76,7 @@ export const RACES: readonly RaceDefinition[] = [
       'Grande variedade física, sem características sobrenaturais obrigatórias.',
     bonusAtributos: {
       vigor: 1,
-      mente: 1,
+      sorte: 1,
       forca: 1,
       vitalidade: 1,
       arcano: 0,
@@ -92,8 +92,7 @@ export const RACES: readonly RaceDefinition[] = [
     habilidadeRacial: {
       nome: 'Instinto de Sobrevivência',
       tipo: 'ativa',
-      custoMana: 0,
-      recargaTurnos: 5,
+      recargaTurnos: GAME_CONFIG.RECARGA_HABILIDADE_RACIAL_RODADAS,
       efeito: '+2 Força, +2 Vitalidade, +1 Agilidade por 2 turnos',
     },
     resistencias: [],
@@ -121,7 +120,7 @@ export const RACES: readonly RaceDefinition[] = [
       'Corpos compactos e robustos, baixa estatura, grande força física, barbas e cabelos densos; a barba carrega importância cultural.',
     bonusAtributos: {
       vigor: 2,
-      mente: 0,
+      sorte: 0,
       forca: 1,
       vitalidade: 2,
       arcano: 0,
@@ -139,8 +138,7 @@ export const RACES: readonly RaceDefinition[] = [
     habilidadeRacial: {
       nome: 'Fúria da Forja',
       tipo: 'ativa',
-      custoMana: 0,
-      recargaTurnos: 6,
+      recargaTurnos: GAME_CONFIG.RECARGA_HABILIDADE_RACIAL_RODADAS,
       duracaoTurnos: 3,
       efeito: '+3 Força, +2 Vitalidade, -20% dano físico recebido, -2 Agilidade',
     },
@@ -170,26 +168,24 @@ export const RACES: readonly RaceDefinition[] = [
       'Esbelta e elegante, orelhas pontudas, traços faciais delicados, movimentos rápidos e precisos.',
     bonusAtributos: {
       vigor: 0,
-      mente: 1,
+      sorte: 1,
       forca: 0,
       vitalidade: 0,
       arcano: 1,
       inteligencia: 2,
       agilidade: 1,
     },
-    // aguardando sistema de regeneração de Mana em combate
     passivaRacial: {
       nome: 'Herança Arcana',
-      descricao: '+10% de eficiência na recuperação de Mana.',
-      efeito: 'bonusEficienciaRecuperacaoMana',
-      valor: 10,
+      descricao: '+1 de Sorte.',
+      efeito: 'bonusSorte',
+      valor: 1,
     },
     // aguardando sistema de efeitos/resistências
     habilidadeRacial: {
       nome: 'Graça de Alfheim',
       tipo: 'ativa',
-      custoMana: 10,
-      recargaTurnos: 5,
+      recargaTurnos: GAME_CONFIG.RECARGA_HABILIDADE_RACIAL_RODADAS,
       duracaoTurnos: 3,
       efeito:
         '+3 Inteligência, +2 Agilidade, +2 Arcano; próximo ataque/habilidade mágica no efeito recebe +15% de dano mágico',
@@ -221,7 +217,7 @@ export const RACES: readonly RaceDefinition[] = [
       'Constituição física naturalmente forte e musculosa, presas inferiores proeminentes, pele em diferentes tons de verde, cinza ou marrom, cabelos geralmente escuros e grande resistência física.',
     bonusAtributos: {
       vigor: 2,
-      mente: 0,
+      sorte: 0,
       forca: 2,
       vitalidade: 1,
       arcano: 0,
@@ -239,8 +235,7 @@ export const RACES: readonly RaceDefinition[] = [
     habilidadeRacial: {
       nome: 'Fúria Orc',
       tipo: 'ativa',
-      custoMana: 0,
-      recargaTurnos: 6,
+      recargaTurnos: GAME_CONFIG.RECARGA_HABILIDADE_RACIAL_RODADAS,
       duracaoTurnos: 3,
       efeito: '+4 Força, +2 Vigor, +10% de dano físico, -2 Agilidade',
     },
@@ -275,7 +270,7 @@ export const RACES: readonly RaceDefinition[] = [
       'Pele pálida, olhos de tonalidades incomuns, presas, temperatura corporal reduzida, sentidos aguçados e grande velocidade.',
     bonusAtributos: {
       vigor: 1,
-      mente: 1,
+      sorte: 1,
       forca: 1,
       vitalidade: 0,
       arcano: 1,
@@ -292,8 +287,7 @@ export const RACES: readonly RaceDefinition[] = [
     habilidadeRacial: {
       nome: 'Drenar Sangue',
       tipo: 'ativa',
-      custoMana: 10,
-      recargaTurnos: 5,
+      recargaTurnos: GAME_CONFIG.RECARGA_HABILIDADE_RACIAL_RODADAS,
       efeito:
         'dano mágico por Inteligência; cura 50% do dano causado, ou 75% se o alvo estiver abaixo de 30% HP',
     },
@@ -330,7 +324,7 @@ export const RACES: readonly RaceDefinition[] = [
       'Traços humanoides combinados com escamas, olhos répteis, garras, dentes afiados e cauda; cor e padrão das escamas variam pela linhagem elemental.',
     bonusAtributos: {
       vigor: 1,
-      mente: 0,
+      sorte: 0,
       forca: 2,
       vitalidade: 1,
       arcano: 1,
@@ -349,8 +343,7 @@ export const RACES: readonly RaceDefinition[] = [
     habilidadeRacial: {
       nome: 'Sopro Dracônico',
       tipo: 'ativa',
-      custoMana: 15,
-      recargaTurnos: 5,
+      recargaTurnos: GAME_CONFIG.RECARGA_HABILIDADE_RACIAL_RODADAS,
       efeito:
         'dano elemental por Inteligência; efeito extra varia por linhagem (fogo: queimadura; gelo: reduz Agilidade do alvo; relâmpago: atinge um segundo alvo; terra: reduz Defesa Física do alvo; vento: aumenta a Agilidade do draconiano)',
     },
@@ -385,4 +378,9 @@ export function getRaceById(racaId: string): RaceDefinition | undefined {
   }
   const normalized = racaId.trim().toLowerCase();
   return RACES_MAP[normalized];
+}
+
+/** Sorte extra dada pela passiva racial (Herança Arcana do Elfo: +1). Somada aos atributos na criação. */
+export function bonusSortePassivaRacial(raca: Pick<RaceDefinition, 'passivaRacial'>): number {
+  return raca.passivaRacial.efeito === 'bonusSorte' ? raca.passivaRacial.valor : 0;
 }
