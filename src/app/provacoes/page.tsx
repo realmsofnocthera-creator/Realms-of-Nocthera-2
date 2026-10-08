@@ -8,13 +8,6 @@ import { CharacterDocument } from '@/server/characterService';
 import { ProvacoesScreen } from '@/components/provacoes/ProvacoesScreen';
 import { NOCTHERA_THEME } from '@/theme/theme';
 
-interface SessionUser {
-  uid: string;
-  email: string | null;
-}
-
-const LOCAL_SESSION_KEY = 'nocthera_auth_session';
-
 export default function ProvacoesPage() {
   const router = useRouter();
   const [character, setCharacter] = useState<CharacterDocument | null>(null);
@@ -44,7 +37,7 @@ export default function ProvacoesPage() {
       try {
         await auth.authStateReady();
       } catch {
-        // Prossegue para verificação do usuário ou fallback local
+        // Prossegue para verificação do usuário
       }
 
       const activeUser = auth.currentUser ?? currentUser;
@@ -60,29 +53,8 @@ export default function ProvacoesPage() {
             return;
           }
         } catch {
-          // Segue para fallback localStorage ou redirecionamento
+          // Segue para o redirecionamento
         }
-      }
-
-      try {
-        const rawSession = window.localStorage.getItem(LOCAL_SESSION_KEY);
-        if (rawSession) {
-          const parsed = JSON.parse(rawSession) as {
-            user?: SessionUser;
-            idToken?: string;
-          };
-          if (parsed.user?.uid && parsed.idToken) {
-            const char = await buscarPersonagem(parsed.idToken);
-            if (cancelado) return;
-            if (char) {
-              setCharacter(char);
-              setLoading(false);
-              return;
-            }
-          }
-        }
-      } catch {
-        // Ignora falhas de leitura do localStorage
       }
 
       if (!cancelado) {

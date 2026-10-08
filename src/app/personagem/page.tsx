@@ -12,7 +12,6 @@ interface SessionUser {
   email: string | null;
 }
 
-const LOCAL_SESSION_KEY = 'nocthera_auth_session';
 
 export default function PersonagemPage() {
   const router = useRouter();
@@ -61,30 +60,8 @@ export default function PersonagemPage() {
             return;
           }
         } catch {
-          // Segue para fallback ou redirecionamento
+          // Segue para o redirecionamento
         }
-      }
-
-      try {
-        const rawSession = window.localStorage.getItem(LOCAL_SESSION_KEY);
-        if (rawSession) {
-          const parsed = JSON.parse(rawSession) as {
-            user?: SessionUser;
-            idToken?: string;
-          };
-          if (parsed.user?.uid && parsed.idToken) {
-            const char = await buscarPersonagem(parsed.idToken);
-            if (cancelado) return;
-            if (char) {
-              setUser(parsed.user);
-              setCharacter(char);
-              setLoading(false);
-              return;
-            }
-          }
-        }
-      } catch {
-        // Ignora falhas de leitura do localStorage
       }
 
       if (!cancelado) {
@@ -99,11 +76,6 @@ export default function PersonagemPage() {
   }, [router]);
 
   const handleLogout = async () => {
-    try {
-      window.localStorage.removeItem(LOCAL_SESSION_KEY);
-    } catch {
-      // Ignora
-    }
     await logoutUser();
     router.replace('/login');
   };

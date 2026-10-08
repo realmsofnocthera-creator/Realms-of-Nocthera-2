@@ -16,6 +16,7 @@ import {
   logoutUser,
 } from '@/lib/firebase';
 import { CharacterCreateForm } from '@/components/CharacterCreateForm';
+import { mensagemErroAutenticacao, SENHA_TAMANHO_MINIMO, validarSenhaNova } from '@/lib/senha';
 import { CharacterDocument } from '@/server/characterService';
 import Link from 'next/link';
 
@@ -24,7 +25,6 @@ interface SessionUser {
   email: string | null;
 }
 
-const LOCAL_SESSION_KEY = 'nocthera_auth_session';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -78,7 +78,7 @@ export default function LoginPage() {
     }
   };
 
-  // Monitora estado da autenticação oficial do Firebase ou sessão persistida do servidor
+  // Monitora estado da autenticação do Firebase Auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser: User | null) => {
       if (currentUser) {
@@ -109,26 +109,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Verifica se há sessão de fallback salva localmente
-      try {
-        const rawSession = window.localStorage.getItem(LOCAL_SESSION_KEY);
-        if (rawSession) {
-          const parsed = JSON.parse(rawSession) as {
-            user?: SessionUser;
-            idToken?: string;
-          };
-          if (parsed.user?.uid && parsed.idToken) {
-            setUser(parsed.user);
-            setIdToken(parsed.idToken);
-            await loadCharacterData(parsed.idToken);
-            setAuthLoading(false);
-            return;
-          }
-        }
-      } catch {
-        // Ignora falhas de leitura do localStorage
-      }
-
       setUser(null);
       setIdToken(null);
       setCharacter(null);
@@ -138,56 +118,20 @@ export default function LoginPage() {
     return () => unsubscribe();
   }, [router]);
 
-  const authenticateViaServerFallback = async (
-    authMode: 'login' | 'signup',
-    userEmail: string,
-    userPassword: string
-  ) => {
-    const res = await fetch('/api/auth/email', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        mode: authMode,
-        email: userEmail,
-        password: userPassword,
-      }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      const errorObj = new Error(data.error || 'Falha na autenticação.') as Error & {
-        code?: string;
-      };
-      errorObj.code = data.code;
-      throw errorObj;
-    }
-
-    const sessionUser: SessionUser = {
-      uid: data.user.uid,
-      email: data.user.email,
-    };
-
-    try {
-      window.localStorage.setItem(
-        LOCAL_SESSION_KEY,
-        JSON.stringify({ user: sessionUser, idToken: data.idToken })
-      );
-    } catch {
-      // Continua mesmo sem localStorage
-    }
-
-    setUser(sessionUser);
-    setIdToken(data.idToken);
-    await loadCharacterData(data.idToken);
-  };
-
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
     setAuthNotice(null);
     setFormLoading(true);
+
+    if (mode === 'signup') {
+      const erroSenha = validarSenhaNova(password);
+      if (erroSenha) {
+        setAuthError(erroSenha);
+        setFormLoading(false);
+        return;
+      }
+    }
 
     try {
       if (mode === 'signup') {
@@ -214,37 +158,8 @@ export default function LoginPage() {
         await loadCharacterData(token);
       }
     } catch (err: unknown) {
-      const firebaseError = err as { code?: string; message?: string };
-
-      // Quando o provedor Email/Password não está habilitado no console Firebase,
-      // autentica de forma transparente pelo endpoint do servidor integrado ao Firestore (users/{uid})
-      if (
-        firebaseError.code === 'auth/operation-not-allowed' ||
-        firebaseError.code === 'auth/configuration-not-found'
-      ) {
-        try {
-          await authenticateViaServerFallback(mode, email, password);
-          return;
-        } catch (fallbackErr: unknown) {
-          const fbErr = fallbackErr as { code?: string; message?: string };
-          setAuthError(fbErr.message || 'Ocorreu um erro durante a autenticação.');
-          return;
-        }
-      }
-
-      if (firebaseError.code === 'auth/email-already-in-use') {
-        setAuthError('Este e-mail já está em uso. Tente fazer login.');
-      } else if (
-        firebaseError.code === 'auth/invalid-credential' ||
-        firebaseError.code === 'auth/user-not-found' ||
-        firebaseError.code === 'auth/wrong-password'
-      ) {
-        setAuthError('E-mail ou senha incorretos.');
-      } else if (firebaseError.code === 'auth/weak-password') {
-        setAuthError('A senha deve conter no mínimo 6 caracteres.');
-      } else {
-        setAuthError(firebaseError.message || 'Ocorreu um erro durante a autenticação.');
-      }
+      const firebaseError = err as { code?: string };
+      setAuthError(mensagemErroAutenticacao(firebaseError.code));
     } finally {
       setFormLoading(false);
     }
@@ -261,8 +176,8 @@ export default function LoginPage() {
       setIdToken(token);
       await loadCharacterData(token);
     } catch (err: unknown) {
-      const firebaseError = err as { message?: string };
-      setAuthError(firebaseError.message || 'Erro ao autenticar com Google.');
+      const firebaseError = err as { code?: string };
+      setAuthError(mensagemErroAutenticacao(firebaseError.code));
     } finally {
       setFormLoading(false);
     }
@@ -303,11 +218,6 @@ export default function LoginPage() {
   };
 
   const handleLogout = async () => {
-    try {
-      window.localStorage.removeItem(LOCAL_SESSION_KEY);
-    } catch {
-      // Ignora
-    }
     await logoutUser();
     setUser(null);
     setIdToken(null);
@@ -428,7 +338,8 @@ export default function LoginPage() {
                   id="passwordInput"
                   type="password"
                   required
-                  minLength={6}
+                  minLength={mode === 'signup' ? SENHA_TAMANHO_MINIMO : undefined}
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
