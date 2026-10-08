@@ -1,8 +1,8 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { NotificationDot } from '../NotificationDot';
-import { NOCTHERA_THEME } from '../../theme/theme';
+import { NotificationDot } from '@/components/NotificationDot';
+import { NOCTHERA_THEME } from '@/theme/theme';
 
 describe('NotificationDot Component', () => {
   it('visible=false não renderiza nada', () => {

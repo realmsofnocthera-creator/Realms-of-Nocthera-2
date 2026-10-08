@@ -24,7 +24,8 @@ service cloud.firestore {
 
     // Coleção users/{uid}
     match /users/{uid} {
-      allow get: if isOwner(uid) && isValidId(uid);
+      // Documento com hash de senha do login antigo nunca é legível (0.5-A5)
+      allow get: if isOwner(uid) && isValidId(uid) && !('passwordHash' in resource.data);
       allow list: if false;
       allow create: if isOwner(uid) && isValidId(uid)
                     && incoming().keys().hasAll(['email', 'dataCriacao'])

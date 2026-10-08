@@ -5,52 +5,183 @@
       "description": "User account document",
       "type": "object",
       "properties": {
-        "email": { "type": "string", "format": "email" },
-        "dataCriacao": { "type": "string" }
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "dataCriacao": {
+          "type": "string"
+        }
       },
-      "required": ["email", "dataCriacao"]
+      "required": [
+        "email",
+        "dataCriacao"
+      ]
     },
     "character": {
       "title": "Character",
       "description": "Character document for Realms of Nocthera",
       "type": "object",
       "properties": {
-        "nome": { "type": "string", "minLength": 2, "maxLength": 32 },
-        "racaId": { "type": "string" },
-        "classeId": { "type": "string" },
-        "linhagem": { "type": "string" },
-        "nivel": { "type": "number" },
-        "xpAtual": { "type": "number" },
-        "pontosDisponiveis": { "type": "number" },
-        "ouro": { "type": "number" },
+        "nome": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 32
+        },
+        "racaId": {
+          "type": "string"
+        },
+        "classeId": {
+          "type": "string"
+        },
+        "linhagem": {
+          "type": "string"
+        },
+        "nivel": {
+          "type": "number"
+        },
+        "xpAtual": {
+          "type": "number"
+        },
+        "pontosDisponiveis": {
+          "type": "number"
+        },
+        "ouro": {
+          "type": "number"
+        },
         "atributos": {
           "type": "object",
           "properties": {
-            "vigor": { "type": "number" },
-            "mente": { "type": "number" },
-            "forca": { "type": "number" },
-            "vitalidade": { "type": "number" },
-            "arcano": { "type": "number" },
-            "inteligencia": { "type": "number" },
-            "agilidade": { "type": "number" }
+            "vigor": {
+              "type": "number"
+            },
+            "mente": {
+              "type": "number"
+            },
+            "forca": {
+              "type": "number"
+            },
+            "vitalidade": {
+              "type": "number"
+            },
+            "arcano": {
+              "type": "number"
+            },
+            "inteligencia": {
+              "type": "number"
+            },
+            "agilidade": {
+              "type": "number"
+            }
           },
-          "required": ["vigor", "mente", "forca", "vitalidade", "arcano", "inteligencia", "agilidade"]
+          "required": [
+            "vigor",
+            "mente",
+            "forca",
+            "vitalidade",
+            "arcano",
+            "inteligencia",
+            "agilidade"
+          ]
         }
       },
-      "required": ["nome", "racaId", "nivel", "xpAtual", "pontosDisponiveis", "atributos", "ouro"]
+      "required": [
+        "nome",
+        "racaId",
+        "nivel",
+        "xpAtual",
+        "pontosDisponiveis",
+        "atributos",
+        "ouro"
+      ]
     },
     "transaction": {
       "title": "Transaction",
       "description": "Registro de alteração de ouro (ganho ou perdido)",
       "type": "object",
       "properties": {
-        "uid": { "type": "string" },
-        "tipo": { "type": "string", "enum": ["ganho", "perda"] },
-        "quantidade": { "type": "number" },
-        "motivo": { "type": "string" },
-        "timestamp": { "type": "string" }
+        "uid": {
+          "type": "string"
+        },
+        "tipo": {
+          "type": "string",
+          "enum": [
+            "ganho",
+            "perda"
+          ]
+        },
+        "quantidade": {
+          "type": "number"
+        },
+        "motivo": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        }
       },
-      "required": ["uid", "tipo", "quantidade", "motivo", "timestamp"]
+      "required": [
+        "uid",
+        "tipo",
+        "quantidade",
+        "motivo",
+        "timestamp"
+      ]
+    },
+    "nome": {
+      "title": "Nome",
+      "description": "Índice de unicidade do nome do personagem (chave = nome normalizado)",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string"
+        },
+        "nome": {
+          "type": "string"
+        },
+        "criadoEm": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "uid",
+        "nome"
+      ]
+    },
+    "combate": {
+      "title": "Combate",
+      "description": "Registro de combate: semente do servidor, entrada para replay e resposta para reenvios idempotentes",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string"
+        },
+        "monstroId": {
+          "type": "string"
+        },
+        "seed": {
+          "type": "number"
+        },
+        "vencedor": {
+          "type": "string"
+        },
+        "xpGanho": {
+          "type": "number"
+        },
+        "ouroGanho": {
+          "type": "number"
+        },
+        "criadoEm": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "uid",
+        "monstroId",
+        "seed",
+        "vencedor",
+        "criadoEm"
+      ]
     }
   },
   "firestore": {
@@ -65,6 +196,14 @@
     "/transactions/{transactionId}": {
       "schema": "transaction",
       "description": "Histórico de transações de ouro"
+    },
+    "/nomes/{chave}": {
+      "schema": "nome",
+      "description": "Índice de nomes únicos (só servidor)"
+    },
+    "/combates/{combateId}": {
+      "schema": "combate",
+      "description": "Log de combates (só servidor)"
     }
   }
 }

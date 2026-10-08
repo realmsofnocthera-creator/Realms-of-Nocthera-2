@@ -1,0 +1,45 @@
+# 0.5-D4 — Regra fixa do roadmap (build e testes limpos) verificada em cada push e PR.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Auditoria de segurança (dependências de produção, alta ou crítica)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Checagem de tipos
+        run: npx tsc --noEmit -p .
+
+      - name: Testes
+        run: npm test
+
+      - name: Build de produção
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'

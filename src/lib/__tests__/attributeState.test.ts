@@ -6,7 +6,7 @@ import {
   limparPendente,
   ZEROS_PENDENTE,
   PendingAttributes,
-} from '../attributeState';
+} from '@/lib/attributeState';
 
 describe('attributeState - Funções puras de estado de distribuição', () => {
   it('calcularTotalPendente soma corretamente os pontos distribuídos', () => {

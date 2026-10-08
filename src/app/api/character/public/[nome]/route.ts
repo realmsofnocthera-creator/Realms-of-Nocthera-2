@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuthToken } from '../../../../../server/auth';
-import { getPublicCharacterByName } from '../../../../../server/characterService';
+import { verifyAuthToken } from '@/server/auth';
+import { getPublicCharacterByName } from '@/server/characterService';
+import { respostaErroPersistencia } from '@/server/respostaErro';
+import { limitarPorConta, limitarPorIp } from '@/server/rateLimit';
 
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ nome: string }> }
 ) {
   try {
+    const limiteIp = limitarPorIp(req, 'leitura');
+    if (limiteIp) return limiteIp;
+
     const authHeader = req.headers.get('authorization');
     const user = await verifyAuthToken(authHeader);
 
@@ -16,6 +21,9 @@ export async function GET(
         { status: 401 }
       );
     }
+
+    const limiteConta = limitarPorConta(user.uid, 'leitura');
+    if (limiteConta) return limiteConta;
 
     const { nome } = await context.params;
     const decodedNome = decodeURIComponent(nome || '').trim();
@@ -37,6 +45,9 @@ export async function GET(
 
     return NextResponse.json({ profile }, { status: 200 });
   } catch (error) {
+    const erroBanco = respostaErroPersistencia(error);
+    if (erroBanco) return erroBanco;
+
     const message = error instanceof Error ? error.message : 'Erro interno do servidor.';
     return NextResponse.json({ error: message }, { status: 500 });
   }

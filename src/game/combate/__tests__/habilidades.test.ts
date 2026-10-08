@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { GAME_CONFIG } from '../../../rules/config';
+import { GAME_CONFIG } from '@/rules/config';
 import {
   DefinicaoHabilidade,
   DefinicaoPassiva,
@@ -11,7 +11,7 @@ import {
   obterPassiva,
   limparRegistroParaTestes,
   resolverDanoHabilidade,
-} from '../habilidades';
+} from '@/game/combate/habilidades';
 
 describe('ORDEM 47 — Interface, Registro e Resolução de Habilidades', () => {
   beforeEach(() => {

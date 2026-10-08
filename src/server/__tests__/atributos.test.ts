@@ -7,12 +7,16 @@ import {
   alterarDiamantes,
   updateCharacter,
   applyCombatResult,
+} from '@/server/characterService';
+import {
+  ErroPersistencia,
   getTransactionsByUid,
   resetCharacterStore,
   setTestPersistenceFailHook,
-} from '../characterService';
-import { ResultadoCombate } from '../../game/combat';
-import { GAME_CONFIG } from '../../rules/config';
+} from '@/test/repositorioMemoria';
+import { tokenDeTeste } from '@/test/firebaseAdminMock';
+import { ResultadoCombate } from '@/game/combat';
+import { GAME_CONFIG } from '@/rules/config';
 
 describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)', () => {
   beforeEach(() => {
@@ -299,7 +303,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
     expect(finalChar?.pontosDisponiveis).toBe(0);
   });
 
-  it('estorno: se a gravação falhar após a cobrança, o saldo de diamantes volta ao original', async () => {
+  it('0.5-C2: se o commit do reset falhar, nada é cobrado nem gravado (transação atômica)', async () => {
     await createCharacter('user_attr_9', {
       nome: 'Zephyr',
       racaId: 'elfo',
@@ -319,12 +323,12 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
     await updateCharacter('user_attr_9', { pontosDisponiveis: 3 });
     await distribuirPontos('user_attr_9', { mente: 3 });
 
-    // Simula falha ao gravar o updateCharacter após o débito (alterarDiamantes consome 1 chamada de updateCharacter no débito e a 2ª é o update dos atributos)
-    let updateCallCount = 0;
-    setTestPersistenceFailHook(() => {
-      updateCallCount++;
-      // A chamada 1 é o débito de diamantes; a chamada 2 é o updateCharacter com os novos atributos resetados
-      if (updateCallCount === 2) {
+    const antes = (await getCharacterByUid('user_attr_9'))!;
+    const txAntes = getTransactionsByUid('user_attr_9').length;
+
+    // Falha simulada no commit da transação do reset
+    setTestPersistenceFailHook((operacao) => {
+      if (operacao === 'resetarAtributos') {
         throw new Error('Falha simulada de I/O na persistência');
       }
     });
@@ -335,8 +339,11 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
 
     setTestPersistenceFailHook(null);
 
-    const charFinal = await getCharacterByUid('user_attr_9');
-    expect(charFinal?.diamantes).toBe(150); // Saldo estornado para 150
+    const charFinal = (await getCharacterByUid('user_attr_9'))!;
+    expect(charFinal.diamantes).toBe(150);
+    expect(charFinal.atributos).toEqual(antes.atributos);
+    expect(charFinal.pontosAlocadosPorNivel).toEqual(antes.pontosAlocadosPorNivel);
+    expect(getTransactionsByUid('user_attr_9').length).toBe(txAntes);
   });
 
   it('Promise.all([combate com level up, distribuirPontos]) no mesmo uid: total final de pontos consistente', async () => {
@@ -469,40 +476,46 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
     expect(updated.pontosDisponiveis).toBe(0);
   });
 
-  it('com NODE_ENV diferente de "test", o hook de falha não dispara', async () => {
-    await createCharacter('user_env_test_1', {
-      nome: 'Thorin',
-      racaId: 'anao',
-      classeId: 'cavaleiro',
-      pontos: {
-        vigor: 5,
-        mente: 0,
-        forca: 2,
-        vitalidade: 3,
-        arcano: 0,
-        inteligencia: 0,
-        agilidade: 0,
-      },
+  it('0.5-C1: falha de gravação no cadastro vira erro 503 para o cliente, nunca sucesso silencioso', async () => {
+    const { POST } = await import('@/app/api/character/create/route');
+    const { NextRequest } = await import('next/server');
+
+    setTestPersistenceFailHook((operacao) => {
+      if (operacao === 'criarPersonagem') {
+        throw new ErroPersistencia(operacao);
+      }
     });
 
-    const originalEnv = process.env.NODE_ENV;
     try {
-      // Altera temporariamente NODE_ENV para 'production'
-      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
-
-      let hookChamado = false;
-      setTestPersistenceFailHook(() => {
-        hookChamado = true;
-        throw new Error('Falha simulada');
+      const req = new NextRequest('http://localhost:3000/api/character/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokenDeTeste('user_env_test_1')}`,
+        },
+        body: JSON.stringify({
+          nome: 'Thorin',
+          racaId: 'anao',
+          classeId: 'cavaleiro',
+          pontos: { vigor: 5, mente: 0, forca: 2, vitalidade: 3, arcano: 0, inteligencia: 0, agilidade: 0 },
+        }),
       });
 
-      // A gravação em ambiente não-test deve ignorar o hook
-      const updated = await updateCharacter('user_env_test_1', { ouro: 100 });
-      expect(updated.ouro).toBe(100);
-      expect(hookChamado).toBe(false);
+      const res = await POST(req);
+      expect(res.status).toBe(503);
+      expect(await getCharacterByUid('user_env_test_1')).toBeNull();
     } finally {
-      (process.env as Record<string, string | undefined>).NODE_ENV = originalEnv;
       setTestPersistenceFailHook(null);
     }
+
+    // O nome não fica reservado por um cadastro que falhou
+    await expect(
+      createCharacter('outro_uid_thorin', {
+        nome: 'Thorin',
+        racaId: 'anao',
+        classeId: 'cavaleiro',
+        pontos: { vigor: 5, mente: 0, forca: 2, vitalidade: 3, arcano: 0, inteligencia: 0, agilidade: 0 },
+      })
+    ).resolves.toMatchObject({ nome: 'Thorin' });
   });
 });

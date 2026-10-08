@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { resolverCombate, Combatente } from '../combat';
-import { MONSTERS } from '../../rules/monsters';
-import { RACES, getRaceById } from '../../rules/races';
-import { CLASSES, getClassById } from '../../rules/classes';
-import { GAME_CONFIG } from '../../rules/config';
-import { calcularHpMax, calcularSobreescudoMax } from '../index';
-import { AttributeName, Attributes } from '../../rules/attributes';
+import { resolverCombate, Combatente } from '@/game/combat';
+import { MONSTERS } from '@/rules/monsters';
+import { RACES, getRaceById } from '@/rules/races';
+import { CLASSES, getClassById } from '@/rules/classes';
+import { GAME_CONFIG } from '@/rules/config';
+import { calcularHpMax, calcularSobreescudoMax } from '@/game/index';
+import { AttributeName, Attributes } from '@/rules/attributes';
 
 /**
  * ORDEM 45 — Teste de Fotografia (Snapshot) do Motor de Combate

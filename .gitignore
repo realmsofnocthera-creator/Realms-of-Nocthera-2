@@ -7,3 +7,6 @@ coverage/
 .env*
 !.env.example
 
+# Gerados
+tsconfig.tsbuildinfo
+*.tsbuildinfo

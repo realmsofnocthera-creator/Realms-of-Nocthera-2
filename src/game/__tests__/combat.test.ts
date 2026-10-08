@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   iniciativa,
   calcularDanoFisico,
@@ -45,16 +45,18 @@ import {
   turnoDeCombate,
   resolverCombate,
   Combatente,
-} from '../combat';
-import { MONSTERS_MAP } from '../../rules/monsters';
-import { GAME_CONFIG } from '../../rules/config';
-import { calcularHpMax, calcularManaMax, calcularSobreescudoMax } from '../index';
+} from '@/game/combat';
+import { MONSTERS_MAP } from '@/rules/monsters';
+import { GAME_CONFIG } from '@/rules/config';
+import { calcularHpMax, calcularManaMax, calcularSobreescudoMax } from '@/game/index';
 import {
   createCharacter,
   applyCombatResult,
-  getTransactionsByUid,
-  resetCharacterStore,
-} from '../../server/characterService';
+} from '@/server/characterService';
+import { getTransactionsByUid, resetCharacterStore } from '@/test/repositorioMemoria';
+
+// A semente do combate vem do servidor (0.5-B1); aqui ela é fixa para o teste da rota ser determinístico
+vi.mock('../../server/combateSemente', () => ({ gerarSementeCombate: () => 42 }));
 
 describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
   beforeEach(() => {
@@ -361,7 +363,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
 
   describe('6. ORDEM 4 - Passiva Racial Adaptabilidade (+5% XP em Combate)', () => {
     it('POST /api/combat/start aplica +5% sobre o XP base do monstro (arredondado para baixo) antes de somar ao personagem Humano', async () => {
-      const { POST } = await import('../../app/api/combat/start/route');
+      const { POST } = await import('@/app/api/combat/start/route');
       const { NextRequest } = await import('next/server');
 
       const uid = 'combat_humano_xp_user';
@@ -387,7 +389,6 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         },
         body: JSON.stringify({
           monsterId: 'rato-da-peste', // XP base = 25 -> com +5% = floor(26.25) = 26
-          seed: 42,
         }),
       });
 

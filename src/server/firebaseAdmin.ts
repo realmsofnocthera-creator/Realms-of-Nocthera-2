@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp, App } from 'firebase-admin/app';
+import { getAuth, Auth } from 'firebase-admin/auth';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -17,3 +18,5 @@ export const adminDb: Firestore = getFirestore(
   adminApp,
   firebaseConfig.firestoreDatabaseId
 );
+
+export const adminAuth: Auth = getAuth(adminApp);

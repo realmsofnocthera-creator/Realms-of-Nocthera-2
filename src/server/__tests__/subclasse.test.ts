@@ -6,12 +6,11 @@ import {
   distribuirPontos,
   resetarAtributos,
   escolherSubclasse,
-  getTransactionsByUid,
-  resetCharacterStore,
-  setTestPersistenceFailHook,
-} from '../characterService';
-import { GAME_CONFIG } from '../../rules/config';
-import { obterSubclasse } from '../../game/subclasses';
+} from '@/server/characterService';
+import { getTransactionsByUid, resetCharacterStore, setTestPersistenceFailHook } from '@/test/repositorioMemoria';
+import { GAME_CONFIG } from '@/rules/config';
+import { obterSubclasse } from '@/game/subclasses';
+import { tokenDeTeste } from '@/test/firebaseAdminMock';
 
 describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
   beforeEach(() => {
@@ -233,17 +232,13 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
     expect(snapDepois.atributos).toEqual(snapAntes.atributos);
   });
 
-  it('(g) estorno: falha de gravação após a cobrança devolve ouro e fragmentos (primeiro desbloqueio) e diamantes (troca)', async () => {
-    // 1. Estorno no primeiro desbloqueio
+  it('(g) 0.5-C2: se o commit falhar, ouro, fragmentos e diamantes ficam intactos (desbloqueio e troca)', async () => {
+    // 1. Primeiro desbloqueio
     await setupPersonagem('user_sub_g1', 'barbaro');
+    const txAntesG1 = getTransactionsByUid('user_sub_g1').length;
 
-    let updateCount1 = 0;
-    setTestPersistenceFailHook(() => {
-      updateCount1++;
-      // Chamada 1: débito de ouro
-      // Chamada 2: débito de fragmentos
-      // Chamada 3: updateCharacter com a subclasse
-      if (updateCount1 === 3) {
+    setTestPersistenceFailHook((operacao) => {
+      if (operacao === 'escolherSubclasse') {
         throw new Error('Falha simulada na gravação da subclasse');
       }
     });
@@ -257,18 +252,16 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
     expect(charG1.ouro).toBe(15000);
     expect(charG1.fragmentosAlma).toBe(10);
     expect(charG1.subclasseAtualId).toBeNull();
+    expect(getTransactionsByUid('user_sub_g1').length).toBe(txAntesG1);
 
-    // 2. Estorno na troca de subclasse
+    // 2. Troca de subclasse
     await setupPersonagem('user_sub_g2', 'barbaro');
     await escolherSubclasse('user_sub_g2', 'berserker');
     const diamantesAntesG2 = (await getCharacterByUid('user_sub_g2'))!.diamantes!;
+    const txAntesG2 = getTransactionsByUid('user_sub_g2').length;
 
-    let updateCount2 = 0;
-    setTestPersistenceFailHook(() => {
-      updateCount2++;
-      // Chamada 1: débito de diamantes
-      // Chamada 2: updateCharacter com a nova subclasse
-      if (updateCount2 === 2) {
+    setTestPersistenceFailHook((operacao) => {
+      if (operacao === 'escolherSubclasse') {
         throw new Error('Falha simulada na troca de subclasse');
       }
     });
@@ -281,6 +274,7 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
     const charG2 = (await getCharacterByUid('user_sub_g2'))!;
     expect(charG2.diamantes).toBe(diamantesAntesG2);
     expect(charG2.subclasseAtualId).toBe('berserker');
+    expect(getTransactionsByUid('user_sub_g2').length).toBe(txAntesG2);
   });
 
   it('(h) duas chamadas simultâneas (Promise.all) com a mesma subclasse no primeiro desbloqueio: uma tem sucesso e a outra falha com "Subclasse já ativa", cobrando UMA vez só', async () => {
@@ -358,7 +352,7 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
 
   describe('Rota POST /api/character/subclasse/escolher', () => {
     it('deve retornar 401 quando não autenticado', async () => {
-      const { POST } = await import('../../app/api/character/subclasse/escolher/route');
+      const { POST } = await import('@/app/api/character/subclasse/escolher/route');
       const req = new Request('http://localhost:3000/api/character/subclasse/escolher', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -372,11 +366,10 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
     });
 
     it('deve retornar 400 com mensagem exata para erro de regra', async () => {
-      const { POST } = await import('../../app/api/character/subclasse/escolher/route');
-      const { createSignedSessionToken } = await import('../auth');
+      const { POST } = await import('@/app/api/character/subclasse/escolher/route');
 
       await setupPersonagem('user_route_err', 'barbaro', { nivel: 19 });
-      const token = createSignedSessionToken({ uid: 'user_route_err', email: 'test@route.com' });
+      const token = tokenDeTeste('user_route_err');
 
       const req = new Request('http://localhost:3000/api/character/subclasse/escolher', {
         method: 'POST',
@@ -394,11 +387,10 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
     });
 
     it('deve retornar 200 com { character } no sucesso', async () => {
-      const { POST } = await import('../../app/api/character/subclasse/escolher/route');
-      const { createSignedSessionToken } = await import('../auth');
+      const { POST } = await import('@/app/api/character/subclasse/escolher/route');
 
       await setupPersonagem('user_route_ok', 'barbaro');
-      const token = createSignedSessionToken({ uid: 'user_route_ok', email: 'ok@route.com' });
+      const token = tokenDeTeste('user_route_ok');
 
       const req = new Request('http://localhost:3000/api/character/subclasse/escolher', {
         method: 'POST',

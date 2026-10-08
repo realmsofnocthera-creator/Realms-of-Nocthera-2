@@ -68,10 +68,33 @@ export async function loginWithGoogle(): Promise<UserCredential> {
   return credential;
 }
 
+// Chave da antiga sessão do login próprio (removido na 0.5-A2); só é limpa no logout
+const LEGACY_SESSION_KEY = 'nocthera_auth_session';
+
 /**
- * Logout do Firebase Auth
+ * Logout: revoga as sessões no servidor (o token atual deixa de valer para a API)
+ * e depois encerra a sessão do Firebase Auth no navegador.
  */
 export async function logoutUser(): Promise<void> {
+  const currentUser = auth.currentUser;
+  if (currentUser) {
+    try {
+      const token = await currentUser.getIdToken();
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      // O signOut abaixo acontece mesmo se a revogação falhar
+    }
+  }
+
+  try {
+    window.localStorage.removeItem(LEGACY_SESSION_KEY);
+  } catch {
+    // Ignora
+  }
+
   return await signOut(auth);
 }
 

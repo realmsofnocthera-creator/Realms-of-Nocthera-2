@@ -1,10 +1,10 @@
 export const DESENVOLVIMENTO_ASSETS = {
-  iconeDistribuicao: '/images/desenvolvimento/icone-distribuicao.png',
-  iconeSubclasse: '/images/desenvolvimento/icone-subclasse.png',
-  botaoVoltar: '/images/desenvolvimento/botao-voltar.png',
-  botaoMelhorarHabilidade: '/images/desenvolvimento/botao-melhorar-habilidade.png',
-  botaoAvancarHabilidade: '/images/desenvolvimento/botao-avancar-habilidade.png',
-  iconePoder: '/images/desenvolvimento/icone-poder.png',
-  iconeMaestrias: '/images/desenvolvimento/icone-maestrias.png',
-  background: '/images/desenvolvimento/background.png',
+  iconeDistribuicao: '/images/desenvolvimento/icone-distribuicao.webp',
+  iconeSubclasse: '/images/desenvolvimento/icone-subclasse.webp',
+  botaoVoltar: '/images/desenvolvimento/botao-voltar.webp',
+  botaoMelhorarHabilidade: '/images/desenvolvimento/botao-melhorar-habilidade.webp',
+  botaoAvancarHabilidade: '/images/desenvolvimento/botao-avancar-habilidade.webp',
+  iconePoder: '/images/desenvolvimento/icone-poder.webp',
+  iconeMaestrias: '/images/desenvolvimento/icone-maestrias.webp',
+  background: '/images/desenvolvimento/background.webp',
 } as const;

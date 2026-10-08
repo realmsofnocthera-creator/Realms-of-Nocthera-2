@@ -696,18 +696,6 @@ export function CharacterCreateForm({
           // ignora
         }
       }
-      if (!activeToken && typeof window !== 'undefined') {
-        try {
-          const raw = window.localStorage.getItem('nocthera_auth_session');
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed.idToken) activeToken = parsed.idToken;
-          }
-        } catch {
-          // ignora
-        }
-      }
-
       if (!activeToken) {
         setError('Sessão expirada ou não encontrada. Por favor, faça login novamente.');
         return;

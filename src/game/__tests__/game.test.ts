@@ -6,8 +6,8 @@ import {
   calcularPoderTotal,
   xpParaProximoNivel,
   aplicarDano,
-} from '../index';
-import { GAME_CONFIG } from '../../rules/config';
+} from '@/game/index';
+import { GAME_CONFIG } from '@/rules/config';
 
 describe('Realms of Nocthera - Regras do Jogo e Lógica Pura', () => {
   describe('Atributos e Status Iniciais', () => {

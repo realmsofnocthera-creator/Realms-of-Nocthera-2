@@ -1,14 +1,14 @@
-import { Attributes } from '../rules/attributes';
-import { getClassById } from '../rules/classes';
-import { GAME_CONFIG } from '../rules/config';
-import { Elemento, ModificadoresElementais } from '../rules/elements';
-import { MonsterDefinition } from '../rules/monsters';
-import { getRaceById } from '../rules/races';
+import { Attributes } from '@/rules/attributes';
+import { getClassById } from '@/rules/classes';
+import { GAME_CONFIG } from '@/rules/config';
+import { Elemento, ModificadoresElementais } from '@/rules/elements';
+import { MonsterDefinition } from '@/rules/monsters';
+import { getRaceById } from '@/rules/races';
 import {
   EFEITOS_STATUS,
   EfeitoStatus,
   QUANTIDADE_REMOCAO_BENCAO_DIVINA,
-} from '../rules/statusEffects';
+} from '@/rules/statusEffects';
 import {
   aplicarMultiplicadorElemental,
   calcularMultiplicadorElemental,
@@ -46,7 +46,7 @@ import {
   calcularMitigacaoMagicaEfetiva,
   reduzirDanoPercentual,
 } from './combate/efeitos';
-import { HabilidadesEquipadas } from '../rules/habilidadesEquipadas';
+import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import {
   ContextoHabilidade,
   ResultadoHabilidade,

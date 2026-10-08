@@ -1,4 +1,4 @@
-import { PASSIVA_POR_SUBCLASSE, TIER_PASSIVA_SUBCLASSE } from '../../../rules/subclasseKits';
+import { PASSIVA_POR_SUBCLASSE, TIER_PASSIVA_SUBCLASSE } from '@/rules/subclasseKits';
 import { obterPassiva } from './registro';
 import { ModificadoresPassiva } from './tipos';
 

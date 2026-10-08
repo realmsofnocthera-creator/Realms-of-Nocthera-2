@@ -1,5 +1,5 @@
-import { BERSERKER_KIT, PASSIVAS_SUBCLASSE } from '../../../../rules/subclasseKits';
-import { DefinicaoHabilidade, DefinicaoPassiva } from '../tipos';
+import { BERSERKER_KIT, PASSIVAS_SUBCLASSE } from '@/rules/subclasseKits';
+import { DefinicaoHabilidade, DefinicaoPassiva } from '@/game/combate/habilidades/tipos';
 
 export const HABILIDADES_BERSERKER: DefinicaoHabilidade[] = [
   {

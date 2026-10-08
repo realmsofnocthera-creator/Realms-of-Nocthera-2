@@ -9,8 +9,8 @@ import {
   MULTIPLICADOR_ELEMENTAL_MINIMO,
   MULTIPLICADOR_ELEMENTAL_NEUTRO,
   ModificadoresElementais,
-} from '../rules/elements';
-import { DraconianLineage, getRaceById } from '../rules/races';
+} from '@/rules/elements';
+import { DraconianLineage, getRaceById } from '@/rules/races';
 
 export type ReacaoElemental = 'fraqueza' | 'resistência' | 'imune';
 

@@ -1,4 +1,4 @@
-import backgroundHubImg from './images/hud/background-hub.png';
+import backgroundHubImg from './images/hud/background-hub.webp';
 import avatarPersonagemImg from './images/hud/avatar-personagem.png';
 import molduraPerfilImg from './images/hud/moldura-perfil.png';
 
@@ -16,37 +16,27 @@ import menuMenuIcon from './icons/hud/menu-menu.png';
 import menuEventosIcon from './icons/hud/menu-eventos.png';
 import menuHistoriaIcon from './icons/hud/menu-historia.png';
 import menuPasseBatalhaIcon from './icons/hud/menu-passe-batalha.png';
-
-type ImportedAsset = string | { src: string };
-
-function resolveAssetSrc(imported: ImportedAsset, publicFallback: string): string {
-  if (!imported) return publicFallback;
-  if (typeof imported === 'string') return imported;
-  if (typeof imported === 'object' && typeof imported.src === 'string') {
-    return imported.src;
-  }
-  return publicFallback;
-}
+import { srcDaImagem } from '@/assets/srcDaImagem';
 
 export const HUD_IMAGES = {
-  backgroundHub: resolveAssetSrc(backgroundHubImg, '/images/hud/background-hub.png'),
-  avatarPersonagem: resolveAssetSrc(avatarPersonagemImg, '/images/hud/avatar-personagem.png'),
-  molduraPerfil: resolveAssetSrc(molduraPerfilImg, '/images/hud/moldura-perfil.png'),
+  backgroundHub: srcDaImagem(backgroundHubImg),
+  avatarPersonagem: srcDaImagem(avatarPersonagemImg),
+  molduraPerfil: srcDaImagem(molduraPerfilImg),
 } as const;
 
 export const HUD_ICONS = {
-  ouro: resolveAssetSrc(ouroIcon, '/icons/hud/ouro.png'),
-  diamante: resolveAssetSrc(diamanteIcon, '/icons/hud/diamante.png'),
-  notificacao: resolveAssetSrc(notificacaoIcon, '/icons/hud/notificacao.png'),
-  configuracoes: resolveAssetSrc(configuracoesIcon, '/icons/hud/configuracoes.png'),
-  mail: resolveAssetSrc(mailIcon, '/icons/hud/mail.png'),
-  menuArena: resolveAssetSrc(menuArenaIcon, '/icons/hud/menu-arena.png'),
-  menuProvacoes: resolveAssetSrc(menuProvacoesIcon, '/icons/hud/menu-provacoes.png'),
-  menuGuilda: resolveAssetSrc(menuGuildaIcon, '/icons/hud/menu-guilda.png'),
-  menuLoja: resolveAssetSrc(menuLojaIcon, '/icons/hud/menu-loja.png'),
-  menuPersonagem: resolveAssetSrc(menuPersonagemIcon, '/icons/hud/menu-personagem.png'),
-  menuMenu: resolveAssetSrc(menuMenuIcon, '/icons/hud/menu-menu.png'),
-  menuEventos: resolveAssetSrc(menuEventosIcon, '/icons/hud/menu-eventos.png'),
-  menuHistoria: resolveAssetSrc(menuHistoriaIcon, '/icons/hud/menu-historia.png'),
-  menuPasseBatalha: resolveAssetSrc(menuPasseBatalhaIcon, '/icons/hud/menu-passe-batalha.png'),
+  ouro: srcDaImagem(ouroIcon),
+  diamante: srcDaImagem(diamanteIcon),
+  notificacao: srcDaImagem(notificacaoIcon),
+  configuracoes: srcDaImagem(configuracoesIcon),
+  mail: srcDaImagem(mailIcon),
+  menuArena: srcDaImagem(menuArenaIcon),
+  menuProvacoes: srcDaImagem(menuProvacoesIcon),
+  menuGuilda: srcDaImagem(menuGuildaIcon),
+  menuLoja: srcDaImagem(menuLojaIcon),
+  menuPersonagem: srcDaImagem(menuPersonagemIcon),
+  menuMenu: srcDaImagem(menuMenuIcon),
+  menuEventos: srcDaImagem(menuEventosIcon),
+  menuHistoria: srcDaImagem(menuHistoriaIcon),
+  menuPasseBatalha: srcDaImagem(menuPasseBatalhaIcon),
 } as const;

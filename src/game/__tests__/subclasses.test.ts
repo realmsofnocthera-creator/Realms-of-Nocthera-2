@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { Attributes } from '../../rules/attributes';
-import { CLASSES } from '../../rules/classes';
-import { GAME_CONFIG } from '../../rules/config';
-import { SUBCLASSES } from '../../rules/subclasses';
+import { Attributes } from '@/rules/attributes';
+import { CLASSES } from '@/rules/classes';
+import { GAME_CONFIG } from '@/rules/config';
+import { SUBCLASSES } from '@/rules/subclasses';
 import {
   subclassesDaClasse,
   obterSubclasse,
   verificarRequisitosDesbloqueio,
   aplicarBonusSubclasse,
   removerBonusSubclasse,
-} from '../subclasses';
+} from '@/game/subclasses';
 
 describe('ORDEM 43 — Dados e Funções Puras de Subclasses', () => {
   it('(a) existem exatamente 12 subclasses, 2 por classe, ids únicos', () => {

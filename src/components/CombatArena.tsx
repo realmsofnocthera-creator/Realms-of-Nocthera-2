@@ -12,6 +12,13 @@ interface CombatArenaProps {
   onCombatComplete: (updatedChar: CharacterDocument) => void;
 }
 
+function novoCombateId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 export function CombatArena({ idToken, character, onCombatComplete }: CombatArenaProps) {
   const [combating, setCombating] = useState<string | null>(null);
   const [combatResult, setCombatResult] = useState<ResultadoCombate | null>(null);
@@ -26,8 +33,11 @@ export function CombatArena({ idToken, character, onCombatComplete }: CombatAren
     setMensagens([]);
     setLevelUps(0);
 
-    try {
-      const res = await fetch('/api/combat/start', {
+    // Um id por batalha: se a resposta se perder e o pedido for repetido,
+    // o servidor devolve o mesmo resultado sem dar XP/ouro de novo (0.5-B3)
+    const combateId = novoCombateId();
+    const enviar = () =>
+      fetch('/api/combat/start', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -35,8 +45,18 @@ export function CombatArena({ idToken, character, onCombatComplete }: CombatAren
         },
         body: JSON.stringify({
           monsterId: monster.id,
+          combateId,
         }),
       });
+
+    try {
+      let res: Response;
+      try {
+        res = await enviar();
+        if (res.status === 503) res = await enviar();
+      } catch {
+        res = await enviar();
+      }
 
       const data = await res.json();
       if (!res.ok) {

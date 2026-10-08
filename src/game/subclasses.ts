@@ -1,6 +1,6 @@
-import { ATTRIBUTES, Attributes } from '../rules/attributes';
-import { GAME_CONFIG } from '../rules/config';
-import { Subclasse, SUBCLASSES } from '../rules/subclasses';
+import { ATTRIBUTES, Attributes } from '@/rules/attributes';
+import { GAME_CONFIG } from '@/rules/config';
+import { Subclasse, SUBCLASSES } from '@/rules/subclasses';
 
 /**
  * Retorna as subclasses pertencentes à classe informada.
