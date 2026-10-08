@@ -4,9 +4,13 @@ import { combateIdValido, executarCombate } from '../../../../server/characterSe
 import { gerarSementeCombate } from '../../../../server/combateSemente';
 import { respostaErroPersistencia } from '../../../../server/respostaErro';
 import { MONSTERS_MAP } from '../../../../rules/monsters';
+import { limitarPorConta, limitarPorIp } from '@/server/rateLimit';
 
 export async function POST(req: NextRequest) {
   try {
+    const limiteIp = limitarPorIp(req, 'combate');
+    if (limiteIp) return limiteIp;
+
     const authHeader = req.headers.get('authorization');
     const user = await verifyAuthToken(authHeader);
 
@@ -16,6 +20,9 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+
+    const limiteConta = limitarPorConta(user.uid, 'combate');
+    if (limiteConta) return limiteConta;
 
     // Qualquer "seed" enviada pelo cliente é ignorada (0.5-B1)
     const body = await req.json().catch(() => ({}));
