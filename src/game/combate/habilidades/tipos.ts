@@ -39,6 +39,20 @@ export interface ResultadoHabilidade {
   efeitosNoUsuario?: AplicacaoEfeitoDefensivo[];
   /** Efeitos de Cura e restauração (catálogo 1.2) em quem usa a habilidade, aplicados depois do golpe. */
   efeitosCura?: AplicacaoCura[];
+
+  // ---- Dano ofensivo (catálogo 1.2, categoria da 1.2.4) ----
+  /** Golpes na mesma ação, cada um com o percentualDano da habilidade (Golpe Duplo = 2, Dano Replicado = 3). */
+  numeroGolpes?: number;
+  /** Dano Escalado: o dano parte de X% do HP que o usuário perdeu, no lugar do dano base. */
+  danoEscalado?: { percentualHpPerdido: number };
+  /** Dano Invertido: +percentualPorPasso de dano para cada pontosEscudoPorPasso de Sobreescudo do alvo, até o teto. */
+  danoInvertido?: { percentualPorPasso: number; pontosEscudoPorPasso: number; tetoPercentual: number };
+  /** Dano Elemental Forçado: ignora resistências e imunidades elementais do alvo (fraquezas continuam valendo). */
+  ignorarResistenciaElemental?: boolean;
+  /** Dano Acumulativo: cada uso soma percentualPorAtaque ao bônus das próximas vezes, até o limite. */
+  acumulativo?: { percentualPorAtaque: number; limitePercentual: number };
+  /** Ímpeto Imprudente: nos próximos N ataques, +% de dano e −% de defesa. */
+  impeto?: { ataques: number; bonusDanoPercentual: number; reducaoDefesaPercentual: number };
 }
 
 export interface DefinicaoHabilidade {

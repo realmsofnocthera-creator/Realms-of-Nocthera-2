@@ -146,6 +146,10 @@ export interface Combatente {
   curaContinua?: CuraContinuaAtiva;
   /** Ressurreição Parcial preparada ou já usada nesta luta. */
   ressurreicaoParcial?: RessurreicaoParcialEstado;
+  /** Dano Acumulativo: bônus de dano (%) acumulado pelos usos anteriores da habilidade. */
+  danoAcumulativoPercentual?: number;
+  /** Ímpeto Imprudente ativo: bônus de dano e defesa reduzida pelos próximos ataques de quem o usou. */
+  impeto?: { ataquesRestantes: number; bonusDanoPercentual: number; reducaoDefesaPercentual: number };
 }
 
 export interface AtaqueLog {
@@ -199,6 +203,10 @@ export interface AtaqueLog {
   imortalidadeBreve?: boolean;
   /** Dano devolvido ao atacante pelo Redirecionamento do defensor. */
   danoRedirecionado?: number;
+  /** Bônus de Dano Acumulativo (%) usado neste golpe. */
+  danoAcumulativoPercentual?: number;
+  /** Ímpeto Imprudente estava ativo neste golpe. */
+  impetoImprudenteAtivo?: boolean;
   /** Efeitos de Cura e restauração que a habilidade aplicou em quem a usou. */
   efeitosCuraAplicados?: TipoEfeitoCura[];
   /** HP recuperado pelas curas da habilidade. */
@@ -2229,6 +2237,13 @@ export function turnoDeCombate(
       bonusSobreescudoCorteDoVazioAtivo = golpeSamurai.bonusSobreescudoCorteDoVazioAtivo;
     }
 
+    // Ímpeto Imprudente de quem ataca: vale para este ataque e depois perde 1 (ver abaixo)
+    const impetoNesteAtaque =
+      atacante.impeto && atacante.impeto.ataquesRestantes > 0 ? atacante.impeto : undefined;
+    let novoImpeto: Combatente['impeto'];
+    let ignorarResistenciaElementalDoGolpe = false;
+    let danoAcumulativoUsado: number | undefined;
+
     // Interceptação de Habilidade equipada (subclasse ou customizada)
     let resultadoHabilidadeInterceptada: ResultadoHabilidade | undefined;
     let efeitosDefensivosAplicados: TipoEfeitoDefensivo[] | undefined;
@@ -2273,10 +2288,34 @@ export function turnoDeCombate(
           );
         }
 
+        // Dano ofensivo (catálogo 1.2): bônus acumulado e Ímpeto entram na mesma soma
+        const bonusAcumulativo = resHab.acumulativo ? atacante.danoAcumulativoPercentual ?? 0 : 0;
+        const ctxResolvido: ContextoHabilidade = {
+          ...ctxHab,
+          bonusDanoExtraPercentual:
+            (ctxHab.bonusDanoExtraPercentual ?? 0) +
+            bonusAcumulativo +
+            (impetoNesteAtaque?.bonusDanoPercentual ?? 0),
+        };
         const { danoBruto: novoDanoBruto, mitigacaoEfetiva } = resolverDanoHabilidade(
           resHab,
-          ctxHab
+          ctxResolvido
         );
+        if (resHab.acumulativo) {
+          danoAcumulativoUsado = bonusAcumulativo;
+          atacante.danoAcumulativoPercentual = Math.min(
+            resHab.acumulativo.limitePercentual,
+            bonusAcumulativo + resHab.acumulativo.percentualPorAtaque
+          );
+        }
+        if (resHab.impeto && resHab.impeto.ataques > 0) {
+          novoImpeto = {
+            ataquesRestantes: resHab.impeto.ataques,
+            bonusDanoPercentual: resHab.impeto.bonusDanoPercentual,
+            reducaoDefesaPercentual: resHab.impeto.reducaoDefesaPercentual,
+          };
+        }
+        ignorarResistenciaElementalDoGolpe = resHab.ignorarResistenciaElemental === true;
 
         danoBruto = novoDanoBruto;
         habilidadeAcionada = resHab.nome;
@@ -2286,6 +2325,13 @@ export function turnoDeCombate(
         golpes = undefined;
         numeroGolpes = undefined;
         danoPorGolpe = undefined;
+        // Golpe Duplo / Dano Replicado: vários golpes na mesma ação, cada um com o dano da habilidade
+        if (resHab.numeroGolpes && resHab.numeroGolpes > 1) {
+          numeroGolpes = resHab.numeroGolpes;
+          danoPorGolpe = novoDanoBruto;
+          golpes = Array.from({ length: resHab.numeroGolpes }, () => novoDanoBruto);
+          danoBruto = novoDanoBruto * resHab.numeroGolpes;
+        }
         curaHp = undefined;
         instintoSobrevivenciaAtivo = undefined;
         iraAbaixo30Ativo = undefined;
@@ -2328,6 +2374,15 @@ export function turnoDeCombate(
       }
     }
 
+    // Ímpeto Imprudente: este ataque gasta 1 dos N; uma nova aplicação (da habilidade usada agora) vale a partir do próximo
+    if (impetoNesteAtaque && atacante.impeto) {
+      const restantes = atacante.impeto.ataquesRestantes - 1;
+      atacante.impeto = restantes > 0 ? { ...atacante.impeto, ataquesRestantes: restantes } : undefined;
+    }
+    if (novoImpeto) {
+      atacante.impeto = novoImpeto;
+    }
+
     // Identifica se o golpe atual possui elemento (via habilidade de classe cadastrada ou elementoAtaque do combatente/monstro)
     let elementoGolpe: Elemento | undefined;
     if (acaoCausaDano) {
@@ -2362,10 +2417,17 @@ export function turnoDeCombate(
       const modsRaciaisDefensor = defensor.racaId
         ? obterModificadoresRaciais(defensor.racaId, defensor.linhagem)
         : {};
-      const modificadoresAlvo = combinarModificadores(
+      const modificadoresCombinados = combinarModificadores(
         modsRaciaisDefensor,
         defensor.modificadoresElementais ?? {}
       );
+      // Dano Elemental Forçado: ignora resistências e imunidades do alvo; fraquezas continuam valendo
+      const modificadoresAlvo: ModificadoresElementais = ignorarResistenciaElementalDoGolpe
+        ? {
+            ...modificadoresCombinados,
+            [elementoGolpe]: Math.max(0, modificadoresCombinados[elementoGolpe] ?? 0),
+          }
+        : modificadoresCombinados;
 
       multiplicadorElemental = calcularMultiplicadorElemental(elementoGolpe, modificadoresAlvo);
       reacaoElemental = obterTextoReacaoElemental(elementoGolpe, modificadoresAlvo);
@@ -2388,6 +2450,15 @@ export function turnoDeCombate(
       hpMax: defensor.hpMax,
       nivel: nivelDefensor,
     });
+    // Ímpeto Imprudente do defensor: a defesa dele cai enquanto durar (o Cavaleiro calcula a própria defesa à parte)
+    const impetoDefensor =
+      defensor.impeto && defensor.impeto.ataquesRestantes > 0 ? defensor.impeto : undefined;
+    if (impetoDefensor && acaoCausaDano && !ehCavaleiroDefensor) {
+      mitigacaoParaAtaque = Math.floor(
+        (mitigacaoParaAtaque * Math.max(0, 100 - impetoDefensor.reducaoDefesaPercentual)) / 100
+      );
+    }
+
     // Efeitos de Mitigação e defesa do defensor (Resistências, Contrapeso, Absorção Mágica, Imortalidade...)
     const efeitosDefensor = defensor.efeitosDefensivos ?? [];
     const defensorImortal = acaoCausaDano && estaImortal(efeitosDefensor);
@@ -2444,7 +2515,7 @@ export function turnoDeCombate(
     } else if (defensorImortal) {
       // Imortalidade Breve: o golpe não causa dano nenhum
       danoEfetivo = 0;
-    } else if (ehBandidoAtacante && golpes && golpes.length > 1) {
+    } else if (golpes && golpes.length > 1) {
       let totalEfetivoGolpes = 0;
       for (const [indiceGolpe, danoGolpeIndividual] of golpes.entries()) {
         const multCritico = multiplicadorCriticoDoGolpe(indiceGolpe);
@@ -2745,6 +2816,8 @@ export function turnoDeCombate(
       ...(efeitosDefensivosAplicados ? { efeitosDefensivosAplicados } : {}),
       ...(defensorImortal ? { imortalidadeBreve: true } : {}),
       ...(danoRedirecionado > 0 ? { danoRedirecionado } : {}),
+      ...(danoAcumulativoUsado !== undefined ? { danoAcumulativoPercentual: danoAcumulativoUsado } : {}),
+      ...(impetoNesteAtaque ? { impetoImprudenteAtivo: true } : {}),
       ...(efeitosCuraAplicados ? { efeitosCuraAplicados } : {}),
       ...(curaHabilidade !== undefined ? { curaHabilidade } : {}),
       ...(efeitosNegativosRemovidos !== undefined ? { efeitosNegativosRemovidos } : {}),

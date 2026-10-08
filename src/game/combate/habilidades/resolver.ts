@@ -12,7 +12,25 @@ export function resolverDanoHabilidade(
 ): { danoBruto: number; mitigacaoEfetiva: number } {
   // Regra 1.2.2: todos os bônus de dano somam num grupo só, com um único arredondamento
   const bonusContraSobreescudo = ctx.alvo.sobreescudo > 0 ? r.bonusContraSobreescudoPercentual : 0;
-  const base = calcularDanoComBonusSomados(ctx.danoBase, r.percentualDano, [
+
+  // Dano Invertido: quanto mais Sobreescudo o alvo tem, mais dano (entra na mesma soma)
+  const bonusInvertido = r.danoInvertido
+    ? Math.min(
+        r.danoInvertido.tetoPercentual,
+        Math.floor(ctx.alvo.sobreescudo / Math.max(1, r.danoInvertido.pontosEscudoPorPasso)) *
+          r.danoInvertido.percentualPorPasso
+      )
+    : 0;
+
+  // Dano Escalado: o dano parte de X% do HP perdido do usuário, no lugar do dano base
+  const danoBaseEfetivo = r.danoEscalado
+    ? Math.ceil(
+        (Math.max(0, ctx.atacante.hpMax - ctx.atacante.hp) * r.danoEscalado.percentualHpPerdido) / 100
+      )
+    : ctx.danoBase;
+
+  const base = calcularDanoComBonusSomados(danoBaseEfetivo, r.percentualDano, [
+    bonusInvertido,
     r.bonusDanoPercentual,
     ctx.bonusDanoExtraPercentual ?? 0,
     bonusContraSobreescudo,
