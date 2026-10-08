@@ -1,35 +1,5 @@
 import { adminAuth } from '@/server/firebaseAdmin';
-import { descreverErro, registrarLog } from '@/server/log';
-
-// Erros que significam token recusado (nunca cair no caminho sem checagem de revogação)
-const CODIGOS_TOKEN_INVALIDO = new Set([
-  'auth/id-token-revoked',
-  'auth/id-token-expired',
-  'auth/argument-error',
-  'auth/invalid-id-token',
-  'auth/user-disabled',
-  'auth/user-not-found',
-]);
-
-/**
- * Disjuntor da checagem de revogação.
- *
- * verifyIdToken(token, true) consulta o Firebase Auth com a credencial do servidor. Se essa
- * consulta falhar (ex.: a conta de serviço não tem permissão e o Admin SDK devolve
- * auth/internal-error), insistir a cada requisição só gera erro, aviso em todo log e uma
- * chamada de rede a mais. Depois da primeira falha a checagem fica desligada por
- * COOLDOWN_REVOGACAO_MS; passado o prazo ela é tentada de novo, e volta sozinha quando a
- * permissão for concedida. A assinatura, o projeto e a expiração do token continuam
- * sempre validados; só a revogação (logout no servidor) fica sem efeito nesse período.
- */
-export const COOLDOWN_REVOGACAO_MS = 10 * 60_000;
-const MAX_MENSAGEM_LOG = 500;
-let revogacaoIndisponivelAte = 0;
-
-/** Só para testes: religa a checagem de revogação. */
-export function reiniciarDisjuntorRevogacao(): void {
-  revogacaoIndisponivelAte = 0;
-}
+import { repositorio } from '@/server/persistencia';
 
 export interface AuthenticatedUser {
   uid: string;
@@ -37,11 +7,53 @@ export interface AuthenticatedUser {
 }
 
 /**
+ * Revogação de sessão por logout (0.5-A4), guardada no Firestore em revogacoes/{uid}.
+ *
+ * Por que não verifyIdToken(token, true): essa checagem consulta a API de login do Firebase
+ * (Identity Toolkit) a cada requisição. Em ambientes em que a conta de serviço pertence a
+ * outro projeto (caso do AI Studio) essa API pode estar desativada no projeto da conta e o
+ * Admin SDK devolve auth/internal-error. Guardar o instante do logout no Firestore funciona
+ * em qualquer ambiente, evita uma chamada de rede por requisição e dá a mesma garantia:
+ * um token é recusado se o login que o originou (auth_time) é anterior ao último logout.
+ * O auth_time não muda quando o token é renovado, então renovar um login revogado não ajuda;
+ * um login novo tem auth_time maior e volta a valer.
+ *
+ * Limites conhecidos: com várias instâncias, o logout feito em uma pode levar até
+ * TTL_CACHE_REVOGACAO_MS para valer nas outras (cache em memória); e, como na checagem
+ * antiga, conta desativada no console só deixa de valer quando o token (1 h) expira.
+ */
+export const TTL_CACHE_REVOGACAO_MS = 30_000;
+const MAX_ENTRADAS_CACHE = 10_000;
+const cacheRevogacao = new Map<string, { valor: number | null; expiraEm: number }>();
+
+/** Só para testes: esquece o cache de revogações. */
+export function limparCacheRevogacao(): void {
+  cacheRevogacao.clear();
+}
+
+function guardarNoCache(uid: string, valor: number | null): void {
+  if (cacheRevogacao.size >= MAX_ENTRADAS_CACHE) {
+    cacheRevogacao.clear();
+  }
+  cacheRevogacao.set(uid, { valor, expiraEm: Date.now() + TTL_CACHE_REVOGACAO_MS });
+}
+
+async function instanteDaRevogacao(uid: string): Promise<number | null> {
+  const emCache = cacheRevogacao.get(uid);
+  if (emCache && emCache.expiraEm > Date.now()) {
+    return emCache.valor;
+  }
+  const valor = await repositorio.lerRevogacaoSessoes(uid);
+  guardarNoCache(uid, valor);
+  return valor;
+}
+
+/**
  * Valida o ID Token do Firebase Auth recebido no cabeçalho Authorization: Bearer <token>.
  *
- * O firebase-admin confere a assinatura do Google, o projeto (aud/iss) e a expiração (exp).
- * Com checkRevoked, tokens emitidos antes de um logout (revokeRefreshTokens) também são
- * rejeitados. Não existe mais token de sessão próprio (removido na 0.5-A1/A2).
+ * O firebase-admin confere a assinatura do Google, o projeto (aud/iss) e a expiração (exp),
+ * sem nenhuma chamada à API de login. Depois o token é comparado com o último logout do
+ * usuário. Se o Firestore falhar, lança ErroPersistencia (as rotas respondem 503).
  */
 export async function verifyAuthToken(authHeader: string | null): Promise<AuthenticatedUser | null> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -53,50 +65,28 @@ export async function verifyAuthToken(authHeader: string | null): Promise<Authen
     return null;
   }
 
-  const agora = Date.now();
-  const checarRevogacao = agora >= revogacaoIndisponivelAte;
-
+  let decoded: { uid: string; email?: string; auth_time?: number };
   try {
-    const decoded = await adminAuth.verifyIdToken(idToken, checarRevogacao);
-    return { uid: decoded.uid, email: decoded.email || '' };
-  } catch (error) {
-    const codigo = (error as { code?: string })?.code ?? '';
-    if (!checarRevogacao || !codigo.startsWith('auth/') || CODIGOS_TOKEN_INVALIDO.has(codigo)) {
-      return null;
-    }
-
-    // A consulta de revogação falhou por outro motivo (permissão, rede, API). Confirma que o
-    // token em si é válido; só então liga o disjuntor. Assim, um token ruim ou uma falha ao
-    // buscar as chaves do Google nunca desligam a checagem.
-    let user: AuthenticatedUser;
-    try {
-      const decoded = await adminAuth.verifyIdToken(idToken, false);
-      user = { uid: decoded.uid, email: decoded.email || '' };
-    } catch {
-      return null;
-    }
-
-    // Pedidos simultâneos que falharam juntos: só o primeiro liga o disjuntor e registra o aviso
-    if (Date.now() >= revogacaoIndisponivelAte) {
-      revogacaoIndisponivelAte = Date.now() + COOLDOWN_REVOGACAO_MS;
-      registrarLog('WARNING', 'auth.checagem_revogacao_indisponivel', {
-        codigo,
-        // No auth/internal-error o Admin SDK traz a resposta bruta do servidor na mensagem
-        // (ex.: API desativada, permissão negada); é ela que diz a causa real.
-        mensagem: descreverErro(error).mensagem.slice(0, MAX_MENSAGEM_LOG),
-        novaTentativaEm: new Date(revogacaoIndisponivelAte).toISOString(),
-        efeito: 'tokens validados sem checar revogação; o logout no servidor não invalida tokens já emitidos',
-        acao: 'ler "mensagem"; causas comuns: conta de serviço sem o papel Firebase Authentication Admin, ou API Identity Toolkit desativada no projeto da conta de serviço',
-      });
-    }
-    return user;
+    decoded = await adminAuth.verifyIdToken(idToken);
+  } catch {
+    return null;
   }
+
+  const revogadoEm = await instanteDaRevogacao(decoded.uid);
+  const loginEm = typeof decoded.auth_time === 'number' ? decoded.auth_time : 0;
+  if (revogadoEm !== null && loginEm <= revogadoEm) {
+    return null;
+  }
+
+  return { uid: decoded.uid, email: decoded.email || '' };
 }
 
 /**
- * Invalida todas as sessões do usuário no servidor (logout).
- * Tokens já emitidos passam a ser rejeitados por verifyAuthToken.
+ * Invalida todas as sessões do usuário no servidor (logout): tokens de logins anteriores a
+ * este instante passam a ser recusados por verifyAuthToken.
  */
 export async function revokeUserSessions(uid: string): Promise<void> {
-  await adminAuth.revokeRefreshTokens(uid);
+  const revogadoEm = Math.floor(Date.now() / 1000);
+  await repositorio.gravarRevogacaoSessoes(uid, revogadoEm);
+  guardarNoCache(uid, revogadoEm);
 }

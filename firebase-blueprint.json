@@ -182,6 +182,22 @@
         "vencedor",
         "criadoEm"
       ]
+    },
+    "revogacao": {
+      "title": "Revogação de sessões",
+      "description": "Instante (epoch em segundos) do último logout no servidor; tokens com auth_time menor ou igual são recusados",
+      "type": "object",
+      "properties": {
+        "revogadoEm": {
+          "type": "number"
+        },
+        "atualizadoEm": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "revogadoEm"
+      ]
     }
   },
   "firestore": {
@@ -204,6 +220,10 @@
     "/combates/{combateId}": {
       "schema": "combate",
       "description": "Log de combates (só servidor)"
+    },
+    "/revogacoes/{uid}": {
+      "schema": "revogacao",
+      "description": "Revogação de sessões por logout (só servidor)"
     }
   }
 }

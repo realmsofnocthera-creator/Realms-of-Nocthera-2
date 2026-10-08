@@ -300,5 +300,33 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
         return typeof uid === 'string' ? uid : null;
       });
     },
+
+    async lerRevogacaoSessoes(uid: string) {
+      return lerComRetry(`lerRevogacao:${uid}`, async () => {
+        const snap = await db.collection('revogacoes').doc(uid).get();
+        const valor = snap.exists ? snap.data()?.revogadoEm : null;
+        return typeof valor === 'number' ? valor : null;
+      });
+    },
+
+    async gravarRevogacaoSessoes(uid: string, revogadoEmSegundos: number) {
+      try {
+        await comTimeout(
+          db.collection('revogacoes').doc(uid).set({
+            revogadoEm: revogadoEmSegundos,
+            atualizadoEm: new Date().toISOString(),
+          }),
+          TIMEOUT_LEITURA_MS
+        );
+      } catch (error) {
+        const { codigo, mensagem } = descreverErro(error);
+        registrarLog('ERROR', 'firestore.gravacao_falhou', {
+          operacao: 'gravarRevogacao',
+          codigo,
+          mensagem,
+        });
+        throw new ErroPersistencia(`gravarRevogacao:${uid}`, error);
+      }
+    },
   };
 }

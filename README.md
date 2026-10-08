@@ -26,7 +26,7 @@ O servidor é a fonte da verdade para o estado e as mecânicas; o navegador apen
 │   ├── lib/                   # Cliente Firebase (Auth/Firestore), política de senha, utilitários
 │   ├── rules/                 # Dados e configurações das regras (raças, classes, monstros, XP...)
 │   ├── server/                # Código exclusivo do servidor
-│   │   ├── auth.ts            # Valida o ID Token do Firebase (assinatura, expiração, revogação)
+│   │   ├── auth.ts            # Valida o ID Token do Firebase (assinatura, expiração) e a revogação por logout (Firestore)
 │   │   ├── characterService.ts# Regras de personagem; cada operação é uma transação
 │   │   ├── persistencia/      # Repositório Firestore (transações, timeout, retry de leitura)
 │   │   ├── rateLimit.ts       # Limite por IP e por conta com bloqueio progressivo (429)
@@ -48,6 +48,7 @@ O servidor é a fonte da verdade para o estado e as mecânicas; o navegador apen
 | `transactions/{id}` | ganhos e gastos de ouro, diamantes e fragmentos | só o servidor |
 | `nomes/{chave}` | índice de nome único do personagem | só o servidor |
 | `combates/{uid}__{id}` | semente, entrada e resultado de cada combate | só o servidor |
+| `revogacoes/{uid}` | instante do último logout no servidor (tokens de logins anteriores são recusados) | só o servidor |
 
 ## Desenvolvimento
 
@@ -74,4 +75,3 @@ O servidor usa o Firebase Admin SDK com Application Default Credentials (no Clou
    `node scripts/criar-indice-nomes.mjs` e `node scripts/criar-indice-nomes.mjs --aplicar`
 4. Publicar as regras do Firestore (`firestore.rules`).
 5. Agendar o backup diário: `bash scripts/configurar-backup-firestore.sh`
-6. Dar o papel **Firebase Authentication Admin** à conta de serviço do app (IAM, no Google Cloud). Sem ele, o servidor não consegue checar revogação de sessão: o login continua funcionando e o log mostra `auth.checagem_revogacao_indisponivel` (uma vez a cada 10 minutos), mas o logout no servidor não invalida tokens já emitidos.

@@ -1,20 +1,28 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-  COOLDOWN_REVOGACAO_MS,
-  reiniciarDisjuntorRevogacao,
+  TTL_CACHE_REVOGACAO_MS,
+  limparCacheRevogacao,
   revokeUserSessions,
   verifyAuthToken,
 } from '@/server/auth';
-import {
-  chamadasComChecagemDeRevogacao,
-  limparRevogacoesDeTeste,
-  simularFalhaChecagemRevogacao,
-  tokenDeTeste,
-} from '@/test/firebaseAdminMock';
+import { repositorio } from '@/server/persistencia';
+import { ErroPersistencia, resetCharacterStore } from '@/test/repositorioMemoria';
+import { tokenDeTeste } from '@/test/firebaseAdminMock';
 
-describe('0.5-A1/A4 — verifyAuthToken (Firebase Auth via firebase-admin)', () => {
+const T0 = new Date('2026-10-08T12:00:00Z');
+const segundos = (d: Date) => Math.floor(d.getTime() / 1000);
+
+describe('0.5-A1/A4 — verifyAuthToken (Firebase Auth via firebase-admin + revogação no Firestore)', () => {
   beforeEach(() => {
-    limparRevogacoesDeTeste();
+    resetCharacterStore();
+    limparCacheRevogacao();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(T0);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it('rejeita cabeçalho ausente, sem Bearer ou vazio', async () => {
@@ -23,121 +31,138 @@ describe('0.5-A1/A4 — verifyAuthToken (Firebase Auth via firebase-admin)', () 
     expect(await verifyAuthToken('Bearer    ')).toBeNull();
   });
 
+  it('rejeita token que o Firebase não reconhece', async () => {
+    expect(await verifyAuthToken('Bearer token-qualquer')).toBeNull();
+  });
+
   it('aceita um ID Token válido e devolve uid e email', async () => {
     const user = await verifyAuthToken(`Bearer ${tokenDeTeste('jogador_a1')}`);
     expect(user).toEqual({ uid: 'jogador_a1', email: 'jogador_a1@test.com' });
   });
 
-  it('logout no servidor invalida tokens emitidos antes dele, e um login novo volta a valer', async () => {
-    const antigo = tokenDeTeste('jogador_logout');
-    expect(await verifyAuthToken(`Bearer ${antigo}`)).not.toBeNull();
+  describe('logout no servidor', () => {
+    it('recusa os tokens do login anterior, inclusive renovados, e aceita um login novo', async () => {
+      const loginAntigo = segundos(T0);
+      const antigo = tokenDeTeste('jogador_logout', loginAntigo);
+      expect(await verifyAuthToken(`Bearer ${antigo}`)).not.toBeNull();
 
-    await revokeUserSessions('jogador_logout');
-    expect(await verifyAuthToken(`Bearer ${antigo}`)).toBeNull();
+      vi.setSystemTime(new Date(T0.getTime() + 5_000));
+      await revokeUserSessions('jogador_logout');
+      expect(await verifyAuthToken(`Bearer ${antigo}`)).toBeNull();
 
-    const novo = tokenDeTeste('jogador_logout');
-    expect(await verifyAuthToken(`Bearer ${novo}`)).not.toBeNull();
+      // Token renovado a partir da sessão revogada: o auth_time continua o do login antigo
+      const renovado = tokenDeTeste('jogador_logout', loginAntigo);
+      expect(await verifyAuthToken(`Bearer ${renovado}`)).toBeNull();
+
+      // Login novo (auth_time depois do logout) volta a valer
+      vi.setSystemTime(new Date(T0.getTime() + 7_000));
+      const novo = tokenDeTeste('jogador_logout');
+      expect(await verifyAuthToken(`Bearer ${novo}`)).not.toBeNull();
+    });
+
+    it('não afeta outros usuários', async () => {
+      const tokenDeOutro = tokenDeTeste('jogador_outro', segundos(T0));
+      vi.setSystemTime(new Date(T0.getTime() + 5_000));
+      await revokeUserSessions('jogador_que_saiu');
+      expect(await verifyAuthToken(`Bearer ${tokenDeOutro}`)).not.toBeNull();
+    });
+
+    it('guarda o instante do logout em segundos no repositório', async () => {
+      await revokeUserSessions('jogador_registro');
+      expect(await repositorio.lerRevogacaoSessoes('jogador_registro')).toBe(segundos(T0));
+      expect(await repositorio.lerRevogacaoSessoes('ninguem')).toBeNull();
+    });
   });
 
-  describe('disjuntor da checagem de revogação (erro auth/internal-error em produção)', () => {
-    let aviso: ReturnType<typeof vi.spyOn>;
+  describe('cache entre instâncias', () => {
+    it('logout feito em outra instância vale aqui no máximo após o TTL do cache', async () => {
+      const token = tokenDeTeste('jogador_multi', segundos(T0));
+      expect(await verifyAuthToken(`Bearer ${token}`)).not.toBeNull(); // guarda "sem revogação" no cache
 
-    beforeEach(() => {
-      reiniciarDisjuntorRevogacao();
-      vi.useFakeTimers({ toFake: ['Date'] });
-      vi.setSystemTime(new Date('2026-10-08T12:00:00Z'));
-      aviso = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      // Outra instância registra o logout direto no banco
+      vi.setSystemTime(new Date(T0.getTime() + 5_000));
+      await repositorio.gravarRevogacaoSessoes('jogador_multi', segundos(new Date(T0.getTime() + 5_000)));
+
+      expect(await verifyAuthToken(`Bearer ${token}`)).not.toBeNull(); // ainda dentro do TTL
+
+      vi.setSystemTime(new Date(T0.getTime() + TTL_CACHE_REVOGACAO_MS + 6_000));
+      expect(await verifyAuthToken(`Bearer ${token}`)).toBeNull();
     });
 
-    afterEach(() => {
-      aviso.mockRestore();
-      vi.useRealTimers();
-    });
-
-    const avisosDeRevogacao = () =>
-      aviso.mock.calls.filter((chamada: unknown[]) => String(chamada[0]).includes('auth.checagem_revogacao_indisponivel'));
-
-    it('com a consulta falhando, aceita o token, avisa UMA vez e para de consultar durante o cooldown', async () => {
-      simularFalhaChecagemRevogacao(true);
-
-      for (let i = 0; i < 6; i++) {
-        expect(await verifyAuthToken(`Bearer ${tokenDeTeste('jogador_sem_perm')}`)).toEqual({
-          uid: 'jogador_sem_perm',
-          email: 'jogador_sem_perm@test.com',
-        });
+    it('requisições seguidas do mesmo usuário leem o banco uma vez só', async () => {
+      const ler = vi.spyOn(repositorio, 'lerRevogacaoSessoes');
+      const token = tokenDeTeste('jogador_cache');
+      for (let i = 0; i < 5; i++) {
+        await verifyAuthToken(`Bearer ${token}`);
       }
-
-      expect(avisosDeRevogacao()).toHaveLength(1);
-      expect(chamadasComChecagemDeRevogacao()).toBe(1);
+      expect(ler).toHaveBeenCalledTimes(1);
     });
+  });
 
-    it('o aviso traz o código e a mensagem do erro, para mostrar a causa real', async () => {
-      simularFalhaChecagemRevogacao(true);
-      await verifyAuthToken(`Bearer ${tokenDeTeste('jogador_diagnostico')}`);
-
-      const linha = JSON.parse(String(avisosDeRevogacao()[0][0]));
-      expect(linha.codigo).toBe('auth/internal-error');
-      expect(linha.mensagem).toBe('Falha ao consultar o usuário no Firebase Auth.');
-    });
-
-    it('pedidos simultâneos na primeira falha geram um único aviso', async () => {
-      simularFalhaChecagemRevogacao(true);
-
-      const resultados = await Promise.all(
-        Array.from({ length: 5 }, () => verifyAuthToken(`Bearer ${tokenDeTeste('jogador_paralelo')}`))
+  describe('falha do Firestore', () => {
+    it('lança ErroPersistencia em vez de aceitar ou recusar o token às cegas', async () => {
+      vi.spyOn(repositorio, 'lerRevogacaoSessoes').mockRejectedValue(new ErroPersistencia('lerRevogacao'));
+      await expect(verifyAuthToken(`Bearer ${tokenDeTeste('jogador_banco')}`)).rejects.toBeInstanceOf(
+        ErroPersistencia
       );
-
-      expect(resultados.every((u) => u?.uid === 'jogador_paralelo')).toBe(true);
-      expect(avisosDeRevogacao()).toHaveLength(1);
     });
 
-    it('depois do cooldown tenta de novo e, com a permissão concedida, a revogação volta a valer', async () => {
-      simularFalhaChecagemRevogacao(true);
-      const antigo = tokenDeTeste('jogador_volta');
-      expect(await verifyAuthToken(`Bearer ${antigo}`)).not.toBeNull();
-      expect(chamadasComChecagemDeRevogacao()).toBe(1);
+    it('as rotas respondem 503, não 401 (o cliente pode tentar de novo)', async () => {
+      const { GET } = await import('@/app/api/character/me/route');
+      const { NextRequest } = await import('next/server');
+      vi.spyOn(repositorio, 'lerRevogacaoSessoes').mockRejectedValue(new ErroPersistencia('lerRevogacao'));
 
-      // Permissão concedida e logout feito; ainda dentro do cooldown a checagem segue desligada
-      simularFalhaChecagemRevogacao(false);
-      await revokeUserSessions('jogador_volta');
-      expect(await verifyAuthToken(`Bearer ${antigo}`)).not.toBeNull();
-      expect(chamadasComChecagemDeRevogacao()).toBe(1);
-
-      // Passado o cooldown a checagem é religada e o token revogado é recusado
-      vi.setSystemTime(Date.now() + COOLDOWN_REVOGACAO_MS + 1000);
-      expect(await verifyAuthToken(`Bearer ${antigo}`)).toBeNull();
-      expect(chamadasComChecagemDeRevogacao()).toBe(2);
+      const res = await GET(
+        new NextRequest('http://localhost:3000/api/character/me', {
+          headers: { Authorization: `Bearer ${tokenDeTeste('jogador_503')}` },
+        })
+      );
+      expect(res.status).toBe(503);
     });
 
-    it('se a consulta continua falhando após o cooldown, tenta uma vez e volta a esperar', async () => {
-      simularFalhaChecagemRevogacao(true);
-      await verifyAuthToken(`Bearer ${tokenDeTeste('jogador_persistente')}`);
+    it('o logout também responde 503 quando não consegue gravar a revogação', async () => {
+      const { POST } = await import('@/app/api/auth/logout/route');
+      const { NextRequest } = await import('next/server');
+      vi.spyOn(repositorio, 'gravarRevogacaoSessoes').mockRejectedValue(new ErroPersistencia('gravarRevogacao'));
 
-      vi.setSystemTime(Date.now() + COOLDOWN_REVOGACAO_MS + 1000);
-      for (let i = 0; i < 4; i++) {
-        await verifyAuthToken(`Bearer ${tokenDeTeste('jogador_persistente')}`);
-      }
+      const res = await POST(
+        new NextRequest('http://localhost:3000/api/auth/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokenDeTeste('jogador_logout_503')}` },
+        })
+      );
+      expect(res.status).toBe(503);
+    });
+  });
 
-      expect(chamadasComChecagemDeRevogacao()).toBe(2);
-      expect(avisosDeRevogacao()).toHaveLength(2);
+  describe('POST /api/auth/logout', () => {
+    it('devolve 204 e depois recusa o token usado no logout', async () => {
+      const { POST } = await import('@/app/api/auth/logout/route');
+      const { NextRequest } = await import('next/server');
+      const token = tokenDeTeste('jogador_rota', segundos(T0));
+      expect(await verifyAuthToken(`Bearer ${token}`)).not.toBeNull();
+
+      vi.setSystemTime(new Date(T0.getTime() + 3_000));
+      const res = await POST(
+        new NextRequest('http://localhost:3000/api/auth/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      );
+      expect(res.status).toBe(204);
+      expect(await verifyAuthToken(`Bearer ${token}`)).toBeNull();
     });
 
-    it('token inválido nunca liga o disjuntor nem é aceito', async () => {
-      simularFalhaChecagemRevogacao(true);
-
-      expect(await verifyAuthToken('Bearer token-qualquer')).toBeNull();
-      expect(avisosDeRevogacao()).toHaveLength(0);
-
-      // A checagem continua ativa: o próximo token válido ainda tenta consultar
-      await verifyAuthToken(`Bearer ${tokenDeTeste('jogador_valido')}`);
-      expect(avisosDeRevogacao()).toHaveLength(1);
-    });
-
-    it('erros que significam token recusado não caem no caminho sem revogação', async () => {
-      simularFalhaChecagemRevogacao(true, 'auth/id-token-revoked');
-
-      expect(await verifyAuthToken(`Bearer ${tokenDeTeste('jogador_revogado')}`)).toBeNull();
-      expect(avisosDeRevogacao()).toHaveLength(0);
+    it('é idempotente para token inválido (204 sem gravar nada)', async () => {
+      const { POST } = await import('@/app/api/auth/logout/route');
+      const { NextRequest } = await import('next/server');
+      const res = await POST(
+        new NextRequest('http://localhost:3000/api/auth/logout', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer token-invalido' },
+        })
+      );
+      expect(res.status).toBe(204);
     });
   });
 });
