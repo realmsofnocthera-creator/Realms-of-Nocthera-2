@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Combatente, turnoDeCombate } from '../../combat';
-import { MONSTERS_MAP } from '../../../rules/monsters';
+import { Combatente, turnoDeCombate } from '@/game/combat';
+import { MONSTERS_MAP } from '@/rules/monsters';
 import {
   obterModificadoresPassivaSubclasse,
   registrarHabilidadesDeSubclasse,
-} from '../habilidades';
-import { reduzirDanoPercentual } from '../efeitos';
+} from '@/game/combate/habilidades';
+import { reduzirDanoPercentual } from '@/game/combate/efeitos';
 
 describe('ORDEM 48D — Passivas de Subclasse (Frenesi e Casca de Pedra)', () => {
   beforeEach(() => {

@@ -1,8 +1,8 @@
-import { getClassById } from '../rules/classes';
+import { getClassById } from '@/rules/classes';
 import {
   HabilidadesEquipadas,
   SLOTS_HABILIDADE,
-} from '../rules/habilidadesEquipadas';
+} from '@/rules/habilidadesEquipadas';
 
 /**
  * Retorna os 3 IDs das habilidades dos espaços equipáveis da classe

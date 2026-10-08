@@ -4,9 +4,9 @@ import {
   criarRepositorioFirestore,
   personagemDoFirestore,
   personagemParaFirestore,
-} from '../persistencia/firestore';
-import { ErroPersistencia } from '../persistencia/tipos';
-import type { CharacterDocument } from '../characterService';
+} from '@/server/persistencia/firestore';
+import { ErroPersistencia } from '@/server/persistencia/tipos';
+import type { CharacterDocument } from '@/server/characterService';
 
 type Ref = { path: string; get: () => Promise<Snap> };
 type Snap = { exists: boolean; data: () => Record<string, unknown> | undefined };

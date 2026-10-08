@@ -6,7 +6,7 @@ import firebaseConfig from '../../../firebase-applet-config.json';
 // todos os tokens abaixo são recusados antes de qualquer busca de chave pública.
 vi.unmock('@/server/firebaseAdmin');
 
-const { verifyAuthToken } = await import('../auth');
+const { verifyAuthToken } = await import('@/server/auth');
 
 function base64url(obj: unknown): string {
   return Buffer.from(JSON.stringify(obj), 'utf8').toString('base64url');

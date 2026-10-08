@@ -1,11 +1,11 @@
-import { ATTRIBUTES, AttributeName, Attributes } from '../rules/attributes';
-import { GAME_CONFIG } from '../rules/config';
-import { getRaceById } from '../rules/races';
-import { getClassById } from '../rules/classes';
-import { getAvatarById } from '../rules/avatars';
-import { HabilidadesEquipadas } from '../rules/habilidadesEquipadas';
-import { SUBCLASSES } from '../rules/subclasses';
-import { MONSTERS_MAP } from '../rules/monsters';
+import { ATTRIBUTES, AttributeName, Attributes } from '@/rules/attributes';
+import { GAME_CONFIG } from '@/rules/config';
+import { getRaceById } from '@/rules/races';
+import { getClassById } from '@/rules/classes';
+import { getAvatarById } from '@/rules/avatars';
+import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
+import { SUBCLASSES } from '@/rules/subclasses';
+import { MONSTERS_MAP } from '@/rules/monsters';
 import {
   calcularAgilidadeEfetiva,
   calcularDefesaFisica,
@@ -23,8 +23,8 @@ import {
   verificarRequisitosDesbloqueio,
   aplicarBonusSubclasse,
   removerBonusSubclasse,
-} from '../game';
-import { calcularDanoFisico, Combatente, resolverCombate, ResultadoCombate } from '../game/combat';
+} from '@/game';
+import { calcularDanoFisico, Combatente, resolverCombate, ResultadoCombate } from '@/game/combat';
 import { registrarLog } from './log';
 import {
   chaveDoNome,

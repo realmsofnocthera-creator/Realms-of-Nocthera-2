@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { ATTRIBUTES, AttributeName } from '../attributes';
-import { GAME_CONFIG } from '../config';
-import { getAttributeExplanation, ATTRIBUTE_DISPLAY_NAMES } from '../attributeInfo';
-import { getCharacterOtherBonuses } from '../otherBonuses';
+import { ATTRIBUTES, AttributeName } from '@/rules/attributes';
+import { GAME_CONFIG } from '@/rules/config';
+import { getAttributeExplanation, ATTRIBUTE_DISPLAY_NAMES } from '@/rules/attributeInfo';
+import { getCharacterOtherBonuses } from '@/rules/otherBonuses';
 import { CharacterDocument } from '@/server/characterService';
 
 describe('attributeInfo', () => {

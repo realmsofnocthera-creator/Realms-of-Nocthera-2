@@ -1,4 +1,4 @@
-import { AttributeName, ATTRIBUTES } from '../rules/attributes';
+import { AttributeName, ATTRIBUTES } from '@/rules/attributes';
 
 export type PendingAttributes = Record<AttributeName, number>;
 

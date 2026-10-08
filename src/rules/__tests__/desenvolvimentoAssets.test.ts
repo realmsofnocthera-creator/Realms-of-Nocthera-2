@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { DESENVOLVIMENTO_ASSETS } from '../desenvolvimentoAssets';
+import { DESENVOLVIMENTO_ASSETS } from '@/rules/desenvolvimentoAssets';
 
 describe('DESENVOLVIMENTO_ASSETS', () => {
   it('todos os caminhos começam com /images/desenvolvimento/', () => {

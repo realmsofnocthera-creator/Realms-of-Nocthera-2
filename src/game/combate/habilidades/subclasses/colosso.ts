@@ -1,5 +1,5 @@
-import { COLOSSO_KIT, PASSIVAS_SUBCLASSE } from '../../../../rules/subclasseKits';
-import { DefinicaoHabilidade, DefinicaoPassiva } from '../tipos';
+import { COLOSSO_KIT, PASSIVAS_SUBCLASSE } from '@/rules/subclasseKits';
+import { DefinicaoHabilidade, DefinicaoPassiva } from '@/game/combate/habilidades/tipos';
 
 export const HABILIDADES_COLOSSO: DefinicaoHabilidade[] = [
   {

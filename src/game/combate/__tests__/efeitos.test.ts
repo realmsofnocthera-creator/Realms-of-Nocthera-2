@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { GAME_CONFIG } from '../../../rules/config';
+import { GAME_CONFIG } from '@/rules/config';
 import {
   aplicarBonusContraSobreescudo,
   reduzirDanoPercentual,
-} from '../efeitos';
+} from '@/game/combate/efeitos';
 
 describe('ORDEM 45 — Helpers Puros de Efeitos de Combate', () => {
   describe('aplicarBonusContraSobreescudo', () => {

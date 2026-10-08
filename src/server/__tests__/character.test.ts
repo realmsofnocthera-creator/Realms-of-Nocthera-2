@@ -7,21 +7,21 @@ import {
   updateCharacterAvatar,
   updateCharacterSobre,
   calcularXpComBonusRacial,
-} from '../characterService';
-import { resetCharacterStore } from '../../test/repositorioMemoria';
-import { AVATARES_DISPONIVEIS } from '../../rules/avatars';
+} from '@/server/characterService';
+import { resetCharacterStore } from '@/test/repositorioMemoria';
+import { AVATARES_DISPONIVEIS } from '@/rules/avatars';
 import {
   calcularAgilidadeEfetiva,
   calcularDefesaFisica,
   calcularHpMax,
   calcularManaMax,
   calcularSobreescudoMax,
-} from '../../game';
-import { calcularDanoFisico } from '../../game/combat';
-import { GAME_CONFIG } from '../../rules/config';
-import { RACES, RACES_MAP, getRaceById } from '../../rules/races';
-import { CLASSES, getClassById } from '../../rules/classes';
-import { MONSTERS_MAP } from '../../rules/monsters';
+} from '@/game';
+import { calcularDanoFisico } from '@/game/combat';
+import { GAME_CONFIG } from '@/rules/config';
+import { RACES, RACES_MAP, getRaceById } from '@/rules/races';
+import { CLASSES, getClassById } from '@/rules/classes';
+import { MONSTERS_MAP } from '@/rules/monsters';
 
 describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', () => {
   beforeEach(() => {

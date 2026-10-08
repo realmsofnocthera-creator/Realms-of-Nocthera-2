@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { CLASSES } from '../../rules/classes';
+import { CLASSES } from '@/rules/classes';
 import {
   idsHabilidadesDaClasse,
   habilidadesPadraoDaClasse,
   normalizarHabilidadesEquipadas,
-} from '../habilidades';
+} from '@/game/habilidades';
 
 describe('ORDEM 42 — Habilidades de Classe e Habilidades Equipadas', () => {
   it('(a) os ids de todas as classes são únicos e não vazios', () => {

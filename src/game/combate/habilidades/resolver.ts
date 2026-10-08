@@ -1,9 +1,9 @@
-import { GAME_CONFIG } from '../../../rules/config';
+import { GAME_CONFIG } from '@/rules/config';
 import {
   aplicarBonusContraSobreescudo,
   calcularMitigacaoFisicaEfetiva,
   calcularMitigacaoMagicaEfetiva,
-} from '../efeitos';
+} from '@/game/combate/efeitos';
 import { ContextoHabilidade, ResultadoHabilidade } from './tipos';
 
 export function resolverDanoHabilidade(

@@ -1,4 +1,4 @@
-import type { CharacterDocument, TransactionDocument } from '../characterService';
+import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 
 /**
  * Registro de um combate resolvido (0.5-B1/B3): guarda a semente e a entrada para

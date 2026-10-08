@@ -1,6 +1,6 @@
-import { Attributes } from '../rules/attributes';
-import { GAME_CONFIG } from '../rules/config';
-import { XP_TABLE } from '../rules/xpTable';
+import { Attributes } from '@/rules/attributes';
+import { GAME_CONFIG } from '@/rules/config';
+import { XP_TABLE } from '@/rules/xpTable';
 
 export interface ResultadoDano {
   sobreescudo: number;

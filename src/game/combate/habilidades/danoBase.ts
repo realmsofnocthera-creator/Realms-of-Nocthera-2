@@ -1,4 +1,4 @@
-import { calcularInstintoSobrevivencia } from '../../combat';
+import { calcularInstintoSobrevivencia } from '@/game/combat';
 
 export interface AplicarPassivasDanoParams {
   classeId: string;

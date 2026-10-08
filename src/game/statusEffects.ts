@@ -9,7 +9,7 @@ import {
   HASH_MIX_MULT,
   HASH_RODADA_MULT,
   HASH_SEED_MULT,
-} from '../rules/statusEffects';
+} from '@/rules/statusEffects';
 
 export interface EfeitoAtivo {
   id: EfeitoStatus;

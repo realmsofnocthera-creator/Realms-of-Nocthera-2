@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { NOCTHERA_THEME } from '../theme/theme';
+import { NOCTHERA_THEME } from '@/theme/theme';
 
 export interface NotificationDotProps {
   visible: boolean;

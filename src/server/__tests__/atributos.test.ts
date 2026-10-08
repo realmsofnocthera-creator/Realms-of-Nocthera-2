@@ -7,16 +7,16 @@ import {
   alterarDiamantes,
   updateCharacter,
   applyCombatResult,
-} from '../characterService';
+} from '@/server/characterService';
 import {
   ErroPersistencia,
   getTransactionsByUid,
   resetCharacterStore,
   setTestPersistenceFailHook,
-} from '../../test/repositorioMemoria';
-import { tokenDeTeste } from '../../test/firebaseAdminMock';
-import { ResultadoCombate } from '../../game/combat';
-import { GAME_CONFIG } from '../../rules/config';
+} from '@/test/repositorioMemoria';
+import { tokenDeTeste } from '@/test/firebaseAdminMock';
+import { ResultadoCombate } from '@/game/combat';
+import { GAME_CONFIG } from '@/rules/config';
 
 describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)', () => {
   beforeEach(() => {
@@ -477,7 +477,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
   });
 
   it('0.5-C1: falha de gravação no cadastro vira erro 503 para o cliente, nunca sucesso silencioso', async () => {
-    const { POST } = await import('../../app/api/character/create/route');
+    const { POST } = await import('@/app/api/character/create/route');
     const { NextRequest } = await import('next/server');
 
     setTestPersistenceFailHook((operacao) => {

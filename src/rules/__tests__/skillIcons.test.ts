@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { RACES } from '../races';
-import { CLASSES } from '../classes';
+import { RACES } from '@/rules/races';
+import { CLASSES } from '@/rules/classes';
 import {
   RACE_SKILL_ICONS,
   CLASS_SKILL_ICONS,
   getRaceSkillIcon,
   getClassSkillIcon,
-} from '../skillIcons';
+} from '@/rules/skillIcons';
 
 describe('skillIcons', () => {
   it('contém mapeamento para todos os racaId definidos em races.ts', () => {

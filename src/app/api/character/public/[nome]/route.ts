@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuthToken } from '../../../../../server/auth';
-import { getPublicCharacterByName } from '../../../../../server/characterService';
+import { verifyAuthToken } from '@/server/auth';
+import { getPublicCharacterByName } from '@/server/characterService';
 import { respostaErroPersistencia } from '@/server/respostaErro';
 import { limitarPorConta, limitarPorIp } from '@/server/rateLimit';
 

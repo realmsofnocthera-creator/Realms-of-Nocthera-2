@@ -7,17 +7,17 @@ import {
   MODIFICADOR_IMUNIDADE,
   MODIFICADOR_RESISTENCIA_FORTE,
   MULTIPLICADOR_ELEMENTAL_MINIMO,
-} from '../../rules/elements';
-import { CLASSES_MAP } from '../../rules/classes';
-import { MONSTERS_MAP } from '../../rules/monsters';
+} from '@/rules/elements';
+import { CLASSES_MAP } from '@/rules/classes';
+import { MONSTERS_MAP } from '@/rules/monsters';
 import {
   aplicarMultiplicadorElemental,
   calcularMultiplicadorElemental,
   combinarModificadores,
   obterModificadoresRaciais,
   obterTextoReacaoElemental,
-} from '../elements';
-import { Combatente, resolverCombate, turnoDeCombate } from '../combat';
+} from '@/game/elements';
+import { Combatente, resolverCombate, turnoDeCombate } from '@/game/combat';
 
 describe('ORDEM 22 — Sistema de Elementos (Bloco A)', () => {
   describe('1. Dados e Constantes Elementais (src/rules/elements.ts)', () => {

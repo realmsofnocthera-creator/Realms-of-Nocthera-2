@@ -1,10 +1,10 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { DocumentData, Firestore, Transaction } from 'firebase-admin/firestore';
-import { AVATARES_DISPONIVEIS, getAvatarById } from '../../rules/avatars';
-import { normalizarHabilidadesEquipadas, ZEROS_ATRIBUTOS } from '../../game';
-import type { Attributes } from '../../rules/attributes';
-import type { CharacterDocument, TransactionDocument } from '../characterService';
-import { descreverErro, registrarLog } from '../log';
+import { AVATARES_DISPONIVEIS, getAvatarById } from '@/rules/avatars';
+import { normalizarHabilidadesEquipadas, ZEROS_ATRIBUTOS } from '@/game';
+import type { Attributes } from '@/rules/attributes';
+import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
+import { descreverErro, registrarLog } from '@/server/log';
 import {
   ContextoTransacao,
   ErroPersistencia,

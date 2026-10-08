@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RACES } from '../races';
+import { RACES } from '@/rules/races';
 
 describe('racePassives', () => {
   it('cada uma das 6 raças tem passivaRacial.descricao não vazia', () => {

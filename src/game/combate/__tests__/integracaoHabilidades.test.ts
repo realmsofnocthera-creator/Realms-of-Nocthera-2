@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { Combatente, resolverCombate, turnoDeCombate } from '../../combat';
-import { MONSTERS_MAP } from '../../../rules/monsters';
-import { CLASSES, getClassById } from '../../../rules/classes';
+import { Combatente, resolverCombate, turnoDeCombate } from '@/game/combat';
+import { MONSTERS_MAP } from '@/rules/monsters';
+import { CLASSES, getClassById } from '@/rules/classes';
 import {
   DefinicaoHabilidade,
   registrarHabilidade,
@@ -9,7 +9,7 @@ import {
   obterSlotAcionado,
   resolverDanoHabilidade,
   ContextoHabilidade,
-} from '../habilidades';
+} from '@/game/combate/habilidades';
 
 describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
   beforeEach(() => {

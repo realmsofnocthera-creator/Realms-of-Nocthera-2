@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Combatente, resolverCombate } from '../../combat';
-import { MONSTERS_MAP, MonsterDefinition } from '../../../rules/monsters';
+import { Combatente, resolverCombate } from '@/game/combat';
+import { MONSTERS_MAP, MonsterDefinition } from '@/rules/monsters';
 import {
   obterHabilidade,
   registrarHabilidadesDeSubclasse,
   resolverDanoHabilidade,
   aplicarPassivasDanoDaClasse,
   ContextoHabilidade,
-} from '../habilidades';
+} from '@/game/combate/habilidades';
 
 const MONSTRO_SINTETICO_ESCUDO: MonsterDefinition = {
   id: 'monstro-sintetico-escudo',

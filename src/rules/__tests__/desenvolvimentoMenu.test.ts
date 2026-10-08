@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   DESENVOLVIMENTO_MENU,
   DESENVOLVIMENTO_SECAO_PADRAO,
-} from '../desenvolvimentoMenu';
+} from '@/rules/desenvolvimentoMenu';
 
 describe('DESENVOLVIMENTO_MENU', () => {
   it('contém exatamente 5 itens na ordem esperada', () => {

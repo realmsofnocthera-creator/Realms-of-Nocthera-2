@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { GAME_CONFIG } from '../../../rules/config';
+import { GAME_CONFIG } from '@/rules/config';
 import {
   aplicarDefesaCavaleiro,
   calcularGolpeFeiticeiro,
   calcularGolpeSamurai,
-} from '../../combat';
+} from '@/game/combat';
 import {
   aplicarBonusContraSobreescudo,
   reduzirDanoPercentual,
-} from '../efeitos';
-import { aplicarDano, calcularDefesaFisica } from '../../index';
+} from '@/game/combate/efeitos';
+import { aplicarDano, calcularDefesaFisica } from '@/game/index';
 
 describe('ORDEM 45b — Testes de Equivalência e Integração dos Efeitos de Combate', () => {
   // Fórmulas antigas reescritas dentro do próprio teste (conforme especificação da Ordem 45b)

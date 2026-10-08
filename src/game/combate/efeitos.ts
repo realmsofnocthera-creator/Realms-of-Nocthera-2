@@ -1,4 +1,4 @@
-import { GAME_CONFIG } from '../../rules/config';
+import { GAME_CONFIG } from '@/rules/config';
 
 /**
  * Aplica bônus percentual de dano contra o Sobreescudo do alvo se o alvo possuir Sobreescudo ativo (> 0).

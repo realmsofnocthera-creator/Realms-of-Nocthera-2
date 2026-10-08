@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   EFEITOS_STATUS,
   EfeitoStatus,
-} from '../../rules/statusEffects';
-import { MONSTERS_MAP, MonsterDefinition } from '../../rules/monsters';
-import { GAME_CONFIG } from '../../rules/config';
+} from '@/rules/statusEffects';
+import { MONSTERS_MAP, MonsterDefinition } from '@/rules/monsters';
+import { GAME_CONFIG } from '@/rules/config';
 import {
   calcularDanoEfeito,
   EfeitoAtivo,
@@ -13,14 +13,14 @@ import {
   removerEfeitos,
   sorteioStatus,
   tentarAplicarEfeito,
-} from '../statusEffects';
-import { Combatente, resolverCombate } from '../combat';
+} from '@/game/statusEffects';
+import { Combatente, resolverCombate } from '@/game/combat';
 import {
   applyCombatResult,
   createCharacter,
   getCharacterByUid,
-} from '../../server/characterService';
-import { resetCharacterStore } from '../../test/repositorioMemoria';
+} from '@/server/characterService';
+import { resetCharacterStore } from '@/test/repositorioMemoria';
 
 describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
   beforeEach(() => {

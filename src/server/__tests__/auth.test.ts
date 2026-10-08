@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { verifyAuthToken, revokeUserSessions } from '../auth';
-import { limparRevogacoesDeTeste, tokenDeTeste } from '../../test/firebaseAdminMock';
+import { verifyAuthToken, revokeUserSessions } from '@/server/auth';
+import { limparRevogacoesDeTeste, tokenDeTeste } from '@/test/firebaseAdminMock';
 
 describe('0.5-A1/A4 — verifyAuthToken (Firebase Auth via firebase-admin)', () => {
   beforeEach(() => {

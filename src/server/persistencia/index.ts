@@ -1,4 +1,4 @@
-import { adminDb } from '../firebaseAdmin';
+import { adminDb } from '@/server/firebaseAdmin';
 import { criarRepositorioFirestore } from './firestore';
 
 export * from './tipos';

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuthToken } from '../../../../server/auth';
-import { combateIdValido, executarCombate } from '../../../../server/characterService';
-import { gerarSementeCombate } from '../../../../server/combateSemente';
-import { respostaErroPersistencia } from '../../../../server/respostaErro';
-import { MONSTERS_MAP } from '../../../../rules/monsters';
+import { verifyAuthToken } from '@/server/auth';
+import { combateIdValido, executarCombate } from '@/server/characterService';
+import { gerarSementeCombate } from '@/server/combateSemente';
+import { respostaErroPersistencia } from '@/server/respostaErro';
+import { MONSTERS_MAP } from '@/rules/monsters';
 import { limitarPorConta, limitarPorIp } from '@/server/rateLimit';
 
 export async function POST(req: NextRequest) {

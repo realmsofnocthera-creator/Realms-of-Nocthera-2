@@ -5,14 +5,14 @@
  * e sem transação aninhada.
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type { CharacterDocument, TransactionDocument } from '../server/characterService';
+import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import type {
   ContextoTransacao,
   RegistroCombate,
   Repositorio,
-} from '../server/persistencia/tipos';
+} from '@/server/persistencia/tipos';
 
-export * from '../server/persistencia/tipos';
+export * from '@/server/persistencia/tipos';
 
 interface Estado {
   personagens: Map<string, CharacterDocument>;

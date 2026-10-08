@@ -1,20 +1,20 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import { createCharacter, getCharacterByUid } from '../characterService';
-import { resolverCombate, Combatente } from '../../game/combat';
-import { MONSTERS_MAP } from '../../rules/monsters';
+import { createCharacter, getCharacterByUid } from '@/server/characterService';
+import { resolverCombate, Combatente } from '@/game/combat';
+import { MONSTERS_MAP } from '@/rules/monsters';
 import {
   getTransactionsByUid,
   obterCombateRegistrado,
   resetCharacterStore,
   setTestPersistenceFailHook,
-} from '../../test/repositorioMemoria';
-import { tokenDeTeste } from '../../test/firebaseAdminMock';
+} from '@/test/repositorioMemoria';
+import { tokenDeTeste } from '@/test/firebaseAdminMock';
 
 const SEMENTE_DO_SERVIDOR = 12345;
 vi.mock('../combateSemente', () => ({ gerarSementeCombate: vi.fn(() => SEMENTE_DO_SERVIDOR) }));
 
-const { POST } = await import('../../app/api/combat/start/route');
+const { POST } = await import('@/app/api/combat/start/route');
 
 async function criarHeroi(uid: string) {
   await createCharacter(uid, {

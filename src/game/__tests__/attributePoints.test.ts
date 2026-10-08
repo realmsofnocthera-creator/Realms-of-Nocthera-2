@@ -4,8 +4,8 @@ import {
   aplicarDistribuicao,
   calcularReset,
   ZEROS_ATRIBUTOS,
-} from '../attributePoints';
-import { Attributes } from '../../rules/attributes';
+} from '@/game/attributePoints';
+import { Attributes } from '@/rules/attributes';
 
 describe('attributePoints - Funções Puras', () => {
   describe('validarDistribuicao', () => {

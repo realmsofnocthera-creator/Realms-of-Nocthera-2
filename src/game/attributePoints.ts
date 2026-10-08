@@ -1,4 +1,4 @@
-import { ATTRIBUTES, AttributeName, Attributes } from '../rules/attributes';
+import { ATTRIBUTES, AttributeName, Attributes } from '@/rules/attributes';
 
 export const ZEROS_ATRIBUTOS: Attributes = {
   vigor: 0,

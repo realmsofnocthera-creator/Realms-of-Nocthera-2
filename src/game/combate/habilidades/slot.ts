@@ -1,5 +1,5 @@
-import { getClassById } from '../../../rules/classes';
-import { SlotHabilidade } from '../../../rules/habilidadesEquipadas';
+import { getClassById } from '@/rules/classes';
+import { SlotHabilidade } from '@/rules/habilidadesEquipadas';
 
 /**
  * Mapeia o nome da habilidade acionada de uma classe para o respectivo slot equipável:

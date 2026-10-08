@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { criarLimitador } from '../rateLimit';
-import { createCharacter } from '../characterService';
-import { resetCharacterStore } from '../../test/repositorioMemoria';
-import { tokenDeTeste } from '../../test/firebaseAdminMock';
+import { criarLimitador } from '@/server/rateLimit';
+import { createCharacter } from '@/server/characterService';
+import { resetCharacterStore } from '@/test/repositorioMemoria';
+import { tokenDeTeste } from '@/test/firebaseAdminMock';
 
 const REGRA = { limite: 3, janelaMs: 1000 };
 
@@ -50,7 +50,7 @@ describe('0.5-A3 — rate limiting', () => {
     beforeEach(() => resetCharacterStore());
 
     it('rota de escrita responde 429 com Retry-After depois de 30 requisições por minuto da mesma conta', async () => {
-      const { POST } = await import('../../app/api/character/sobre/route');
+      const { POST } = await import('@/app/api/character/sobre/route');
       const uid = 'a3_limite_conta';
       await createCharacter(uid, {
         nome: 'Limitada',

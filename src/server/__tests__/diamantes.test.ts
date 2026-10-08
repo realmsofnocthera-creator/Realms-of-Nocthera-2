@@ -4,9 +4,9 @@ import {
   getCharacterByUid,
   getPublicCharacterByName,
   alterarDiamantes,
-} from '../characterService';
-import { getTransactionsByUid, resetCharacterStore } from '../../test/repositorioMemoria';
-import { GAME_CONFIG } from '../../rules/config';
+} from '@/server/characterService';
+import { getTransactionsByUid, resetCharacterStore } from '@/test/repositorioMemoria';
+import { GAME_CONFIG } from '@/rules/config';
 
 describe('ORDEM 38 — Moeda Diamantes (Camada de Dados / Servidor)', () => {
   beforeEach(() => {
