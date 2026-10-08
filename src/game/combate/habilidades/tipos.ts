@@ -1,5 +1,6 @@
 import type { AplicacaoEfeitoDefensivo } from '@/game/combate/efeitosDefensivos';
 import type { AplicacaoCura } from '@/game/combate/efeitosCura';
+import type { AplicacaoBuff } from '@/game/combate/efeitosBuffs';
 
 export type EspacoHabilidade = 'basico' | 'especial' | 'ultimate';
 export type TipoDanoHabilidade = 'fisico' | 'magico';
@@ -53,6 +54,14 @@ export interface ResultadoHabilidade {
   acumulativo?: { percentualPorAtaque: number; limitePercentual: number };
   /** Ímpeto Imprudente: nos próximos N ataques, +% de dano e −% de defesa. */
   impeto?: { ataques: number; bonusDanoPercentual: number; reducaoDefesaPercentual: number };
+
+  // ---- Atributos e buffs (catálogo 1.2, categoria da 1.2.4) ----
+  /** Buffs temporários em quem usa a habilidade (Aumento de Força/Sorte/Agilidade/Geral, Sincronismo, Delírio Controlado). */
+  buffs?: AplicacaoBuff[];
+  /** Foco: o próximo ataque de quem usa a habilidade ignora X% da defesa do inimigo. */
+  foco?: { ignorarDefesaPercentual: number };
+  /** Aceleração: +1 ação extra neste round (uma ação a mais, além das do turno). */
+  acaoExtra?: boolean;
 }
 
 export interface DefinicaoHabilidade {
