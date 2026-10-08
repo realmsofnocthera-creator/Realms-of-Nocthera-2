@@ -182,7 +182,7 @@ export const CLASSES: readonly ClassDefinition[] = [
         tipo: 'passivaI',
         nome: 'Fluxo Arcano',
         descricao:
-          'Aumenta permanentemente a Mana máxima em +10% e o dano mágico base em +10%.',
+          'Aumenta permanentemente o dano mágico base em +10%.',
       },
       passivaII: {
         id: 'feiticeiro_acumulo_arcano',
@@ -293,7 +293,7 @@ export const CLASSES: readonly ClassDefinition[] = [
         tipo: 'habilidadeEspecial',
         nome: 'Bênção Divina',
         descricao:
-          'A cada 3 ataques básicos (contador A), ao invés de atacar, recupera 15% do HP máximo e 10% do MP máximo sem ultrapassar os tetos e remove 1 efeito negativo ativo.',
+          'A cada 3 ataques básicos (contador A), ao invés de atacar, recupera 15% do HP máximo sem ultrapassar o teto e remove 1 efeito negativo ativo.',
       },
       passivaI: {
         id: 'profeta_graca_divina',
@@ -301,7 +301,7 @@ export const CLASSES: readonly ClassDefinition[] = [
         tipo: 'passivaI',
         nome: 'Graça Divina',
         descricao:
-          'Aumenta permanentemente o HP máximo em +10% e o MP máximo em +10%.',
+          'Aumenta permanentemente o HP máximo em +10%.',
       },
       passivaII: {
         id: 'profeta_fe_inabalavel',
@@ -318,7 +318,7 @@ export const CLASSES: readonly ClassDefinition[] = [
         tipo: 'ultimate',
         nome: 'Milagre Divino',
         descricao:
-          'A cada 7 ataques básicos (contador C independente), recupera 30% do HP máximo e 25% do MP máximo (sem ultrapassar tetos), remove todos os efeitos negativos ativos e causa 150% do dano mágico normal no mesmo turno (bônus temporário de dano/Defesa nos turnos seguintes: aguardando sistema de efeitos/resistências).',
+          'A cada 7 ataques básicos (contador C independente), recupera 30% do HP máximo (sem ultrapassar o teto), remove todos os efeitos negativos ativos e causa 150% do dano mágico normal no mesmo turno (bônus temporário de dano/Defesa nos turnos seguintes: aguardando sistema de efeitos/resistências).',
         elemento: 'sagrado',
       },
     },

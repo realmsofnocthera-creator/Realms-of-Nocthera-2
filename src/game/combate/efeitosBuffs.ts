@@ -8,6 +8,8 @@ import { Attributes, ATTRIBUTES, AttributeName } from '@/rules/attributes';
 export type AplicacaoBuff =
   /** Aumento de Força / Sorte / Agilidade (+N em um atributo) ou Aumento Geral (+N em todos). */
   | { tipo: 'atributo'; atributo: AttributeName | 'todos'; valor: number; rodadas: number }
+  /** Bônus de dano em % só para um tipo de dano (ex.: +10% de dano físico do Orc, +15% de dano mágico do Elfo). */
+  | { tipo: 'bonusDano'; percentual: number; tipoDano: 'fisico' | 'magico'; rodadas: number }
   /** Sincronismo: o ataque duplo por Agilidade passa a exigir 1,5x a Agilidade do inimigo em vez de 2x. */
   | { tipo: 'sincronismo'; rodadas: number }
   /** Delírio Controlado: +% de dano e +% de defesa, com risco de perder % do HP máximo a cada rodada. */
@@ -19,7 +21,7 @@ export type AplicacaoBuff =
       rodadas: number;
     };
 
-export type TipoBuff = 'aumentoAtributo' | 'sincronismo' | 'delirioControlado';
+export type TipoBuff = 'aumentoAtributo' | 'sincronismo' | 'delirioControlado' | 'bonusDano';
 
 export interface BuffAtivo {
   tipo: TipoBuff;
@@ -27,6 +29,8 @@ export interface BuffAtivo {
   atributo?: AttributeName | 'todos';
   valor?: number;
   bonusDanoPercentual?: number;
+  /** Para 'bonusDano': a que tipo de dano o bônus se aplica. */
+  tipoDano?: 'fisico' | 'magico';
   bonusDefesaPercentual?: number;
   perdaHpPercentualPorRodada?: number;
   rodadasRestantes: number;
@@ -59,6 +63,15 @@ export function adicionarBuffs(
         recemAplicado: true,
       };
       resultado = resultado.filter((b) => !(b.tipo === 'aumentoAtributo' && b.atributo === a.atributo));
+    } else if (a.tipo === 'bonusDano') {
+      novo = {
+        tipo: 'bonusDano',
+        bonusDanoPercentual: a.percentual,
+        tipoDano: a.tipoDano,
+        rodadasRestantes: a.rodadas,
+        recemAplicado: true,
+      };
+      resultado = resultado.filter((b) => !(b.tipo === 'bonusDano' && b.tipoDano === a.tipoDano));
     } else if (a.tipo === 'sincronismo') {
       novo = { tipo: 'sincronismo', rodadasRestantes: a.rodadas, recemAplicado: true };
       resultado = resultado.filter((b) => b.tipo !== 'sincronismo');
@@ -89,7 +102,7 @@ export function aplicarBuffsAosAtributos(
     const alvos: readonly AttributeName[] =
       b.atributo === 'todos' ? ATTRIBUTES : b.atributo ? [b.atributo] : [];
     for (const nome of alvos) {
-      efetivos[nome] += b.valor;
+      efetivos[nome] = Math.max(0, efetivos[nome] + b.valor);
     }
   }
   return efetivos;
@@ -101,9 +114,17 @@ export function multiplicadorAgilidadeParaDuplo(buffs: readonly BuffAtivo[] | un
     : MULTIPLICADOR_AGILIDADE_DUPLO_PADRAO;
 }
 
-export function bonusDanoDosBuffs(buffs: readonly BuffAtivo[] | undefined): number {
+/** Bônus de dano dos buffs: o Delírio vale para tudo; o bônus por tipo só para o tipo do golpe (se informado). */
+export function bonusDanoDosBuffs(
+  buffs: readonly BuffAtivo[] | undefined,
+  tipoDano?: 'fisico' | 'magico'
+): number {
   return ativos(buffs)
-    .filter((b) => b.tipo === 'delirioControlado')
+    .filter(
+      (b) =>
+        b.tipo === 'delirioControlado' ||
+        (b.tipo === 'bonusDano' && (tipoDano === undefined || b.tipoDano === tipoDano))
+    )
     .reduce((soma, b) => soma + (b.bonusDanoPercentual ?? 0), 0);
 }
 

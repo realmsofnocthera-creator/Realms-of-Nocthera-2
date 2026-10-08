@@ -93,8 +93,14 @@ import {
   estaDistraido,
   fatorCuraPercentual,
   percentualPontoFraco,
+  reducaoDefesaDosDebuffs,
   reducaoDefesaPorPressao,
 } from './combate/efeitosDebuffs';
+import {
+  definicaoRacialDeAtaque,
+  obterHabilidadeRacial,
+  racialDeveDisparar,
+} from './combate/racial';
 import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import {
   ContextoHabilidade,
@@ -175,6 +181,10 @@ export interface Combatente {
   buffs?: BuffAtivo[];
   /** Debuffs ativos (Enfraquecimento, Cicatrização, Ponto Fraco, Pressão, Exaustão, Distração). */
   debuffs?: DebuffAtivo[];
+  /** Habilidade racial ativa: ações que faltam para poder disparar de novo (0 = pronta). */
+  recargaRacialRestante?: number;
+  /** A habilidade racial de ataque (Vampiro, Draconiano) disparou nesta ação e substitui o ataque. */
+  racialAtaquePendente?: boolean;
   /** Foco: % de defesa do inimigo que o PRÓXIMO ataque ignora. */
   focoProximoAtaque?: number;
   /** Ímpeto Imprudente ativo: bônus de dano e defesa reduzida pelos próximos ataques de quem o usou. */
@@ -234,6 +244,8 @@ export interface AtaqueLog {
   danoRedirecionado?: number;
   /** Bônus de Dano Acumulativo (%) usado neste golpe. */
   danoAcumulativoPercentual?: number;
+  /** Habilidade racial que disparou nesta ação (HP abaixo de 50%). */
+  racialAcionada?: string;
   /** O atacante estava distraído e perdeu a ação. */
   distraido?: boolean;
   /** Debuffs que a habilidade colocou no inimigo. */
@@ -2051,6 +2063,38 @@ export function turnoDeCombate(
     };
   }
 
+  // Habilidade racial ativa: dispara sozinha com HP abaixo de 50% e depois espera a recarga (8 rodadas)
+  let racialAcionada: string | undefined;
+  if (
+    racialDeveDisparar({
+      racaId: atacante.racaId,
+      hp: atacante.hp,
+      hpMax: atacante.hpMax,
+      recargaRestante: atacante.recargaRacialRestante,
+    })
+  ) {
+    const racial = obterHabilidadeRacial(atacante.racaId)!;
+    if (racial.tipo === 'buff') {
+      // Os buffs valem já nesta ação (não esperam a próxima)
+      atacante.buffs = [
+        ...(atacante.buffs ?? []),
+        ...adicionarBuffs([], racial.buffs).map((b) => ({ ...b, recemAplicado: false })),
+      ];
+      let efeitos = atacante.efeitosDefensivos ?? [];
+      for (const a of racial.efeitosDefensivos ?? []) {
+        efeitos = adicionarEfeitoDefensivo(efeitos, a, 0).efeitos;
+      }
+      atacante.efeitosDefensivos = efeitos;
+      racialAcionada = racial.nome;
+    } else if (atacante.classeId) {
+      atacante.racialAtaquePendente = true;
+      racialAcionada = racial.nome;
+    }
+    if (racialAcionada) {
+      atacante.recargaRacialRestante = GAME_CONFIG.RECARGA_HABILIDADE_RACIAL_RODADAS;
+    }
+  }
+
   // Atributos com buffs e debuffs (Exaustão) valem durante o turno inteiro; os originais voltam no fim
   const atributosOriginaisAtacante = atacante.atributos;
   const atributosOriginaisDefensor = defensor.atributos;
@@ -2058,6 +2102,12 @@ export function turnoDeCombate(
   defensor.atributos = atributosEfetivos(atributosOriginaisDefensor, defensor);
   try {
     const resultado = turnoDeCombateInterno(atacante, defensor, numeroTurno, opcoesTurno);
+    atacante.racialAtaquePendente = false;
+    if (racialAcionada && resultado.turnoLog.ataques.length > 0) {
+      const primeiro = resultado.turnoLog.ataques[0];
+      primeiro.racialAcionada = racialAcionada;
+      primeiro.mensagem = `${atacante.nome} aciona ${racialAcionada}! ${primeiro.mensagem}`;
+    }
     passarAcaoBuffs(atacante);
     return resultado;
   } finally {
@@ -2078,6 +2128,9 @@ function atributosEfetivos(atributos: Attributes, c: Combatente): Attributes {
  * (o HP não cai abaixo de 1).
  */
 function passarAcaoBuffs(c: Combatente): void {
+  if ((c.recargaRacialRestante ?? 0) > 0) {
+    c.recargaRacialRestante = (c.recargaRacialRestante ?? 0) - 1;
+  }
   if (c.debuffs && c.debuffs.length > 0) {
     c.debuffs = avancarDebuffs(c.debuffs).debuffs;
   }
@@ -2254,11 +2307,19 @@ function turnoDeCombateInterno(
       atacante.impeto && atacante.impeto.ataquesRestantes > 0 ? atacante.impeto : undefined;
     // Debuffs: o Enfraquecimento de quem ataca reduz o dano; o Ponto Fraco do alvo aumenta (e é consumido no golpe)
     const pontoFracoNesteAtaque = percentualPontoFraco(defensor.debuffs);
-    const bonusDanoBuffs =
+    // O tipo de dano do golpe padrão: Feiticeiro e Profeta causam dano mágico; as demais classes, o do atributo maior
+    const tipoDanoDaClasse: 'fisico' | 'magico' =
+      ehFeiticeiroAtacante || ehProfetaAtacante ? 'magico' : ehDanoFisicoPadrao ? 'fisico' : 'magico';
+    const bonusDanoBuffsPorTipo = (tipo: 'fisico' | 'magico'): number =>
       (impetoNesteAtaque?.bonusDanoPercentual ?? 0) +
-      bonusDanoDosBuffs(atacante.buffs) +
+      bonusDanoDosBuffs(atacante.buffs, tipo) +
       bonusDanoDosDebuffs(atacante.debuffs) +
       pontoFracoNesteAtaque;
+    const bonusDanoBuffs = bonusDanoBuffsPorTipo(
+      ehBarbaroAtacante || ehCavaleiroAtacante || ehBandidoAtacante || ehSamuraiAtacante
+        ? 'fisico'
+        : tipoDanoDaClasse
+    );
     let debuffsNovosNoAlvo: AplicacaoDebuff[] | undefined;
     // Foco: este ataque ignora parte da defesa do inimigo (consumido ao atacar)
     const focoNesteAtaque = atacante.focoProximoAtaque ?? 0;
@@ -2426,10 +2487,19 @@ function turnoDeCombateInterno(
     // Interceptação de Habilidade equipada (subclasse ou customizada)
     let resultadoHabilidadeInterceptada: ResultadoHabilidade | undefined;
     let efeitosDefensivosAplicados: TipoEfeitoDefensivo[] | undefined;
-    if (atacante.classeId && atacante.habilidadesEquipadas) {
+    // Habilidade racial de ataque (Vampiro, Draconiano): no lugar do 1º ataque da ação em que disparou
+    const racialDeAtaque =
+      i === 0 && atacante.racialAtaquePendente && atacante.racaId
+        ? definicaoRacialDeAtaque(atacante.racaId, atacante.linhagem)
+        : undefined;
+    let elementoRacial: Elemento | undefined;
+    if (atacante.classeId && (racialDeAtaque || atacante.habilidadesEquipadas)) {
       const slot = obterSlotAcionado(atacante.classeId, habilidadeAcionada);
-      const habId = slot ? atacante.habilidadesEquipadas[slot] : undefined;
-      const defHab = habId ? obterHabilidade(habId) : undefined;
+      const habId = slot && atacante.habilidadesEquipadas ? atacante.habilidadesEquipadas[slot] : undefined;
+      const defHab = racialDeAtaque?.definicao ?? (habId ? obterHabilidade(habId) : undefined);
+      if (racialDeAtaque) {
+        elementoRacial = racialDeAtaque.elemento;
+      }
       if (defHab) {
         const tipoPrevisto = defHab.tipoDano ?? 'fisico';
         const danoBasePlano = tipoPrevisto === 'fisico' ? danoFisico : danoMagico;
@@ -2474,7 +2544,7 @@ function turnoDeCombateInterno(
           bonusDanoExtraPercentual:
             (ctxHab.bonusDanoExtraPercentual ?? 0) +
             bonusAcumulativo +
-            bonusDanoBuffs,
+            bonusDanoBuffsPorTipo(tipoPrevisto),
         };
         const { danoBruto: novoDanoBruto, mitigacaoEfetiva } = resolverDanoHabilidade(
           resHab,
@@ -2615,6 +2685,9 @@ function turnoDeCombateInterno(
           }
         }
       }
+      if (elementoGolpe === undefined && elementoRacial !== undefined) {
+        elementoGolpe = elementoRacial;
+      }
       if (elementoGolpe === undefined && atacante.elementoAtaque !== undefined) {
         elementoGolpe = atacante.elementoAtaque;
       }
@@ -2675,8 +2748,9 @@ function turnoDeCombateInterno(
         ? ((100 - (impetoDefensor?.reducaoDefesaPercentual ?? 0)) *
             (100 - focoNesteAtaque) *
             (100 + bonusDefesaDosBuffs(defensor.buffs)) *
-            (100 - reducaoDefesaPorPressao(defensor.debuffs, hpAtual, defensor.hpMax))) /
-          1_000_000
+            (100 - reducaoDefesaPorPressao(defensor.debuffs, hpAtual, defensor.hpMax)) *
+            (100 - reducaoDefesaDosDebuffs(defensor.debuffs))) /
+          100_000_000
         : 100;
     if (fatorDefesaPercentual !== 100 && !ehCavaleiroDefensor) {
       mitigacaoParaAtaque = Math.floor(

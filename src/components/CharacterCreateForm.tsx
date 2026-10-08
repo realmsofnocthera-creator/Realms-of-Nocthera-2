@@ -1559,7 +1559,7 @@ export function CharacterCreateForm({
                     transition={{ duration: 0.26, delay: 0.16, ease: 'easeOut' }}
                     className="relative z-10 grid grid-cols-[44%_54%] justify-between gap-2 h-[31%] shrink-0"
                   >
-                    {/* ESQUERDA MEIO: 4 mini-slots + Moldura Central de Recursos (HP / MP / SE) + 4 mini-slots */}
+                    {/* ESQUERDA MEIO: 4 mini-slots + Moldura Central de Recursos (HP / Crítico / SE) + 4 mini-slots */}
                     <div className="h-full grid grid-cols-[22%_52%_22%] justify-between items-stretch gap-1">
                       {/* 4 slots ornamentais esquerdos */}
                       <div className="flex flex-col justify-between gap-1">
@@ -1573,7 +1573,7 @@ export function CharacterCreateForm({
                         ))}
                       </div>
 
-                      {/* Moldura central vertical com os 3 Recursos Previstos (HP, Mana, Sobreescudo) */}
+                      {/* Moldura central vertical com os 3 Recursos Previstos (HP, Crítico, Sobreescudo) */}
                       <div className="rounded-[3px] bg-[#110B0C]/95 border border-[#D4AF37] p-1.5 flex flex-col justify-around items-center text-center shadow-inner">
                         <span className="font-cinzel font-bold text-[8px] uppercase tracking-wider text-[#F5C542]">
                           Recursos Nv.1
