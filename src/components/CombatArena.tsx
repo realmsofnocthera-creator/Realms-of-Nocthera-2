@@ -27,6 +27,11 @@ export function CombatArena({ idToken, character, onCombatComplete }: CombatAren
     setLevelUps(0);
 
     try {
+      // Um id por clique: se a requisição for reenviada, o servidor não aplica XP/ouro duas vezes
+      const combatId =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : undefined;
       const res = await fetch('/api/combat/start', {
         method: 'POST',
         headers: {
@@ -35,6 +40,7 @@ export function CombatArena({ idToken, character, onCombatComplete }: CombatAren
         },
         body: JSON.stringify({
           monsterId: monster.id,
+          ...(combatId ? { combatId } : {}),
         }),
       });
 

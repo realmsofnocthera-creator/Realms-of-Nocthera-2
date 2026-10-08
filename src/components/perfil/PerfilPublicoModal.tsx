@@ -29,7 +29,6 @@ import { HUD_IMAGES } from '@/assets/hud';
 import { PERFIL_IMAGES } from '@/assets/perfil';
 import { AvatarPicker } from '@/components/AvatarPicker';
 
-const LOCAL_SESSION_KEY = 'nocthera_auth_session';
 
 export interface PerfilPublicoModalProps {
   isOpen: boolean;
@@ -46,21 +45,10 @@ async function resolveCurrentToken(): Promise<string | null> {
     try {
       return await auth.currentUser.getIdToken();
     } catch {
-      // Continua para fallback local
+      // Sem token válido: segue sem sessão
     }
   }
 
-  try {
-    const rawSession = window.localStorage.getItem(LOCAL_SESSION_KEY);
-    if (rawSession) {
-      const parsed = JSON.parse(rawSession) as { idToken?: string };
-      if (parsed.idToken) {
-        return parsed.idToken;
-      }
-    }
-  } catch {
-    // Ignora falhas de leitura do localStorage
-  }
 
   return null;
 }

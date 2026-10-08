@@ -1,4 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Autenticação e semente controladas só nos testes (0.5-A5, 0.5-B1)
+vi.mock('../../server/auth', () => import('../../server/__tests__/helpers/authFake'));
+vi.mock('../../server/combatSeed', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../server/combatSeed')>()),
+  gerarSemente: () => 42,
+}));
 import {
   iniciativa,
   calcularDanoFisico,

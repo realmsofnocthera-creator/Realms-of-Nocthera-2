@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuthToken } from '../../../../server/auth';
+import { limitarEscrita } from '../../../../server/rateLimit';
 import { updateCharacterSobre } from '../../../../server/characterService';
 
 export async function POST(req: NextRequest) {
@@ -13,6 +14,9 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+
+    const limitado = limitarEscrita(req, user.uid, 'character-sobre');
+    if (limitado) return limitado;
 
     const body = await req.json();
     const sobre = typeof body?.sobre === 'string' ? body.sobre : '';

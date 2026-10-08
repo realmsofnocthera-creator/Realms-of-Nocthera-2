@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuthToken } from '../../../../../server/auth';
+import { limitarEscrita } from '../../../../../server/rateLimit';
 import { escolherSubclasse } from '../../../../../server/characterService';
 
 const ERROS_REGRA = new Set([
@@ -23,6 +24,9 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+
+    const limitado = limitarEscrita(req, user.uid, 'character-subclasse-escolher');
+    if (limitado) return limitado;
 
     let body: { subclasseId?: unknown } | null = null;
     try {

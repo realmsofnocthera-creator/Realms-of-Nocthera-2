@@ -26,73 +26,28 @@ import {
   removerBonusSubclasse,
 } from '../game';
 import { calcularDanoFisico, ResultadoCombate } from '../game/combat';
-import { adminDb } from './firebaseAdmin';
+import {
+  persistencia,
+  memoriaDeTeste,
+  NomeEmUsoError,
+  PersonagemJaExisteError,
+  type ResultadoMutacao,
+  type OpcoesMutacao,
+} from './persistence';
 
-export interface CharacterDocument {
-  uid: string;
-  nome: string;
-  avatarId: string;
-  sobre?: string;
-  racaId: string;
-  classeId: string;
-  linhagem?: string;
-  nivel: number;
-  xpAtual: number;
-  pontosDisponiveis: number;
-  pontosAlocadosPorNivel?: Attributes;
-  habilidadesEquipadas?: HabilidadesEquipadas;
-  fragmentosAlma?: number;
-  subclasseAtualId?: string | null;
-  subclasseTiers?: Record<string, number>;
-  bonusSubclasseAplicado?: Attributes;
-  atributos: Attributes;
-  ouro: number;
-  diamantes?: number;
-  hpMax: number;
-  manaMax: number;
-  sobreescudoMax: number;
-  defesaFisica?: number;
-  agilidadeEfetiva?: number;
-  danoFisicoBase?: number;
-  criadoEm: string;
-}
+export type {
+  CharacterDocument,
+  PublicCharacterProfile,
+  CreateCharacterInput,
+  TransactionDocument,
+} from './characterTypes';
+import type {
+  CharacterDocument,
+  PublicCharacterProfile,
+  CreateCharacterInput,
+  TransactionDocument,
+} from './characterTypes';
 
-export interface PublicCharacterProfile {
-  nome: string;
-  raca: string;
-  racaId: string;
-  classe: string;
-  classeId: string;
-  linhagem?: string;
-  nivel: number;
-  avatarId: string;
-  atributosFinais: Attributes;
-  poderTotal: number;
-  sobre: string;
-}
-
-export interface CreateCharacterInput {
-  nome: string;
-  avatarId?: string;
-  racaId?: string;
-  classeId?: string;
-  linhagem?: string;
-  pontos: Record<AttributeName, number>;
-}
-
-export interface TransactionDocument {
-  id?: string;
-  uid: string;
-  tipo: 'ganho' | 'perda';
-  quantidade: number;
-  moeda?: 'ouro' | 'diamantes' | 'fragmentosAlma';
-  motivo: string;
-  timestamp: string;
-}
-
-// Armazenamento em memória do servidor como persistência confiável e cache server-side
-const memoryStore = new Map<string, CharacterDocument>();
-const transactionsStore: TransactionDocument[] = [];
 
 /**
  * Calcula o XP final de uma vitória aplicando a passiva bonusXpPercentual da raça do personagem
@@ -126,7 +81,7 @@ export async function createCharacter(
     throw new Error('O nome do personagem deve ter entre 2 e 32 caracteres.');
   }
 
-  if (await isCharacterNameTaken(nomeLimpo)) {
+  if ((await persistencia().buscarUidPorNome(nomeLimpo)) !== null) {
     throw new Error('Esse nome já está em uso.');
   }
 
@@ -268,10 +223,15 @@ export async function createCharacter(
     criadoEm: new Date().toISOString(),
   };
 
-  memoryStore.set(uid, character);
-
-  // Persiste no Firestore usando Firebase Admin SDK (privilégio de servidor)
-  await persistCharacterToFirestore(uid, character);
+  // Grava personagem + índice de nome em uma única transação (0.5-C1, C3)
+  try {
+    await persistencia().criarPersonagem(character);
+  } catch (error) {
+    if (error instanceof NomeEmUsoError || error instanceof PersonagemJaExisteError) {
+      throw new Error(error.message);
+    }
+    throw error;
+  }
 
   return character;
 }
@@ -302,39 +262,10 @@ export function calcularAtributosDerivados(
 }
 
 /**
- * Busca o personagem pelo UID do usuário e calcula os atributos derivados dinamicamente com src/game/.
+ * Normaliza um documento lido da persistência: recalcula derivados com src/game/ e
+ * preenche os padrões de campos opcionais.
  */
-export async function getCharacterByUid(uid: string): Promise<CharacterDocument | null> {
-  // 1. Tenta buscar via Firebase Admin SDK
-  try {
-    const fromFirestore = await fetchCharacterFromFirestore(uid);
-    if (fromFirestore) {
-      const derivados = calcularAtributosDerivados(
-        fromFirestore.atributos,
-        fromFirestore.classeId,
-        fromFirestore.nivel
-      );
-      Object.assign(fromFirestore, derivados);
-      fromFirestore.habilidadesEquipadas = normalizarHabilidadesEquipadas(
-        fromFirestore.classeId,
-        fromFirestore.habilidadesEquipadas
-      );
-      fromFirestore.diamantes = fromFirestore.diamantes ?? 0;
-      fromFirestore.fragmentosAlma = fromFirestore.fragmentosAlma ?? 0;
-      fromFirestore.subclasseAtualId = fromFirestore.subclasseAtualId ?? null;
-      fromFirestore.subclasseTiers = fromFirestore.subclasseTiers ?? {};
-      memoryStore.set(uid, fromFirestore);
-      return fromFirestore;
-    }
-  } catch {
-    // Continua para o memoryStore
-  }
-
-  const char = memoryStore.get(uid);
-  if (!char) {
-    return null;
-  }
-
+function normalizarDocumento(char: CharacterDocument): CharacterDocument {
   const derivados = calcularAtributosDerivados(char.atributos, char.classeId, char.nivel);
   return {
     ...char,
@@ -344,12 +275,18 @@ export async function getCharacterByUid(uid: string): Promise<CharacterDocument 
     subclasseTiers: char.subclasseTiers ?? {},
     bonusSubclasseAplicado: char.bonusSubclasseAplicado,
     pontosAlocadosPorNivel: char.pontosAlocadosPorNivel ?? { ...ZEROS_ATRIBUTOS },
-    habilidadesEquipadas: normalizarHabilidadesEquipadas(
-      char.classeId,
-      char.habilidadesEquipadas
-    ),
+    habilidadesEquipadas: normalizarHabilidadesEquipadas(char.classeId, char.habilidadesEquipadas),
     ...derivados,
   };
+}
+
+/**
+ * Busca o personagem pelo UID do usuário e calcula os atributos derivados dinamicamente com src/game/.
+ * Falhas de leitura no Firestore propagam como erro (nunca viram "personagem não encontrado").
+ */
+export async function getCharacterByUid(uid: string): Promise<CharacterDocument | null> {
+  const char = await persistencia().lerPersonagem(uid);
+  return char ? normalizarDocumento(char) : null;
 }
 
 // Hook para simulação de falha de persistência em testes (apenas ativo em NODE_ENV === 'test')
@@ -362,21 +299,12 @@ export function setTestPersistenceFailHook(hook: (() => void) | null) {
 }
 
 /**
- * Atualiza os dados de um personagem existente no servidor e Firestore via Firebase Admin SDK.
+ * Mescla alterações num personagem e recalcula os derivados (função pura).
  */
-export async function updateCharacter(
-  uid: string,
+function mesclarAtualizacao(
+  current: CharacterDocument,
   updates: Partial<CharacterDocument>
-): Promise<CharacterDocument> {
-  if (process.env.NODE_ENV === 'test' && testPersistenceFailHook) {
-    testPersistenceFailHook();
-  }
-
-  const current = await getCharacterByUid(uid);
-  if (!current) {
-    throw new Error('Personagem não encontrado para atualização.');
-  }
-
+): CharacterDocument {
   const updated: CharacterDocument = {
     ...current,
     ...updates,
@@ -401,19 +329,58 @@ export async function updateCharacter(
   };
 
   // Recalcula derivados usando src/game/ (incluindo Resistência Bárbara no nível 20+, Muralha de Ferro, Fluxo Arcano e Passos Rápidos no nível 12+)
-  const derivados = calcularAtributosDerivados(
-    updated.atributos,
-    updated.classeId,
-    updated.nivel
-  );
+  const derivados = calcularAtributosDerivados(updated.atributos, updated.classeId, updated.nivel);
   Object.assign(updated, derivados);
-
-  memoryStore.set(uid, updated);
-
-  // Grava via Firebase Admin SDK
-  await persistCharacterToFirestore(uid, updated);
-
   return updated;
+}
+
+function novoIdTransacao(): string {
+  return `tx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+/**
+ * Lê, altera e grava o personagem (mais transações e registro de idempotência) em UMA
+ * operação atômica (transação do Firestore). `fn` deve ser pura e síncrona: pode ser
+ * reexecutada em caso de contenção (0.5-C2).
+ */
+async function mutarPersonagem<T>(
+  uid: string,
+  naoEncontrado: string,
+  fn: (atual: CharacterDocument) => ResultadoMutacao<T>,
+  opcoes?: OpcoesMutacao
+): Promise<{ repetida: boolean; resultado: T }> {
+  if (process.env.NODE_ENV === 'test' && testPersistenceFailHook) {
+    testPersistenceFailHook();
+  }
+
+  return persistencia().mutarPersonagem(
+    uid,
+    (atual) => {
+      if (!atual) {
+        throw new Error(naoEncontrado);
+      }
+      return fn(normalizarDocumento(atual));
+    },
+    opcoes
+  );
+}
+
+/**
+ * Atualiza os dados de um personagem existente no servidor e Firestore via Firebase Admin SDK.
+ */
+export async function updateCharacter(
+  uid: string,
+  updates: Partial<CharacterDocument>
+): Promise<CharacterDocument> {
+  const { resultado } = await mutarPersonagem(
+    uid,
+    'Personagem não encontrado para atualização.',
+    (current) => {
+      const proximo = mesclarAtualizacao(current, updates);
+      return { proximo, resultado: proximo };
+    }
+  );
+  return resultado;
 }
 
 /**
@@ -433,35 +400,14 @@ export async function updateCharacterAvatar(
     throw new Error(`Avatar inválido: "${String(avatarId)}".`);
   }
 
-  const current = await getCharacterByUid(uid);
-  if (!current) {
-    throw new Error('Personagem não encontrado.');
-  }
-
-  const updated: CharacterDocument = {
-    ...current,
-    avatarId: avatarValido.id,
-  };
-
-  memoryStore.set(uid, updated);
-
-  if (!isTestEnv()) {
-    try {
-      await adminDb.collection('characters').doc(uid).set(
-        {
-          avatarId: avatarValido.id,
-        },
-        { merge: true }
-      );
-    } catch (error: unknown) {
-      const err = error as { code?: number | string; message?: string };
-      console.error(
-        `[Firebase Admin SDK] Falha ao atualizar avatarId em characters/${uid}: Código ${err.code || 'N/A'} - ${err.message || String(error)}`
-      );
+  const { resultado } = await persistencia().mutarPersonagem(uid, (atual) => {
+    if (!atual) {
+      throw new Error('Personagem não encontrado.');
     }
-  }
-
-  return updated;
+    const proximo = { ...normalizarDocumento(atual), avatarId: avatarValido.id };
+    return { proximo, resultado: proximo };
+  });
+  return resultado;
 }
 
 /**
@@ -480,35 +426,14 @@ export async function updateCharacterSobre(
     throw new Error('O campo "Sobre" deve ter no máximo 150 caracteres.');
   }
 
-  const current = await getCharacterByUid(uid);
-  if (!current) {
-    throw new Error('Personagem não encontrado.');
-  }
-
-  const updated: CharacterDocument = {
-    ...current,
-    sobre: sobreNormalizado,
-  };
-
-  memoryStore.set(uid, updated);
-
-  if (!isTestEnv()) {
-    try {
-      await adminDb.collection('characters').doc(uid).set(
-        {
-          sobre: sobreNormalizado,
-        },
-        { merge: true }
-      );
-    } catch (error: unknown) {
-      const err = error as { code?: number | string; message?: string };
-      console.error(
-        `[Firebase Admin SDK] Falha ao atualizar sobre em characters/${uid}: Código ${err.code || 'N/A'} - ${err.message || String(error)}`
-      );
+  const { resultado } = await persistencia().mutarPersonagem(uid, (atual) => {
+    if (!atual) {
+      throw new Error('Personagem não encontrado.');
     }
-  }
-
-  return updated;
+    const proximo = { ...normalizarDocumento(atual), sobre: sobreNormalizado };
+    return { proximo, resultado: proximo };
+  });
+  return resultado;
 }
 
 function toPublicCharacterProfile(char: CharacterDocument): PublicCharacterProfile {
@@ -546,80 +471,73 @@ export async function getPublicCharacterByName(
   if (!nomeLimpo) {
     return null;
   }
-  const nomeNormalizado = nomeLimpo.toLowerCase();
-
-  for (const char of memoryStore.values()) {
-    if (char.nome.trim().toLowerCase() === nomeNormalizado) {
-      return toPublicCharacterProfile(char);
-    }
-  }
-
-  if (isTestEnv()) {
+  // Índice nomes/{nomeNormalizado}: busca O(1), sem varrer a coleção (0.5-C3)
+  const uid = await persistencia().buscarUidPorNome(nomeLimpo);
+  if (!uid) {
     return null;
   }
-
-  try {
-    const exactSnap = await adminDb
-      .collection('characters')
-      .where('nome', '==', nomeLimpo)
-      .limit(1)
-      .get();
-
-    if (!exactSnap.empty) {
-      const docSnap = exactSnap.docs[0];
-      const loaded = await getCharacterByUid(docSnap.id);
-      if (loaded) {
-        return toPublicCharacterProfile(loaded);
-      }
-    }
-
-    const allSnap = await adminDb.collection('characters').select('nome').get();
-    for (const docSnap of allSnap.docs) {
-      const data = docSnap.data();
-      if (
-        typeof data?.nome === 'string' &&
-        data.nome.trim().toLowerCase() === nomeNormalizado
-      ) {
-        const loaded = await getCharacterByUid(docSnap.id);
-        if (loaded) {
-          return toPublicCharacterProfile(loaded);
-        }
-      }
-    }
-  } catch (error: unknown) {
-    const err = error as { code?: number | string; message?: string };
-    console.error(
-      `[Firebase Admin SDK] Erro ao buscar perfil público "${nomeLimpo}": Código ${err.code || 'N/A'} - ${err.message || String(error)}`
-    );
-  }
-
-  return null;
+  const loaded = await getCharacterByUid(uid);
+  return loaded ? toPublicCharacterProfile(loaded) : null;
 }
 
 /**
- * Registra uma transação de alteração de ouro na coleção transactions/ via Firebase Admin SDK.
+ * Registra uma transação avulsa na coleção transactions/. Falha de gravação propaga como erro.
+ * (As alterações de saldo gravam a transação na MESMA operação atômica do personagem.)
  */
 export async function recordTransaction(
   tx: Omit<TransactionDocument, 'id'>
 ): Promise<TransactionDocument> {
   const transaction: TransactionDocument = {
     ...tx,
-    id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    id: novoIdTransacao(),
   };
 
-  transactionsStore.push(transaction);
-
-  // Grava via Firebase Admin SDK
-  await persistTransactionToFirestore(transaction);
+  await persistencia().registrarTransacao(transaction);
 
   return transaction;
 }
 
 /**
- * Retorna as transações de ouro e diamantes do usuário.
+ * Retorna as transações do usuário gravadas em memória. Somente para testes: em produção
+ * as transações vivem na coleção transactions/ do Firestore.
  */
 export function getTransactionsByUid(uid: string): TransactionDocument[] {
-  return transactionsStore.filter((t) => t.uid === uid);
+  return memoriaDeTeste.transacoes.filter((t) => t.uid === uid);
+}
+
+type MoedaAlteravel = 'ouro' | 'diamantes' | 'fragmentosAlma';
+
+/**
+ * Altera um saldo e grava a transação de forma atômica (um único commit).
+ * Se o saldo ficar negativo, lança `mensagemInsuficiente` sem alterar nada.
+ */
+async function alterarSaldo(
+  uid: string,
+  moeda: MoedaAlteravel,
+  delta: number,
+  motivo: string,
+  mensagemInsuficiente: string
+): Promise<CharacterDocument> {
+  const { resultado } = await mutarPersonagem(uid, 'Personagem não encontrado.', (current) => {
+    const novoSaldo = (current[moeda] ?? 0) + delta;
+    if (novoSaldo < 0) {
+      throw new Error(mensagemInsuficiente);
+    }
+
+    const transacao: TransactionDocument = {
+      id: novoIdTransacao(),
+      uid,
+      tipo: delta > 0 ? 'ganho' : 'perda',
+      quantidade: Math.abs(delta),
+      moeda,
+      motivo,
+      timestamp: new Date().toISOString(),
+    };
+
+    const proximo = mesclarAtualizacao(current, { [moeda]: novoSaldo });
+    return { proximo, transacoes: [transacao], resultado: proximo };
+  });
+  return resultado;
 }
 
 /**
@@ -639,35 +557,7 @@ export async function alterarDiamantes(
   if (typeof delta !== 'number' || !Number.isInteger(delta) || delta === 0) {
     throw new Error('Delta de diamantes inválido: deve ser um número inteiro diferente de zero.');
   }
-
-  const current = await getCharacterByUid(uid);
-  if (!current) {
-    throw new Error('Personagem não encontrado.');
-  }
-
-  const saldoAtual = current.diamantes ?? 0;
-  const novoSaldo = saldoAtual + delta;
-
-  if (novoSaldo < 0) {
-    throw new Error('Diamantes insuficientes');
-  }
-
-  // Grava transação com a mesma função do ouro
-  await recordTransaction({
-    uid,
-    tipo: delta > 0 ? 'ganho' : 'perda',
-    quantidade: Math.abs(delta),
-    moeda: 'diamantes',
-    motivo,
-    timestamp: new Date().toISOString(),
-  });
-
-  // Atualiza o personagem
-  const updated = await updateCharacter(uid, {
-    diamantes: novoSaldo,
-  });
-
-  return updated;
+  return alterarSaldo(uid, 'diamantes', delta, motivo, 'Diamantes insuficientes');
 }
 
 /**
@@ -687,33 +577,7 @@ export async function alterarOuro(
   if (typeof delta !== 'number' || !Number.isInteger(delta) || delta === 0) {
     throw new Error('Delta de ouro inválido: deve ser um número inteiro diferente de zero.');
   }
-
-  const current = await getCharacterByUid(uid);
-  if (!current) {
-    throw new Error('Personagem não encontrado.');
-  }
-
-  const saldoAtual = current.ouro ?? 0;
-  const novoSaldo = saldoAtual + delta;
-
-  if (novoSaldo < 0) {
-    throw new Error('Ouro insuficiente');
-  }
-
-  await recordTransaction({
-    uid,
-    tipo: delta > 0 ? 'ganho' : 'perda',
-    quantidade: Math.abs(delta),
-    moeda: 'ouro',
-    motivo,
-    timestamp: new Date().toISOString(),
-  });
-
-  const updated = await updateCharacter(uid, {
-    ouro: novoSaldo,
-  });
-
-  return updated;
+  return alterarSaldo(uid, 'ouro', delta, motivo, 'Ouro insuficiente');
 }
 
 /**
@@ -735,33 +599,7 @@ export async function alterarFragmentosAlma(
       'Delta de fragmentos de alma inválido: deve ser um número inteiro diferente de zero.'
     );
   }
-
-  const current = await getCharacterByUid(uid);
-  if (!current) {
-    throw new Error('Personagem não encontrado.');
-  }
-
-  const saldoAtual = current.fragmentosAlma ?? 0;
-  const novoSaldo = saldoAtual + delta;
-
-  if (novoSaldo < 0) {
-    throw new Error('Fragmentos de alma insuficientes');
-  }
-
-  await recordTransaction({
-    uid,
-    tipo: delta > 0 ? 'ganho' : 'perda',
-    quantidade: Math.abs(delta),
-    moeda: 'fragmentosAlma',
-    motivo: descricao,
-    timestamp: new Date().toISOString(),
-  });
-
-  const updated = await updateCharacter(uid, {
-    fragmentosAlma: novoSaldo,
-  });
-
-  return updated;
+  return alterarSaldo(uid, 'fragmentosAlma', delta, descricao, 'Fragmentos de alma insuficientes');
 }
 
 // Mutex por UID para serializar operações de combate, distribuição e reset do mesmo personagem
@@ -785,7 +623,8 @@ export async function runWithUserMutex<T>(uid: string, fn: () => Promise<T>): Pr
     await previousPromise;
     const newSet = new Set(activeUids || []);
     newSet.add(uid);
-    return await activeUserMutexStorage.run(newSet, fn);
+    // Além da fila em memória (mesma instância), trava distribuída entre instâncias (0.5-C2)
+    return await activeUserMutexStorage.run(newSet, () => persistencia().comTrava(uid, fn));
   } finally {
     resolveCurrent();
     if (userMutexMap.get(uid) === currentPromise) {
@@ -1052,349 +891,142 @@ export async function escolherSubclasse(
   });
 }
 
-/**
- * Aplica os efeitos pós-combate no personagem:
- * - Se venceu: adiciona XP, processa level up até 30 com pontos por nível, adiciona ouro e grava transação.
- * - Se perdeu: aplica regra de morte (perde até 50 de ouro sem negativar, restaura HP/Mana) e grava transação.
- */
-export async function applyCombatResult(
-  uid: string,
-  resultado: ResultadoCombate,
-  monstroNome: string
-): Promise<{
+export interface OpcoesAplicarCombate {
+  /** Identificador único do combate: reenvios com o mesmo id não reaplicam XP nem ouro (0.5-B3). */
+  combatId?: string;
+  /** Dados auditáveis gravados junto do registro do combate (semente, monstro etc.). */
+  auditoria?: Record<string, unknown>;
+}
+
+export interface ResultadoAplicacaoCombate {
   character: CharacterDocument;
   levelUps: number;
   transaction?: TransactionDocument;
   mensagens: string[];
-}> {
+  resultadoCombate: ResultadoCombate;
+  /** true quando o combatId já havia sido aplicado e este é o resultado gravado na primeira vez. */
+  repetido: boolean;
+}
+
+/**
+ * Aplica os efeitos pós-combate no personagem:
+ * - Se venceu: adiciona XP, processa level up até 30 com pontos por nível, adiciona ouro e grava transação.
+ * - Se perdeu: aplica regra de morte (perde até 50 de ouro sem negativar, restaura HP/Mana) e grava transação.
+ * Personagem, transação e registro do combate são gravados em uma única operação atômica.
+ */
+export async function applyCombatResult(
+  uid: string,
+  resultado: ResultadoCombate,
+  monstroNome: string,
+  opcoes: OpcoesAplicarCombate = {}
+): Promise<ResultadoAplicacaoCombate> {
   return runWithUserMutex(uid, async () => {
-    const current = await getCharacterByUid(uid);
-    if (!current) {
-      throw new Error('Personagem não encontrado.');
-    }
-
-    const mensagens: string[] = [...resultado.mensagens];
-    let transaction: TransactionDocument | undefined;
-    let levelUps = 0;
-
-    if (resultado.vencedor === 'personagem') {
-      // 1. Soma XP e processa Level Up
-      let novoXp = current.xpAtual + resultado.xpGanho;
-      let novoNivel = current.nivel;
-      let pontosDisponiveis = current.pontosDisponiveis;
-
-      while (novoNivel < GAME_CONFIG.NIVEL_MAXIMO_GRAU_1) {
-        const xpNecessario = xpParaProximoNivel(novoNivel);
-        if (novoXp >= xpNecessario) {
-          novoXp -= xpNecessario;
-          novoNivel += 1;
-          pontosDisponiveis += GAME_CONFIG.PONTOS_POR_NIVEL;
-          levelUps += 1;
-          mensagens.push(
-            `★ SUBIU DE NÍVEL! ${current.nome} alcançou o Nível ${novoNivel}! (+${GAME_CONFIG.PONTOS_POR_NIVEL} pontos disponíveis)`
-          );
-        } else {
-          break;
+    const idempotencia = opcoes.combatId
+      ? {
+          id: opcoes.combatId,
+          auditoria: {
+            monstro: monstroNome,
+            vencedor: resultado.vencedor,
+            ...(opcoes.auditoria ?? {}),
+          },
         }
-      }
+      : undefined;
 
-      if (novoNivel >= GAME_CONFIG.NIVEL_MAXIMO_GRAU_1) {
-        novoNivel = GAME_CONFIG.NIVEL_MAXIMO_GRAU_1;
-      }
+    const { repetida, resultado: aplicado } = await mutarPersonagem<
+      Omit<ResultadoAplicacaoCombate, 'repetido'>
+    >(
+      uid,
+      'Personagem não encontrado.',
+      (current) => {
+        const mensagens: string[] = [...resultado.mensagens];
+        let transaction: TransactionDocument | undefined;
+        let levelUps = 0;
 
-      // 2. Soma ouro
-      const novoOuro = current.ouro + resultado.ouroGanho;
+        if (resultado.vencedor === 'personagem') {
+          // 1. Soma XP e processa Level Up
+          let novoXp = current.xpAtual + resultado.xpGanho;
+          let novoNivel = current.nivel;
+          let pontosDisponiveis = current.pontosDisponiveis;
 
-      // 3. Grava transação de ganho se ouro > 0 via Firebase Admin SDK
-      if (resultado.ouroGanho > 0) {
-        transaction = await recordTransaction({
-          uid,
-          tipo: 'ganho',
-          quantidade: resultado.ouroGanho,
-          motivo: `Vitória em combate contra ${monstroNome}`,
-          timestamp: new Date().toISOString(),
-        });
-      }
+          while (novoNivel < GAME_CONFIG.NIVEL_MAXIMO_GRAU_1) {
+            const xpNecessario = xpParaProximoNivel(novoNivel);
+            if (novoXp >= xpNecessario) {
+              novoXp -= xpNecessario;
+              novoNivel += 1;
+              pontosDisponiveis += GAME_CONFIG.PONTOS_POR_NIVEL;
+              levelUps += 1;
+              mensagens.push(
+                `★ SUBIU DE NÍVEL! ${current.nome} alcançou o Nível ${novoNivel}! (+${GAME_CONFIG.PONTOS_POR_NIVEL} pontos disponíveis)`
+              );
+            } else {
+              break;
+            }
+          }
 
-      const updated = await updateCharacter(uid, {
-        xpAtual: novoXp,
-        nivel: novoNivel,
-        pontosDisponiveis,
-        ouro: novoOuro,
-      });
+          if (novoNivel >= GAME_CONFIG.NIVEL_MAXIMO_GRAU_1) {
+            novoNivel = GAME_CONFIG.NIVEL_MAXIMO_GRAU_1;
+          }
 
-      return {
-        character: updated,
-        levelUps,
-        transaction,
-        mensagens,
-      };
-    } else {
-      // Derrota do Personagem - Regra de morte
-      const ouroAtual = current.ouro;
-      const ouroPerdido = Math.min(ouroAtual, GAME_CONFIG.OURO_PERDIDO_MORTE);
-      const novoOuro = Math.max(0, ouroAtual - ouroPerdido);
+          // 2. Soma ouro
+          const novoOuro = current.ouro + resultado.ouroGanho;
 
-      if (ouroPerdido > 0) {
-        transaction = await recordTransaction({
-          uid,
-          tipo: 'perda',
-          quantidade: ouroPerdido,
-          motivo: `Penalidade de morte contra ${monstroNome}`,
-          timestamp: new Date().toISOString(),
-        });
-      }
+          // 3. Transação de ganho se ouro > 0
+          if (resultado.ouroGanho > 0) {
+            transaction = {
+              id: novoIdTransacao(),
+              uid,
+              tipo: 'ganho',
+              quantidade: resultado.ouroGanho,
+              motivo: `Vitória em combate contra ${monstroNome}`,
+              timestamp: new Date().toISOString(),
+            };
+          }
 
-      const updated = await updateCharacter(uid, {
-        ouro: novoOuro,
-      });
+          const proximo = mesclarAtualizacao(current, {
+            xpAtual: novoXp,
+            nivel: novoNivel,
+            pontosDisponiveis,
+            ouro: novoOuro,
+          });
 
-      return {
-        character: updated,
-        levelUps: 0,
-        transaction,
-        mensagens,
-      };
-    }
+          return {
+            proximo,
+            transacoes: transaction ? [transaction] : [],
+            resultado: { character: proximo, levelUps, transaction, mensagens, resultadoCombate: resultado },
+          };
+        }
+
+        // Derrota do Personagem - Regra de morte
+        const ouroAtual = current.ouro;
+        const ouroPerdido = Math.min(ouroAtual, GAME_CONFIG.OURO_PERDIDO_MORTE);
+        const novoOuro = Math.max(0, ouroAtual - ouroPerdido);
+
+        if (ouroPerdido > 0) {
+          transaction = {
+            id: novoIdTransacao(),
+            uid,
+            tipo: 'perda',
+            quantidade: ouroPerdido,
+            motivo: `Penalidade de morte contra ${monstroNome}`,
+            timestamp: new Date().toISOString(),
+          };
+        }
+
+        const proximo = mesclarAtualizacao(current, { ouro: novoOuro });
+        return {
+          proximo,
+          transacoes: transaction ? [transaction] : [],
+          resultado: { character: proximo, levelUps: 0, transaction, mensagens, resultadoCombate: resultado },
+        };
+      },
+      idempotencia ? { idempotencia } : undefined
+    );
+
+    return { ...aplicado, repetido: repetida };
   });
 }
 
-function isTestEnv(): boolean {
-  return Boolean(process.env.VITEST || process.env.NODE_ENV === 'test');
-}
-
-function withFirestoreTimeout<T>(promise: Promise<T>, ms = 4000): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(`Timeout de ${ms}ms na operação com Firestore`)), ms)
-    ),
-  ]);
-}
-
-/**
- * Verifica se já existe qualquer personagem (de qualquer conta) usando o mesmo nome.
- * Comparação normalizada com trim() e case-insensitive (ex.: "Yuri" e "yuri" contam como iguais).
- */
-async function isCharacterNameTaken(nomeLimpo: string): Promise<boolean> {
-  const nomeNormalizado = nomeLimpo.trim().toLowerCase();
-
-  for (const char of memoryStore.values()) {
-    if (char.nome.trim().toLowerCase() === nomeNormalizado) {
-      return true;
-    }
-  }
-
-  if (isTestEnv()) {
-    return false;
-  }
-
-  try {
-    const exactSnap = await withFirestoreTimeout(
-      adminDb
-        .collection('characters')
-        .where('nome', '==', nomeLimpo)
-        .limit(1)
-        .get()
-    );
-
-    if (!exactSnap.empty) {
-      return true;
-    }
-
-    const allNamesSnap = await withFirestoreTimeout(
-      adminDb.collection('characters').select('nome').get()
-    );
-    for (const docSnap of allNamesSnap.docs) {
-      const data = docSnap.data();
-      if (
-        typeof data?.nome === 'string' &&
-        data.nome.trim().toLowerCase() === nomeNormalizado
-      ) {
-        return true;
-      }
-    }
-  } catch (error: unknown) {
-    const err = error as { code?: number | string; message?: string };
-    console.error(
-      `[Firebase Admin SDK] Erro ao verificar unicidade do nome "${nomeLimpo}": Código ${err.code || 'N/A'} - ${err.message || String(error)}`
-    );
-  }
-
-  return false;
-}
-
-/**
- * Persistência no Firestore usando Firebase Admin SDK com privilégio de servidor
- */
-async function persistCharacterToFirestore(
-  uid: string,
-  char: CharacterDocument
-) {
-  if (isTestEnv()) {
-    return;
-  }
-
-  try {
-    await withFirestoreTimeout(
-      adminDb.collection('characters').doc(uid).set({
-        uid: char.uid,
-        nome: char.nome,
-        avatarId: char.avatarId,
-        sobre: char.sobre ?? '',
-        racaId: char.racaId,
-        classeId: char.classeId,
-        ...(char.linhagem ? { linhagem: char.linhagem } : {}),
-        nivel: char.nivel,
-        xpAtual: char.xpAtual,
-        pontosDisponiveis: char.pontosDisponiveis,
-        pontosAlocadosPorNivel: char.pontosAlocadosPorNivel ?? { ...ZEROS_ATRIBUTOS },
-        ouro: char.ouro,
-        diamantes: char.diamantes ?? 0,
-        fragmentosAlma: char.fragmentosAlma ?? 0,
-        subclasseAtualId: char.subclasseAtualId ?? null,
-        subclasseTiers: char.subclasseTiers ?? {},
-        ...(char.bonusSubclasseAplicado ? { bonusSubclasseAplicado: char.bonusSubclasseAplicado } : {}),
-        hpMax: char.hpMax,
-        manaMax: char.manaMax,
-        sobreescudoMax: char.sobreescudoMax,
-        criadoEm: char.criadoEm,
-        atributos: char.atributos,
-      })
-    );
-  } catch (error: unknown) {
-    const err = error as { code?: number | string; message?: string; details?: string };
-    console.error(
-      `[Firebase Admin SDK] Falha ao persistir characters/${uid}: Código ${err.code || 'N/A'} - ${err.message || String(error)}`
-    );
-  }
-}
-
-/**
- * Persistência de transações no Firestore usando Firebase Admin SDK
- */
-async function persistTransactionToFirestore(
-  tx: TransactionDocument
-) {
-  if (isTestEnv()) {
-    return;
-  }
-
-  const docId = tx.id || `tx_${Date.now()}`;
-  try {
-    await adminDb.collection('transactions').doc(docId).set({
-      uid: tx.uid,
-      tipo: tx.tipo,
-      quantidade: tx.quantidade,
-      moeda: tx.moeda || 'ouro',
-      motivo: tx.motivo,
-      timestamp: tx.timestamp,
-    });
-  } catch (error: unknown) {
-    const err = error as { code?: number | string; message?: string; details?: string };
-    console.error(
-      `[Firebase Admin SDK] Falha ao persistir transactions/${docId}: Código ${err.code || 'N/A'} - ${err.message || String(error)}`
-    );
-  }
-}
-
-/**
- * Leitura de personagem no Firestore usando Firebase Admin SDK
- */
-async function fetchCharacterFromFirestore(uid: string): Promise<CharacterDocument | null> {
-  if (isTestEnv()) {
-    return null;
-  }
-
-  try {
-    const docSnap = await withFirestoreTimeout(
-      adminDb.collection('characters').doc(uid).get()
-    );
-    if (!docSnap.exists) {
-      return null;
-    }
-
-    const data = docSnap.data();
-    if (!data) return null;
-
-    const classeIdResolvido =
-      typeof data.classeId === 'string' && data.classeId ? data.classeId : 'barbaro';
-    const avatarExistente =
-      typeof data.avatarId === 'string' && getAvatarById(data.avatarId)
-        ? data.avatarId
-        : (getAvatarById(classeIdResolvido)?.id ?? AVATARES_DISPONIVEIS[0].id);
-
-    return {
-      uid: data.uid || uid,
-      nome: data.nome || '',
-      avatarId: avatarExistente,
-      sobre: typeof data.sobre === 'string' ? data.sobre : '',
-      racaId: typeof data.racaId === 'string' && data.racaId ? data.racaId : 'humano',
-      classeId: classeIdResolvido,
-      ...(typeof data.linhagem === 'string' && data.linhagem ? { linhagem: data.linhagem } : {}),
-      nivel: Number(data.nivel || 1),
-      xpAtual: Number(data.xpAtual || 0),
-      pontosDisponiveis: Number(data.pontosDisponiveis || 0),
-      pontosAlocadosPorNivel: {
-        vigor: Number(data.pontosAlocadosPorNivel?.vigor || 0),
-        mente: Number(data.pontosAlocadosPorNivel?.mente || 0),
-        forca: Number(data.pontosAlocadosPorNivel?.forca || 0),
-        vitalidade: Number(data.pontosAlocadosPorNivel?.vitalidade || 0),
-        arcano: Number(data.pontosAlocadosPorNivel?.arcano || 0),
-        inteligencia: Number(data.pontosAlocadosPorNivel?.inteligencia || 0),
-        agilidade: Number(data.pontosAlocadosPorNivel?.agilidade || 0),
-      },
-      habilidadesEquipadas: normalizarHabilidadesEquipadas(
-        classeIdResolvido,
-        data.habilidadesEquipadas
-      ),
-      ouro: Number(data.ouro || 0),
-      diamantes: Number(data.diamantes || 0),
-      fragmentosAlma: Number(data.fragmentosAlma || 0),
-      subclasseAtualId:
-        typeof data.subclasseAtualId === 'string' ? data.subclasseAtualId : null,
-      subclasseTiers:
-        data.subclasseTiers && typeof data.subclasseTiers === 'object'
-          ? (data.subclasseTiers as Record<string, number>)
-          : {},
-      ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
-        ? {
-            bonusSubclasseAplicado: {
-              vigor: Number(data.bonusSubclasseAplicado.vigor || 0),
-              mente: Number(data.bonusSubclasseAplicado.mente || 0),
-              forca: Number(data.bonusSubclasseAplicado.forca || 0),
-              vitalidade: Number(data.bonusSubclasseAplicado.vitalidade || 0),
-              arcano: Number(data.bonusSubclasseAplicado.arcano || 0),
-              inteligencia: Number(data.bonusSubclasseAplicado.inteligencia || 0),
-              agilidade: Number(data.bonusSubclasseAplicado.agilidade || 0),
-            },
-          }
-        : {}),
-      hpMax: 0,
-      manaMax: 0,
-      sobreescudoMax: 0,
-      criadoEm: data.criadoEm || new Date().toISOString(),
-      atributos: {
-        vigor: Number(data.atributos?.vigor || 2),
-        mente: Number(data.atributos?.mente || 2),
-        forca: Number(data.atributos?.forca || 0),
-        vitalidade: Number(data.atributos?.vitalidade || 0),
-        arcano: Number(data.atributos?.arcano || 0),
-        inteligencia: Number(data.atributos?.inteligencia || 0),
-        agilidade: Number(data.atributos?.agilidade || 0),
-      },
-    };
-  } catch (error: unknown) {
-    const err = error as { code?: number | string; message?: string };
-    console.error(
-      `[Firebase Admin SDK] Erro ao consultar characters/${uid}: Código ${err.code || 'N/A'} - ${err.message || String(error)}`
-    );
-    return null;
-  }
-}
-
 export function resetCharacterStore() {
-  memoryStore.clear();
-  transactionsStore.length = 0;
+  memoriaDeTeste.limpar();
   testPersistenceFailHook = null;
 }

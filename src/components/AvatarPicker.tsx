@@ -8,7 +8,6 @@ import { getClassById } from '@/rules/classes';
 import { AVATAR_IMAGES } from '@/assets/avatars';
 import { NOCTHERA_THEME } from '@/theme/theme';
 
-const LOCAL_SESSION_KEY = 'nocthera_auth_session';
 
 export interface AvatarPickerProps {
   selectedAvatarId?: string;
@@ -23,21 +22,10 @@ async function resolveCurrentToken(explicitToken?: string): Promise<string | nul
     try {
       return await auth.currentUser.getIdToken();
     } catch {
-      // Continua para fallback local
+      // Sem token válido: segue sem sessão
     }
   }
 
-  try {
-    const rawSession = window.localStorage.getItem(LOCAL_SESSION_KEY);
-    if (rawSession) {
-      const parsed = JSON.parse(rawSession) as { idToken?: string };
-      if (parsed.idToken) {
-        return parsed.idToken;
-      }
-    }
-  } catch {
-    // Ignora falhas de leitura do localStorage
-  }
 
   return null;
 }

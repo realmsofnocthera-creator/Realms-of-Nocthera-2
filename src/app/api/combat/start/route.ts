@@ -1,13 +1,17 @@
+import crypto from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuthToken } from '../../../../server/auth';
+import { limitarEscrita } from '../../../../server/rateLimit';
 import {
   getCharacterByUid,
   applyCombatResult,
   calcularXpComBonusRacial,
   runWithUserMutex,
 } from '../../../../server/characterService';
+import { gerarSemente, combatIdValido } from '../../../../server/combatSeed';
 import { MONSTERS_MAP } from '../../../../rules/monsters';
 import { getRaceById } from '../../../../rules/races';
+import { PersistenciaIndisponivelError } from '../../../../server/persistence';
 import { resolverCombate, Combatente } from '../../../../game/combat';
 
 export async function POST(req: NextRequest) {
@@ -22,8 +26,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const limitado = limitarEscrita(req, user.uid, 'combat-start');
+    if (limitado) return limitado;
+
     const body = await req.json().catch(() => ({}));
-    const { monsterId, seed } = body;
+    const { monsterId } = body;
+    // A semente NUNCA vem do cliente (0.5-B1). O cliente só pode enviar um combatId para
+    // que reenvios da mesma requisição não apliquem XP e ouro duas vezes (0.5-B3).
+    const combatId: string = combatIdValido(body.combatId) ? body.combatId : crypto.randomUUID();
 
     if (!monsterId || typeof monsterId !== 'string') {
       return NextResponse.json(
@@ -67,7 +77,7 @@ export async function POST(req: NextRequest) {
       };
 
       // 3. Resolução 100% no servidor
-      const combateSeed = typeof seed === 'number' ? seed : Date.now();
+      const combateSeed = gerarSemente();
       const resultado = resolverCombate(combatentePersonagem, monstro, combateSeed);
 
       // Se venceu e o personagem possui passiva bonusXpPercentual, aplica por cima do XP base do monstro (arredondado para baixo)
@@ -83,21 +93,19 @@ export async function POST(req: NextRequest) {
       }
 
       // 4. Aplica alterações de status, XP, ouro e transações no servidor
-      const postCombat = await applyCombatResult(
-        user.uid,
-        resultado,
-        monstro.nome
-      );
+      const postCombat = await applyCombatResult(user.uid, resultado, monstro.nome, {
+        combatId,
+        auditoria: { seed: combateSeed, monsterId },
+      });
 
-      return {
-        resultado,
-        postCombat,
-      };
+      return { postCombat };
     });
 
     return NextResponse.json(
       {
-        resultado: postCombatData.resultado,
+        combatId,
+        repetido: postCombatData.postCombat.repetido,
+        resultado: postCombatData.postCombat.resultadoCombate,
         character: postCombatData.postCombat.character,
         levelUps: postCombatData.postCombat.levelUps,
         transaction: postCombatData.postCombat.transaction,
@@ -106,6 +114,12 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
+    if (error instanceof PersistenciaIndisponivelError) {
+      return NextResponse.json(
+        { error: 'Serviço temporariamente indisponível. Tente novamente em instantes.' },
+        { status: 503 }
+      );
+    }
     const message = error instanceof Error ? error.message : 'Erro durante a batalha.';
     if (message.includes('Personagem não encontrado')) {
       return NextResponse.json({ error: message }, { status: 404 });

@@ -13,7 +13,6 @@ interface SessionUser {
   email: string | null;
 }
 
-const LOCAL_SESSION_KEY = 'nocthera_auth_session';
 
 export default function HubPage() {
   const router = useRouter();
@@ -65,27 +64,6 @@ export default function HubPage() {
         }
       }
 
-      // Verifica sessão de fallback salva localmente (mesmo padrão de src/app/login/page.tsx)
-      try {
-        const rawSession = window.localStorage.getItem(LOCAL_SESSION_KEY);
-        if (rawSession) {
-          const parsed = JSON.parse(rawSession) as {
-            user?: SessionUser;
-            idToken?: string;
-          };
-          if (parsed.user?.uid && parsed.idToken) {
-            const char = await buscarPersonagem(parsed.idToken);
-            if (cancelado) return;
-            if (char) {
-              setCharacter(char);
-              setLoading(false);
-              return;
-            }
-          }
-        }
-      } catch {
-        // Ignora falhas de leitura do localStorage
-      }
 
       if (!cancelado) {
         router.replace('/login');

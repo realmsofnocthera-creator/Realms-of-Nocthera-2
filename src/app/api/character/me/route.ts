@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuthToken } from '@/server/auth';
 import { getCharacterByUid } from '@/server/characterService';
+import { PersistenciaIndisponivelError } from '@/server/persistence';
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,6 +19,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ character }, { status: 200 });
   } catch (error) {
+    if (error instanceof PersistenciaIndisponivelError) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
     const message = error instanceof Error ? error.message : 'Erro ao carregar dados do personagem.';
     return NextResponse.json({ error: message }, { status: 500 });
   }

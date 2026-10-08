@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuthToken } from '../../../../server/auth';
+import { limitarEscrita } from '../../../../server/rateLimit';
 import { updateCharacterAvatar } from '../../../../server/characterService';
 
 async function handleUpdateAvatar(req: NextRequest) {
@@ -13,6 +14,9 @@ async function handleUpdateAvatar(req: NextRequest) {
         { status: 401 }
       );
     }
+
+    const limitado = limitarEscrita(req, user.uid, 'character-avatar');
+    if (limitado) return limitado;
 
     const body = await req.json();
     const avatarId = typeof body?.avatarId === 'string' ? body.avatarId : '';

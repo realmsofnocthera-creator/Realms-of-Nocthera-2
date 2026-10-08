@@ -14,7 +14,6 @@ interface SessionUser {
   email: string | null;
 }
 
-const LOCAL_SESSION_KEY = 'nocthera_auth_session';
 
 export default function CombatePage() {
   const router = useRouter();
@@ -65,28 +64,6 @@ export default function CombatePage() {
         } catch {
           // Segue para fallback ou redirecionamento
         }
-      }
-
-      try {
-        const rawSession = window.localStorage.getItem(LOCAL_SESSION_KEY);
-        if (rawSession) {
-          const parsed = JSON.parse(rawSession) as {
-            user?: SessionUser;
-            idToken?: string;
-          };
-          if (parsed.user?.uid && parsed.idToken) {
-            const char = await buscarPersonagem(parsed.idToken);
-            if (cancelado) return;
-            if (char) {
-              setIdToken(parsed.idToken);
-              setCharacter(char);
-              setLoading(false);
-              return;
-            }
-          }
-        }
-      } catch {
-        // Ignora falhas de leitura do localStorage
       }
 
       if (!cancelado) {

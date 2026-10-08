@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuthToken } from '@/server/auth';
+import { limitarEscrita } from '@/server/rateLimit';
 import { distribuirPontos } from '@/server/characterService';
 
 const ERROS_REGRA = new Set([
@@ -20,6 +21,9 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+
+    const limitado = limitarEscrita(req, user.uid, 'character-atributos-distribuir');
+    if (limitado) return limitado;
 
     const body = await req.json().catch(() => ({}));
     const distribuicao = body?.distribuicao;

@@ -22,10 +22,12 @@ service cloud.firestore {
       return request.resource.data;
     }
 
+    // nomes/, combates/ e locks/ são exclusivas do servidor (Admin SDK): negadas pela regra padrão acima.
+
     // Coleção users/{uid}
     match /users/{uid} {
-      allow get: if isOwner(uid) && isValidId(uid);
-      allow list: if false;
+      // 0.5-A5: sem leitura pelo cliente (contas antigas podem ter passwordHash no documento).
+      allow get, list: if false;
       allow create: if isOwner(uid) && isValidId(uid)
                     && incoming().keys().hasAll(['email', 'dataCriacao'])
                     && incoming().keys().hasOnly(['email', 'dataCriacao'])

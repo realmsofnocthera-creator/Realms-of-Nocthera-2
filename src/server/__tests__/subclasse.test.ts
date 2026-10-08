@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+vi.mock('../auth', () => import('./helpers/authFake'));
 import {
   createCharacter,
   getCharacterByUid,
@@ -373,10 +375,9 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
 
     it('deve retornar 400 com mensagem exata para erro de regra', async () => {
       const { POST } = await import('../../app/api/character/subclasse/escolher/route');
-      const { createSignedSessionToken } = await import('../auth');
 
       await setupPersonagem('user_route_err', 'barbaro', { nivel: 19 });
-      const token = createSignedSessionToken({ uid: 'user_route_err', email: 'test@route.com' });
+      const token = 'test-token-user_route_err';
 
       const req = new Request('http://localhost:3000/api/character/subclasse/escolher', {
         method: 'POST',
@@ -395,10 +396,9 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
 
     it('deve retornar 200 com { character } no sucesso', async () => {
       const { POST } = await import('../../app/api/character/subclasse/escolher/route');
-      const { createSignedSessionToken } = await import('../auth');
 
       await setupPersonagem('user_route_ok', 'barbaro');
-      const token = createSignedSessionToken({ uid: 'user_route_ok', email: 'ok@route.com' });
+      const token = 'test-token-user_route_ok';
 
       const req = new Request('http://localhost:3000/api/character/subclasse/escolher', {
         method: 'POST',
