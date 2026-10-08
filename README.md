@@ -10,8 +10,6 @@ O servidor é a fonte da verdade para o estado e as mecânicas; o navegador apen
 ├── .github/workflows/ci.yml   # CI: npm ci, audit, lint, tsc, testes e build em cada push/PR
 ├── scripts/
 │   ├── dev.mjs                         # Servidor de desenvolvimento (npm run dev)
-│   ├── migrar-contas-login-proprio.mjs # Importa contas do login antigo para o Firebase Auth
-│   ├── criar-indice-nomes.mjs          # Cria o índice nomes/ para personagens já existentes
 │   ├── configurar-backup-firestore.sh  # Agenda backup diário do Firestore
 │   └── otimizar-imagens.mjs            # Converte imagens grandes para WebP no tamanho de uso
 ├── src/
@@ -68,10 +66,10 @@ O servidor usa o Firebase Admin SDK com Application Default Credentials (no Clou
 
 ## Passos únicos após o deploy da Etapa 0.5
 
-1. No console do Firebase → Authentication → Sign-in method, deixar **E-mail/senha** e **Google** ativos.
-2. Migrar contas do login antigo (simule primeiro, depois aplique):
-   `node scripts/migrar-contas-login-proprio.mjs` e `node scripts/migrar-contas-login-proprio.mjs --aplicar`
-3. Indexar os nomes dos personagens existentes:
-   `node scripts/criar-indice-nomes.mjs` e `node scripts/criar-indice-nomes.mjs --aplicar`
-4. Publicar as regras do Firestore (`firestore.rules`).
-5. Agendar o backup diário: `bash scripts/configurar-backup-firestore.sh`
+1. No console do Firebase → Authentication → Sign-in method, deixar **E-mail/senha** e **Google** ativos (já estão).
+2. Publicar as regras do Firestore (`firestore.rules`), com `firebase deploy --only firestore:rules` (já publicadas).
+3. Agendar o backup diário: `bash scripts/configurar-backup-firestore.sh`
+
+## Dados atuais são de teste
+
+Tudo o que existe hoje no banco (contas, personagens, transações) é de teste e será **apagado no início da alfa**. Por isso não há migração das contas do antigo login próprio nem índice retroativo de nomes (`nomes/`): contas e personagens criados antes da Etapa 0.5 não são migrados. Depois da limpeza, tudo nasce já no formato novo (Firebase Auth, índice de nomes, registro de combates e revogação de sessão).
