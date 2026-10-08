@@ -14,7 +14,7 @@ export const SUBCLASSES: readonly Subclasse[] = [
     nome: 'Berserker',
     bonusAtributos: {
       vigor: 12,
-      mente: 0,
+      sorte: 0,
       forca: 20,
       vitalidade: 0,
       arcano: 0,
@@ -28,7 +28,7 @@ export const SUBCLASSES: readonly Subclasse[] = [
     nome: 'Colosso',
     bonusAtributos: {
       vigor: 18,
-      mente: 0,
+      sorte: 0,
       forca: 6,
       vitalidade: 16,
       arcano: 0,
@@ -42,7 +42,7 @@ export const SUBCLASSES: readonly Subclasse[] = [
     nome: 'Vanguarda',
     bonusAtributos: {
       vigor: 10,
-      mente: 0,
+      sorte: 0,
       forca: 16,
       vitalidade: 14,
       arcano: 0,
@@ -56,7 +56,7 @@ export const SUBCLASSES: readonly Subclasse[] = [
     nome: 'Bastião',
     bonusAtributos: {
       vigor: 14,
-      mente: 0,
+      sorte: 0,
       forca: 0,
       vitalidade: 22,
       arcano: 4,
@@ -70,7 +70,7 @@ export const SUBCLASSES: readonly Subclasse[] = [
     nome: 'Arquimago',
     bonusAtributos: {
       vigor: 0,
-      mente: 12,
+      sorte: 12,
       forca: 0,
       vitalidade: 0,
       arcano: 4,
@@ -84,7 +84,7 @@ export const SUBCLASSES: readonly Subclasse[] = [
     nome: 'Sábio Arcano',
     bonusAtributos: {
       vigor: 0,
-      mente: 18,
+      sorte: 18,
       forca: 0,
       vitalidade: 0,
       arcano: 12,
@@ -98,7 +98,7 @@ export const SUBCLASSES: readonly Subclasse[] = [
     nome: 'Assassino',
     bonusAtributos: {
       vigor: 4,
-      mente: 0,
+      sorte: 0,
       forca: 22,
       vitalidade: 0,
       arcano: 0,
@@ -112,7 +112,7 @@ export const SUBCLASSES: readonly Subclasse[] = [
     nome: 'Duelista',
     bonusAtributos: {
       vigor: 4,
-      mente: 0,
+      sorte: 0,
       forca: 14,
       vitalidade: 0,
       arcano: 0,
@@ -126,7 +126,7 @@ export const SUBCLASSES: readonly Subclasse[] = [
     nome: 'Sacerdote',
     bonusAtributos: {
       vigor: 12,
-      mente: 18,
+      sorte: 18,
       forca: 0,
       vitalidade: 0,
       arcano: 10,
@@ -140,7 +140,7 @@ export const SUBCLASSES: readonly Subclasse[] = [
     nome: 'Inquisidor',
     bonusAtributos: {
       vigor: 6,
-      mente: 12,
+      sorte: 12,
       forca: 0,
       vitalidade: 0,
       arcano: 0,
@@ -154,7 +154,7 @@ export const SUBCLASSES: readonly Subclasse[] = [
     nome: 'Kensei',
     bonusAtributos: {
       vigor: 6,
-      mente: 0,
+      sorte: 0,
       forca: 24,
       vitalidade: 0,
       arcano: 0,
@@ -168,7 +168,7 @@ export const SUBCLASSES: readonly Subclasse[] = [
     nome: 'Ronin',
     bonusAtributos: {
       vigor: 10,
-      mente: 0,
+      sorte: 0,
       forca: 12,
       vitalidade: 0,
       arcano: 0,

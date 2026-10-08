@@ -80,7 +80,7 @@ describe('ORDEM 48E — Sobreescudo máximo: soma da classe com a subclasse', ()
         nome: `Titan ${uid}`.slice(0, 32),
         racaId: 'humano',
         classeId: 'barbaro',
-        pontos: { vigor: 2, mente: 0, forca: 2, vitalidade: 6, arcano: 0, inteligencia: 0, agilidade: 0 },
+        pontos: { vigor: 2, sorte: 0, forca: 2, vitalidade: 6, arcano: 0, inteligencia: 0, agilidade: 0 },
       });
       return updateCharacter(uid, { nivel: 20 });
     }

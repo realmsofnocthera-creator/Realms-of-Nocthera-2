@@ -61,7 +61,7 @@ describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
         sobreescudo: 20,
         atributos: {
           vigor: 10,
-          mente: 2,
+          sorte: 2,
           forca: 15,
           vitalidade: 10,
           arcano: 0,
@@ -121,7 +121,7 @@ describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 2,
+          sorte: 2,
           forca: 15,
           vitalidade: 5,
           arcano: 0,
@@ -143,7 +143,7 @@ describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 50,
-          mente: 0,
+          sorte: 0,
           forca: 1,
           vitalidade: 0,
           arcano: 0,
@@ -196,7 +196,7 @@ describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 2,
+          sorte: 2,
           forca: 15,
           vitalidade: 5,
           arcano: 0,
@@ -218,7 +218,7 @@ describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 50,
-          mente: 0,
+          sorte: 0,
           forca: 1,
           vitalidade: 0,
           arcano: 0,
@@ -260,7 +260,7 @@ describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 0,
+          sorte: 0,
           forca: 20,
           vitalidade: 0,
           arcano: 0,
@@ -282,7 +282,7 @@ describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
         mitigacao: 10,
         atributos: {
           vigor: 50,
-          mente: 0,
+          sorte: 0,
           forca: 1,
           vitalidade: 0,
           arcano: 0,
@@ -334,7 +334,7 @@ describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 0,
+          sorte: 0,
           forca: 20,
           vitalidade: 0,
           arcano: 0,
@@ -356,7 +356,7 @@ describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
         mitigacao: 0,
         atributos: {
           vigor: 50,
-          mente: 0,
+          sorte: 0,
           forca: 1,
           vitalidade: 0,
           arcano: 0,
@@ -405,7 +405,7 @@ describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 0,
+          sorte: 0,
           forca: 10,
           vitalidade: 0,
           arcano: 0,
@@ -426,7 +426,7 @@ describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 0,
+          sorte: 0,
           forca: 1,
           vitalidade: 0,
           arcano: 0,
@@ -468,7 +468,7 @@ describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 0,
+          sorte: 0,
           forca: 25, // dano físico base = 25
           vitalidade: 0,
           arcano: 0,
@@ -490,7 +490,7 @@ describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
         mitigacao: 20, // Mitigação física = 20
         atributos: {
           vigor: 10,
-          mente: 0,
+          sorte: 0,
           forca: 1,
           vitalidade: 0,
           arcano: 0,
@@ -542,7 +542,7 @@ describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 0,
+          sorte: 0,
           forca: 25, // dano físico base = 25
           vitalidade: 0,
           arcano: 0,
@@ -564,7 +564,7 @@ describe('ORDEM 48B — Integração de Habilidades Equipadas ao Motor', () => {
         mitigacao: 20, // Mitigação física = 20
         atributos: {
           vigor: 10,
-          mente: 0,
+          sorte: 0,
           forca: 1,
           vitalidade: 0,
           arcano: 0,

@@ -24,7 +24,7 @@ describe('ORDEM 38 — Moeda Diamantes (Camada de Dados / Servidor)', () => {
       classeId: 'cavaleiro',
       pontos: {
         vigor: 5,
-        mente: 0,
+        sorte: 0,
         forca: 5,
         vitalidade: 0,
         arcano: 0,
@@ -47,7 +47,7 @@ describe('ORDEM 38 — Moeda Diamantes (Camada de Dados / Servidor)', () => {
       classeId: 'feiticeiro',
       pontos: {
         vigor: 2,
-        mente: 5,
+        sorte: 5,
         forca: 0,
         vitalidade: 0,
         arcano: 0,
@@ -77,7 +77,7 @@ describe('ORDEM 38 — Moeda Diamantes (Camada de Dados / Servidor)', () => {
       classeId: 'barbaro',
       pontos: {
         vigor: 5,
-        mente: 0,
+        sorte: 0,
         forca: 5,
         vitalidade: 0,
         arcano: 0,
@@ -109,7 +109,7 @@ describe('ORDEM 38 — Moeda Diamantes (Camada de Dados / Servidor)', () => {
       classeId: 'cavaleiro',
       pontos: {
         vigor: 5,
-        mente: 0,
+        sorte: 0,
         forca: 2,
         vitalidade: 3,
         arcano: 0,
@@ -141,7 +141,7 @@ describe('ORDEM 38 — Moeda Diamantes (Camada de Dados / Servidor)', () => {
       classeId: 'feiticeiro',
       pontos: {
         vigor: 2,
-        mente: 5,
+        sorte: 5,
         forca: 0,
         vitalidade: 0,
         arcano: 0,
@@ -163,7 +163,7 @@ describe('ORDEM 38 — Moeda Diamantes (Camada de Dados / Servidor)', () => {
       classeId: 'bandido',
       pontos: {
         vigor: 3,
-        mente: 0,
+        sorte: 0,
         forca: 2,
         vitalidade: 0,
         arcano: 0,
@@ -192,7 +192,7 @@ describe('ORDEM 38 — Moeda Diamantes (Camada de Dados / Servidor)', () => {
       classeId: 'feiticeiro',
       pontos: {
         vigor: 2,
-        mente: 3,
+        sorte: 3,
         forca: 0,
         vitalidade: 0,
         arcano: 5,

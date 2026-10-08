@@ -173,12 +173,10 @@ describe('ORDEM 22 — Sistema de Elementos (Bloco A)', () => {
         nivel: 1,
         hp: 100,
         hpMax: 100,
-        mana: 100,
-        manaMax: 100,
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 10,
+          sorte: 10,
           forca: 0,
           vitalidade: 0,
           arcano: 5,
@@ -238,13 +236,11 @@ describe('ORDEM 22 — Sistema de Elementos (Bloco A)', () => {
         nivel: 30,
         hp: 150,
         hpMax: 200,
-        mana: 150,
-        manaMax: 200,
         sobreescudo: 0,
         contadorMilagreDivino: 6, // próximo golpe é o 7º -> Milagre Divino (150% de 20 = 30 antes do elemento)
         atributos: {
           vigor: 20,
-          mente: 20,
+          sorte: 20,
           forca: 0,
           vitalidade: 0,
           arcano: 10,
@@ -286,7 +282,7 @@ describe('ORDEM 22 — Sistema de Elementos (Bloco A)', () => {
           sobreescudo: 0,
           atributos: {
             vigor: 20,
-            mente: 10,
+            sorte: 10,
             forca: 0,
             vitalidade: 0,
             arcano: 5,
@@ -311,7 +307,7 @@ describe('ORDEM 22 — Sistema de Elementos (Bloco A)', () => {
         elementoAtaque: 'sombrio',
         atributos: {
           vigor: 10,
-          mente: 5,
+          sorte: 5,
           forca: 0,
           vitalidade: 0,
           arcano: 5,
@@ -337,7 +333,7 @@ describe('ORDEM 22 — Sistema de Elementos (Bloco A)', () => {
         elementoAtaque: 'sombrio',
         atributos: {
           vigor: 5,
-          mente: 5,
+          sorte: 5,
           forca: 0,
           vitalidade: 0,
           arcano: 2,
@@ -357,7 +353,7 @@ describe('ORDEM 22 — Sistema de Elementos (Bloco A)', () => {
         },
         atributos: {
           vigor: 10,
-          mente: 2,
+          sorte: 2,
           forca: 5,
           vitalidade: 10,
           arcano: 0,
@@ -386,7 +382,7 @@ describe('ORDEM 22 — Sistema de Elementos (Bloco A)', () => {
         elementoAtaque: 'fogo',
         atributos: {
           vigor: 10,
-          mente: 5,
+          sorte: 5,
           forca: 2,
           vitalidade: 0,
           arcano: 5,
@@ -404,7 +400,7 @@ describe('ORDEM 22 — Sistema de Elementos (Bloco A)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 2,
+          sorte: 2,
           forca: 5,
           vitalidade: 2,
           arcano: 2,
@@ -421,7 +417,7 @@ describe('ORDEM 22 — Sistema de Elementos (Bloco A)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 2,
+          sorte: 2,
           forca: 5,
           vitalidade: 2,
           arcano: 2,

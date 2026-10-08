@@ -55,7 +55,7 @@
             "vigor": {
               "type": "number"
             },
-            "mente": {
+            "sorte": {
               "type": "number"
             },
             "forca": {
@@ -76,7 +76,7 @@
           },
           "required": [
             "vigor",
-            "mente",
+            "sorte",
             "forca",
             "vitalidade",
             "arcano",

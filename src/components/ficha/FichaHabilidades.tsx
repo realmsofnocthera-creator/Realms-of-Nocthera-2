@@ -32,7 +32,6 @@ export function FichaHabilidades({
     src: string | null;
     nivelRequerido?: number;
     bloqueada: boolean;
-    custoMana?: number;
     recargaTurnos?: number;
     duracaoTurnos?: number;
   }
@@ -49,7 +48,6 @@ export function FichaHabilidades({
       src: getRaceSkillIcon(raca.id, 'ativa'),
       nivelRequerido: 1,
       bloqueada: false,
-      custoMana: raca.habilidadeRacial.custoMana,
       recargaTurnos: raca.habilidadeRacial.recargaTurnos,
       duracaoTurnos: raca.habilidadeRacial.duracaoTurnos,
     });
@@ -152,7 +150,6 @@ export function FichaHabilidades({
                 descricao={skill.descricao}
                 nivelRequerido={skill.nivelRequerido}
                 bloqueada={skill.bloqueada}
-                custoMana={skill.custoMana}
                 recargaTurnos={skill.recargaTurnos}
                 duracaoTurnos={skill.duracaoTurnos}
                 badgeIndex={idx + 1}
@@ -185,7 +182,6 @@ export function FichaHabilidades({
                 descricao={skill.descricao}
                 nivelRequerido={skill.nivelRequerido}
                 bloqueada={skill.bloqueada}
-                custoMana={skill.custoMana}
                 recargaTurnos={skill.recargaTurnos}
                 duracaoTurnos={skill.duracaoTurnos}
                 badgeIndex={idx + 5}

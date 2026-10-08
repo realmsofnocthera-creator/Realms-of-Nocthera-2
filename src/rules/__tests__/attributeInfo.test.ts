@@ -27,9 +27,10 @@ describe('attributeInfo', () => {
     expect(vigorExp).toContain(String(GAME_CONFIG.HP_POR_PONTO_VIGOR));
     expect(vigorExp).toBe('Cada ponto de Vigor aumenta seu HP máximo em 5.');
 
-    const menteExp = getAttributeExplanation('mente');
-    expect(menteExp).toContain(String(GAME_CONFIG.MANA_POR_PONTO_MENTE));
-    expect(menteExp).toBe('Cada ponto de Mente aumenta sua Mana máxima em 5.');
+    const sorteExp = getAttributeExplanation('sorte');
+    expect(sorteExp).toBe(
+      'Cada ponto de Sorte aumenta a chance de acerto crítico em 0,1% (base de 2%; o crítico causa 2x de dano) e a chance de drops em 0,1%.'
+    );
 
     const forcaExp = getAttributeExplanation('forca');
     expect(forcaExp).toContain('1');
@@ -70,11 +71,10 @@ describe('attributeInfo', () => {
       xpAtual: 500,
       ouro: 100,
       hpMax: 50,
-      manaMax: 20,
       sobreescudoMax: 10,
       atributos: {
         vigor: 10,
-        mente: 4,
+        sorte: 4,
         forca: 15,
         vitalidade: 5,
         arcano: 2,

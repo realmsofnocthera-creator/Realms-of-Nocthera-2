@@ -11,7 +11,6 @@ export interface SkillIconProps {
   descricao: string;
   nivelRequerido?: number;
   bloqueada?: boolean;
-  custoMana?: number;
   recargaTurnos?: number;
   duracaoTurnos?: number;
   isOpen?: boolean;
@@ -28,7 +27,6 @@ export function SkillIcon({
   descricao,
   nivelRequerido,
   bloqueada = false,
-  custoMana,
   recargaTurnos,
   duracaoTurnos,
   isOpen: controlledIsOpen,
@@ -151,7 +149,6 @@ export function SkillIcon({
         descricao={descricao}
         nivelRequerido={nivelRequerido}
         bloqueada={bloqueada}
-        custoMana={custoMana}
         recargaTurnos={recargaTurnos}
         duracaoTurnos={duracaoTurnos}
       />

@@ -5,6 +5,7 @@ import { CharacterDocument } from '@/server/characterService';
 import { ATTRIBUTES, AttributeName } from '@/rules/attributes';
 import { ATTRIBUTE_DISPLAY_NAMES } from '@/rules/attributeInfo';
 import { ATTRIBUTE_ICONS, RESOURCE_ICONS } from '@/assets/icons';
+import { calcularChanceCritico } from '@/game';
 import { FICHA_ASSETS } from '@/rules/fichaAssets';
 import {
   PendingAttributes,
@@ -58,11 +59,13 @@ export function AtributosPanel({
       corValor: 'text-[#F5C542]',
     },
     {
-      id: 'mana',
-      nome: 'Mana',
-      icone: RESOURCE_ICONS.mana,
-      valor: character.manaMax,
-      corValor: 'text-[#93C5FD]',
+      id: 'critico',
+      nome: 'Crítico',
+      icone: ATTRIBUTE_ICONS.sorte,
+      valor: `${String(
+        character.chanceCritico ?? calcularChanceCritico(character.atributos.sorte)
+      ).replace('.', ',')}%`,
+      corValor: 'text-[#C4B5FD]',
     },
   ];
 

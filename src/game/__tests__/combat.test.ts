@@ -48,7 +48,7 @@ import {
 } from '@/game/combat';
 import { MONSTERS_MAP } from '@/rules/monsters';
 import { GAME_CONFIG } from '@/rules/config';
-import { calcularHpMax, calcularManaMax, calcularSobreescudoMax } from '@/game/index';
+import { calcularHpMax, calcularSobreescudoMax } from '@/game/index';
 import {
   createCharacter,
   applyCombatResult,
@@ -89,7 +89,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 2,
-          mente: 2,
+          sorte: 2,
           forca: 4,
           vitalidade: 0,
           arcano: 0,
@@ -105,7 +105,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 5,
-          mente: 0,
+          sorte: 0,
           forca: 2,
           vitalidade: 0,
           arcano: 0,
@@ -130,7 +130,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 4,
-          mente: 2,
+          sorte: 2,
           forca: 4,
           vitalidade: 2,
           arcano: 0,
@@ -166,7 +166,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 10,
         atributos: {
           vigor: 10,
-          mente: 2,
+          sorte: 2,
           forca: 10,
           vitalidade: 5,
           arcano: 0,
@@ -197,7 +197,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 6, // 6 * 5 = 30 HP max
-          mente: 4, // 4 * 5 = 20 Mana max
+          sorte: 4, // 4 * 5 = 20 Mana max
           forca: 1,
           vitalidade: 0,
           arcano: 0,
@@ -214,9 +214,8 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       expect(res.ouroPerdido).toBe(GAME_CONFIG.OURO_PERDIDO_MORTE); // 50
       expect(res.personagemFinal.ouro).toBe(120 - 50); // 70
 
-      // HP e Mana restaurados ao valor máximo
+      // HP restaurado ao valor máximo
       expect(res.personagemFinal.hp).toBe(calcularHpMax(heroiFragil.atributos.vigor)); // 30
-      expect(res.personagemFinal.mana).toBe(calcularManaMax(heroiFragil.atributos.mente)); // 20
 
       // Teste com ouro menor que 50: não deve ficar negativo
       const heroiPobre: Combatente = {
@@ -236,7 +235,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         nome: 'Ascendente',
         pontos: {
           vigor: 4,
-          mente: 2,
+          sorte: 2,
           forca: 2,
           vitalidade: 2,
           arcano: 0,
@@ -256,8 +255,6 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         personagemFinal: {
           hp: 30,
           hpMax: 30,
-          mana: 20,
-          manaMax: 20,
           ouro: 20,
         },
       };
@@ -285,8 +282,6 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         personagemFinal: {
           hp: 30,
           hpMax: 30,
-          mana: 20,
-          manaMax: 20,
           ouro: 520,
         },
       };
@@ -310,7 +305,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         nome: 'Bancário',
         pontos: {
           vigor: 4,
-          mente: 2,
+          sorte: 2,
           forca: 2,
           vitalidade: 2,
           arcano: 0,
@@ -372,7 +367,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         racaId: 'humano',
         pontos: {
           vigor: 4,
-          mente: 0,
+          sorte: 0,
           forca: 4,
           vitalidade: 1,
           arcano: 0,
@@ -420,7 +415,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 3,
+          sorte: 3,
           forca: 40,
           vitalidade: 0,
           arcano: 1,
@@ -436,7 +431,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 20,
-          mente: 0,
+          sorte: 0,
           forca: 5,
           vitalidade: 0,
           arcano: 0,
@@ -465,7 +460,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 3,
+          sorte: 3,
           forca: 100,
           vitalidade: 0,
           arcano: 1,
@@ -481,7 +476,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 40,
-          mente: 0,
+          sorte: 0,
           forca: 5,
           vitalidade: 0,
           arcano: 0,
@@ -504,7 +499,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       sobreescudo: 0,
       atributos: {
         vigor: 200,
-        mente: 0,
+        sorte: 0,
         forca: 1,
         vitalidade: 0,
         arcano: 0,
@@ -523,7 +518,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 20,
-          mente: 2,
+          sorte: 2,
           forca: 10,
           vitalidade: 2,
           arcano: 0,
@@ -559,7 +554,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 20,
-          mente: 2,
+          sorte: 2,
           forca: 10,
           vitalidade: 2,
           arcano: 0,
@@ -604,7 +599,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
     it('um Bárbaro nível 12+ com HP abaixo de 50% causa mais dano físico que um idêntico com HP cheio (e <25% não acumula)', () => {
       const atributosIguais = {
         vigor: 20,
-        mente: 2,
+        sorte: 2,
         forca: 10,
         vitalidade: 2,
         arcano: 0,
@@ -690,7 +685,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 20,
-          mente: 2,
+          sorte: 2,
           forca: 15,
           vitalidade: 5,
           arcano: 0,
@@ -762,7 +757,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       sobreescudo: 0,
       atributos: {
         vigor: 200,
-        mente: 0,
+        sorte: 0,
         forca,
         vitalidade: 0,
         arcano: 0,
@@ -781,7 +776,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 10,
         atributos: {
           vigor: 20,
-          mente: 2,
+          sorte: 2,
           forca: 8,
           vitalidade: 5,
           arcano: 0,
@@ -856,7 +851,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
     it('Cavaleiro nível 20+ com HP abaixo de 30% recebe menos dano que um idêntico com HP cheio (Último Bastião)', () => {
       const atributosIguais = {
         vigor: 20,
-        mente: 2,
+        sorte: 2,
         forca: 8,
         vitalidade: 10,
         arcano: 0,
@@ -908,7 +903,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 20,
         atributos: {
           vigor: 20,
-          mente: 2,
+          sorte: 2,
           forca: 10,
           vitalidade: 10,
           arcano: 0,
@@ -962,7 +957,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       mitigacao,
       atributos: {
         vigor: 200,
-        mente: 10,
+        sorte: 10,
         forca: 1,
         vitalidade: 0,
         arcano: 0,
@@ -981,7 +976,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 10,
+          sorte: 10,
           forca: 2,
           vitalidade: 0,
           arcano: 5,
@@ -1028,25 +1023,17 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       expect(danosEfetivos[8]).toBe(31);
     });
 
-    it('Feiticeiro nível 12+ tem Mana máxima e dano mágico base maiores que nível 11 (Fluxo Arcano +10%)', () => {
-      const mente = 10; // Base Mana = 50
+    it('Feiticeiro nível 12+ tem dano mágico base maior que nível 11 (Fluxo Arcano +10%)', () => {
       const inteligencia = 20; // Base Dano Mágico = 20
-
-      const manaLv11 = calcularManaMax(mente, { classeId: 'feiticeiro', nivel: 11 });
-      const manaLv12 = calcularManaMax(mente, { classeId: 'feiticeiro', nivel: 12 });
 
       const danoLv11 = calcularDanoMagico(inteligencia, { classeId: 'feiticeiro', nivel: 11 });
       const danoLv12 = calcularDanoMagico(inteligencia, { classeId: 'feiticeiro', nivel: 12 });
 
-      expect(manaLv12).toBeGreaterThan(manaLv11);
       expect(danoLv12).toBeGreaterThan(danoLv11);
-      expect(manaLv11).toBe(50);
-      expect(manaLv12).toBe(55); // +10%
       expect(danoLv11).toBe(20);
       expect(danoLv12).toBe(22); // +10%
 
-      const fluxoPuro = aplicarFluxoArcano(100, 30, 12, 'feiticeiro');
-      expect(fluxoPuro.manaMax).toBe(110);
+      const fluxoPuro = aplicarFluxoArcano(30, 12, 'feiticeiro');
       expect(fluxoPuro.danoMagico).toBe(33);
     });
 
@@ -1077,7 +1064,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 10,
+          sorte: 10,
           forca: 0,
           vitalidade: 0,
           arcano: 5,
@@ -1126,7 +1113,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         cargasAcumuloArcano: 3, // 3 cargas prontas (+30%)
         atributos: {
           vigor: 10,
-          mente: 10,
+          sorte: 10,
           forca: 0,
           vitalidade: 0,
           arcano: 5,
@@ -1175,7 +1162,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 15,
+          sorte: 15,
           forca: 0,
           vitalidade: 0,
           arcano: 10,
@@ -1238,7 +1225,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       mitigacao,
       atributos: {
         vigor: 300,
-        mente: 5,
+        sorte: 5,
         forca: 1,
         vitalidade: 0,
         arcano: 0,
@@ -1257,7 +1244,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 2,
+          sorte: 2,
           forca: 20, // Dano físico base = 20
           vitalidade: 0,
           arcano: 0,
@@ -1358,7 +1345,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 2,
+          sorte: 2,
           forca: 40, // Base c/ Passos Rápidos (+5%) = 42
           vitalidade: 0,
           arcano: 0,
@@ -1423,7 +1410,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         cargasSedeSangueBandido: 3, // 3 cargas (+15%)
         atributos: {
           vigor: 10,
-          mente: 2,
+          sorte: 2,
           forca: 40, // Base c/ Passos Rápidos = 42
           vitalidade: 0,
           arcano: 0,
@@ -1458,7 +1445,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 2,
+          sorte: 2,
           forca: 40, // Com Passos Rápidos (+5%) = 42 de dano físico base
           vitalidade: 0,
           arcano: 0,
@@ -1526,7 +1513,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       mitigacao,
       atributos: {
         vigor: 300,
-        mente: 10,
+        sorte: 10,
         forca: 1,
         vitalidade: 0,
         arcano: 0,
@@ -1535,19 +1522,17 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       },
     });
 
-    it('Profeta nível 5+ aciona Bênção Divina no 3º, 6º, 9º ataque (ao invés de atacar), curando 15% do HP máx e 10% do MP máx sem ultrapassar os tetos (incluindo teste partindo de HP/MP quase cheio)', () => {
+    it('Profeta nível 5+ aciona Bênção Divina no 3º, 6º, 9º ataque (ao invés de atacar), curando 15% do HP máx sem ultrapassar o teto (incluindo teste partindo de HP quase cheio)', () => {
       const profetaLv5: Combatente = {
         nome: 'Profeta Nv5',
         classeId: 'profeta',
         nivel: 5,
         hp: 20, // Começa com 20/100 HP
         hpMax: 100,
-        mana: 30, // Começa com 30/100 MP
-        manaMax: 100,
         sobreescudo: 0,
         atributos: {
           vigor: 20,
-          mente: 20,
+          sorte: 20,
           forca: 0,
           vitalidade: 0,
           arcano: 5,
@@ -1570,13 +1555,13 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       expect(habilidades).toEqual([
         'Luz Sagrada', // 1º (ataca com 18 de dano mágico)
         'Luz Sagrada', // 2º (ataca com 18 de dano mágico)
-        'Bênção Divina', // 3º (cura +15 HP e +10 MP, 0 de dano, reinicia contador A)
+        'Bênção Divina', // 3º (cura +15 HP, 0 de dano, reinicia contador A)
         'Luz Sagrada', // 4º
         'Luz Sagrada', // 5º
-        'Bênção Divina', // 6º (cura +15 HP e +10 MP, 0 de dano, reinicia contador A)
+        'Bênção Divina', // 6º (cura +15 HP, 0 de dano, reinicia contador A)
         'Luz Sagrada', // 7º
         'Luz Sagrada', // 8º
-        'Bênção Divina', // 9º (cura +15 HP e +10 MP, 0 de dano, reinicia contador A)
+        'Bênção Divina', // 9º (cura +15 HP, 0 de dano, reinicia contador A)
       ]);
 
       expect(profetaLv5.contadorBencaoDivina).toBe(0);
@@ -1585,57 +1570,43 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       expect(logs[0].danoEfetivo).toBe(18);
       expect(logs[1].danoEfetivo).toBe(18);
 
-      // Nos turnos 3, 6 e 9 (Bênção Divina), NÃO ataca (danoEfetivo = 0) e cura +15 HP (15% de 100) e +10 MP (10% de 100)
+      // Nos turnos 3, 6 e 9 (Bênção Divina), NÃO ataca (danoEfetivo = 0) e cura +15 HP (15% de 100)
       for (const idx of [2, 5, 8]) {
         expect(logs[idx].danoBruto).toBe(0);
         expect(logs[idx].danoEfetivo).toBe(0);
         expect(logs[idx].curaHp).toBe(15);
-        expect(logs[idx].curaMana).toBe(10);
       }
 
-      // Após 3 ativações de Bênção Divina: HP subiu de 20 -> 35 -> 50 -> 65; MP subiu de 30 -> 40 -> 50 -> 60
+      // Após 3 ativações de Bênção Divina: HP subiu de 20 -> 35 -> 50 -> 65
       expect(profetaLv5.hp).toBe(65);
-      expect(profetaLv5.mana).toBe(60);
 
-      // Teste partindo de HP e MP quase cheios (95/100 HP e 96/100 MP) para confirmar que NÃO estoura o teto máximo!
+      // Teste partindo de HP quase cheio (95/100) para confirmar que NÃO estoura o teto máximo!
       const profetaQuaseCheio: Combatente = {
         ...profetaLv5,
         atributos: { ...profetaLv5.atributos },
         hp: 95,
         hpMax: 100,
-        mana: 96,
-        manaMax: 100,
-        contadorBencaoDivina: 2, // próximo turno é o 3º ataque -> Bênção Divina (+15 HP e +10 MP)
+        contadorBencaoDivina: 2, // próximo turno é o 3º ataque -> Bênção Divina (+15 HP)
       };
 
       const resTeto = turnoDeCombate(profetaQuaseCheio, alvo, 10);
       expect(resTeto.turnoLog.ataques[0].habilidadeAcionada).toBe('Bênção Divina');
       expect(resTeto.atacanteHp).toBe(100); // 95 + 15 seria 110, limitado a 100
-      expect(resTeto.atacanteMana).toBe(100); // 96 + 10 seria 106, limitado a 100
       expect(profetaQuaseCheio.hp).toBe(100);
-      expect(profetaQuaseCheio.mana).toBe(100);
     });
 
-    it('Profeta nível 12+ tem HP máximo e MP máximo maiores que nível 11 (Graça Divina +10%)', () => {
+    it('Profeta nível 12+ tem HP máximo maior que nível 11 (Graça Divina +10%)', () => {
       const vigor = 10; // Base HP = 50
-      const mente = 12; // Base MP = 60
 
       const hpLv11 = calcularHpMax(vigor, { classeId: 'profeta', nivel: 11 });
       const hpLv12 = calcularHpMax(vigor, { classeId: 'profeta', nivel: 12 });
 
-      const mpLv11 = calcularManaMax(mente, { classeId: 'profeta', nivel: 11 });
-      const mpLv12 = calcularManaMax(mente, { classeId: 'profeta', nivel: 12 });
-
       expect(hpLv12).toBeGreaterThan(hpLv11);
-      expect(mpLv12).toBeGreaterThan(mpLv11);
       expect(hpLv11).toBe(50);
       expect(hpLv12).toBe(55); // +10%
-      expect(mpLv11).toBe(60);
-      expect(mpLv12).toBe(66); // +10%
 
-      const gracaPura = aplicarGracaDivina(100, 80, 12, 'profeta');
+      const gracaPura = aplicarGracaDivina(100, 12, 'profeta');
       expect(gracaPura.hpMax).toBe(110);
-      expect(gracaPura.manaMax).toBe(88);
     });
 
     it('Profeta nível 20+ acumula até 2 cargas de Fé Inabalável (+15% eficácia de cura por carga) e aplica na próxima cura sem vazar para curas fora do ciclo', () => {
@@ -1653,23 +1624,21 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
 
       // 2) Teste em combate com 2 cargas acumuladas e contadores controlados para verificar:
       // - Ataque comum (Luz Sagrada) NÃO consome as 2 cargas;
-      // - A primeira cura (Bênção Divina) consome as 2 cargas (+30% eficácia de cura: 15% de 200 = 30 -> 30 * 1.30 = 39 HP; 10% de 200 = 20 -> 20 * 1.30 = 26 MP) e zera as cargas;
-      // - Uma cura subsequente fora do ciclo de B (antes do contador B completar 3 novamente) recebe 0 cargas (cura base de 30 HP e 20 MP), sem vazar o bônus!
+      // - A primeira cura (Bênção Divina) consome as 2 cargas (+30% eficácia de cura: 15% de 200 = 30 -> 30 * 1.30 = 39 HP) e zera as cargas;
+      // - Uma cura subsequente fora do ciclo de B (antes do contador B completar 3 novamente) recebe 0 cargas (cura base de 30 HP), sem vazar o bônus!
       const profetaLv20: Combatente = {
         nome: 'Profeta Nv20',
         classeId: 'profeta',
         nivel: 20,
         hp: 50,
         hpMax: 200,
-        mana: 50,
-        manaMax: 200,
         sobreescudo: 0,
         contadorBencaoDivina: 1, // próximo é Luz Sagrada (1->2), depois Bênção Divina (2->3->0)
         contadorFeInabalavel: 0, // vai para 1 no ataque comum e para 2 na Bênção (não gera nova carga ainda)
         cargasFeInabalavel: 2, // 2 cargas acumuladas (+30% eficácia de cura)
         atributos: {
           vigor: 20,
-          mente: 20,
+          sorte: 20,
           forca: 0,
           vitalidade: 0,
           arcano: 5,
@@ -1686,41 +1655,34 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       expect(turnoAtaqueComum.cargasFeInabalavelConsumidas).toBe(0);
       expect(profetaLv20.cargasFeInabalavel).toBe(2);
       expect(profetaLv20.hp).toBe(50);
-      expect(profetaLv20.mana).toBe(50);
 
       // Passo B: Próxima ação é Bênção Divina (contador A: 2 -> 3 -> 0).
-      // Aplica e consome as 2 cargas (+30% sobre 30 HP = 39 HP; +30% sobre 20 MP = 26 MP) e zera cargas!
+      // Aplica e consome as 2 cargas (+30% sobre 30 HP = 39 HP) e zera cargas!
       const turnoCuraCom2Cargas = turnoDeCombate(profetaLv20, alvo, 2).turnoLog.ataques[0];
       expect(turnoCuraCom2Cargas.habilidadeAcionada).toBe('Bênção Divina');
       expect(turnoCuraCom2Cargas.cargasFeInabalavelConsumidas).toBe(2);
       expect(turnoCuraCom2Cargas.curaHp).toBe(39);
-      expect(turnoCuraCom2Cargas.curaMana).toBe(26);
       expect(profetaLv20.hp).toBe(89); // 50 + 39
-      expect(profetaLv20.mana).toBe(76); // 50 + 26
       expect(profetaLv20.cargasFeInabalavel).toBe(0); // Cargas consumidas!
 
       // Passo C: Se outra cura ocorrer fora do ciclo do contador B (ex: ajustando contadorA = 2 enquanto contadorB = 0 e cargas = 0),
-      // ela NÃO recebe o bônus de Fé Inabalável (cura apenas os 30 HP e 20 MP base, sem vazar)!
+      // ela NÃO recebe o bônus de Fé Inabalável (cura apenas os 30 HP base, sem vazar)!
       profetaLv20.contadorBencaoDivina = 2;
       profetaLv20.contadorFeInabalavel = 0;
       const turnoCuraSemCarga = turnoDeCombate(profetaLv20, alvo, 3).turnoLog.ataques[0];
       expect(turnoCuraSemCarga.habilidadeAcionada).toBe('Bênção Divina');
       expect(turnoCuraSemCarga.cargasFeInabalavelConsumidas).toBe(0);
       expect(turnoCuraSemCarga.curaHp).toBe(30); // 15% de 200 sem bônus
-      expect(turnoCuraSemCarga.curaMana).toBe(20); // 10% de 200 sem bônus
       expect(profetaLv20.hp).toBe(119); // 89 + 30
-      expect(profetaLv20.mana).toBe(96); // 76 + 20
     });
 
-    it('Profeta nível 30 aciona Milagre Divino no 7º ataque, curando 30% do HP máx e 25% do MP máx e causando 150% de dano mágico no mesmo turno', () => {
+    it('Profeta nível 30 aciona Milagre Divino no 7º ataque, curando 30% do HP máx e causando 150% de dano mágico no mesmo turno', () => {
       // Primeiro valida a função pura calcularAcaoProfeta sem cargas extras no 7º ataque:
-      // HP máx = 200 (30% = 60), MP máx = 200 (25% = 50), Inteligência = 20 (150% = 30 de dano mágico)
+      // HP máx = 200 (30% = 60), Inteligência = 20 (150% = 30 de dano mágico)
       const milagrePuro = calcularAcaoProfeta({
         inteligenciaBase: 20,
         hpAtual: 100,
         hpMax: 200,
-        manaAtual: 80,
-        manaMax: 200,
         nivel: 30,
         contadorBencao: 0,
         contadorFeInabalavel: 0,
@@ -1732,9 +1694,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       expect(milagrePuro.causaDano).toBe(true);
       expect(milagrePuro.danoBruto).toBe(30); // 150% de 20
       expect(milagrePuro.curaHp).toBe(60); // 30% de 200
-      expect(milagrePuro.curaMana).toBe(50); // 25% de 200
       expect(milagrePuro.novoHp).toBe(160); // 100 + 60
-      expect(milagrePuro.novaMana).toBe(130); // 80 + 50
       expect(milagrePuro.novoContadorMilagre).toBe(0);
 
       // Agora valida os 7 turnos em turnoDeCombate:
@@ -1744,12 +1704,10 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         nivel: 30,
         hp: 40,
         hpMax: 200,
-        mana: 40,
-        manaMax: 200,
         sobreescudo: 0,
         atributos: {
           vigor: 20,
-          mente: 20,
+          sorte: 20,
           forca: 0,
           vitalidade: 0,
           arcano: 10,
@@ -1776,13 +1734,11 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
 
       // No 7º ataque (Milagre Divino):
       // - Causa 150% do dano mágico normal (30) contra o inimigo no mesmo turno;
-      // - E recupera 30% do HP máx (60 base, amplificado pela 1 carga de Fé Inabalável gerada no fim do 6º turno -> 60 * 1.15 = 69 HP)
-      //   e 25% do MP máx (50 base, amplificado por +15% -> 50 * 1.15 = 57.5 MP)!
+      // - E recupera 30% do HP máx (60 base, amplificado pela 1 carga de Fé Inabalável gerada no fim do 6º turno -> 60 * 1.15 = 69 HP)!
       expect(atk7.danoBruto).toBe(30);
       expect(atk7.danoEfetivo).toBe(30);
       expect(atk7.cargasFeInabalavelConsumidas).toBe(1);
       expect(atk7.curaHp).toBe(69);
-      expect(atk7.curaMana).toBe(57.5);
     });
   });
 
@@ -1799,7 +1755,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       mitigacao,
       atributos: {
         vigor: 300,
-        mente: 2,
+        sorte: 2,
         forca: 1,
         vitalidade: 0,
         arcano: 0,
@@ -1818,7 +1774,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 2,
+          sorte: 2,
           forca: 20, // Dano físico base = 20; Iaijutsu (220%) = 44
           vitalidade: 0,
           arcano: 0,
@@ -1917,7 +1873,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 2,
+          sorte: 2,
           forca: 40, // Base c/ Disciplina do Guerreiro (+5%) = 42
           vitalidade: 0,
           arcano: 0,
@@ -1980,7 +1936,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         cargasFocoAbsoluto: 3, // 3 cargas (+15%)
         atributos: {
           vigor: 10,
-          mente: 2,
+          sorte: 2,
           forca: 40, // Base c/ Disciplina do Guerreiro = 42
           vitalidade: 0,
           arcano: 0,
@@ -2045,7 +2001,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 20,
-          mente: 2,
+          sorte: 2,
           forca: 40, // Dano físico base = 42
           vitalidade: 0,
           arcano: 0,
@@ -2086,7 +2042,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         sobreescudo: 0,
         atributos: {
           vigor: 20,
-          mente: 2,
+          sorte: 2,
           forca: 40, // Dano físico base = 42
           vitalidade: 0,
           arcano: 0,

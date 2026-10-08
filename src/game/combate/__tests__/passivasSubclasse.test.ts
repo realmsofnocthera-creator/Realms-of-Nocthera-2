@@ -115,7 +115,7 @@ describe('ORDEM 48D — Passivas de Subclasse (Frenesi e Casca de Pedra)', () =>
         mitigacao: 0,
         atributos: {
           vigor: 50,
-          mente: 0,
+          sorte: 0,
           forca: 1,
           vitalidade: 0,
           arcano: 0,
@@ -135,7 +135,7 @@ describe('ORDEM 48D — Passivas de Subclasse (Frenesi e Casca de Pedra)', () =>
         sobreescudo: 0,
         atributos: {
           vigor: 10,
-          mente: 0,
+          sorte: 0,
           forca: 20,
           vitalidade: 0,
           arcano: 0,
@@ -183,7 +183,7 @@ describe('ORDEM 48D — Passivas de Subclasse (Frenesi e Casca de Pedra)', () =>
         sobreescudo: 0,
         atributos: {
           vigor: 50,
-          mente: 0,
+          sorte: 0,
           forca: 50,
           vitalidade: 0,
           arcano: 0,
@@ -205,7 +205,7 @@ describe('ORDEM 48D — Passivas de Subclasse (Frenesi e Casca de Pedra)', () =>
         subclasseTiers: { colosso: 1 },
         atributos: {
           vigor: 40,
-          mente: 0,
+          sorte: 0,
           forca: 10,
           vitalidade: 0,
           arcano: 0,
@@ -251,7 +251,7 @@ describe('ORDEM 48D — Passivas de Subclasse (Frenesi e Casca de Pedra)', () =>
         subclasseTiers: { colosso: 1 },
         atributos: {
           vigor: 40,
-          mente: 0,
+          sorte: 0,
           forca: 10,
           vitalidade: 0,
           arcano: 0,

@@ -32,7 +32,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
       classeId: 'barbaro',
       pontos: {
         vigor: 5,
-        mente: 0,
+        sorte: 0,
         forca: 5,
         vitalidade: 0,
         arcano: 0,
@@ -56,14 +56,14 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
     expect(charDepois.pontosAlocadosPorNivel?.vigor).toBe(3);
   });
 
-  it('distribuir pontos em Vitalidade aumenta sobreescudoMax em SOBREESCUDO_POR_PONTO_VITALIDADE por ponto e Mente aumenta manaMax', async () => {
+  it('distribuir pontos em Vitalidade aumenta sobreescudoMax em SOBREESCUDO_POR_PONTO_VITALIDADE por ponto e Sorte aumenta a chance de crítico', async () => {
     await createCharacter('user_attr_2', {
       nome: 'Eldrin',
       racaId: 'elfo',
       classeId: 'feiticeiro',
       pontos: {
         vigor: 2,
-        mente: 5,
+        sorte: 5,
         forca: 0,
         vitalidade: 0,
         arcano: 0,
@@ -75,21 +75,22 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
     await updateCharacter('user_attr_2', { pontosDisponiveis: 5 });
 
     const antes = await getCharacterByUid('user_attr_2');
-    const manaMaxAntes = antes!.manaMax;
+    const criticoAntes = antes!.chanceCritico!;
     const sobreescudoAntes = antes!.sobreescudoMax;
 
     const depois = await distribuirPontos('user_attr_2', {
       vitalidade: 2,
-      mente: 3,
+      sorte: 3,
     });
 
     expect(depois.atributos.vitalidade).toBe(antes!.atributos.vitalidade + 2);
-    expect(depois.atributos.mente).toBe(antes!.atributos.mente + 3);
+    expect(depois.atributos.sorte).toBe(antes!.atributos.sorte + 3);
     expect(depois.sobreescudoMax).toBe(
       sobreescudoAntes + 2 * GAME_CONFIG.SOBREESCUDO_POR_PONTO_VITALIDADE
     );
-    expect(depois.manaMax).toBe(
-      manaMaxAntes + 3 * GAME_CONFIG.MANA_POR_PONTO_MENTE
+    expect(depois.chanceCritico).toBeCloseTo(
+      criticoAntes + 3 * GAME_CONFIG.CHANCE_CRITICO_POR_PONTO_SORTE,
+      4
     );
     expect(depois.pontosDisponiveis).toBe(0);
   });
@@ -101,7 +102,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
       classeId: 'cavaleiro',
       pontos: {
         vigor: 5,
-        mente: 0,
+        sorte: 0,
         forca: 2,
         vitalidade: 3,
         arcano: 0,
@@ -133,7 +134,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
       classeId: 'barbaro',
       pontos: {
         vigor: 5,
-        mente: 0,
+        sorte: 0,
         forca: 5,
         vitalidade: 0,
         arcano: 0,
@@ -165,7 +166,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
     expect(charAposReset.pontosDisponiveis).toBe(6);
     expect(charAposReset.pontosAlocadosPorNivel).toEqual({
       vigor: 0,
-      mente: 0,
+      sorte: 0,
       forca: 0,
       vitalidade: 0,
       arcano: 0,
@@ -190,7 +191,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
       classeId: 'feiticeiro',
       pontos: {
         vigor: 2,
-        mente: 5,
+        sorte: 5,
         forca: 0,
         vitalidade: 0,
         arcano: 0,
@@ -201,7 +202,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
 
     await alterarDiamantes('user_attr_5', 50, 'Saldo menor que 100');
     await updateCharacter('user_attr_5', { pontosDisponiveis: 3 });
-    await distribuirPontos('user_attr_5', { mente: 3 });
+    await distribuirPontos('user_attr_5', { sorte: 3 });
 
     const snapshotAntes = await getCharacterByUid('user_attr_5');
 
@@ -219,7 +220,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
       classeId: 'bandido',
       pontos: {
         vigor: 3,
-        mente: 0,
+        sorte: 0,
         forca: 2,
         vitalidade: 0,
         arcano: 0,
@@ -247,7 +248,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
       classeId: 'cavaleiro',
       pontos: {
         vigor: 5,
-        mente: 0,
+        sorte: 0,
         forca: 2,
         vitalidade: 3,
         arcano: 0,
@@ -275,7 +276,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
       classeId: 'profeta',
       pontos: {
         vigor: 3,
-        mente: 5,
+        sorte: 5,
         forca: 0,
         vitalidade: 0,
         arcano: 2,
@@ -289,7 +290,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
 
     // Dispara duas chamadas concorrentes de 3 pontos
     const p1 = distribuirPontos('user_attr_8', { vigor: 3 });
-    const p2 = distribuirPontos('user_attr_8', { mente: 3 });
+    const p2 = distribuirPontos('user_attr_8', { sorte: 3 });
 
     const results = await Promise.allSettled([p1, p2]);
 
@@ -310,7 +311,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
       classeId: 'feiticeiro',
       pontos: {
         vigor: 2,
-        mente: 5,
+        sorte: 5,
         forca: 0,
         vitalidade: 0,
         arcano: 0,
@@ -321,7 +322,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
 
     await alterarDiamantes('user_attr_9', 150, 'Saldo inicial');
     await updateCharacter('user_attr_9', { pontosDisponiveis: 3 });
-    await distribuirPontos('user_attr_9', { mente: 3 });
+    await distribuirPontos('user_attr_9', { sorte: 3 });
 
     const antes = (await getCharacterByUid('user_attr_9'))!;
     const txAntes = getTransactionsByUid('user_attr_9').length;
@@ -353,7 +354,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
       classeId: 'cavaleiro',
       pontos: {
         vigor: 5,
-        mente: 0,
+        sorte: 0,
         forca: 5,
         vitalidade: 0,
         arcano: 0,
@@ -376,8 +377,6 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
       personagemFinal: {
         hp: 20,
         hpMax: 20,
-        mana: 20,
-        manaMax: 20,
         ouro: 20,
       },
     };
@@ -404,7 +403,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
       classeId: 'feiticeiro',
       pontos: {
         vigor: 2,
-        mente: 5,
+        sorte: 5,
         forca: 0,
         vitalidade: 0,
         arcano: 0,
@@ -415,7 +414,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
 
     await alterarDiamantes('user_mutex_combat_2', 150, 'Saldo diamantes');
     await updateCharacter('user_mutex_combat_2', { pontosDisponiveis: 3 });
-    await distribuirPontos('user_mutex_combat_2', { mente: 3 });
+    await distribuirPontos('user_mutex_combat_2', { sorte: 3 });
 
     const combateVitoria: ResultadoCombate = {
       vencedor: 'personagem',
@@ -427,8 +426,6 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
       personagemFinal: {
         hp: 20,
         hpMax: 20,
-        mana: 20,
-        manaMax: 20,
         ouro: 10,
       },
     };
@@ -443,7 +440,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
     expect(finalChar!.diamantes).toBe(50); // 150 - 100
     // O reset devolveu os 3 alocados e o combate deu mais 3 = 6 disponíveis
     expect(finalChar!.pontosDisponiveis).toBe(6);
-    expect(finalChar!.pontosAlocadosPorNivel?.mente).toBe(0);
+    expect(finalChar!.pontosAlocadosPorNivel?.sorte).toBe(0);
     expect(finalChar!.nivel).toBe(2);
   });
 
@@ -454,7 +451,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
       classeId: 'barbaro',
       pontos: {
         vigor: 5,
-        mente: 0,
+        sorte: 0,
         forca: 5,
         vitalidade: 0,
         arcano: 0,
@@ -497,7 +494,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
           nome: 'Thorin',
           racaId: 'anao',
           classeId: 'cavaleiro',
-          pontos: { vigor: 5, mente: 0, forca: 2, vitalidade: 3, arcano: 0, inteligencia: 0, agilidade: 0 },
+          pontos: { vigor: 5, sorte: 0, forca: 2, vitalidade: 3, arcano: 0, inteligencia: 0, agilidade: 0 },
         }),
       });
 
@@ -514,7 +511,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
         nome: 'Thorin',
         racaId: 'anao',
         classeId: 'cavaleiro',
-        pontos: { vigor: 5, mente: 0, forca: 2, vitalidade: 3, arcano: 0, inteligencia: 0, agilidade: 0 },
+        pontos: { vigor: 5, sorte: 0, forca: 2, vitalidade: 3, arcano: 0, inteligencia: 0, agilidade: 0 },
       })
     ).resolves.toMatchObject({ nome: 'Thorin' });
   });

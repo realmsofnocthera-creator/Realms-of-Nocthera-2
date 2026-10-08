@@ -1,6 +1,6 @@
 export const ATTRIBUTES = [
   'vigor',
-  'mente',
+  'sorte',
   'forca',
   'vitalidade',
   'arcano',

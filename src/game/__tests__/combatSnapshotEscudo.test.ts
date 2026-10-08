@@ -21,7 +21,7 @@ const PONTOS_INICIAIS_FIXOS: Attributes = {
   vigor: 2,
   vitalidade: 1,
   inteligencia: 1,
-  mente: 1,
+  sorte: 1,
   arcano: 0,
 };
 
@@ -31,7 +31,7 @@ const CICLO_ATRIBUTOS: readonly AttributeName[] = [
   'vigor',
   'vitalidade',
   'inteligencia',
-  'mente',
+  'sorte',
   'arcano',
 ];
 
@@ -49,7 +49,7 @@ const MONSTRO_SINTETICO_ESCUDO: MonsterDefinition = {
   hp: 25000,
   atributos: {
     vigor: 80,
-    mente: 30,
+    sorte: 30,
     forca: 50,
     vitalidade: 150, // Vitalidade alta
     arcano: 20,
@@ -76,7 +76,7 @@ function criarCombatenteTeste(classeId: string): Combatente {
     vigor: 0,
     vitalidade: 0,
     inteligencia: 0,
-    mente: 0,
+    sorte: 0,
     arcano: 0,
   };
 
@@ -93,12 +93,12 @@ function criarCombatenteTeste(classeId: string): Combatente {
       classe.bonusAtributos.vigor +
       PONTOS_INICIAIS_FIXOS.vigor +
       pontosNivel.vigor,
-    mente:
-      GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente +
-      raca.bonusAtributos.mente +
-      classe.bonusAtributos.mente +
-      PONTOS_INICIAIS_FIXOS.mente +
-      pontosNivel.mente,
+    sorte:
+      GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte +
+      raca.bonusAtributos.sorte +
+      classe.bonusAtributos.sorte +
+      PONTOS_INICIAIS_FIXOS.sorte +
+      pontosNivel.sorte,
     forca:
       GAME_CONFIG.VALOR_BASE_ATRIBUTOS.forca +
       raca.bonusAtributos.forca +
@@ -159,8 +159,6 @@ describe('ORDEM 46A — Snapshot de Combate contra Monstro Sintético Blindado',
       personagemFinal: {
         hp: number;
         hpMax: number;
-        mana: number;
-        manaMax: number;
         ouro: number;
       };
       totalTurnos: number;

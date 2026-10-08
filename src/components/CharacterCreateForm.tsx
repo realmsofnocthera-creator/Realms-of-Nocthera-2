@@ -12,9 +12,9 @@ import {
 } from 'lucide-react';
 import { ATTRIBUTES, AttributeName, Attributes } from '@/rules/attributes';
 import { GAME_CONFIG } from '@/rules/config';
-import { RACES, RaceDefinition, DraconianLineage } from '@/rules/races';
+import { RACES, RaceDefinition, DraconianLineage, bonusSortePassivaRacial } from '@/rules/races';
 import { CLASSES, ClassDefinition } from '@/rules/classes';
-import { calcularHpMax, calcularManaMax, calcularSobreescudoMax } from '@/game';
+import { calcularChanceCritico, calcularHpMax, calcularSobreescudoMax } from '@/game';
 import {
   RACE_ICONS,
   CLASS_ICONS,
@@ -68,7 +68,7 @@ function formatRacialPassiveSummary(race: RaceDefinition): string {
  */
 const ATTRIBUTE_CANONICAL_DESCRIPTIONS: Record<AttributeName, string> = {
   vigor: 'Concede +5 pontos de HP máximo por ponto investido.',
-  mente: 'Concede +5 pontos de Mana máxima por ponto investido.',
+  sorte: 'Cada ponto dá +0,1% de chance de crítico (2x de dano) e +0,1% de chance de drops.',
   forca: 'Aumenta o dano físico causado pelos seus ataques.',
   vitalidade: 'Concede +2 de Sobreescudo máximo e +1 de Defesa Física por ponto.',
   arcano: 'Amplifica a afinidade arcana e o poder místico do personagem.',
@@ -78,7 +78,7 @@ const ATTRIBUTE_CANONICAL_DESCRIPTIONS: Record<AttributeName, string> = {
 
 const ATTRIBUTE_SHORT_NAMES: Record<AttributeName, string> = {
   vigor: 'Vigor',
-  mente: 'Mente',
+  sorte: 'Sorte',
   forca: 'Força',
   vitalidade: 'Vitalidade',
   arcano: 'Arcano',
@@ -110,7 +110,6 @@ interface ShowcaseSkillItem {
   tipo: string;
   descricao: string;
   nivelRequerido?: number;
-  custoMana?: number;
   recargaTurnos?: number;
   duracaoTurnos?: number;
 }
@@ -162,7 +161,6 @@ function WizardSelectionShowcase({
           nome: activeRace.habilidadeRacial.nome,
           tipo: 'Ativa',
           descricao: activeRace.habilidadeRacial.efeito,
-          custoMana: activeRace.habilidadeRacial.custoMana,
           recargaTurnos: activeRace.habilidadeRacial.recargaTurnos,
           duracaoTurnos: activeRace.habilidadeRacial.duracaoTurnos,
         },
@@ -503,7 +501,6 @@ function WizardSelectionShowcase({
                     tipo={skill.tipo}
                     descricao={skill.descricao}
                     nivelRequerido={skill.nivelRequerido}
-                    custoMana={skill.custoMana}
                     recargaTurnos={skill.recargaTurnos}
                     duracaoTurnos={skill.duracaoTurnos}
                     isOpen={activeSkillPopoverId === skill.id}
@@ -553,7 +550,7 @@ export function CharacterCreateForm({
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [pontos, setPontos] = useState<Record<AttributeName, number>>({
     vigor: 0,
-    mente: 0,
+    sorte: 0,
     forca: 0,
     vitalidade: 0,
     arcano: 0,
@@ -626,7 +623,7 @@ export function CharacterCreateForm({
   const handleResetPoints = () => {
     setPontos({
       vigor: 0,
-      mente: 0,
+      sorte: 0,
       forca: 0,
       vitalidade: 0,
       arcano: 0,
@@ -640,11 +637,12 @@ export function CharacterCreateForm({
     selectedRace.bonusAtributos.vigor +
     selectedClass.bonusAtributos.vigor +
     pontos.vigor;
-  const finalMente =
-    GAME_CONFIG.VALOR_BASE_ATRIBUTOS.mente +
-    selectedRace.bonusAtributos.mente +
-    selectedClass.bonusAtributos.mente +
-    pontos.mente;
+  const finalSorte =
+    GAME_CONFIG.VALOR_BASE_ATRIBUTOS.sorte +
+    selectedRace.bonusAtributos.sorte +
+    bonusSortePassivaRacial(selectedRace) +
+    selectedClass.bonusAtributos.sorte +
+    pontos.sorte;
   const finalVitalidade =
     GAME_CONFIG.VALOR_BASE_ATRIBUTOS.vitalidade +
     selectedRace.bonusAtributos.vitalidade +
@@ -655,10 +653,7 @@ export function CharacterCreateForm({
     classeId: selectedClass.id,
     nivel: 1,
   });
-  const previewMana = calcularManaMax(finalMente, {
-    classeId: selectedClass.id,
-    nivel: 1,
-  });
+  const previewCritico = `${String(calcularChanceCritico(finalSorte)).replace('.', ',')}%`;
   const previewSobreescudo = calcularSobreescudoMax(finalVitalidade, {
     classeId: selectedClass.id,
     nivel: 1,
@@ -1600,13 +1595,13 @@ export function CharacterCreateForm({
                         <div className="w-full flex items-center justify-between px-1 text-[9px] sm:text-[10px] tabular-nums">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={RESOURCE_ICONS.mana}
-                            alt="MP"
+                            src={ATTRIBUTE_ICONS.sorte}
+                            alt="Crítico"
                             className="w-3.5 h-3.5 object-contain"
                           />
-                          <span className="font-cinzel text-[#D5C7A4] text-[8px]">MP</span>
+                          <span className="font-cinzel text-[#D5C7A4] text-[8px]">CRÍT.</span>
                           <span className="font-cinzel font-bold text-[#F5F3E0]">
-                            {previewMana}
+                            {previewCritico}
                           </span>
                         </div>
 
@@ -1671,7 +1666,6 @@ export function CharacterCreateForm({
                             nome={selectedRace.habilidadeRacial.nome}
                             tipo="Ativa"
                             descricao={selectedRace.habilidadeRacial.efeito}
-                            custoMana={selectedRace.habilidadeRacial.custoMana}
                             recargaTurnos={selectedRace.habilidadeRacial.recargaTurnos}
                             duracaoTurnos={selectedRace.habilidadeRacial.duracaoTurnos}
                             isOpen={resumoSkillPopoverId === 'resumo-race-ativa'}
@@ -1748,8 +1742,8 @@ export function CharacterCreateForm({
                         Pergaminho de Consagração
                       </span>
                       <span className="truncate">
-                        {selectedRace.nome} · {selectedClass.nome} · HP {previewHp} / MP{' '}
-                        {previewMana}
+                        {selectedRace.nome} · {selectedClass.nome} · HP {previewHp} / Crítico{' '}
+                        {previewCritico}
                       </span>
                     </div>
 

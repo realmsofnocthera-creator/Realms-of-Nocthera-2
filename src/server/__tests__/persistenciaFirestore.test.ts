@@ -64,15 +64,14 @@ const PERSONAGEM: CharacterDocument = {
   nivel: 3,
   xpAtual: 10,
   pontosDisponiveis: 2,
-  pontosAlocadosPorNivel: { vigor: 1, mente: 0, forca: 1, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 0 },
+  pontosAlocadosPorNivel: { vigor: 1, sorte: 0, forca: 1, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 0 },
   fragmentosAlma: 4,
   subclasseAtualId: null,
   subclasseTiers: {},
-  atributos: { vigor: 6, mente: 2, forca: 5, vitalidade: 1, arcano: 0, inteligencia: 0, agilidade: 1 },
+  atributos: { vigor: 6, sorte: 2, forca: 5, vitalidade: 1, arcano: 0, inteligencia: 0, agilidade: 1 },
   ouro: 120,
   diamantes: 7,
   hpMax: 80,
-  manaMax: 20,
   sobreescudoMax: 0,
   criadoEm: '2026-10-01T00:00:00.000Z',
 };
@@ -94,7 +93,6 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
       ...PERSONAGEM,
       habilidadesEquipadas: expect.any(Object),
       hpMax: 0,
-      manaMax: 0,
       sobreescudoMax: 0,
     });
   });

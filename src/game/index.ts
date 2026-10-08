@@ -103,27 +103,22 @@ export function aplicarMuralhaDeFerro(
 
 /**
  * Passiva I do Feiticeiro (Nível 12+) — Fluxo Arcano:
- * Aplica permanentemente +10% à Mana máxima e +10% ao dano mágico base
+ * Aplica permanentemente +10% ao dano mágico base
  * quando o personagem é da classe Feiticeiro e possui nível >= 12.
  */
 export function aplicarFluxoArcano(
-  manaMaxBase: number,
   danoMagicoBase: number,
   nivel: number,
   classeId: string = 'feiticeiro'
-): { manaMax: number; danoMagico: number } {
+): { danoMagico: number } {
   const ehFeiticeiroNivel12 =
     classeId.trim().toLowerCase() === 'feiticeiro' && nivel >= 12;
 
   if (!ehFeiticeiroNivel12) {
-    return {
-      manaMax: manaMaxBase,
-      danoMagico: danoMagicoBase,
-    };
+    return { danoMagico: danoMagicoBase };
   }
 
   return {
-    manaMax: Math.ceil((manaMaxBase * 110) / 100),
     danoMagico: Math.ceil((danoMagicoBase * (100 + FLUXO_ARCANO_DANO_PERCENTUAL)) / 100),
   };
 }
@@ -157,29 +152,22 @@ export function aplicarPassosRapidos(
 
 /**
  * Passiva I do Profeta (Nível 12+) — Graça Divina:
- * Aplica permanentemente +10% ao HP máximo e +10% ao MP (Mana) máximo
+ * Aplica permanentemente +10% ao HP máximo
  * quando o personagem é da classe Profeta e possui nível >= 12.
  */
 export function aplicarGracaDivina(
   hpMaxBase: number,
-  manaMaxBase: number,
   nivel: number,
   classeId: string = 'profeta'
-): { hpMax: number; manaMax: number } {
+): { hpMax: number } {
   const ehProfetaNivel12 =
     classeId.trim().toLowerCase() === 'profeta' && nivel >= 12;
 
   if (!ehProfetaNivel12) {
-    return {
-      hpMax: hpMaxBase,
-      manaMax: manaMaxBase,
-    };
+    return { hpMax: hpMaxBase };
   }
 
-  return {
-    hpMax: Math.ceil((hpMaxBase * 110) / 100),
-    manaMax: Math.ceil((manaMaxBase * 110) / 100),
-  };
+  return { hpMax: Math.ceil((hpMaxBase * 110) / 100) };
 }
 
 /**
@@ -259,29 +247,28 @@ export function calcularHpMax(vigor: number, opcoes?: OpcoesCalculoStatus): numb
     return aplicarResistenciaBarbara(base, 0, nivel, opcoes!.classeId).hpMax;
   }
   if (classeNormalizada === 'profeta' && nivel >= 12) {
-    return aplicarGracaDivina(base, 0, nivel, opcoes!.classeId).hpMax;
+    return aplicarGracaDivina(base, nivel, opcoes!.classeId).hpMax;
   }
   return base;
 }
 
 /**
- * Calcula a mana máxima baseada nos pontos de Mente.
- * Cada ponto de Mente concede +5 Mana.
- * - Se for Feiticeiro nível 12+, aplica permanentemente "Fluxo Arcano" (+10% Mana máxima).
- * - Se for Profeta nível 12+, aplica permanentemente "Graça Divina" (+10% Mana máxima).
+ * Chance de acerto crítico em %: base fixa + 0,1% por ponto de Sorte.
+ * Ex.: Sorte 20 → 2% + 2% = 4%. O crítico dobra o dano depois da defesa.
  */
-export function calcularManaMax(mente: number, opcoes?: OpcoesCalculoStatus): number {
-  const base = mente * GAME_CONFIG.MANA_POR_PONTO_MENTE;
-  const classeNormalizada = opcoes?.classeId?.trim().toLowerCase();
-  const nivel = opcoes?.nivel ?? 1;
+export function calcularChanceCritico(sorte: number): number {
+  const chance =
+    GAME_CONFIG.CHANCE_CRITICO_BASE_PERCENTUAL +
+    Math.max(0, sorte) * GAME_CONFIG.CHANCE_CRITICO_POR_PONTO_SORTE;
+  return Math.min(100, Number(chance.toFixed(4)));
+}
 
-  if (classeNormalizada === 'feiticeiro' && nivel >= 12) {
-    return aplicarFluxoArcano(base, 0, nivel, opcoes!.classeId).manaMax;
-  }
-  if (classeNormalizada === 'profeta' && nivel >= 12) {
-    return aplicarGracaDivina(0, base, nivel, opcoes!.classeId).manaMax;
-  }
-  return base;
+/**
+ * Bônus na chance de drop em %: +0,1% por ponto de Sorte.
+ * Ainda não há sistema de drops; o valor fica pronto para quando houver.
+ */
+export function calcularBonusChanceDrop(sorte: number): number {
+  return Number((Math.max(0, sorte) * GAME_CONFIG.CHANCE_DROP_POR_PONTO_SORTE).toFixed(4));
 }
 
 /**
@@ -323,12 +310,12 @@ export function calcularSobreescudoMax(vitalidade: number, opcoes?: OpcoesCalcul
 
 /**
  * Calcula o Poder Total do personagem como a soma simples de todos os 7 atributos finais
- * (Vigor + Mente + Força + Vitalidade + Arcano + Inteligência + Agilidade).
+ * (Vigor + Sorte + Força + Vitalidade + Arcano + Inteligência + Agilidade).
  */
 export function calcularPoderTotal(atributosFinais: Attributes): number {
   return (
     atributosFinais.vigor +
-    atributosFinais.mente +
+    atributosFinais.sorte +
     atributosFinais.forca +
     atributosFinais.vitalidade +
     atributosFinais.arcano +
@@ -360,9 +347,12 @@ export function aplicarDano(
   danoBruto: number,
   mitigacao: number,
   sobreescudo: number,
-  hp: number
+  hp: number,
+  /** Multiplica o dano depois da defesa (crítico = 2). */
+  multiplicadorPosDefesa: number = 1
 ): ResultadoDano {
-  const danoAposMitigacao = Math.max(GAME_CONFIG.DANO_MINIMO, danoBruto - mitigacao);
+  const danoAposMitigacao =
+    Math.max(GAME_CONFIG.DANO_MINIMO, danoBruto - mitigacao) * multiplicadorPosDefesa;
 
   if (sobreescudo >= danoAposMitigacao) {
     return {

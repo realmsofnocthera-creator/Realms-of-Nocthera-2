@@ -14,7 +14,7 @@ describe('attributeState - Funções puras de estado de distribuição', () => {
       ...ZEROS_PENDENTE,
       vigor: 2,
       forca: 3,
-      mente: 1,
+      sorte: 1,
     };
     expect(calcularTotalPendente(pendente)).toBe(6);
   });
@@ -45,26 +45,26 @@ describe('attributeState - Funções puras de estado de distribuição', () => {
 
     // Tentativa de adicionar o 4º ponto quando só há 3 disponíveis
     const antesExcesso = { ...pendente };
-    const depoisExcesso = ajustarPontoPendente(3, pendente, 'mente', 1);
+    const depoisExcesso = ajustarPontoPendente(3, pendente, 'sorte', 1);
     expect(depoisExcesso).toEqual(antesExcesso);
-    expect(depoisExcesso.mente).toBe(0);
+    expect(depoisExcesso.sorte).toBe(0);
   });
 
   it('ajustarPontoPendente (−) não passa de 0', () => {
     let pendente: PendingAttributes = {
       ...ZEROS_PENDENTE,
-      mente: 2,
+      sorte: 2,
     };
 
-    pendente = ajustarPontoPendente(5, pendente, 'mente', -1);
-    expect(pendente.mente).toBe(1);
+    pendente = ajustarPontoPendente(5, pendente, 'sorte', -1);
+    expect(pendente.sorte).toBe(1);
 
-    pendente = ajustarPontoPendente(5, pendente, 'mente', -1);
-    expect(pendente.mente).toBe(0);
+    pendente = ajustarPontoPendente(5, pendente, 'sorte', -1);
+    expect(pendente.sorte).toBe(0);
 
     // Tentativa de decrementar abaixo de zero
-    pendente = ajustarPontoPendente(5, pendente, 'mente', -1);
-    expect(pendente.mente).toBe(0);
+    pendente = ajustarPontoPendente(5, pendente, 'sorte', -1);
+    expect(pendente.sorte).toBe(0);
 
     pendente = ajustarPontoPendente(5, pendente, 'vigor', -1);
     expect(pendente.vigor).toBe(0);
@@ -73,7 +73,7 @@ describe('attributeState - Funções puras de estado de distribuição', () => {
   it('limparPendente zera todas as 7 posições', () => {
     const pendente: PendingAttributes = {
       vigor: 2,
-      mente: 1,
+      sorte: 1,
       forca: 3,
       vitalidade: 1,
       arcano: 2,

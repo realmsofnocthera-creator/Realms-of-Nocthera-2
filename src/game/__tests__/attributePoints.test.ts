@@ -13,7 +13,7 @@ describe('attributePoints - Funções Puras', () => {
       const dist = validarDistribuicao(6, { vigor: 2, forca: 3 });
       expect(dist).toEqual({
         vigor: 2,
-        mente: 0,
+        sorte: 0,
         forca: 3,
         vitalidade: 0,
         arcano: 0,
@@ -23,9 +23,9 @@ describe('attributePoints - Funções Puras', () => {
     });
 
     it('aceita distribuição com soma exatamente igual aos pontos disponíveis', () => {
-      const dist = validarDistribuicao(3, { vigor: 1, mente: 1, agilidade: 1 });
+      const dist = validarDistribuicao(3, { vigor: 1, sorte: 1, agilidade: 1 });
       expect(dist.vigor).toBe(1);
-      expect(dist.mente).toBe(1);
+      expect(dist.sorte).toBe(1);
       expect(dist.agilidade).toBe(1);
     });
 
@@ -82,7 +82,7 @@ describe('attributePoints - Funções Puras', () => {
     it('não altera os objetos de entrada e retorna novo objeto com gastos', () => {
       const baseAtributos: Attributes = {
         vigor: 5,
-        mente: 2,
+        sorte: 2,
         forca: 4,
         vitalidade: 3,
         arcano: 1,
@@ -91,7 +91,7 @@ describe('attributePoints - Funções Puras', () => {
       };
       const baseAlocados: Attributes = {
         vigor: 1,
-        mente: 0,
+        sorte: 0,
         forca: 0,
         vitalidade: 0,
         arcano: 0,
@@ -100,7 +100,7 @@ describe('attributePoints - Funções Puras', () => {
       };
       const distribuicao: Attributes = {
         vigor: 2,
-        mente: 1,
+        sorte: 1,
         forca: 0,
         vitalidade: 0,
         arcano: 0,
@@ -120,9 +120,9 @@ describe('attributePoints - Funções Puras', () => {
 
       expect(res.gastos).toBe(3);
       expect(res.atributos.vigor).toBe(7);
-      expect(res.atributos.mente).toBe(3);
+      expect(res.atributos.sorte).toBe(3);
       expect(res.alocados.vigor).toBe(3);
-      expect(res.alocados.mente).toBe(1);
+      expect(res.alocados.sorte).toBe(1);
     });
   });
 
@@ -130,7 +130,7 @@ describe('attributePoints - Funções Puras', () => {
     it('devolve só os pontos alocados por nível, soma a pontosDisponiveis e zera alocados', () => {
       const atributos: Attributes = {
         vigor: 8, // 5 criação + 3 alocados
-        mente: 4, // 2 criação + 2 alocados
+        sorte: 4, // 2 criação + 2 alocados
         forca: 5, // 5 criação + 0 alocados
         vitalidade: 2, // 1 criação + 1 alocado
         arcano: 0,
@@ -139,7 +139,7 @@ describe('attributePoints - Funções Puras', () => {
       };
       const alocados: Attributes = {
         vigor: 3,
-        mente: 2,
+        sorte: 2,
         forca: 0,
         vitalidade: 1,
         arcano: 0,
@@ -161,7 +161,7 @@ describe('attributePoints - Funções Puras', () => {
       expect(res.alocados).toEqual(ZEROS_ATRIBUTOS);
       expect(res.atributos).toEqual({
         vigor: 5,
-        mente: 2,
+        sorte: 2,
         forca: 5,
         vitalidade: 1,
         arcano: 0,
@@ -173,7 +173,7 @@ describe('attributePoints - Funções Puras', () => {
     it('lança "Nenhum ponto alocado para resetar" se alocados for zerado', () => {
       const atributos: Attributes = {
         vigor: 5,
-        mente: 2,
+        sorte: 2,
         forca: 5,
         vitalidade: 1,
         arcano: 0,
@@ -189,7 +189,7 @@ describe('attributePoints - Funções Puras', () => {
     it('lança "Estado inconsistente" se a subtração resultaria em atributo negativo', () => {
       const atributos: Attributes = {
         vigor: 2,
-        mente: 0,
+        sorte: 0,
         forca: 0,
         vitalidade: 0,
         arcano: 0,
@@ -198,7 +198,7 @@ describe('attributePoints - Funções Puras', () => {
       };
       const alocados: Attributes = {
         vigor: 5, // Mais alocado do que o atributo total atual
-        mente: 0,
+        sorte: 0,
         forca: 0,
         vitalidade: 0,
         arcano: 0,

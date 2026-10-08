@@ -34,7 +34,7 @@ export const MONSTERS: readonly MonsterDefinition[] = [
     hp: 12,
     atributos: {
       vigor: 1,
-      mente: 0,
+      sorte: 0,
       forca: 2,
       vitalidade: 0,
       arcano: 0,
@@ -60,7 +60,7 @@ export const MONSTERS: readonly MonsterDefinition[] = [
     hp: 30,
     atributos: {
       vigor: 3,
-      mente: 2,
+      sorte: 2,
       forca: 3,
       vitalidade: 2,
       arcano: 2,
@@ -87,7 +87,7 @@ export const MONSTERS: readonly MonsterDefinition[] = [
     hp: 75,
     atributos: {
       vigor: 6,
-      mente: 2,
+      sorte: 2,
       forca: 9,
       vitalidade: 5,
       arcano: 2,

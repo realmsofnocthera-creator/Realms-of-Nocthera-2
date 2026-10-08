@@ -16,7 +16,7 @@ const MONSTRO_SINTETICO_ESCUDO: MonsterDefinition = {
   hp: 25000,
   atributos: {
     vigor: 80,
-    mente: 30,
+    sorte: 30,
     forca: 50,
     vitalidade: 150,
     arcano: 20,
@@ -294,7 +294,7 @@ describe('ORDEM 48C — Habilidades Ativas do Berserker e do Colosso', () => {
         sobreescudo: 100,
         atributos: {
           vigor: 40,
-          mente: 5,
+          sorte: 5,
           forca: 45,
           vitalidade: 30,
           arcano: 0,
@@ -349,7 +349,7 @@ describe('ORDEM 48C — Habilidades Ativas do Berserker e do Colosso', () => {
         sobreescudo: 100,
         atributos: {
           vigor: 40,
-          mente: 5,
+          sorte: 5,
           forca: 35,
           vitalidade: 30,
           arcano: 0,
