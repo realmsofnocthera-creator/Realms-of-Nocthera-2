@@ -7,8 +7,8 @@ import {
   updateCharacterAvatar,
   updateCharacterSobre,
   calcularXpComBonusRacial,
-  resetCharacterStore,
 } from '../characterService';
+import { resetCharacterStore } from '../../test/repositorioMemoria';
 import { AVATARES_DISPONIVEIS } from '../../rules/avatars';
 import {
   calcularAgilidadeEfetiva,

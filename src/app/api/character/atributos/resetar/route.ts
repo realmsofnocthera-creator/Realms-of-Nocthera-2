@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuthToken } from '@/server/auth';
 import { resetarAtributos } from '@/server/characterService';
+import { respostaErroPersistencia } from '@/server/respostaErro';
 
 const ERROS_REGRA = new Set([
   'Nenhum ponto alocado para resetar',
@@ -26,6 +27,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ character }, { status: 200 });
   } catch (error) {
+    const erroBanco = respostaErroPersistencia(error);
+    if (erroBanco) return erroBanco;
+
     const message = error instanceof Error ? error.message : 'Erro ao resetar atributos.';
 
     if (

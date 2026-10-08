@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   iniciativa,
   calcularDanoFisico,
@@ -52,9 +52,11 @@ import { calcularHpMax, calcularManaMax, calcularSobreescudoMax } from '../index
 import {
   createCharacter,
   applyCombatResult,
-  getTransactionsByUid,
-  resetCharacterStore,
 } from '../../server/characterService';
+import { getTransactionsByUid, resetCharacterStore } from '../../test/repositorioMemoria';
+
+// A semente do combate vem do servidor (0.5-B1); aqui ela é fixa para o teste da rota ser determinístico
+vi.mock('../../server/combateSemente', () => ({ gerarSementeCombate: () => 42 }));
 
 describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
   beforeEach(() => {
@@ -387,7 +389,6 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         },
         body: JSON.stringify({
           monsterId: 'rato-da-peste', // XP base = 25 -> com +5% = floor(26.25) = 26
-          seed: 42,
         }),
       });
 

@@ -19,8 +19,8 @@ import {
   applyCombatResult,
   createCharacter,
   getCharacterByUid,
-  resetCharacterStore,
 } from '../../server/characterService';
+import { resetCharacterStore } from '../../test/repositorioMemoria';
 
 describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
   beforeEach(() => {

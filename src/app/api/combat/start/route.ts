@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuthToken } from '../../../../server/auth';
-import {
-  getCharacterByUid,
-  applyCombatResult,
-  calcularXpComBonusRacial,
-  runWithUserMutex,
-} from '../../../../server/characterService';
+import { combateIdValido, executarCombate } from '../../../../server/characterService';
+import { gerarSementeCombate } from '../../../../server/combateSemente';
+import { respostaErroPersistencia } from '../../../../server/respostaErro';
 import { MONSTERS_MAP } from '../../../../rules/monsters';
-import { getRaceById } from '../../../../rules/races';
-import { resolverCombate, Combatente } from '../../../../game/combat';
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,12 +17,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Qualquer "seed" enviada pelo cliente é ignorada (0.5-B1)
     const body = await req.json().catch(() => ({}));
-    const { monsterId, seed } = body;
+    const { monsterId, combateId } = body;
 
     if (!monsterId || typeof monsterId !== 'string') {
       return NextResponse.json(
         { error: 'Identificador de monstro inválido.' },
+        { status: 400 }
+      );
+    }
+
+    if (combateId !== undefined && !combateIdValido(combateId)) {
+      return NextResponse.json(
+        { error: 'Identificador de combate inválido.' },
         { status: 400 }
       );
     }
@@ -40,72 +43,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Leitura do personagem, resolução do combate e gravação do resultado 100% dentro do mutex por UID
-    const postCombatData = await runWithUserMutex(user.uid, async () => {
-      // 1. Busca o personagem atual do usuário dentro do mutex
-      const character = await getCharacterByUid(user.uid);
-      if (!character) {
-        throw new Error('Personagem não encontrado. Crie um personagem antes de batalhar.');
-      }
-
-      // 2. Prepara o combatente com HP cheio e Sobreescudo calculados
-      const combatentePersonagem: Combatente = {
-        nome: character.nome,
-        racaId: character.racaId,
-        classeId: character.classeId,
-        linhagem: character.linhagem,
-        nivel: character.nivel,
-        hp: character.hpMax,
-        hpMax: character.hpMax,
-        sobreescudo: character.sobreescudoMax,
-        atributos: character.atributos,
-        habilidadesEquipadas: character.habilidadesEquipadas,
-        subclasseAtualId: character.subclasseAtualId,
-        subclasseTiers: character.subclasseTiers,
-        ouro: character.ouro,
-        mitigacao: 0,
-      };
-
-      // 3. Resolução 100% no servidor
-      const combateSeed = typeof seed === 'number' ? seed : Date.now();
-      const resultado = resolverCombate(combatentePersonagem, monstro, combateSeed);
-
-      // Se venceu e o personagem possui passiva bonusXpPercentual, aplica por cima do XP base do monstro (arredondado para baixo)
-      if (resultado.vencedor === 'personagem') {
-        const raca = getRaceById(character.racaId);
-        if (raca && raca.passivaRacial.efeito === 'bonusXpPercentual') {
-          const xpComBonus = calcularXpComBonusRacial(monstro.xpConcedido, character.racaId);
-          resultado.xpGanho = xpComBonus;
-          resultado.mensagens.push(
-            `Passiva Racial (${raca.passivaRacial.nome}): +${raca.passivaRacial.valor}% de XP aplicado (${monstro.xpConcedido} → ${xpComBonus} XP).`
-          );
-        }
-      }
-
-      // 4. Aplica alterações de status, XP, ouro e transações no servidor
-      const postCombat = await applyCombatResult(
-        user.uid,
-        resultado,
-        monstro.nome
-      );
-
-      return {
-        resultado,
-        postCombat,
-      };
+    // Leitura do personagem, resolução do combate e gravação do resultado na mesma transação
+    const resposta = await executarCombate(user.uid, monstro.id, {
+      seed: gerarSementeCombate(),
+      combateId,
     });
 
     return NextResponse.json(
       {
-        resultado: postCombatData.resultado,
-        character: postCombatData.postCombat.character,
-        levelUps: postCombatData.postCombat.levelUps,
-        transaction: postCombatData.postCombat.transaction,
-        mensagens: postCombatData.postCombat.mensagens,
+        resultado: resposta.resultado,
+        character: resposta.character,
+        levelUps: resposta.levelUps,
+        transaction: resposta.transaction,
+        mensagens: resposta.mensagens,
+        combateId: resposta.combateId,
+        repetido: resposta.repetido,
       },
       { status: 200 }
     );
   } catch (error) {
+    const erroBanco = respostaErroPersistencia(error);
+    if (erroBanco) return erroBanco;
+
     const message = error instanceof Error ? error.message : 'Erro durante a batalha.';
     if (message.includes('Personagem não encontrado')) {
       return NextResponse.json({ error: message }, { status: 404 });
