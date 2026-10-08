@@ -20,6 +20,29 @@ export interface OpcoesCalculoStatus {
 export const RESISTENCIA_BARBARA_SOBREESCUDO_PERCENTUAL = 5;
 export const MURALHA_DE_FERRO_SOBREESCUDO_PERCENTUAL = 10;
 
+// Bônus permanentes de dano das passivas de classe (nível 12+), em % (somam no grupo de dano, 1.2.2)
+export const FLUXO_ARCANO_DANO_PERCENTUAL = 10;
+export const PASSOS_RAPIDOS_DANO_PERCENTUAL = 5;
+export const DISCIPLINA_DO_GUERREIRO_DANO_PERCENTUAL = 5;
+
+/**
+ * Bônus permanente de dano (em %) da passiva de classe, para entrar no grupo de soma do golpe:
+ * Fluxo Arcano (Feiticeiro, dano mágico), Passos Rápidos (Bandido) e Disciplina do Guerreiro
+ * (Samurai), dano físico. Zero para as demais classes ou antes do nível 12.
+ */
+export function bonusPassivaPermanenteDanoPercentual(
+  classeId: string | undefined,
+  nivel: number,
+  tipoDano: 'fisico' | 'magico'
+): number {
+  const classe = classeId?.trim().toLowerCase();
+  if (nivel < 12) return 0;
+  if (tipoDano === 'magico' && classe === 'feiticeiro') return FLUXO_ARCANO_DANO_PERCENTUAL;
+  if (tipoDano === 'fisico' && classe === 'bandido') return PASSOS_RAPIDOS_DANO_PERCENTUAL;
+  if (tipoDano === 'fisico' && classe === 'samurai') return DISCIPLINA_DO_GUERREIRO_DANO_PERCENTUAL;
+  return 0;
+}
+
 /**
  * Passiva II do Bárbaro (Nível 20+) — Resistência Bárbara:
  * Aplica permanentemente +10% ao HP máximo e +5% ao Sobreescudo máximo
@@ -101,7 +124,7 @@ export function aplicarFluxoArcano(
 
   return {
     manaMax: Math.ceil((manaMaxBase * 110) / 100),
-    danoMagico: Math.ceil((danoMagicoBase * 110) / 100),
+    danoMagico: Math.ceil((danoMagicoBase * (100 + FLUXO_ARCANO_DANO_PERCENTUAL)) / 100),
   };
 }
 
@@ -128,7 +151,7 @@ export function aplicarPassosRapidos(
 
   return {
     agilidade: agilidadeBase + 2,
-    danoFisico: Math.ceil((danoFisicoBase * 105) / 100),
+    danoFisico: Math.ceil((danoFisicoBase * (100 + PASSOS_RAPIDOS_DANO_PERCENTUAL)) / 100),
   };
 }
 
@@ -182,7 +205,7 @@ export function aplicarDisciplinaDoGuerreiro(
 
   return {
     agilidade: agilidadeBase + 2,
-    danoFisico: Math.ceil((danoFisicoBase * 105) / 100),
+    danoFisico: Math.ceil((danoFisicoBase * (100 + DISCIPLINA_DO_GUERREIRO_DANO_PERCENTUAL)) / 100),
   };
 }
 

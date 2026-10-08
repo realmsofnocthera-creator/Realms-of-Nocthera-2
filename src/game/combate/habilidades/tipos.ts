@@ -19,6 +19,8 @@ export interface ContextoHabilidade {
   atacante: AtacanteHabilidade;
   alvo: AlvoHabilidade;
   danoBase: number;
+  /** Bônus de dano em %, vindos de passivas (Instinto, Frenesi...), somados no mesmo grupo do bônus da habilidade. */
+  bonusDanoExtraPercentual?: number;
 }
 
 export interface ResultadoHabilidade {

@@ -34,6 +34,7 @@ import {
   aplicarMuralhaDeFerro,
   aplicarPassosRapidos,
   aplicarResistenciaBarbara,
+  bonusPassivaPermanenteDanoPercentual,
   calcularAgilidadeEfetiva,
   calcularDefesaFisica,
   calcularHpMax,
@@ -42,6 +43,8 @@ import {
 } from './index';
 import {
   aplicarBonusContraSobreescudo,
+  calcularDanoComBonusSomados,
+  limitarReducaoDanoPercentual,
   calcularMitigacaoFisicaEfetiva,
   calcularMitigacaoMagicaEfetiva,
   reduzirDanoPercentual,
@@ -51,7 +54,7 @@ import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import {
   ContextoHabilidade,
   ResultadoHabilidade,
-  aplicarPassivasDanoDaClasse,
+  separarPassivasDanoDaClasse,
   obterHabilidade,
   obterModificadoresPassivaSubclasse,
   obterSlotAcionado,
@@ -384,6 +387,8 @@ export function calcularGolpeBarbaro(params: {
   nivel: number;
   contadorFuria: number;
   contadorIra: number;
+  /** Bônus de dano de passivas de subclasse (Frenesi), em %, somado ao Instinto e à Ira. */
+  bonusDanoExtraPercentual?: number;
 }): {
   habilidadeAcionada: 'Golpe Bárbaro' | 'Fúria Selvagem' | 'Ira do Bárbaro';
   danoBruto: number;
@@ -393,13 +398,14 @@ export function calcularGolpeBarbaro(params: {
   iraAbaixo30Ativo: boolean;
 } {
   const { forcaBase, hpAtual, hpMax, nivel, contadorFuria, contadorIra } = params;
+  const bonusDanoExtraPercentual = params.bonusDanoExtraPercentual ?? 0;
 
   const instinto = calcularInstintoSobrevivencia(hpAtual, hpMax, nivel);
   const furia = processarFuriaSelvagem(contadorFuria, nivel);
   const ira = processarIraDoBarbaro(contadorIra, hpAtual, hpMax, nivel);
 
   let forcaEfetiva = calcularDanoFisico(forcaBase) + instinto.bonusForca;
-  let percentualBonusTotal = instinto.percentualBonusDano;
+  let percentualBonusTotal = instinto.percentualBonusDano + bonusDanoExtraPercentual;
   let danoAdicionalFixo = 0;
   let habilidadeAcionada: 'Golpe Bárbaro' | 'Fúria Selvagem' | 'Ira do Bárbaro' = 'Golpe Bárbaro';
 
@@ -714,7 +720,7 @@ export function aplicarDefesaCavaleiro(params: {
   // Redução percentual do dano recebido
   const danoAposReducaoPercentual = reduzirDanoPercentual(
     danoBruto,
-    reducaoDanoPercentual
+    limitarReducaoDanoPercentual(reducaoDanoPercentual)
   );
 
   // Aplica dano priorizando Sobreescudo (e direcionando parcela adicional na Postura do Guardião)
@@ -957,8 +963,13 @@ export function calcularGolpeFeiticeiro(params: {
     nivel,
   });
 
+  // Regra 1.2.2: o dano parte do valor SEM passivas; Fluxo Arcano, cargas e bônus contra
+  // Sobreescudo entram juntos num único grupo de soma (ver calcularDanoComBonusSomados)
+  const danoMagicoBruto = calcularDanoMagico(inteligenciaBase);
+  const bonusFluxoArcano = bonusPassivaPermanenteDanoPercentual('feiticeiro', nivel, 'magico');
+
   // Se houver cargas acumuladas antes deste ataque, consome todas as cargas para amplificar este golpe
-  const consumo = aplicarCargasAcumuloArcano(danoMagicoBase, cargasAcumulo, nivel);
+  const consumo = aplicarCargasAcumuloArcano(danoMagicoBruto, cargasAcumulo, nivel);
 
   // Processa os 3 contadores independentes (A: Explosão Arcana, B: Acúmulo Arcano, C: Cataclismo Arcano)
   const explosao = processarExplosaoArcana(contadorExplosao, nivel);
@@ -982,21 +993,11 @@ export function calcularGolpeFeiticeiro(params: {
     ignorarDefesaMagicaPercentual = explosao.ignorarDefesaMagicaPercentual;
   }
 
-  let danoCalculado = Math.ceil((danoMagicoBase * multiplicadorHabilidade) / 100);
-
-  if (consumo.percentualBonusAplicado > 0) {
-    danoCalculado = Math.ceil(
-      (danoCalculado * (100 + consumo.percentualBonusAplicado)) / 100
-    );
-  }
-
-  if (bonusSobreescudoCataclismoAtivo) {
-    danoCalculado = aplicarBonusContraSobreescudo(
-      danoCalculado,
-      sobreescudoAlvo,
-      cataclismo.bonusDanoContraSobreescudoPercentual
-    );
-  }
+  const danoCalculado = calcularDanoComBonusSomados(danoMagicoBruto, multiplicadorHabilidade, [
+    bonusFluxoArcano,
+    consumo.percentualBonusAplicado,
+    bonusSobreescudoCataclismoAtivo ? cataclismo.bonusDanoContraSobreescudoPercentual : 0,
+  ]);
 
   const danoBruto = Math.max(GAME_CONFIG.DANO_MINIMO, danoCalculado);
   const mitigacaoEfetiva = calcularMitigacaoMagicaEfetiva(
@@ -1284,13 +1285,14 @@ export function calcularGolpeBandido(params: {
   }
 
   const ehGolpeEspecialOuUltimate = danca.acionada || rajada.acionada;
-  const danoPorGolpeSemCarga = Math.ceil(
-    (danoFisicoBase * multiplicadorPorGolpePercentual) / 100
-  );
+
+  // Regra 1.2.2: o dano parte do valor SEM passivas; Passos Rápidos e as cargas somam num grupo só
+  const danoFisicoBruto = calcularDanoFisico(forcaBase);
+  const bonusPassosRapidos = bonusPassivaPermanenteDanoPercentual('bandido', nivel, 'fisico');
 
   // As cargas de Sede de Sangue (Bandido) SÓ são aplicadas e consumidas se Rajada de Golpes ou Dança das Lâminas disparar
   const consumo = aplicarCargasSedeDeSangueBandido(
-    danoPorGolpeSemCarga,
+    danoFisicoBruto,
     cargasSedeSangue,
     nivel,
     ehGolpeEspecialOuUltimate
@@ -1303,7 +1305,13 @@ export function calcularGolpeBandido(params: {
     nivel
   );
 
-  const danoPorGolpe = Math.max(GAME_CONFIG.DANO_MINIMO, consumo.danoComCargas);
+  const danoPorGolpe = Math.max(
+    GAME_CONFIG.DANO_MINIMO,
+    calcularDanoComBonusSomados(danoFisicoBruto, multiplicadorPorGolpePercentual, [
+      bonusPassosRapidos,
+      consumo.percentualBonusAplicado,
+    ])
+  );
   const golpes = Array.from({ length: numeroGolpes }, () => danoPorGolpe);
   const danoBruto = danoPorGolpe * numeroGolpes;
   const mitigacaoPorGolpeEfetiva = calcularMitigacaoFisicaEfetiva(
@@ -1855,11 +1863,15 @@ export function calcularGolpeSamurai(params: {
   }
 
   const ehGolpeEspecialOuUltimate = corteDoVazio.acionada || iaijutsu.acionada;
-  const danoSemCarga = Math.ceil((danoFisicoBase * multiplicadorHabilidade) / 100);
+
+  // Regra 1.2.2: o dano parte do valor SEM passivas; Disciplina, cargas e bônus contra
+  // Sobreescudo somam num grupo só
+  const danoFisicoBruto = calcularDanoFisico(forcaBase);
+  const bonusDisciplina = bonusPassivaPermanenteDanoPercentual('samurai', nivel, 'fisico');
 
   // Aplica e consome cargas de Foco Absoluto SOMENTE em Iaijutsu ou Corte do Vazio (nunca em ataques comuns)
   const consumo = aplicarCargasFocoAbsoluto(
-    danoSemCarga,
+    danoFisicoBruto,
     cargasFocoAbsoluto,
     nivel,
     ehGolpeEspecialOuUltimate
@@ -1872,14 +1884,11 @@ export function calcularGolpeSamurai(params: {
     nivel
   );
 
-  let danoCalculado = consumo.danoComCargas;
-  if (bonusSobreescudoCorteDoVazioAtivo) {
-    danoCalculado = aplicarBonusContraSobreescudo(
-      danoCalculado,
-      sobreescudoAlvo,
-      corteDoVazio.bonusDanoContraSobreescudoPercentual
-    );
-  }
+  const danoCalculado = calcularDanoComBonusSomados(danoFisicoBruto, multiplicadorHabilidade, [
+    bonusDisciplina,
+    consumo.percentualBonusAplicado,
+    bonusSobreescudoCorteDoVazioAtivo ? corteDoVazio.bonusDanoContraSobreescudoPercentual : 0,
+  ]);
 
   const danoBrutoPrincipal = Math.max(GAME_CONFIG.DANO_MINIMO, danoCalculado);
   const danoGolpeExtraBase = Math.max(GAME_CONFIG.DANO_MINIMO, danoFisicoBase);
@@ -2057,6 +2066,16 @@ export function turnoDeCombate(
     let danoGolpeExtraSamuraiPotencial = 0;
     let acaoCausaDano = true;
 
+    // Modificadores de passiva de subclasse do atacante (ex: Frenesi do Berserker).
+    // Entram no mesmo grupo de soma dos outros bônus de dano (regra 1.2.2).
+    const modsPassivaAtacante = obterModificadoresPassivaSubclasse({
+      subclasseAtualId: atacante.subclasseAtualId,
+      subclasseTiers: atacante.subclasseTiers,
+      hp: hpAtacanteAtual,
+      hpMax: atacante.hpMax,
+      nivel: nivelAtacante,
+    });
+
     if (ehBarbaroAtacante) {
       const golpe = calcularGolpeBarbaro({
         forcaBase: atacante.atributos.forca,
@@ -2065,6 +2084,7 @@ export function turnoDeCombate(
         nivel: nivelAtacante,
         contadorFuria,
         contadorIra,
+        bonusDanoExtraPercentual: modsPassivaAtacante.bonusDanoFisicoPercentual,
       });
       danoBruto = golpe.danoBruto;
       contadorFuria = golpe.novoContadorFuria;
@@ -2193,13 +2213,14 @@ export function turnoDeCombate(
       if (defHab) {
         const tipoPrevisto = defHab.tipoDano ?? 'fisico';
         const danoBasePlano = tipoPrevisto === 'fisico' ? danoFisico : danoMagico;
-        const danoBase = aplicarPassivasDanoDaClasse({
+        const passivasClasse = separarPassivasDanoDaClasse({
           classeId: atacante.classeId,
           danoBasePlano,
           hp: hpAtacanteAtual,
           hpMax: atacante.hpMax,
           nivel: nivelAtacante,
         });
+        const danoBase = passivasClasse.danoBase;
         const ctxHab: ContextoHabilidade = {
           atacante: {
             hp: hpAtacanteAtual,
@@ -2214,6 +2235,9 @@ export function turnoDeCombate(
             mitigacaoMagica: mitigacao,
           },
           danoBase,
+          bonusDanoExtraPercentual:
+            passivasClasse.bonusDanoPercentual +
+            (tipoPrevisto === 'fisico' ? modsPassivaAtacante.bonusDanoFisicoPercentual : 0),
         };
 
         const resHab = defHab.executar(ctxHab);
@@ -2258,20 +2282,6 @@ export function turnoDeCombate(
 
         resultadoHabilidadeInterceptada = resHab;
       }
-    }
-
-    // Modificadores de passiva de subclasse do atacante (ex: Frenesi do Berserker)
-    const modsPassivaAtacante = obterModificadoresPassivaSubclasse({
-      subclasseAtualId: atacante.subclasseAtualId,
-      subclasseTiers: atacante.subclasseTiers,
-      hp: hpAtacanteAtual,
-      hpMax: atacante.hpMax,
-      nivel: nivelAtacante,
-    });
-    if (ehDanoFisico && modsPassivaAtacante.bonusDanoFisicoPercentual > 0) {
-      danoBruto = Math.ceil(
-        (danoBruto * (100 + modsPassivaAtacante.bonusDanoFisicoPercentual)) / 100
-      );
     }
 
     // Identifica se o golpe atual possui elemento (via habilidade de classe cadastrada ou elementoAtaque do combatente/monstro)
@@ -2342,7 +2352,7 @@ export function turnoDeCombate(
     ) {
       danoBruto = reduzirDanoPercentual(
         danoBruto,
-        modsPassivaDefensor.reducaoDanoFisicoRecebidoPercentual
+        limitarReducaoDanoPercentual(modsPassivaDefensor.reducaoDanoFisicoRecebidoPercentual)
       );
     }
 

@@ -16,6 +16,8 @@ export const GAME_CONFIG = {
   OURO_PERDIDO_MORTE: 50,
   DANO_MINIMO: 1,
   MAXIMO_ATAQUES_POR_TURNO: 2,
+  // Regra 1.2.2: reduções de dano recebido somadas nunca passam deste teto (só Imortalidade Breve zera o dano)
+  TETO_REDUCAO_DANO_PERCENTUAL: 80,
   HP_POR_PONTO_VIGOR: 5,
   MANA_POR_PONTO_MENTE: 5,
   SOBREESCUDO_POR_PONTO_VITALIDADE: 2,

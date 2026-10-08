@@ -1102,12 +1102,12 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       expect(t3.cargasAcumuloRestantes).toBe(1);
       expect(feiticeiroSync.cargasAcumuloArcano).toBe(1);
 
-      // 4º ataque: consome a 1 carga acumulada (+10% de 22 = ceil(24.2) = 25) e zera cargas
+      // 4º ataque: consome a 1 carga acumulada (Fluxo +10% e carga +10% somam: 20 × 120% = 24) e zera cargas
       const t4 = turnoDeCombate(feiticeiroSync, alvoSync, 4).turnoLog.ataques[0];
       expect(t4.habilidadeAcionada).toBe('Faísca Arcana');
       expect(t4.cargasAcumuloConsumidas).toBe(1);
       expect(t4.cargasAcumuloRestantes).toBe(0);
-      expect(t4.danoBruto).toBe(25);
+      expect(t4.danoBruto).toBe(24);
       expect(feiticeiroSync.cargasAcumuloArcano).toBe(0);
       expect(feiticeiroSync.contadorAcumuloArcano).toBe(1);
       expect(feiticeiroSync.contadorExplosaoArcana).toBe(1);
@@ -1135,12 +1135,12 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         },
       };
 
-      // Golpe 1: consome as 3 cargas (+30% sobre 22 = ceil(28.6) = 29).
+      // Golpe 1: consome as 3 cargas (20 × (100% + Fluxo 10% + cargas 30%) = 28).
       // Contador A vai de 0 -> 1. Contador B NÃO reinicia ao consumir cargas: vai de 1 -> 2!
       const g1 = turnoDeCombate(feiticeiroDefasado, alvoSync, 1).turnoLog.ataques[0];
       expect(g1.habilidadeAcionada).toBe('Faísca Arcana');
       expect(g1.cargasAcumuloConsumidas).toBe(3);
-      expect(g1.danoBruto).toBe(29);
+      expect(g1.danoBruto).toBe(28);
       expect(feiticeiroDefasado.cargasAcumuloArcano).toBe(0);
       expect(feiticeiroDefasado.contadorExplosaoArcana).toBe(1);
       expect(feiticeiroDefasado.contadorAcumuloArcano).toBe(2);
@@ -1155,11 +1155,11 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       expect(feiticeiroDefasado.cargasAcumuloArcano).toBe(1);
 
       // Golpe 3: Contador A chega a 3 (2 -> 3 -> 0 -> Explosão Arcana!) E consome a 1 carga ganha no Golpe 2!
-      // Explosão Arcana (200% de 22 = 44) + 1 carga (+10% de 44 = ceil(48.4) = 49)
+      // Explosão Arcana: 20 × 200% × (100% + Fluxo 10% + 1 carga 10%) = 48
       const g3 = turnoDeCombate(feiticeiroDefasado, alvoSync, 3).turnoLog.ataques[0];
       expect(g3.habilidadeAcionada).toBe('Explosão Arcana');
       expect(g3.cargasAcumuloConsumidas).toBe(1);
-      expect(g3.danoBruto).toBe(49);
+      expect(g3.danoBruto).toBe(48);
       expect(feiticeiroDefasado.contadorExplosaoArcana).toBe(0);
       expect(feiticeiroDefasado.contadorAcumuloArcano).toBe(1);
       expect(feiticeiroDefasado.cargasAcumuloArcano).toBe(0);
@@ -1214,16 +1214,17 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
 
       // Nota: no 6º ataque, o contador B completou o 2º ciclo (ataque 6) e gerou 1 carga para o 7º ataque!
       // Então no 7º ataque (Cataclismo Arcano):
-      // - Sem Sobreescudo no alvo: 22 * 400% = 88; com +10% da 1 carga = ceil(96.8) = 97.
-      //   Mitigação 20 ignorando 20% = 16 -> danoEfetivo = 97 - 16 = 81.
-      // - Com Sobreescudo no alvo: recebe +25% adicional sobre 97 = ceil(97 * 1.25) = 122.
-      //   Mitigação 16 -> danoEfetivo = 122 - 16 = 106.
+      // Regra 1.2.2: Fluxo Arcano (+10%), 1 carga (+10%) e bônus contra Sobreescudo (+25%) somam num grupo só.
+      // - Sem Sobreescudo no alvo: 20 × 400% × 120% = 96.
+      //   Mitigação 20 ignorando 20% = 16 -> danoEfetivo = 96 - 16 = 80.
+      // - Com Sobreescudo no alvo: 20 × 400% × 145% = 116.
+      //   Mitigação 16 -> danoEfetivo = 116 - 16 = 100.
       expect(atk7SemEscudo.bonusSobreescudoCataclismoAtivo).toBe(false);
       expect(atk7ComEscudo.bonusSobreescudoCataclismoAtivo).toBe(true);
-      expect(atk7SemEscudo.danoBruto).toBe(97);
-      expect(atk7SemEscudo.danoEfetivo).toBe(81);
-      expect(atk7ComEscudo.danoBruto).toBe(122);
-      expect(atk7ComEscudo.danoEfetivo).toBe(106);
+      expect(atk7SemEscudo.danoBruto).toBe(96);
+      expect(atk7SemEscudo.danoEfetivo).toBe(80);
+      expect(atk7ComEscudo.danoBruto).toBe(116);
+      expect(atk7ComEscudo.danoEfetivo).toBe(100);
       expect(atk7ComEscudo.danoEfetivo).toBeGreaterThan(atk7SemEscudo.danoEfetivo);
     });
   });
@@ -1438,12 +1439,12 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       expect(comumCom3Cargas.danoBruto).toBe(42);
       expect(bandido3Cargas.cargasSedeSangueBandido).toBe(3);
 
-      // Próximo ataque é Rajada de Golpes: consome todas as 3 cargas (+15% sobre 34 = ceil(39.1) = 40 por golpe -> 80 total) e zera cargas!
+      // Próximo ataque é Rajada de Golpes: consome todas as 3 cargas (40 × 80% × (100% + Passos 5% + cargas 15%) = ceil(38,4) = 39 por golpe -> 78 total) e zera cargas!
       const rajadaCom3Cargas = turnoDeCombate(bandido3Cargas, alvo, 2).turnoLog.ataques[0];
       expect(rajadaCom3Cargas.habilidadeAcionada).toBe('Rajada de Golpes');
       expect(rajadaCom3Cargas.cargasSedeSangueBandidoConsumidas).toBe(3);
-      expect(rajadaCom3Cargas.danoPorGolpe).toBe(40);
-      expect(rajadaCom3Cargas.danoBruto).toBe(80);
+      expect(rajadaCom3Cargas.danoPorGolpe).toBe(39);
+      expect(rajadaCom3Cargas.danoBruto).toBe(78);
       expect(bandido3Cargas.cargasSedeSangueBandido).toBe(0);
     });
 
@@ -1484,17 +1485,16 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       expect(bandidoLv30.contadorDancaLaminas).toBe(0);
 
       // No 6º ataque, o contador B gerou 1 carga; no 7º ataque (Dança das Lâminas), essa 1 carga é consumida!
-      // Base por golpe de Dança das Lâminas (75% de 42) = ceil(31.5) = 32.
-      // Com 1 carga consumida (+5% sobre 32) = ceil(33.6) = 34 por golpe.
-      // 5 golpes de 34 = 170 de dano bruto.
-      // Cada um dos 5 golpes ignora 5% da Defesa Física (20 -> 19), causando 34 - 19 = 15 de dano efetivo por golpe -> 5 * 15 = 75 total!
+      // Por golpe de Dança das Lâminas: 40 × 75% × (100% + Passos 5% + 1 carga 5%) = 33.
+      // 5 golpes de 33 = 165 de dano bruto.
+      // Cada um dos 5 golpes ignora 5% da Defesa Física (20 -> 19), causando 33 - 19 = 14 de dano efetivo por golpe -> 5 * 14 = 70 total!
       expect(atk7.numeroGolpes).toBe(5);
       expect(atk7.ignorarDefesaFisicaPercentual).toBe(5);
       expect(atk7.cargasSedeSangueBandidoConsumidas).toBe(1);
-      expect(atk7.danoPorGolpe).toBe(34);
-      expect(atk7.golpes).toEqual([34, 34, 34, 34, 34]);
-      expect(atk7.danoBruto).toBe(170);
-      expect(atk7.danoEfetivo).toBe(75);
+      expect(atk7.danoPorGolpe).toBe(33);
+      expect(atk7.golpes).toEqual([33, 33, 33, 33, 33]);
+      expect(atk7.danoBruto).toBe(165);
+      expect(atk7.danoEfetivo).toBe(70);
       expect(bandidoLv30.cargasSedeSangueBandido).toBe(0);
 
       // Também verifica cálculo puro de Dança das Lâminas sem cargas (5 golpes de 75% = 375% total)
@@ -1907,7 +1907,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       // - Ataques 1 e 2: Corte Preciso (dano = 42, cargas = 0)
       // - Ataque 3: Iaijutsu (220% de 42 = ceil(92.4) = 93); ao final do 3º ataque, Contador B completa ciclo de 3 e gera 1 carga!
       // - Ataques 4 e 5 (ataques comuns Corte Preciso entre os ciclos!): possuem 1 carga acumulada, mas NÃO aplicam o bônus e NÃO consomem a carga (dano continua 42, cargas continuam 1)!
-      // - Ataque 6 (Iaijutsu): agora SIM consome a 1 carga pendente (+5% sobre 93 = ceil(97.65) = 98)!
+      // - Ataque 6 (Iaijutsu): agora SIM consome a 1 carga pendente (40 × 220% × (100% + Disciplina 5% + carga 5%) = ceil(96,8) = 97)!
       const samuraiLv20: Combatente = {
         nome: 'Samurai Nv20',
         classeId: 'samurai',
@@ -1960,11 +1960,11 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       expect(a5.danoBruto).toBe(42); // Sem bônus de carga!
       expect(samuraiLv20.cargasFocoAbsoluto).toBe(1);
 
-      // 6º ataque: Iaijutsu dispara e CONSOME a carga acumulada (+5% sobre 93 = ceil(97.65) = 98)
+      // 6º ataque: Iaijutsu dispara e CONSOME a carga acumulada (40 × 220% × (100% + Disciplina 5% + carga 5%) = ceil(96,8) = 97)
       const a6 = turnoDeCombate(samuraiLv20, alvo, 6).turnoLog.ataques[0];
       expect(a6.habilidadeAcionada).toBe('Iaijutsu');
       expect(a6.cargasFocoAbsolutoConsumidas).toBe(1);
-      expect(a6.danoBruto).toBe(98);
+      expect(a6.danoBruto).toBe(97);
       expect(a6.danoBruto).toBeGreaterThan(a3.danoBruto);
 
       // 3) Verifica também com 3 cargas acumuladas em um ataque comum seguido de Iaijutsu:
@@ -1998,7 +1998,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       const iaijutsuCom3Cargas = turnoDeCombate(samurai3Cargas, alvo, 2).turnoLog.ataques[0];
       expect(iaijutsuCom3Cargas.habilidadeAcionada).toBe('Iaijutsu');
       expect(iaijutsuCom3Cargas.cargasFocoAbsolutoConsumidas).toBe(3);
-      expect(iaijutsuCom3Cargas.danoBruto).toBe(107); // ceil(93 * 1.15) = ceil(106.95) = 107
+      expect(iaijutsuCom3Cargas.danoBruto).toBe(106); // 40 × 220% × (100% + Disciplina 5% + cargas 15%) = ceil(105,6) = 106
       expect(samurai3Cargas.cargasFocoAbsoluto).toBe(0);
     });
 
@@ -2032,7 +2032,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       expect(corteSemEscudo.danoGolpeExtraBase).toBe(42); // 100% do dano físico normal
 
       expect(corteComEscudo.bonusSobreescudoCorteDoVazioAtivo).toBe(true);
-      expect(corteComEscudo.danoBrutoPrincipal).toBe(237); // ceil(189 * 1.25) = 237
+      expect(corteComEscudo.danoBrutoPrincipal).toBe(234); // 40 × 450% × (100% + Disciplina 5% + escudo 25%) = 234
 
       // 2) CENÁRIO A DO GOLPE EXTRA:
       // Combate onde o Corte do Vazio no 7º ataque deixa o inimigo ACIMA de 20% do HP máximo -> SEM golpe extra!
@@ -2063,8 +2063,8 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       }
 
       // No 7º ataque (Corte do Vazio):
-      // - 450% de 42 = 189; com 1 carga de Foco Absoluto gerada no fim do 6º ataque (+5%) = ceil(189 * 1.05) = 199 bruto.
-      // - Ignora 25% da Defesa Física (20 -> 15 de mitigação) -> 199 - 15 = 184 de dano efetivo.
+      // - 40 × 450% × (100% + Disciplina 5% + 1 carga de Foco Absoluto 5%) = 198 bruto.
+      // - Ignora 25% da Defesa Física (20 -> 15 de mitigação) -> 198 - 15 = 183 de dano efetivo.
       // - HP restante do inimigo fica em 1592 (> 400, ou seja, > 20% de 2000) -> golpeExtraCorteDoVazioAtivo = false!
       expect(atk7CenarioA.habilidadeAcionada).toBe('Corte do Vazio');
       expect(atk7CenarioA.cargasFocoAbsolutoConsumidas).toBe(1);
@@ -2072,8 +2072,8 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       expect(atk7CenarioA.golpeExtraCorteDoVazioAtivo).toBe(false);
       expect(atk7CenarioA.danoGolpeExtraCorteDoVazio).toBe(0);
       expect(atk7CenarioA.danoEfetivoGolpeExtraCorteDoVazio).toBe(0);
-      expect(atk7CenarioA.danoBruto).toBe(199);
-      expect(atk7CenarioA.danoEfetivo).toBe(184);
+      expect(atk7CenarioA.danoBruto).toBe(198);
+      expect(atk7CenarioA.danoEfetivo).toBe(183);
 
       // 3) CENÁRIO B DO GOLPE EXTRA:
       // Combate onde o Corte do Vazio no 7º ataque deixa o inimigo em 20% do HP máximo OU MENOS -> COM golpe extra aplicado (100% do dano físico normal, dano separado, mesma mitigação)!
@@ -2098,14 +2098,14 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       // Inimigo com HP = 500 e hpMax = 500 (20% = 100 HP) e mitigação = 20:
       // - Ataques 1, 2, 4, 5 (Corte Preciso): 42 - 20 = 22 de dano efetivo cada (4 * 22 = 88)
       // - Ataque 3 (Iaijutsu, 0 cargas): 93 - 18 = 75 de dano efetivo
-      // - Ataque 6 (Iaijutsu, 1 carga): 98 - 18 = 80 de dano efetivo
-      // Antes do 7º ataque, inimigo está com 500 - (88 + 75 + 80) = 257 HP.
+      // - Ataque 6 (Iaijutsu, 1 carga): 97 - 18 = 79 de dano efetivo
+      // Antes do 7º ataque, inimigo está com 500 - (88 + 75 + 79) = 258 HP.
       // No 7º ataque (Corte do Vazio):
-      // - Golpe principal causa 199 bruto - 15 mitigação (25% de 20 ignorado) = 184 de dano efetivo.
-      // - Inimigo cai de 257 HP para 73 HP!
-      // - Como 73 HP <= 100 HP (20% de 500), o GOLPE EXTRA dispara automaticamente:
+      // - Golpe principal causa 198 bruto - 15 mitigação (25% de 20 ignorado) = 183 de dano efetivo.
+      // - Inimigo cai de 258 HP para 75 HP!
+      // - Como 75 HP <= 100 HP (20% de 500), o GOLPE EXTRA dispara automaticamente:
       //   +100% do dano físico normal (42 bruto) com a MESMA mitigação (15) = 27 de dano efetivo adicional!
-      // - Inimigo termina com 73 - 27 = 46 HP!
+      // - Inimigo termina com 75 - 27 = 48 HP!
       const inimigoBaixoHp = criarAlvoSamurai(20, 500, 0);
       let atk7CenarioB = turnoDeCombate(samuraiCenarioB, inimigoBaixoHp, 1).turnoLog.ataques[0];
       for (let t = 2; t <= 7; t++) {
@@ -2116,10 +2116,10 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       expect(atk7CenarioB.golpeExtraCorteDoVazioAtivo).toBe(true);
       expect(atk7CenarioB.danoGolpeExtraCorteDoVazio).toBe(42); // 100% do dano físico normal (42)
       expect(atk7CenarioB.danoEfetivoGolpeExtraCorteDoVazio).toBe(27); // 42 - 15 (mesma mitigação com 25% ignorado)
-      expect(atk7CenarioB.danoBruto).toBe(199 + 42); // 241 total bruto (199 + 42)
-      expect(atk7CenarioB.danoEfetivo).toBe(184 + 27); // 211 total efetivo (184 + 27)
-      expect(atk7CenarioB.hpRestante).toBe(46); // 257 - 184 = 73 (<= 100), depois 73 - 27 = 46
-      expect(inimigoBaixoHp.hp).toBe(46);
+      expect(atk7CenarioB.danoBruto).toBe(198 + 42); // 240 total bruto (198 + 42)
+      expect(atk7CenarioB.danoEfetivo).toBe(183 + 27); // 210 total efetivo (183 + 27)
+      expect(atk7CenarioB.hpRestante).toBe(48); // 258 - 183 = 75 (<= 100), depois 75 - 27 = 48
+      expect(inimigoBaixoHp.hp).toBe(48);
     });
   });
 });

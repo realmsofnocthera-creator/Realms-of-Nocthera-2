@@ -1,6 +1,6 @@
 import { GAME_CONFIG } from '@/rules/config';
 import {
-  aplicarBonusContraSobreescudo,
+  calcularDanoComBonusSomados,
   calcularMitigacaoFisicaEfetiva,
   calcularMitigacaoMagicaEfetiva,
 } from '@/game/combate/efeitos';
@@ -10,17 +10,13 @@ export function resolverDanoHabilidade(
   r: ResultadoHabilidade,
   ctx: ContextoHabilidade
 ): { danoBruto: number; mitigacaoEfetiva: number } {
-  let base = Math.ceil((ctx.danoBase * r.percentualDano) / 100);
-
-  if (r.bonusDanoPercentual > 0) {
-    base = Math.ceil((base * (100 + r.bonusDanoPercentual)) / 100);
-  }
-
-  base = aplicarBonusContraSobreescudo(
-    base,
-    ctx.alvo.sobreescudo,
-    r.bonusContraSobreescudoPercentual
-  );
+  // Regra 1.2.2: todos os bônus de dano somam num grupo só, com um único arredondamento
+  const bonusContraSobreescudo = ctx.alvo.sobreescudo > 0 ? r.bonusContraSobreescudoPercentual : 0;
+  const base = calcularDanoComBonusSomados(ctx.danoBase, r.percentualDano, [
+    r.bonusDanoPercentual,
+    ctx.bonusDanoExtraPercentual ?? 0,
+    bonusContraSobreescudo,
+  ]);
 
   const mitigacaoEfetiva =
     r.tipoDano === 'fisico'

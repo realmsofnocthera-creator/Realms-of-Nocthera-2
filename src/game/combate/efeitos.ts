@@ -54,3 +54,33 @@ export function calcularMitigacaoFisicaEfetiva(
   if (percentualIgnorado <= 0) return mitigacaoFisica;
   return Math.floor((mitigacaoFisica * Math.max(0, 100 - percentualIgnorado)) / 100);
 }
+
+/**
+ * Regra 1.2.2 (soma): todos os bônus de dano causado entram num grupo só.
+ *
+ *   dano = ceil( danoBase × %habilidade × (100 + soma dos bônus %) / 10.000 )
+ *
+ * A % da habilidade (ex.: 115% do Golpe Desenfreado) fica fora da soma. Os bônus (passivas,
+ * cargas, buffs, condicionais, bônus contra Sobreescudo...) são somados e aplicados uma vez,
+ * com um único arredondamento para cima no fim. Bônus negativos (debuffs) entram na mesma
+ * soma; o multiplicador nunca fica abaixo de zero. O multiplicador elemental do alvo
+ * (fraqueza/resistência) continua separado, aplicado depois.
+ * Ex.: base 100 × 350% com +30, +25 e +16 = ceil(100 × 350 × 171 / 10.000) = 599.
+ */
+export function calcularDanoComBonusSomados(
+  danoBase: number,
+  percentualHabilidade: number,
+  bonusPercentuais: readonly number[]
+): number {
+  const soma = bonusPercentuais.reduce((acumulado, bonus) => acumulado + bonus, 0);
+  const fator = Math.max(0, 100 + soma);
+  return Math.ceil((danoBase * percentualHabilidade * fator) / 10_000);
+}
+
+/**
+ * Teto das reduções de dano recebido somadas (GAME_CONFIG.TETO_REDUCAO_DANO_PERCENTUAL, 80%).
+ * Nunca negativo. Só a Imortalidade Breve zera o dano.
+ */
+export function limitarReducaoDanoPercentual(reducaoPercentual: number): number {
+  return Math.min(GAME_CONFIG.TETO_REDUCAO_DANO_PERCENTUAL, Math.max(0, reducaoPercentual));
+}

@@ -137,9 +137,9 @@ describe('ORDEM 48C — Habilidades Ativas do Berserker e do Colosso', () => {
         danoBase: 20,
       };
       const res25Escudo = def!.executar(ctx25ComEscudo);
-      // base = 91; com +25% contra sobreescudo -> ceil(91 * 125 / 100) = ceil(113.75) = 114; mitigacao = 16
+      // Regra 1.2.2: 20 × 350% × (100% + 30% de HP baixo + 25% contra Sobreescudo) = 108,5 -> 109; mitigacao = 16
       const dano25Escudo = resolverDanoHabilidade(res25Escudo, ctx25ComEscudo);
-      expect(dano25Escudo.danoBruto).toBe(114);
+      expect(dano25Escudo.danoBruto).toBe(109);
       expect(dano25Escudo.mitigacaoEfetiva).toBe(16);
     });
 

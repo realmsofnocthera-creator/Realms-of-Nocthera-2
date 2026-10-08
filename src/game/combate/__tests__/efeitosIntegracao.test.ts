@@ -2,11 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { GAME_CONFIG } from '@/rules/config';
 import {
   aplicarDefesaCavaleiro,
+  calcularDanoFisico,
+  calcularDanoMagico,
   calcularGolpeFeiticeiro,
   calcularGolpeSamurai,
 } from '@/game/combat';
 import {
   aplicarBonusContraSobreescudo,
+  calcularDanoComBonusSomados,
   reduzirDanoPercentual,
 } from '@/game/combate/efeitos';
 import { aplicarDano, calcularDefesaFisica } from '@/game/index';
@@ -59,7 +62,7 @@ describe('ORDEM 45b — Testes de Equivalência e Integração dos Efeitos de Co
   });
 
   describe('Integração Real 1: Feiticeiro Ultimate (Cataclismo Arcano)', () => {
-    it('com sobreescudoAlvo = 0: não aplica bônus contra sobreescudo (equivalente à fórmula antiga)', () => {
+    it('com sobreescudoAlvo = 0: não aplica bônus contra sobreescudo (regra de soma 1.2.2)', () => {
       const inteligencias = [10, 20, 35, 50, 80];
 
       for (const intBase of inteligencias) {
@@ -77,16 +80,14 @@ describe('ORDEM 45b — Testes de Equivalência e Integração dos Efeitos de Co
         expect(resultado.habilidadeAcionada).toBe('Cataclismo Arcano');
         expect(resultado.bonusSobreescudoCataclismoAtivo).toBe(false);
 
-        // Dano sem bônus de sobreescudo
-        const danoBase = resultado.danoMagicoBase;
-        const danoAntesBonus = Math.ceil((danoBase * 400) / 100);
-        const danoEsperado = formulaAntigaSobreescudo(danoAntesBonus, 0, 25);
+        // Regra 1.2.2: dano bruto × 400% × (100% + Fluxo Arcano 10%), sem bônus de Sobreescudo
+        const danoEsperado = calcularDanoComBonusSomados(calcularDanoMagico(intBase), 400, [10]);
 
         expect(resultado.danoBruto).toBe(Math.max(GAME_CONFIG.DANO_MINIMO, danoEsperado));
       }
     });
 
-    it('com sobreescudoAlvo > 0: aplica bônus de 25% contra sobreescudo estritamente idêntico à fórmula antiga', () => {
+    it('com sobreescudoAlvo > 0: aplica bônus de 25% contra sobreescudo pela regra de soma (1.2.2)', () => {
       const inteligencias = [12, 25, 40, 60, 95];
       const escudos = [10, 50, 200];
 
@@ -106,9 +107,8 @@ describe('ORDEM 45b — Testes de Equivalência e Integração dos Efeitos de Co
           expect(resultado.habilidadeAcionada).toBe('Cataclismo Arcano');
           expect(resultado.bonusSobreescudoCataclismoAtivo).toBe(true);
 
-          const danoBase = resultado.danoMagicoBase;
-          const danoAntesBonus = Math.ceil((danoBase * 400) / 100);
-          const danoEsperado = formulaAntigaSobreescudo(danoAntesBonus, escudo, 25);
+          // Regra 1.2.2: Fluxo Arcano (+10%) e Sobreescudo (+25%) somam num grupo só
+          const danoEsperado = calcularDanoComBonusSomados(calcularDanoMagico(intBase), 400, [10, 25]);
 
           expect(resultado.danoBruto).toBe(Math.max(GAME_CONFIG.DANO_MINIMO, danoEsperado));
         }
@@ -117,7 +117,7 @@ describe('ORDEM 45b — Testes de Equivalência e Integração dos Efeitos de Co
   });
 
   describe('Integração Real 2: Samurai Ultimate (Corte do Vazio)', () => {
-    it('com sobreescudoAlvo = 0: não aplica bônus contra sobreescudo (equivalente à fórmula antiga)', () => {
+    it('com sobreescudoAlvo = 0: não aplica bônus contra sobreescudo (regra de soma 1.2.2)', () => {
       const forcas = [10, 22, 45, 70, 110];
 
       for (const forca of forcas) {
@@ -135,15 +135,14 @@ describe('ORDEM 45b — Testes de Equivalência e Integração dos Efeitos de Co
         expect(resultado.habilidadeAcionada).toBe('Corte do Vazio');
         expect(resultado.bonusSobreescudoCorteDoVazioAtivo).toBe(false);
 
-        const danoBase = resultado.danoFisicoBase;
-        const danoAntesBonus = Math.ceil((danoBase * 450) / 100);
-        const danoEsperado = formulaAntigaSobreescudo(danoAntesBonus, 0, 25);
+        // Regra 1.2.2: dano bruto × 450% × (100% + Disciplina do Guerreiro 5%), sem bônus de Sobreescudo
+        const danoEsperado = calcularDanoComBonusSomados(calcularDanoFisico(forca), 450, [5]);
 
         expect(resultado.danoBrutoPrincipal).toBe(Math.max(GAME_CONFIG.DANO_MINIMO, danoEsperado));
       }
     });
 
-    it('com sobreescudoAlvo > 0: aplica bônus de 25% contra sobreescudo estritamente idêntico à fórmula antiga', () => {
+    it('com sobreescudoAlvo > 0: aplica bônus de 25% contra sobreescudo pela regra de soma (1.2.2)', () => {
       const forcas = [15, 30, 55, 85, 120];
       const escudos = [15, 60, 150];
 
@@ -163,9 +162,8 @@ describe('ORDEM 45b — Testes de Equivalência e Integração dos Efeitos de Co
           expect(resultado.habilidadeAcionada).toBe('Corte do Vazio');
           expect(resultado.bonusSobreescudoCorteDoVazioAtivo).toBe(true);
 
-          const danoBase = resultado.danoFisicoBase;
-          const danoAntesBonus = Math.ceil((danoBase * 450) / 100);
-          const danoEsperado = formulaAntigaSobreescudo(danoAntesBonus, escudo, 25);
+          // Regra 1.2.2: Disciplina (+5%) e Sobreescudo (+25%) somam num grupo só
+          const danoEsperado = calcularDanoComBonusSomados(calcularDanoFisico(forca), 450, [5, 25]);
 
           expect(resultado.danoBrutoPrincipal).toBe(Math.max(GAME_CONFIG.DANO_MINIMO, danoEsperado));
         }
