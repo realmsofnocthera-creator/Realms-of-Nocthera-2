@@ -11,6 +11,25 @@ const CODIGOS_TOKEN_INVALIDO = new Set([
   'auth/user-not-found',
 ]);
 
+/**
+ * Disjuntor da checagem de revogação.
+ *
+ * verifyIdToken(token, true) consulta o Firebase Auth com a credencial do servidor. Se essa
+ * consulta falhar (ex.: a conta de serviço não tem permissão e o Admin SDK devolve
+ * auth/internal-error), insistir a cada requisição só gera erro, aviso em todo log e uma
+ * chamada de rede a mais. Depois da primeira falha a checagem fica desligada por
+ * COOLDOWN_REVOGACAO_MS; passado o prazo ela é tentada de novo, e volta sozinha quando a
+ * permissão for concedida. A assinatura, o projeto e a expiração do token continuam
+ * sempre validados; só a revogação (logout no servidor) fica sem efeito nesse período.
+ */
+export const COOLDOWN_REVOGACAO_MS = 10 * 60_000;
+let revogacaoIndisponivelAte = 0;
+
+/** Só para testes: religa a checagem de revogação. */
+export function reiniciarDisjuntorRevogacao(): void {
+  revogacaoIndisponivelAte = 0;
+}
+
 export interface AuthenticatedUser {
   uid: string;
   email: string;
@@ -33,25 +52,40 @@ export async function verifyAuthToken(authHeader: string | null): Promise<Authen
     return null;
   }
 
+  const agora = Date.now();
+  const checarRevogacao = agora >= revogacaoIndisponivelAte;
+
   try {
-    const decoded = await adminAuth.verifyIdToken(idToken, true);
+    const decoded = await adminAuth.verifyIdToken(idToken, checarRevogacao);
     return { uid: decoded.uid, email: decoded.email || '' };
   } catch (error) {
     const codigo = (error as { code?: string })?.code ?? '';
-    if (!codigo.startsWith('auth/') || CODIGOS_TOKEN_INVALIDO.has(codigo)) {
+    if (!checarRevogacao || !codigo.startsWith('auth/') || CODIGOS_TOKEN_INVALIDO.has(codigo)) {
       return null;
     }
 
-    // A checagem de revogação consulta o Firebase Auth com a credencial do servidor.
-    // Se ela falhar por permissão/rede, o token ainda é validado (assinatura, aud, exp)
-    // e o problema fica registrado, em vez de derrubar todos os logins.
-    registrarLog('WARNING', 'auth.checagem_revogacao_falhou', { codigo });
+    // A consulta de revogação falhou por outro motivo (permissão, rede, API). Confirma que o
+    // token em si é válido; só então liga o disjuntor. Assim, um token ruim ou uma falha ao
+    // buscar as chaves do Google nunca desligam a checagem.
+    let user: AuthenticatedUser;
     try {
       const decoded = await adminAuth.verifyIdToken(idToken, false);
-      return { uid: decoded.uid, email: decoded.email || '' };
+      user = { uid: decoded.uid, email: decoded.email || '' };
     } catch {
       return null;
     }
+
+    // Pedidos simultâneos que falharam juntos: só o primeiro liga o disjuntor e registra o aviso
+    if (Date.now() >= revogacaoIndisponivelAte) {
+      revogacaoIndisponivelAte = Date.now() + COOLDOWN_REVOGACAO_MS;
+      registrarLog('WARNING', 'auth.checagem_revogacao_indisponivel', {
+        codigo,
+        novaTentativaEm: new Date(revogacaoIndisponivelAte).toISOString(),
+        efeito: 'tokens validados sem checar revogação; o logout no servidor não invalida tokens já emitidos',
+        acao: 'conceder o papel "Firebase Authentication Admin" à conta de serviço do app',
+      });
+    }
+    return user;
   }
 }
 

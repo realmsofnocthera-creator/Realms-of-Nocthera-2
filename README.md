@@ -74,3 +74,4 @@ O servidor usa o Firebase Admin SDK com Application Default Credentials (no Clou
    `node scripts/criar-indice-nomes.mjs` e `node scripts/criar-indice-nomes.mjs --aplicar`
 4. Publicar as regras do Firestore (`firestore.rules`).
 5. Agendar o backup diário: `bash scripts/configurar-backup-firestore.sh`
+6. Dar o papel **Firebase Authentication Admin** à conta de serviço do app (IAM, no Google Cloud). Sem ele, o servidor não consegue checar revogação de sessão: o login continua funcionando e o log mostra `auth.checagem_revogacao_indisponivel` (uma vez a cada 10 minutos), mas o logout no servidor não invalida tokens já emitidos.
