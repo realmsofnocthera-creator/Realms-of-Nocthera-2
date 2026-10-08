@@ -50,6 +50,7 @@ import {
   reduzirDanoPercentual,
 } from './combate/efeitos';
 import { calcularInstintoSobrevivencia } from './combate/passivasClasse';
+import { LadoCombate, multiplicadorCritico, sorteioCritico } from './combate/critico';
 import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import {
   ContextoHabilidade,
@@ -163,6 +164,8 @@ export interface AtaqueLog {
   cargasSedeSangueBandidoRestantes?: number;
   ignorarDefesaFisicaPercentual?: number;
   curaHp?: number;
+  /** Quantos golpes desta ação foram críticos (dano dobrado depois da defesa). */
+  golpesCriticos?: number;
   atacanteHpRestante?: number;
   cargasFeInabalavelConsumidas?: number;
   cargasFeInabalavelRestantes?: number;
@@ -185,6 +188,13 @@ export interface TurnoLog {
 
 export interface OpcoesResolverCombate {
   rngStatus?: (rodada: number, indiceAtaque: number) => number;
+  /** Sorteio do crítico em [0, 100) (testes). Sem ele, usa sorteioCritico(seed, ...). */
+  rngCritico?: (
+    rodada: number,
+    indiceAtaque: number,
+    indiceGolpe: number,
+    lado: LadoCombate
+  ) => number;
 }
 
 export interface ResultadoCombate {
@@ -637,6 +647,8 @@ export function aplicarDefesaCavaleiro(params: {
   ehDanoFisico?: boolean;
   posturaAtiva?: boolean;
   juramentoAtivo?: boolean;
+  /** Multiplica o dano depois da defesa (crítico = 2). */
+  multiplicadorPosDefesa?: number;
 }): {
   sobreescudo: number;
   hp: number;
@@ -656,6 +668,7 @@ export function aplicarDefesaCavaleiro(params: {
     ehDanoFisico = true,
     posturaAtiva = false,
     juramentoAtivo = false,
+    multiplicadorPosDefesa = 1,
   } = params;
 
   const posturaAplicada = nivel >= 5 && posturaAtiva;
@@ -722,12 +735,12 @@ export function aplicarDefesaCavaleiro(params: {
     danoAposReducaoPercentual,
     mitigacaoTotal,
     sobreescudoEfetivo,
-    hpAtual
+    hpAtual,
+    multiplicadorPosDefesa
   );
-  const danoEfetivo = Math.max(
-    GAME_CONFIG.DANO_MINIMO,
-    danoAposReducaoPercentual - mitigacaoTotal
-  );
+  const danoEfetivo =
+    Math.max(GAME_CONFIG.DANO_MINIMO, danoAposReducaoPercentual - mitigacaoTotal) *
+    multiplicadorPosDefesa;
 
   return {
     sobreescudo: resultado.sobreescudo,
@@ -1890,6 +1903,11 @@ export function turnoDeCombate(
   defensor: Combatente,
   numeroTurno: number = 1,
   opcoesTurno?: {
+    /**
+     * Sorteio do crítico em [0, 100) para cada golpe. Sem ele, não há crítico
+     * (resolverCombate sempre passa um, derivado da semente).
+     */
+    sorteioCritico?: (indiceAtaque: number, indiceGolpe: number) => number;
     aoFinalizarAtaque?: (
       indiceAtaque: number,
       estadoDefensor: { hp: number; sobreescudo: number; hpMax: number }
@@ -1985,6 +2003,9 @@ export function turnoDeCombate(
 
   const posturaDefensorAtiva = defensor.posturaGuardiaoAtiva ?? false;
   const juramentoDefensorAtivo = defensor.juramentoGuardiaoAtivo ?? false;
+
+  // Acerto crítico (Sorte): 2% + 0,1% por ponto, sorteado em cada golpe
+  const chanceCriticoAtacante = calcularChanceCritico(atacante.atributos.sorte);
 
   for (let i = 0; i < maxAtaques; i++) {
     if (hpAtual <= 0) break;
@@ -2304,12 +2325,29 @@ export function turnoDeCombate(
       );
     }
 
+    // Crítico: cada golpe sorteia; o dano dobra depois da defesa
+    let golpesCriticos = 0;
+    const multiplicadorCriticoDoGolpe = (indiceGolpe: number): number => {
+      if (!acaoCausaDano || !opcoesTurno?.sorteioCritico) {
+        return 1;
+      }
+      const mult = multiplicadorCritico(
+        opcoesTurno.sorteioCritico(i, indiceGolpe),
+        chanceCriticoAtacante
+      );
+      if (mult > 1) {
+        golpesCriticos++;
+      }
+      return mult;
+    };
+
     let danoEfetivo: number;
     if (!acaoCausaDano) {
       danoEfetivo = 0;
     } else if (ehBandidoAtacante && golpes && golpes.length > 1) {
       let totalEfetivoGolpes = 0;
-      for (const danoGolpeIndividual of golpes) {
+      for (const [indiceGolpe, danoGolpeIndividual] of golpes.entries()) {
+        const multCritico = multiplicadorCriticoDoGolpe(indiceGolpe);
         if (ehCavaleiroDefensor) {
           const defRes = aplicarDefesaCavaleiro({
             danoBruto: danoGolpeIndividual,
@@ -2322,6 +2360,7 @@ export function turnoDeCombate(
             ehDanoFisico,
             posturaAtiva: posturaDefensorAtiva,
             juramentoAtivo: juramentoDefensorAtivo,
+            multiplicadorPosDefesa: multCritico,
           });
           sobreescudoAtual = defRes.sobreescudo;
           hpAtual = defRes.hp;
@@ -2334,12 +2373,12 @@ export function turnoDeCombate(
             danoGolpeIndividual,
             mitigacaoParaAtaque,
             sobreescudoAtual,
-            hpAtual
+            hpAtual,
+            multCritico
           );
-          const efetivoGolpe = Math.max(
-            GAME_CONFIG.DANO_MINIMO,
-            danoGolpeIndividual - mitigacaoParaAtaque
-          );
+          const efetivoGolpe =
+            Math.max(GAME_CONFIG.DANO_MINIMO, danoGolpeIndividual - mitigacaoParaAtaque) *
+            multCritico;
           totalEfetivoGolpes += efetivoGolpe;
           sobreescudoAtual = resGolpe.sobreescudo;
           hpAtual = resGolpe.hp;
@@ -2358,6 +2397,7 @@ export function turnoDeCombate(
         ehDanoFisico,
         posturaAtiva: posturaDefensorAtiva,
         juramentoAtivo: juramentoDefensorAtivo,
+        multiplicadorPosDefesa: multiplicadorCriticoDoGolpe(0),
       });
       sobreescudoAtual = defRes.sobreescudo;
       hpAtual = defRes.hp;
@@ -2366,8 +2406,16 @@ export function turnoDeCombate(
       posturaDefensivaAplicada = defRes.posturaAplicada;
       juramentoDefensivoAplicado = defRes.juramentoAplicado;
     } else {
-      const res = aplicarDano(danoBruto, mitigacaoParaAtaque, sobreescudoAtual, hpAtual);
-      danoEfetivo = Math.max(GAME_CONFIG.DANO_MINIMO, danoBruto - mitigacaoParaAtaque);
+      const multCritico = multiplicadorCriticoDoGolpe(0);
+      const res = aplicarDano(
+        danoBruto,
+        mitigacaoParaAtaque,
+        sobreescudoAtual,
+        hpAtual,
+        multCritico
+      );
+      danoEfetivo =
+        Math.max(GAME_CONFIG.DANO_MINIMO, danoBruto - mitigacaoParaAtaque) * multCritico;
       sobreescudoAtual = res.sobreescudo;
       hpAtual = res.hp;
     }
@@ -2394,21 +2442,25 @@ export function turnoDeCombate(
             ehDanoFisico,
             posturaAtiva: false,
             juramentoAtivo: false,
+            multiplicadorPosDefesa: multiplicadorCriticoDoGolpe(1),
           });
           sobreescudoAtual = defResExtra.sobreescudo;
           hpAtual = defResExtra.hp;
           danoEfetivoGolpeExtraCorteDoVazio = defResExtra.danoEfetivo;
         } else {
+          const multCriticoExtra = multiplicadorCriticoDoGolpe(1);
           const resExtra = aplicarDano(
             danoGolpeExtraSamuraiPotencial,
             mitigacaoParaAtaque,
             sobreescudoAtual,
-            hpAtual
+            hpAtual,
+            multCriticoExtra
           );
-          danoEfetivoGolpeExtraCorteDoVazio = Math.max(
-            GAME_CONFIG.DANO_MINIMO,
-            danoGolpeExtraSamuraiPotencial - mitigacaoParaAtaque
-          );
+          danoEfetivoGolpeExtraCorteDoVazio =
+            Math.max(
+              GAME_CONFIG.DANO_MINIMO,
+              danoGolpeExtraSamuraiPotencial - mitigacaoParaAtaque
+            ) * multCriticoExtra;
           sobreescudoAtual = resExtra.sobreescudo;
           hpAtual = resExtra.hp;
         }
@@ -2462,9 +2514,15 @@ export function turnoDeCombate(
           ? ` (elemento: ${elementoGolpe} — ${reacaoElemental})`
           : ` (elemento: ${elementoGolpe})`
         : '';
+    const sufixoCritico =
+      golpesCriticos === 0
+        ? ''
+        : golpesCriticos === 1
+          ? ' CRÍTICO!'
+          : ` ${golpesCriticos} golpes CRÍTICOS!`;
     const mensagem = !acaoCausaDano
       ? `${atacante.nome} canaliza${sufixoHabilidade}${sufixoDuplo} restaurando +${curaHp ?? 0} HP! (${atacante.nome} HP: ${hpAtacanteAtual}/${atacante.hpMax})`
-      : `${atacante.nome} ataca ${defensor.nome}${sufixoHabilidade}${sufixoDuplo} causando ${danoEfetivo} de dano${sufixoElemental}! (${defensor.nome} HP: ${hpAtual}/${defensor.hpMax})`;
+      : `${atacante.nome} ataca ${defensor.nome}${sufixoHabilidade}${sufixoDuplo} causando ${danoEfetivo} de dano${sufixoElemental}!${sufixoCritico} (${defensor.nome} HP: ${hpAtual}/${defensor.hpMax})`;
 
     ataques.push({
       atacante: atacante.nome,
@@ -2497,6 +2555,7 @@ export function turnoDeCombate(
         : {}),
       ...(ignorarDefesaFisicaPercentual !== undefined ? { ignorarDefesaFisicaPercentual } : {}),
       ...(curaHp !== undefined ? { curaHp } : {}),
+      ...(golpesCriticos > 0 ? { golpesCriticos } : {}),
       ...(ehProfetaAtacante || (resultadoHabilidadeInterceptada && (resultadoHabilidadeInterceptada.curaPercentualDanoCausado > 0 || resultadoHabilidadeInterceptada.curaPercentualHpMax > 0))
         ? { atacanteHpRestante: hpAtacanteAtual }
         : {}),
@@ -2682,13 +2741,25 @@ export function resolverCombate(
     opcoes?.rngStatus
       ? opcoes.rngStatus(rodada, indiceAtaque)
       : sorteioStatus(seed, rodada, indiceAtaque);
+  const obterSorteioCritico = (
+    rodada: number,
+    indiceAtaque: number,
+    indiceGolpe: number,
+    lado: LadoCombate
+  ): number =>
+    opcoes?.rngCritico
+      ? opcoes.rngCritico(rodada, indiceAtaque, indiceGolpe, lado)
+      : sorteioCritico(seed, rodada, indiceAtaque, indiceGolpe, lado);
 
   const executarAcaoPersonagem = (
     rodada: number,
     ataquesDoTurno: AtaqueLog[],
     eventosEfeitosDoTurno: EventoEfeito[]
   ) => {
-    const tPersonagem = turnoDeCombate(p, m, rodada);
+    const tPersonagem = turnoDeCombate(p, m, rodada, {
+      sorteioCritico: (idxAtk, idxGolpe) =>
+        obterSorteioCritico(rodada, idxAtk, idxGolpe, 'personagem'),
+    });
     ataquesDoTurno.push(...tPersonagem.turnoLog.ataques);
 
     for (const atk of tPersonagem.turnoLog.ataques) {
@@ -2721,6 +2792,7 @@ export function resolverCombate(
   ) => {
     const efeitosMonstro = monstro.efeitosAplicados ?? [];
     const tMonstro = turnoDeCombate(m, p, rodada, {
+      sorteioCritico: (idxAtk, idxGolpe) => obterSorteioCritico(rodada, idxAtk, idxGolpe, 'monstro'),
       aoFinalizarAtaque: (idxAtk, estadoDefensor) => {
         let hpDefensorAtual = estadoDefensor.hp;
 

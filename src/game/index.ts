@@ -347,9 +347,12 @@ export function aplicarDano(
   danoBruto: number,
   mitigacao: number,
   sobreescudo: number,
-  hp: number
+  hp: number,
+  /** Multiplica o dano depois da defesa (crítico = 2). */
+  multiplicadorPosDefesa: number = 1
 ): ResultadoDano {
-  const danoAposMitigacao = Math.max(GAME_CONFIG.DANO_MINIMO, danoBruto - mitigacao);
+  const danoAposMitigacao =
+    Math.max(GAME_CONFIG.DANO_MINIMO, danoBruto - mitigacao) * multiplicadorPosDefesa;
 
   if (sobreescudo >= danoAposMitigacao) {
     return {
