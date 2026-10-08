@@ -1,4 +1,5 @@
 import type { AplicacaoEfeitoDefensivo } from '@/game/combate/efeitosDefensivos';
+import type { AplicacaoCura } from '@/game/combate/efeitosCura';
 
 export type EspacoHabilidade = 'basico' | 'especial' | 'ultimate';
 export type TipoDanoHabilidade = 'fisico' | 'magico';
@@ -36,6 +37,8 @@ export interface ResultadoHabilidade {
   curaPercentualHpMax: number;
   /** Efeitos de Mitigação e defesa (catálogo 1.2) que a habilidade coloca em quem a usa. */
   efeitosNoUsuario?: AplicacaoEfeitoDefensivo[];
+  /** Efeitos de Cura e restauração (catálogo 1.2) em quem usa a habilidade, aplicados depois do golpe. */
+  efeitosCura?: AplicacaoCura[];
 }
 
 export interface DefinicaoHabilidade {
