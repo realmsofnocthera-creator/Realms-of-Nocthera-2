@@ -17,8 +17,16 @@ export function tokenDeTeste(uid: string): string {
   return `${PREFIXO}${uid}.${sequencia}`;
 }
 
+let falharChecagemRevogacao = false;
+
 export function limparRevogacoesDeTeste(): void {
   revogadoAte.clear();
+  falharChecagemRevogacao = false;
+}
+
+/** Simula o servidor sem permissão para consultar o Firebase Auth (checkRevoked falha). */
+export function simularFalhaChecagemRevogacao(ativo: boolean): void {
+  falharChecagemRevogacao = ativo;
 }
 
 function decodificar(token: string): { uid: string; seq: number } | null {
@@ -40,6 +48,9 @@ export const adminAuth = {
     const decoded = decodificar(token);
     if (!decoded || !decoded.uid) {
       throw erroAuth('auth/argument-error', 'Token inválido.');
+    }
+    if (checkRevoked && falharChecagemRevogacao) {
+      throw erroAuth('auth/insufficient-permission', 'Sem permissão para consultar o usuário.');
     }
     const limite = revogadoAte.get(decoded.uid);
     if (checkRevoked && limite !== undefined && decoded.seq <= limite) {
