@@ -141,7 +141,8 @@ function novoIdTransacao(): string {
 export function calcularAtributosDerivados(
   atributos: Attributes,
   classeId: string,
-  nivel: number
+  nivel: number,
+  subclasse?: { subclasseAtualId?: string | null; subclasseTiers?: Record<string, number> }
 ): {
   hpMax: number;
   manaMax: number;
@@ -153,7 +154,13 @@ export function calcularAtributosDerivados(
   return {
     hpMax: calcularHpMax(atributos.vigor, { classeId, nivel }),
     manaMax: calcularManaMax(atributos.mente, { classeId, nivel }),
-    sobreescudoMax: calcularSobreescudoMax(atributos.vitalidade, { classeId, nivel }),
+    // A passiva da subclasse (Casca de Pedra) entra no Sobreescudo máximo junto com a da classe
+    sobreescudoMax: calcularSobreescudoMax(atributos.vitalidade, {
+      classeId,
+      nivel,
+      subclasseAtualId: subclasse?.subclasseAtualId,
+      subclasseTiers: subclasse?.subclasseTiers,
+    }),
     defesaFisica: calcularDefesaFisica(atributos.vitalidade, { classeId, nivel }),
     agilidadeEfetiva: calcularAgilidadeEfetiva(atributos.agilidade, { classeId, nivel }),
     danoFisicoBase: calcularDanoFisico(atributos.forca, { classeId, nivel }),
@@ -173,7 +180,7 @@ function normalizarPersonagem(char: CharacterDocument): CharacterDocument {
     subclasseTiers: char.subclasseTiers ?? {},
     pontosAlocadosPorNivel: char.pontosAlocadosPorNivel ?? { ...ZEROS_ATRIBUTOS },
     habilidadesEquipadas: normalizarHabilidadesEquipadas(char.classeId, char.habilidadesEquipadas),
-    ...calcularAtributosDerivados(char.atributos, char.classeId, char.nivel),
+    ...calcularAtributosDerivados(char.atributos, char.classeId, char.nivel, char),
   };
 }
 
@@ -206,7 +213,7 @@ function mesclarPersonagem(
   };
   return {
     ...updated,
-    ...calcularAtributosDerivados(updated.atributos, updated.classeId, updated.nivel),
+    ...calcularAtributosDerivados(updated.atributos, updated.classeId, updated.nivel, updated),
   };
 }
 
