@@ -72,6 +72,15 @@ import {
   processarCuraContinua,
   tentarRessurreicaoParcial,
 } from './combate/efeitosCura';
+import {
+  BuffAtivo,
+  adicionarBuffs,
+  aplicarBuffsAosAtributos,
+  avancarBuffs,
+  bonusDanoDosBuffs,
+  bonusDefesaDosBuffs,
+  multiplicadorAgilidadeParaDuplo,
+} from './combate/efeitosBuffs';
 import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import {
   ContextoHabilidade,
@@ -148,6 +157,10 @@ export interface Combatente {
   ressurreicaoParcial?: RessurreicaoParcialEstado;
   /** Dano Acumulativo: bônus de dano (%) acumulado pelos usos anteriores da habilidade. */
   danoAcumulativoPercentual?: number;
+  /** Buffs temporários ativos (aumentos de atributo, Sincronismo, Delírio Controlado). */
+  buffs?: BuffAtivo[];
+  /** Foco: % de defesa do inimigo que o PRÓXIMO ataque ignora. */
+  focoProximoAtaque?: number;
   /** Ímpeto Imprudente ativo: bônus de dano e defesa reduzida pelos próximos ataques de quem o usou. */
   impeto?: { ataquesRestantes: number; bonusDanoPercentual: number; reducaoDefesaPercentual: number };
 }
@@ -205,6 +218,12 @@ export interface AtaqueLog {
   danoRedirecionado?: number;
   /** Bônus de Dano Acumulativo (%) usado neste golpe. */
   danoAcumulativoPercentual?: number;
+  /** Buffs que a habilidade colocou em quem a usou. */
+  buffsAplicados?: string[];
+  /** Foco: % de defesa ignorada neste ataque por causa do Foco. */
+  focoPercentual?: number;
+  /** Aceleração: este ataque é a ação extra concedida pela habilidade. */
+  acaoExtra?: boolean;
   /** Ímpeto Imprudente estava ativo neste golpe. */
   impetoImprudenteAtivo?: boolean;
   /** Efeitos de Cura e restauração que a habilidade aplicou em quem a usou. */
@@ -711,6 +730,8 @@ export function aplicarDefesaCavaleiro(params: {
   multiplicadorPosDefesa?: number;
   /** Outras reduções de dano recebido (efeitos ativos), somadas às do Cavaleiro antes do teto de 80%. */
   reducaoDanoExtraPercentual?: number;
+  /** Ajuste da defesa total em % (100 = sem ajuste; Ímpeto, Foco e Delírio entram aqui). */
+  fatorDefesaPercentual?: number;
 }): {
   sobreescudo: number;
   hp: number;
@@ -732,6 +753,7 @@ export function aplicarDefesaCavaleiro(params: {
     juramentoAtivo = false,
     multiplicadorPosDefesa = 1,
     reducaoDanoExtraPercentual = 0,
+    fatorDefesaPercentual = 100,
   } = params;
 
   const posturaAplicada = nivel >= 5 && posturaAtiva;
@@ -779,7 +801,7 @@ export function aplicarDefesaCavaleiro(params: {
   }
 
   defesaFisica = Math.ceil((defesaFisica * (100 + bonusDefesaPercentual)) / 100);
-  const mitigacaoTotal = mitigacaoBase + defesaFisica;
+  const mitigacaoTotal = Math.floor(((mitigacaoBase + defesaFisica) * fatorDefesaPercentual) / 100);
 
   // Sobreescudo disponível no turno defensivo
   const baseEscudoParaBonus = sobreescudoAtual + bonusSobreescudoFixo;
@@ -1003,6 +1025,8 @@ export function calcularGolpeFeiticeiro(params: {
   contadorCataclismo: number;
   sobreescudoAlvo?: number;
   mitigacaoMagicaAlvo?: number;
+  /** Bônus de dano de buffs (Ímpeto, Delírio), em %, somado no mesmo grupo dos outros bônus. */
+  bonusDanoExtraPercentual?: number;
 }): {
   habilidadeAcionada: 'Faísca Arcana' | 'Explosão Arcana' | 'Cataclismo Arcano';
   danoMagicoBase: number;
@@ -1065,6 +1089,7 @@ export function calcularGolpeFeiticeiro(params: {
 
   const danoCalculado = calcularDanoComBonusSomados(danoMagicoBruto, multiplicadorHabilidade, [
     bonusFluxoArcano,
+    params.bonusDanoExtraPercentual ?? 0,
     consumo.percentualBonusAplicado,
     bonusSobreescudoCataclismoAtivo ? cataclismo.bonusDanoContraSobreescudoPercentual : 0,
   ]);
@@ -1297,6 +1322,8 @@ export function calcularGolpeBandido(params: {
   cargasSedeSangue: number;
   contadorDanca: number;
   mitigacaoFisicaAlvo?: number;
+  /** Bônus de dano de buffs (Ímpeto, Delírio), em %, somado no mesmo grupo dos outros bônus. */
+  bonusDanoExtraPercentual?: number;
 }): {
   habilidadeAcionada: 'Golpe Rápido' | 'Rajada de Golpes' | 'Dança das Lâminas';
   danoFisicoBase: number;
@@ -1379,6 +1406,7 @@ export function calcularGolpeBandido(params: {
     GAME_CONFIG.DANO_MINIMO,
     calcularDanoComBonusSomados(danoFisicoBruto, multiplicadorPorGolpePercentual, [
       bonusPassosRapidos,
+      params.bonusDanoExtraPercentual ?? 0,
       consumo.percentualBonusAplicado,
     ])
   );
@@ -1850,6 +1878,8 @@ export function calcularGolpeSamurai(params: {
   contadorCorteDoVazio: number;
   sobreescudoAlvo?: number;
   mitigacaoFisicaAlvo?: number;
+  /** Bônus de dano de buffs (Ímpeto, Delírio), em %, somado no mesmo grupo dos outros bônus. */
+  bonusDanoExtraPercentual?: number;
 }): {
   habilidadeAcionada: 'Corte Preciso' | 'Iaijutsu' | 'Corte do Vazio';
   danoFisicoBase: number;
@@ -1925,6 +1955,7 @@ export function calcularGolpeSamurai(params: {
 
   const danoCalculado = calcularDanoComBonusSomados(danoFisicoBruto, multiplicadorHabilidade, [
     bonusDisciplina,
+    params.bonusDanoExtraPercentual ?? 0,
     consumo.percentualBonusAplicado,
     bonusSobreescudoCorteDoVazioAtivo ? corteDoVazio.bonusDanoContraSobreescudoPercentual : 0,
   ]);
@@ -1965,7 +1996,38 @@ export function turnoDeCombate(
   atacante: Combatente,
   defensor: Combatente,
   numeroTurno: number = 1,
-  opcoesTurno?: {
+  opcoesTurno?: OpcoesTurno
+): ResultadoTurno {
+  // Atributos com os buffs somados valem durante o turno inteiro; os originais voltam no fim
+  const atributosOriginaisAtacante = atacante.atributos;
+  const atributosOriginaisDefensor = defensor.atributos;
+  atacante.atributos = aplicarBuffsAosAtributos(atributosOriginaisAtacante, atacante.buffs);
+  defensor.atributos = aplicarBuffsAosAtributos(atributosOriginaisDefensor, defensor.buffs);
+  try {
+    const resultado = turnoDeCombateInterno(atacante, defensor, numeroTurno, opcoesTurno);
+    passarAcaoBuffs(atacante);
+    return resultado;
+  } finally {
+    atacante.atributos = atributosOriginaisAtacante;
+    defensor.atributos = atributosOriginaisDefensor;
+  }
+}
+
+/**
+ * Fim da ação de quem atacou: os buffs recém-aplicados passam a valer e os demais perdem 1 rodada.
+ * O Delírio Controlado cobra HP a cada rodada dele; o risco é o desgaste, então nunca mata sozinho
+ * (o HP não cai abaixo de 1).
+ */
+function passarAcaoBuffs(c: Combatente): void {
+  if (!c.buffs || c.buffs.length === 0) return;
+  const avanco = avancarBuffs(c.buffs);
+  c.buffs = avanco.buffs;
+  if (avanco.perdaHpPercentual > 0 && c.hp > 0) {
+    c.hp = Math.max(1, c.hp - Math.ceil((c.hpMax * avanco.perdaHpPercentual) / 100));
+  }
+}
+
+export interface OpcoesTurno {
     /**
      * Sorteio do crítico em [0, 100) para cada golpe. Sem ele, não há crítico
      * (resolverCombate sempre passa um, derivado da semente).
@@ -1975,13 +2037,21 @@ export function turnoDeCombate(
       indiceAtaque: number,
       estadoDefensor: { hp: number; sobreescudo: number; hpMax: number }
     ) => { novoHpDefensor: number };
-  }
-): {
+}
+
+export interface ResultadoTurno {
   turnoLog: TurnoLog;
   defensorHp: number;
   defensorSobreescudo: number;
   atacanteHp: number;
-} {
+}
+
+function turnoDeCombateInterno(
+  atacante: Combatente,
+  defensor: Combatente,
+  numeroTurno: number,
+  opcoesTurno?: OpcoesTurno
+): ResultadoTurno {
   const nivelAtacante = atacante.nivel ?? 1;
   const nivelDefensor = defensor.nivel ?? 1;
 
@@ -1994,8 +2064,12 @@ export function turnoDeCombate(
     nivel: nivelDefensor,
   });
 
-  const temDobroAgilidade = agilAtacante > 0 && agilAtacante >= agilDefensor * 2;
-  const maxAtaques = temDobroAgilidade ? GAME_CONFIG.MAXIMO_ATAQUES_POR_TURNO : 1;
+  // Sincronismo: com o buff ativo, o ataque duplo exige 1,5x a Agilidade do inimigo em vez de 2x
+  const temDobroAgilidade =
+    agilAtacante > 0 &&
+    agilAtacante >= agilDefensor * multiplicadorAgilidadeParaDuplo(atacante.buffs);
+  let maxAtaques = temDobroAgilidade ? GAME_CONFIG.MAXIMO_ATAQUES_POR_TURNO : 1;
+  let acaoExtraConcedida = false;
 
   const classeAtacante = atacante.classeId?.trim().toLowerCase();
   const ehBarbaroAtacante = classeAtacante === 'barbaro';
@@ -2113,6 +2187,14 @@ export function turnoDeCombate(
       nivel: nivelAtacante,
     });
 
+    // Bônus de dano de buffs de quem ataca (Ímpeto Imprudente e Delírio Controlado): entram na soma de cada caminho
+    const impetoNesteAtaque =
+      atacante.impeto && atacante.impeto.ataquesRestantes > 0 ? atacante.impeto : undefined;
+    const bonusDanoBuffs =
+      (impetoNesteAtaque?.bonusDanoPercentual ?? 0) + bonusDanoDosBuffs(atacante.buffs);
+    // Foco: este ataque ignora parte da defesa do inimigo (consumido ao atacar)
+    const focoNesteAtaque = atacante.focoProximoAtaque ?? 0;
+
     if (ehBarbaroAtacante) {
       const golpe = calcularGolpeBarbaro({
         forcaBase: atacante.atributos.forca,
@@ -2121,7 +2203,7 @@ export function turnoDeCombate(
         nivel: nivelAtacante,
         contadorFuria,
         contadorIra,
-        bonusDanoExtraPercentual: modsPassivaAtacante.bonusDanoFisicoPercentual,
+        bonusDanoExtraPercentual: modsPassivaAtacante.bonusDanoFisicoPercentual + bonusDanoBuffs,
       });
       danoBruto = golpe.danoBruto;
       contadorFuria = golpe.novoContadorFuria;
@@ -2136,7 +2218,10 @@ export function turnoDeCombate(
         contadorPostura,
         contadorJuramento,
       });
-      danoBruto = golpeCavaleiro.danoBruto;
+      danoBruto =
+        bonusDanoBuffs > 0
+          ? Math.ceil((golpeCavaleiro.danoBruto * (100 + bonusDanoBuffs)) / 100)
+          : golpeCavaleiro.danoBruto;
       contadorPostura = golpeCavaleiro.novoContadorPostura;
       contadorJuramento = golpeCavaleiro.novoContadorJuramento;
       habilidadeAcionada = golpeCavaleiro.habilidadeAcionada;
@@ -2156,6 +2241,7 @@ export function turnoDeCombate(
         contadorCataclismo,
         sobreescudoAlvo: sobreescudoAtual,
         mitigacaoMagicaAlvo: mitigacao,
+        bonusDanoExtraPercentual: bonusDanoBuffs,
       });
       danoBruto = golpeFeiticeiro.danoBruto;
       mitigacaoParaAtaque = golpeFeiticeiro.mitigacaoEfetiva;
@@ -2176,6 +2262,7 @@ export function turnoDeCombate(
         cargasSedeSangue,
         contadorDanca,
         mitigacaoFisicaAlvo: mitigacao,
+        bonusDanoExtraPercentual: bonusDanoBuffs,
       });
       danoBruto = golpeBandido.danoBruto;
       mitigacaoParaAtaque = golpeBandido.mitigacaoPorGolpeEfetiva;
@@ -2201,7 +2288,10 @@ export function turnoDeCombate(
         cargasFeInabalavel: cargasFe,
         contadorMilagre,
       });
-      danoBruto = acaoProfeta.danoBruto;
+      danoBruto =
+        acaoProfeta.causaDano && bonusDanoBuffs > 0
+          ? Math.ceil((acaoProfeta.danoBruto * (100 + bonusDanoBuffs)) / 100)
+          : acaoProfeta.danoBruto;
       acaoCausaDano = acaoProfeta.causaDano;
       hpAtacanteAtual = acaoProfeta.novoHp;
       contadorBencao = acaoProfeta.novoContadorBencao;
@@ -2222,6 +2312,7 @@ export function turnoDeCombate(
         contadorCorteDoVazio: contadorCorteVazio,
         sobreescudoAlvo: sobreescudoAtual,
         mitigacaoFisicaAlvo: mitigacao,
+        bonusDanoExtraPercentual: bonusDanoBuffs,
       });
       danoBruto = golpeSamurai.danoBrutoPrincipal;
       danoGolpeExtraSamuraiPotencial = golpeSamurai.danoGolpeExtraBase;
@@ -2237,10 +2328,9 @@ export function turnoDeCombate(
       bonusSobreescudoCorteDoVazioAtivo = golpeSamurai.bonusSobreescudoCorteDoVazioAtivo;
     }
 
-    // Ímpeto Imprudente de quem ataca: vale para este ataque e depois perde 1 (ver abaixo)
-    const impetoNesteAtaque =
-      atacante.impeto && atacante.impeto.ataquesRestantes > 0 ? atacante.impeto : undefined;
     let novoImpeto: Combatente['impeto'];
+    let novoFoco: number | undefined;
+    let buffsAplicados: string[] | undefined;
     let ignorarResistenciaElementalDoGolpe = false;
     let danoAcumulativoUsado: number | undefined;
 
@@ -2295,7 +2385,7 @@ export function turnoDeCombate(
           bonusDanoExtraPercentual:
             (ctxHab.bonusDanoExtraPercentual ?? 0) +
             bonusAcumulativo +
-            (impetoNesteAtaque?.bonusDanoPercentual ?? 0),
+            bonusDanoBuffs,
         };
         const { danoBruto: novoDanoBruto, mitigacaoEfetiva } = resolverDanoHabilidade(
           resHab,
@@ -2316,6 +2406,20 @@ export function turnoDeCombate(
           };
         }
         ignorarResistenciaElementalDoGolpe = resHab.ignorarResistenciaElemental === true;
+
+        // Atributos e buffs (catálogo 1.2): valem a partir da próxima ação
+        if (resHab.buffs && resHab.buffs.length > 0) {
+          atacante.buffs = adicionarBuffs(atacante.buffs, resHab.buffs);
+          buffsAplicados = resHab.buffs.map((b) => (b.tipo === 'atributo' ? `atributo:${b.atributo}` : b.tipo));
+        }
+        if (resHab.foco && resHab.foco.ignorarDefesaPercentual > 0) {
+          novoFoco = Math.min(100, resHab.foco.ignorarDefesaPercentual);
+        }
+        // Aceleração: +1 ação extra neste round (uma vez por turno)
+        if (resHab.acaoExtra && !acaoExtraConcedida) {
+          acaoExtraConcedida = true;
+          maxAtaques += 1;
+        }
 
         danoBruto = novoDanoBruto;
         habilidadeAcionada = resHab.nome;
@@ -2381,6 +2485,13 @@ export function turnoDeCombate(
     }
     if (novoImpeto) {
       atacante.impeto = novoImpeto;
+    }
+    // Foco: o ataque que usou o Foco o consome; um novo Foco vale a partir do próximo
+    if (acaoCausaDano && focoNesteAtaque > 0) {
+      atacante.focoProximoAtaque = undefined;
+    }
+    if (novoFoco !== undefined) {
+      atacante.focoProximoAtaque = novoFoco;
     }
 
     // Identifica se o golpe atual possui elemento (via habilidade de classe cadastrada ou elementoAtaque do combatente/monstro)
@@ -2453,9 +2564,17 @@ export function turnoDeCombate(
     // Ímpeto Imprudente do defensor: a defesa dele cai enquanto durar (o Cavaleiro calcula a própria defesa à parte)
     const impetoDefensor =
       defensor.impeto && defensor.impeto.ataquesRestantes > 0 ? defensor.impeto : undefined;
-    if (impetoDefensor && acaoCausaDano && !ehCavaleiroDefensor) {
+    // Ajuste da defesa do defensor: Ímpeto (−), Foco do atacante (−) e Delírio Controlado (+); 100 = sem ajuste
+    const fatorDefesaPercentual =
+      acaoCausaDano
+        ? ((100 - (impetoDefensor?.reducaoDefesaPercentual ?? 0)) *
+            (100 - focoNesteAtaque) *
+            (100 + bonusDefesaDosBuffs(defensor.buffs))) /
+          10_000
+        : 100;
+    if (fatorDefesaPercentual !== 100 && !ehCavaleiroDefensor) {
       mitigacaoParaAtaque = Math.floor(
-        (mitigacaoParaAtaque * Math.max(0, 100 - impetoDefensor.reducaoDefesaPercentual)) / 100
+        (mitigacaoParaAtaque * Math.max(0, fatorDefesaPercentual)) / 100
       );
     }
 
@@ -2533,6 +2652,7 @@ export function turnoDeCombate(
             juramentoAtivo: juramentoDefensorAtivo,
             multiplicadorPosDefesa: multCritico,
             reducaoDanoExtraPercentual: reducaoPorEfeitos,
+            fatorDefesaPercentual,
           });
           sobreescudoAtual = defRes.sobreescudo;
           hpAtual = defRes.hp;
@@ -2571,6 +2691,7 @@ export function turnoDeCombate(
         juramentoAtivo: juramentoDefensorAtivo,
         multiplicadorPosDefesa: multiplicadorCriticoDoGolpe(0),
         reducaoDanoExtraPercentual: reducaoPorEfeitos,
+            fatorDefesaPercentual,
       });
       sobreescudoAtual = defRes.sobreescudo;
       hpAtual = defRes.hp;
@@ -2617,6 +2738,7 @@ export function turnoDeCombate(
             juramentoAtivo: false,
             multiplicadorPosDefesa: multiplicadorCriticoDoGolpe(1),
             reducaoDanoExtraPercentual: reducaoPorEfeitos,
+            fatorDefesaPercentual,
           });
           sobreescudoAtual = defResExtra.sobreescudo;
           hpAtual = defResExtra.hp;
@@ -2818,6 +2940,9 @@ export function turnoDeCombate(
       ...(danoRedirecionado > 0 ? { danoRedirecionado } : {}),
       ...(danoAcumulativoUsado !== undefined ? { danoAcumulativoPercentual: danoAcumulativoUsado } : {}),
       ...(impetoNesteAtaque ? { impetoImprudenteAtivo: true } : {}),
+      ...(acaoCausaDano && focoNesteAtaque > 0 ? { focoPercentual: focoNesteAtaque } : {}),
+      ...(buffsAplicados ? { buffsAplicados } : {}),
+      ...(acaoExtraConcedida && i === maxAtaques - 1 ? { acaoExtra: true } : {}),
       ...(efeitosCuraAplicados ? { efeitosCuraAplicados } : {}),
       ...(curaHabilidade !== undefined ? { curaHabilidade } : {}),
       ...(efeitosNegativosRemovidos !== undefined ? { efeitosNegativosRemovidos } : {}),
