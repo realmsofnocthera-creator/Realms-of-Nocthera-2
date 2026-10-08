@@ -52,6 +52,14 @@ import {
 } from './combate/efeitos';
 import { calcularInstintoSobrevivencia } from './combate/passivasClasse';
 import { LadoCombate, multiplicadorCritico, sorteioCritico } from './combate/critico';
+import { reacaoDoCorpo } from './combate/corpo';
+import {
+  CategoriaCorporal,
+  NOMES_TIPO_GOLPE,
+  SubtipoFisico,
+  TipoGolpe,
+  modificadoresElementaisDaCategoria,
+} from '@/rules/corposMonstros';
 import {
   EfeitoDefensivoAtivo,
   TipoEfeitoDefensivo,
@@ -147,6 +155,13 @@ export interface Combatente {
   subclasseTiers?: Record<string, number>;
   modificadoresElementais?: ModificadoresElementais;
   elementoAtaque?: Elemento;
+  /** Categoria corporal (monstros): define fraquezas e resistências a tipos de dano (roadmap 1.3). */
+  categoriaCorporal?: CategoriaCorporal;
+  /** Só Aberrante: fraquezas e resistências próprias da criatura. */
+  fraquezasProprias?: TipoGolpe[];
+  resistenciasProprias?: TipoGolpe[];
+  /** Subtipo do dano físico do atacante (vem da arma; vazio até as armas existirem). */
+  tipoDanoFisico?: SubtipoFisico;
   contadorFuriaSelvagem?: number;
   contadorIraBarbaro?: number;
   contadorPosturaGuardiao?: number;
@@ -286,6 +301,9 @@ export interface AtaqueLog {
   elemento?: Elemento;
   multiplicadorElemental?: number;
   reacaoElemental?: ReacaoElemental;
+  tipoGolpe?: TipoGolpe;
+  multiplicadorTipoDano?: number;
+  reacaoTipoDano?: 'fraqueza' | 'resistência';
 }
 
 export interface EventoCuraRodada {
@@ -2731,6 +2749,31 @@ function turnoDeCombateInterno(
       }
     }
 
+    // Roadmap 1.3: tipo do golpe (Contusão/Corte/Perfuração da arma, ou mágico) contra o corpo do alvo.
+    // Multiplicador à parte do elemental (±25%), aplicado antes de defesa e crítico.
+    let tipoGolpe: TipoGolpe | undefined;
+    let multiplicadorTipoDano: number | undefined;
+    let reacaoTipoDano: 'fraqueza' | 'resistência' | undefined;
+    if (acaoCausaDano) {
+      tipoGolpe = ehDanoFisico ? atacante.tipoDanoFisico : 'magico';
+      const corpo = reacaoDoCorpo(defensor, tipoGolpe);
+      if (corpo.fatorPercentual !== 100) {
+        multiplicadorTipoDano = corpo.fatorPercentual / 100;
+        reacaoTipoDano = corpo.reacao;
+        const fator = corpo.fatorPercentual;
+        const aplicar = (v: number): number => Math.floor((v * fator) / 100);
+        danoBruto = aplicar(danoBruto);
+        if (golpes && golpes.length > 0) {
+          golpes = golpes.map(aplicar);
+          danoPorGolpe = golpes[0];
+          danoBruto = golpes.reduce((acc, val) => acc + val, 0);
+        }
+        if (danoGolpeExtraSamuraiPotencial > 0) {
+          danoGolpeExtraSamuraiPotencial = aplicar(danoGolpeExtraSamuraiPotencial);
+        }
+      }
+    }
+
     // Modificadores de passiva de subclasse do defensor (ex: Casca de Pedra do Colosso)
     const modsPassivaDefensor = obterModificadoresPassivaSubclasse({
       subclasseAtualId: defensor.subclasseAtualId,
@@ -3075,6 +3118,10 @@ function turnoDeCombateInterno(
           ? ` (elemento: ${elementoGolpe} — ${reacaoElemental})`
           : ` (elemento: ${elementoGolpe})`
         : '';
+    const sufixoCorpo =
+      reacaoTipoDano && tipoGolpe
+        ? ` [${NOMES_TIPO_GOLPE[tipoGolpe]}: ${reacaoTipoDano === 'fraqueza' ? 'fraqueza' : 'resistência'} do corpo]`
+        : '';
     const sufixoDefesa =
       (defensorImortal ? ` ${defensor.nome} está com Imortalidade Breve!` : '') +
       (danoRedirecionado > 0
@@ -3093,7 +3140,7 @@ function turnoDeCombateInterno(
           : ` ${golpesCriticos} golpes CRÍTICOS!`;
     const mensagem = !acaoCausaDano
       ? `${atacante.nome} canaliza${sufixoHabilidade}${sufixoDuplo} restaurando +${curaHp ?? 0} HP! (${atacante.nome} HP: ${hpAtacanteAtual}/${atacante.hpMax})`
-      : `${atacante.nome} ataca ${defensor.nome}${sufixoHabilidade}${sufixoDuplo} causando ${danoEfetivo} de dano${sufixoElemental}!${sufixoCritico}${sufixoDefesa} (${defensor.nome} HP: ${hpAtual}/${defensor.hpMax})`;
+      : `${atacante.nome} ataca ${defensor.nome}${sufixoHabilidade}${sufixoDuplo} causando ${danoEfetivo} de dano${sufixoElemental}${sufixoCorpo}!${sufixoCritico}${sufixoDefesa} (${defensor.nome} HP: ${hpAtual}/${defensor.hpMax})`;
 
     ataques.push({
       atacante: atacante.nome,
@@ -3107,6 +3154,7 @@ function turnoDeCombateInterno(
       ...(elementoGolpe !== undefined ? { elemento: elementoGolpe } : {}),
       ...(multiplicadorElemental !== undefined ? { multiplicadorElemental } : {}),
       ...(reacaoElemental !== undefined ? { reacaoElemental } : {}),
+      ...(multiplicadorTipoDano !== undefined ? { tipoGolpe, multiplicadorTipoDano, reacaoTipoDano } : {}),
       ...(instintoSobrevivenciaAtivo !== undefined ? { instintoSobrevivenciaAtivo } : {}),
       ...(iraAbaixo30Ativo !== undefined ? { iraAbaixo30Ativo } : {}),
       ...(ultimoBastiaoAtivo !== undefined ? { ultimoBastiaoAtivo } : {}),
@@ -3298,10 +3346,17 @@ export function resolverCombate(
     atributos: { ...monstro.atributos },
     ouro: 0,
     mitigacao: 0,
-    modificadoresElementais: monstro.modificadoresElementais
-      ? { ...monstro.modificadoresElementais }
-      : undefined,
+    // Categoria corporal dá fraquezas elementais (Sombrio → Sagrado); o que o monstro define explicitamente vale mais
+    modificadoresElementais: {
+      ...modificadoresElementaisDaCategoria(monstro.categoriaCorporal),
+      ...(monstro.modificadoresElementais ?? {}),
+    },
     elementoAtaque: monstro.elementoAtaque,
+    categoriaCorporal: monstro.categoriaCorporal,
+    fraquezasProprias: monstro.fraquezasProprias ? [...monstro.fraquezasProprias] : undefined,
+    resistenciasProprias: monstro.resistenciasProprias
+      ? [...monstro.resistenciasProprias]
+      : undefined,
   };
 
   // Gerador pseudo-aleatório com seed fixa determinística (LCG)

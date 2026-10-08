@@ -48,6 +48,7 @@ const MONSTRO_SINTETICO_ULTIMATE: MonsterDefinition = {
   nome: 'Colosso de Treino Eterno',
   nivel: 30,
   hp: 100000,
+  categoriaCorporal: 'blindadoPesado',
   atributos: {
     vigor: 100,
     sorte: 10,

@@ -7,6 +7,7 @@ import {
   ModificadoresElementais,
 } from './elements';
 import { EfeitoStatus } from './statusEffects';
+import { CategoriaCorporal, TipoGolpe } from './corposMonstros';
 
 export interface OuroIntervalo {
   min: number;
@@ -18,6 +19,11 @@ export interface MonsterDefinition {
   nome: string;
   nivel: number;
   hp: number;
+  /** Todo monstro pertence a uma categoria corporal (define fraquezas e resistências a tipos de dano). */
+  categoriaCorporal: CategoriaCorporal;
+  /** Só para a categoria Aberrante: as fraquezas e resistências próprias da criatura. */
+  fraquezasProprias?: TipoGolpe[];
+  resistenciasProprias?: TipoGolpe[];
   atributos: Attributes;
   xpConcedido: number;
   ouroConcedido: OuroIntervalo;
@@ -32,6 +38,7 @@ export const MONSTERS: readonly MonsterDefinition[] = [
     nome: 'Rato da Peste',
     nivel: 1,
     hp: 12,
+    categoriaCorporal: 'feral',
     atributos: {
       vigor: 1,
       sorte: 0,
@@ -58,6 +65,7 @@ export const MONSTERS: readonly MonsterDefinition[] = [
     nome: 'Cultista das Sombras',
     nivel: 2,
     hp: 30,
+    categoriaCorporal: 'organicoDesprotegido',
     atributos: {
       vigor: 3,
       sorte: 2,
@@ -85,6 +93,7 @@ export const MONSTERS: readonly MonsterDefinition[] = [
     nome: 'Cavaleiro do Vazio',
     nivel: 5,
     hp: 75,
+    categoriaCorporal: 'sombrio',
     atributos: {
       vigor: 6,
       sorte: 2,
