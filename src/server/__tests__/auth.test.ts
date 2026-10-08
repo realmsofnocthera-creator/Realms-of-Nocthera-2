@@ -71,6 +71,15 @@ describe('0.5-A1/A4 — verifyAuthToken (Firebase Auth via firebase-admin)', () 
       expect(chamadasComChecagemDeRevogacao()).toBe(1);
     });
 
+    it('o aviso traz o código e a mensagem do erro, para mostrar a causa real', async () => {
+      simularFalhaChecagemRevogacao(true);
+      await verifyAuthToken(`Bearer ${tokenDeTeste('jogador_diagnostico')}`);
+
+      const linha = JSON.parse(String(avisosDeRevogacao()[0][0]));
+      expect(linha.codigo).toBe('auth/internal-error');
+      expect(linha.mensagem).toBe('Falha ao consultar o usuário no Firebase Auth.');
+    });
+
     it('pedidos simultâneos na primeira falha geram um único aviso', async () => {
       simularFalhaChecagemRevogacao(true);
 

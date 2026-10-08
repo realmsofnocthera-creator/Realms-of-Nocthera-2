@@ -1,5 +1,5 @@
 import { adminAuth } from '@/server/firebaseAdmin';
-import { registrarLog } from '@/server/log';
+import { descreverErro, registrarLog } from '@/server/log';
 
 // Erros que significam token recusado (nunca cair no caminho sem checagem de revogação)
 const CODIGOS_TOKEN_INVALIDO = new Set([
@@ -23,6 +23,7 @@ const CODIGOS_TOKEN_INVALIDO = new Set([
  * sempre validados; só a revogação (logout no servidor) fica sem efeito nesse período.
  */
 export const COOLDOWN_REVOGACAO_MS = 10 * 60_000;
+const MAX_MENSAGEM_LOG = 500;
 let revogacaoIndisponivelAte = 0;
 
 /** Só para testes: religa a checagem de revogação. */
@@ -80,9 +81,12 @@ export async function verifyAuthToken(authHeader: string | null): Promise<Authen
       revogacaoIndisponivelAte = Date.now() + COOLDOWN_REVOGACAO_MS;
       registrarLog('WARNING', 'auth.checagem_revogacao_indisponivel', {
         codigo,
+        // No auth/internal-error o Admin SDK traz a resposta bruta do servidor na mensagem
+        // (ex.: API desativada, permissão negada); é ela que diz a causa real.
+        mensagem: descreverErro(error).mensagem.slice(0, MAX_MENSAGEM_LOG),
         novaTentativaEm: new Date(revogacaoIndisponivelAte).toISOString(),
         efeito: 'tokens validados sem checar revogação; o logout no servidor não invalida tokens já emitidos',
-        acao: 'conceder o papel "Firebase Authentication Admin" à conta de serviço do app',
+        acao: 'ler "mensagem"; causas comuns: conta de serviço sem o papel Firebase Authentication Admin, ou API Identity Toolkit desativada no projeto da conta de serviço',
       });
     }
     return user;
