@@ -18,6 +18,8 @@ export const GAME_CONFIG = {
   MAXIMO_ATAQUES_POR_TURNO: 2,
   // Regra 1.2.2: reduções de dano recebido somadas nunca passam deste teto (só Imortalidade Breve zera o dano)
   TETO_REDUCAO_DANO_PERCENTUAL: 80,
+  // Roadmap 1.3: tipo do golpe contra o corpo do alvo (fraqueza +25%, resistência −25%)
+  MODIFICADOR_TIPO_DANO_PERCENTUAL: 25,
   HP_POR_PONTO_VIGOR: 5,
   // Sorte: crítico (dobra o dano depois da defesa) e chance de drop
   CHANCE_CRITICO_BASE_PERCENTUAL: 2,

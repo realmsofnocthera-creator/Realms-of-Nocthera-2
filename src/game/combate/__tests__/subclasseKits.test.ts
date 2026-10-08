@@ -14,6 +14,7 @@ const MONSTRO_SINTETICO_ESCUDO: MonsterDefinition = {
   nome: 'Guardião Ancestral Blindado',
   nivel: 30,
   hp: 25000,
+  categoriaCorporal: 'blindadoPesado',
   atributos: {
     vigor: 80,
     sorte: 30,
