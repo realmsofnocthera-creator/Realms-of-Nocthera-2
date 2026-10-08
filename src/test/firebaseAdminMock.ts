@@ -17,16 +17,26 @@ export function tokenDeTeste(uid: string): string {
   return `${PREFIXO}${uid}.${sequencia}`;
 }
 
-let falharChecagemRevogacao = false;
+let falharChecagemRevogacao: string | null = null;
+let chamadasComChecagem = 0;
 
 export function limparRevogacoesDeTeste(): void {
   revogadoAte.clear();
-  falharChecagemRevogacao = false;
+  falharChecagemRevogacao = null;
+  chamadasComChecagem = 0;
 }
 
-/** Simula o servidor sem permissão para consultar o Firebase Auth (checkRevoked falha). */
-export function simularFalhaChecagemRevogacao(ativo: boolean): void {
-  falharChecagemRevogacao = ativo;
+/**
+ * Simula o servidor sem permissão para consultar o Firebase Auth: a checagem de
+ * revogação (checkRevoked) falha com o código informado (o de produção foi auth/internal-error).
+ */
+export function simularFalhaChecagemRevogacao(ativo: boolean, codigo = 'auth/internal-error'): void {
+  falharChecagemRevogacao = ativo ? codigo : null;
+}
+
+/** Quantas vezes verifyIdToken foi chamado com checkRevoked = true. */
+export function chamadasComChecagemDeRevogacao(): number {
+  return chamadasComChecagem;
 }
 
 function decodificar(token: string): { uid: string; seq: number } | null {
@@ -49,8 +59,9 @@ export const adminAuth = {
     if (!decoded || !decoded.uid) {
       throw erroAuth('auth/argument-error', 'Token inválido.');
     }
+    if (checkRevoked) chamadasComChecagem += 1;
     if (checkRevoked && falharChecagemRevogacao) {
-      throw erroAuth('auth/insufficient-permission', 'Sem permissão para consultar o usuário.');
+      throw erroAuth(falharChecagemRevogacao, 'Falha ao consultar o usuário no Firebase Auth.');
     }
     const limite = revogadoAte.get(decoded.uid);
     if (checkRevoked && limite !== undefined && decoded.seq <= limite) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revokeUserSessions, verifyAuthToken } from '@/server/auth';
+import { registrarLog } from '@/server/log';
 import { limitarPorIp } from '@/server/rateLimit';
 
 /**
@@ -18,7 +19,11 @@ export async function POST(req: NextRequest) {
 
   try {
     await revokeUserSessions(user.uid);
-  } catch {
+  } catch (error) {
+    registrarLog('ERROR', 'auth.revogacao_sessoes_falhou', {
+      codigo: (error as { code?: string })?.code ?? 'N/A',
+      acao: 'conceder o papel "Firebase Authentication Admin" à conta de serviço do app',
+    });
     return NextResponse.json({ error: 'Não foi possível encerrar a sessão.' }, { status: 500 });
   }
 
