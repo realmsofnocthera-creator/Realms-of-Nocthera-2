@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "ai-studio-realmsofnocthera-7113e23c-5465-4b0b-afbe-84aab53dd0f8",
+      "rules": "firestore.rules"
+    }
+  ]
+}
