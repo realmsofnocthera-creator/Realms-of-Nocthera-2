@@ -1,0 +1,6 @@
+{
+  "name": "Realms of Nocthera",
+  "description": "RPG online de dark fantasy - Base do projeto e regras do jogo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+:root {
+  /* Dourado / Âmbar (destaques, botões, títulos) */
+  --nocthera-gold-primary: #ED8A0C;
+  --nocthera-gold-bright: #F58C0C;
+
+  /* Ouro pálido (bordas, ícones secundários, divisores) */
+  --nocthera-pale-gold: #B2A66C;
+  --nocthera-pale-gold-light: #D5C7A4;
+
+  /* Fundo principal (escuro) */
+  --nocthera-bg-abyss: #0D0D0D;
+  --nocthera-bg-obsidian: #120F0C;
+
+  /* Fundo de seções / cards */
+  --nocthera-surface-card: #1C1B18;
+  --nocthera-surface-elevated: #2B2824;
+
+  /* Texto principal (bege palha, não branco puro) */
+  --nocthera-text-parchment: #F5F3E0;
+  --nocthera-text-sand: #E2D6B6;
+
+  /* Vermelho carmim (avisos, dano) */
+  --nocthera-crimson: #6B1212;
+
+  /* Azul espectral (magia, arcano) */
+  --nocthera-spectral-blue: #4A6274;
+}
+
+@theme inline {
+  --color-nocthera-gold: var(--nocthera-gold-primary);
+  --color-nocthera-gold-hover: var(--nocthera-gold-bright);
+  --color-nocthera-border: var(--nocthera-pale-gold);
+  --color-nocthera-border-light: var(--nocthera-pale-gold-light);
+  --color-nocthera-bg: var(--nocthera-bg-abyss);
+  --color-nocthera-bg-warm: var(--nocthera-bg-obsidian);
+  --color-nocthera-card: var(--nocthera-surface-card);
+  --color-nocthera-card-alt: var(--nocthera-surface-elevated);
+  --color-nocthera-text: var(--nocthera-text-parchment);
+  --color-nocthera-text-muted: var(--nocthera-text-sand);
+  --color-nocthera-crimson: var(--nocthera-crimson);
+  --color-nocthera-arcane: var(--nocthera-spectral-blue);
+  --font-cinzel: var(--font-cinzel), Georgia, serif;
+}
+

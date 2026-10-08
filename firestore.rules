@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Regra padrão de segurança: negar tudo
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // Coleção users/{uid}
+    match /users/{uid} {
+      allow get: if isOwner(uid) && isValidId(uid);
+      allow list: if false;
+      allow create: if isOwner(uid) && isValidId(uid)
+                    && incoming().keys().hasAll(['email', 'dataCriacao'])
+                    && incoming().keys().hasOnly(['email', 'dataCriacao'])
+                    && incoming().email is string
+                    && incoming().dataCriacao is string;
+      allow update, delete: if false;
+    }
+
+    // Coleção characters/{uid}: NUNCA permitida a escrita pelo cliente
+    match /characters/{uid} {
+      allow get: if isOwner(uid) && isValidId(uid);
+      allow list: if false;
+      allow write: if false;
+    }
+
+    // Coleção transactions/{transactionId}: NUNCA permitida a escrita pelo cliente
+    match /transactions/{transactionId} {
+      allow get: if isSignedIn() && resource.data.uid == request.auth.uid && isValidId(transactionId);
+      allow list: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow write: if false;
+    }
+  }
+}

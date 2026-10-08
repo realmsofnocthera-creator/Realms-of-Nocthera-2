@@ -1,0 +1,6 @@
+<!-- Ícone provisório em traço dourado para a linhagem Draconiana de Gelo -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ED8A0C" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 2v20M2 12h20" />
+  <path d="m4.93 4.93 14.14 14.14M19.07 4.93 4.93 19.07" stroke="#B2A66C" />
+  <polygon points="12 7 14.5 12 12 17 9.5 12" />
+</svg>

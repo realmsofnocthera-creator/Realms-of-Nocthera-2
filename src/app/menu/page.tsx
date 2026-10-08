@@ -1,0 +1,129 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { CharacterDocument } from '@/server/characterService';
+import { MenuScreen } from '@/components/menu/MenuScreen';
+import { NOCTHERA_THEME } from '@/theme/theme';
+
+interface SessionUser {
+  uid: string;
+  email: string | null;
+}
+
+const LOCAL_SESSION_KEY = 'nocthera_auth_session';
+
+export default function MenuPage() {
+  const router = useRouter();
+  const [character, setCharacter] = useState<CharacterDocument | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelado = false;
+
+    const buscarPersonagem = async (token: string): Promise<CharacterDocument | null> => {
+      try {
+        const res = await fetch('/api/character/me', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) {
+          return null;
+        }
+        const data = await res.json();
+        return data.character || null;
+      } catch {
+        return null;
+      }
+    };
+
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser: User | null) => {
+      try {
+        await auth.authStateReady();
+      } catch {
+        // Prossegue para verificação do usuário ou fallback local
+      }
+
+      const activeUser = auth.currentUser ?? currentUser;
+
+      if (activeUser) {
+        try {
+          const token = await activeUser.getIdToken();
+          const char = await buscarPersonagem(token);
+          if (cancelado) return;
+          if (char) {
+            setCharacter(char);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // Segue para fallback localStorage ou redirecionamento
+        }
+      }
+
+      try {
+        const rawSession = window.localStorage.getItem(LOCAL_SESSION_KEY);
+        if (rawSession) {
+          const parsed = JSON.parse(rawSession) as {
+            user?: SessionUser;
+            idToken?: string;
+          };
+          if (parsed.user?.uid && parsed.idToken) {
+            const char = await buscarPersonagem(parsed.idToken);
+            if (cancelado) return;
+            if (char) {
+              setCharacter(char);
+              setLoading(false);
+              return;
+            }
+          }
+        }
+      } catch {
+        // Ignora falhas de leitura do localStorage
+      }
+
+      if (!cancelado) {
+        router.replace('/login');
+      }
+    });
+
+    return () => {
+      cancelado = true;
+      unsubscribe();
+    };
+  }, [router]);
+
+  if (loading || !character) {
+    const { colors } = NOCTHERA_THEME;
+    return (
+      <main
+        className="min-h-screen flex items-center justify-center"
+        style={{
+          backgroundColor: colors.background.primary,
+          color: colors.text.secondary,
+        }}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <div
+            className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+            style={{
+              borderColor: colors.accent.primary,
+              borderTopColor: 'transparent',
+            }}
+          />
+          <span
+            className="text-sm font-cinzel tracking-wider"
+            style={{ color: colors.text.primary }}
+          >
+            Carregando menu...
+          </span>
+        </div>
+      </main>
+    );
+  }
+
+  return <MenuScreen personagem={character} />;
+}

@@ -1,0 +1,70 @@
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "User account document",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "dataCriacao": { "type": "string" }
+      },
+      "required": ["email", "dataCriacao"]
+    },
+    "character": {
+      "title": "Character",
+      "description": "Character document for Realms of Nocthera",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string", "minLength": 2, "maxLength": 32 },
+        "racaId": { "type": "string" },
+        "classeId": { "type": "string" },
+        "linhagem": { "type": "string" },
+        "nivel": { "type": "number" },
+        "xpAtual": { "type": "number" },
+        "pontosDisponiveis": { "type": "number" },
+        "ouro": { "type": "number" },
+        "atributos": {
+          "type": "object",
+          "properties": {
+            "vigor": { "type": "number" },
+            "mente": { "type": "number" },
+            "forca": { "type": "number" },
+            "vitalidade": { "type": "number" },
+            "arcano": { "type": "number" },
+            "inteligencia": { "type": "number" },
+            "agilidade": { "type": "number" }
+          },
+          "required": ["vigor", "mente", "forca", "vitalidade", "arcano", "inteligencia", "agilidade"]
+        }
+      },
+      "required": ["nome", "racaId", "nivel", "xpAtual", "pontosDisponiveis", "atributos", "ouro"]
+    },
+    "transaction": {
+      "title": "Transaction",
+      "description": "Registro de alteração de ouro (ganho ou perdido)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "tipo": { "type": "string", "enum": ["ganho", "perda"] },
+        "quantidade": { "type": "number" },
+        "motivo": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["uid", "tipo", "quantidade", "motivo", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "user",
+      "description": "User account metadata"
+    },
+    "/characters/{uid}": {
+      "schema": "character",
+      "description": "Player character owned by the user"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "transaction",
+      "description": "Histórico de transações de ouro"
+    }
+  }
+}
