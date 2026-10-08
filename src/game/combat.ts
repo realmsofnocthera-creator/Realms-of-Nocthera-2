@@ -64,6 +64,14 @@ import {
   percentualRedirecionamento,
   reducaoDanoRecebidoPorEfeitos,
 } from './combate/efeitosDefensivos';
+import {
+  CuraContinuaAtiva,
+  RessurreicaoParcialEstado,
+  TipoEfeitoCura,
+  aplicarCuras,
+  processarCuraContinua,
+  tentarRessurreicaoParcial,
+} from './combate/efeitosCura';
 import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import {
   ContextoHabilidade,
@@ -134,6 +142,10 @@ export interface Combatente {
   contadorCorteDoVazio?: number;
   /** Efeitos de Mitigação e defesa ativos (só durante a luta; nunca persistidos). */
   efeitosDefensivos?: EfeitoDefensivoAtivo[];
+  /** Cura Contínua ativa (só durante a luta). */
+  curaContinua?: CuraContinuaAtiva;
+  /** Ressurreição Parcial preparada ou já usada nesta luta. */
+  ressurreicaoParcial?: RessurreicaoParcialEstado;
 }
 
 export interface AtaqueLog {
@@ -187,6 +199,16 @@ export interface AtaqueLog {
   imortalidadeBreve?: boolean;
   /** Dano devolvido ao atacante pelo Redirecionamento do defensor. */
   danoRedirecionado?: number;
+  /** Efeitos de Cura e restauração que a habilidade aplicou em quem a usou. */
+  efeitosCuraAplicados?: TipoEfeitoCura[];
+  /** HP recuperado pelas curas da habilidade. */
+  curaHabilidade?: number;
+  /** Quantos efeitos negativos a Limpeza pediu para remover (a remoção é feita pelo resolverCombate). */
+  efeitosNegativosRemovidos?: number;
+  /** O defensor caiu a 0 e voltou pela Ressurreição Parcial. */
+  ressurreicaoDefensor?: boolean;
+  /** O atacante caiu a 0 (Redirecionamento) e voltou pela Ressurreição Parcial. */
+  ressurreicaoAtacante?: boolean;
   atacanteHpRestante?: number;
   cargasFeInabalavelConsumidas?: number;
   cargasFeInabalavelRestantes?: number;
@@ -201,10 +223,19 @@ export interface AtaqueLog {
   reacaoElemental?: ReacaoElemental;
 }
 
+export interface EventoCuraRodada {
+  tipo: 'curaContinua' | 'ressurreicao';
+  combatente: string;
+  /** HP recuperado (Cura Contínua) ou HP com que voltou (Ressurreição). */
+  valor: number;
+}
+
 export interface TurnoLog {
   numeroTurno: number;
   ataques: AtaqueLog[];
   eventosEfeitos: EventoEfeito[];
+  /** Cura Contínua e Ressurreição Parcial no fim da rodada. */
+  eventosCura?: EventoCuraRodada[];
 }
 
 export interface OpcoesResolverCombate {
@@ -2545,6 +2576,17 @@ export function turnoDeCombate(
       }
     }
 
+    // Ressurreição Parcial: se o defensor caiu a 0, volta com X% do HP (uma vez por luta)
+    let ressurreicaoDefensor = false;
+    if (hpAtual <= 0 && defensor.ressurreicaoParcial) {
+      const rev = tentarRessurreicaoParcial(defensor.ressurreicaoParcial, hpAtual, defensor.hpMax);
+      if (rev.ressuscitou) {
+        hpAtual = rev.hp;
+        defensor.ressurreicaoParcial = rev.estado;
+        ressurreicaoDefensor = true;
+      }
+    }
+
     // O Sobreescudo gasto sai primeiro do Escudo Temporário; a Absorção Mágica vale para um ataque mágico só
     if (acaoCausaDano && efeitosDefensor.length > 0) {
       let efeitosAtualizados = gastarEscudoTemporario(
@@ -2565,6 +2607,15 @@ export function turnoDeCombate(
       const resRedirecionado = aplicarDano(danoRedirecionado, 0, atacante.sobreescudo, hpAtacanteAtual);
       atacante.sobreescudo = resRedirecionado.sobreescudo;
       hpAtacanteAtual = resRedirecionado.hp;
+    }
+    let ressurreicaoAtacante = false;
+    if (hpAtacanteAtual <= 0 && atacante.ressurreicaoParcial) {
+      const rev = tentarRessurreicaoParcial(atacante.ressurreicaoParcial, hpAtacanteAtual, atacante.hpMax);
+      if (rev.ressuscitou) {
+        hpAtacanteAtual = rev.hp;
+        atacante.ressurreicaoParcial = rev.estado;
+        ressurreicaoAtacante = true;
+      }
     }
 
     if (ehDanoFisico && temSedeDeSangue && racaAtacante) {
@@ -2591,6 +2642,37 @@ export function turnoDeCombate(
       }
     }
 
+    // Cura e restauração (catálogo 1.2): curas da habilidade em quem a usou
+    let efeitosCuraAplicados: TipoEfeitoCura[] | undefined;
+    let curaHabilidade: number | undefined;
+    let efeitosNegativosRemovidos: number | undefined;
+    const aplicacoesCura = resultadoHabilidadeInterceptada?.efeitosCura;
+    if (aplicacoesCura && aplicacoesCura.length > 0 && hpAtacanteAtual > 0) {
+      const curas = aplicarCuras({
+        hp: hpAtacanteAtual,
+        hpMax: atacante.hpMax,
+        sobreescudo: atacante.sobreescudo,
+        sobreescudoMax: calcularSobreescudoMax(atacante.atributos.vitalidade, {
+          classeId: atacante.classeId,
+          nivel: nivelAtacante,
+          subclasseAtualId: atacante.subclasseAtualId,
+          subclasseTiers: atacante.subclasseTiers,
+        }),
+        curaContinuaAtual: atacante.curaContinua,
+        ressurreicaoAtual: atacante.ressurreicaoParcial,
+        aplicacoes: aplicacoesCura,
+      });
+      hpAtacanteAtual = curas.hp;
+      atacante.sobreescudo = curas.sobreescudo;
+      atacante.curaContinua = curas.curaContinua;
+      atacante.ressurreicaoParcial = curas.ressurreicaoParcial;
+      efeitosCuraAplicados = curas.aplicados;
+      curaHabilidade = curas.curaHp;
+      if (curas.efeitosNegativosARemover > 0) {
+        efeitosNegativosRemovidos = curas.efeitosNegativosARemover;
+      }
+    }
+
     const sufixoDuplo = maxAtaques > 1 ? ` (Ataque ${i + 1}/${maxAtaques} - Agilidade Superior)` : '';
     const sufixoHabilidade =
       habilidadeAcionada &&
@@ -2612,6 +2694,11 @@ export function turnoDeCombate(
       (defensorImortal ? ` ${defensor.nome} está com Imortalidade Breve!` : '') +
       (danoRedirecionado > 0
         ? ` ${defensor.nome} devolve ${danoRedirecionado} de dano (Redirecionamento)!`
+        : '') +
+      (ressurreicaoDefensor ? ` ${defensor.nome} volta à luta (Ressurreição Parcial)!` : '') +
+      (ressurreicaoAtacante ? ` ${atacante.nome} volta à luta (Ressurreição Parcial)!` : '') +
+      (curaHabilidade !== undefined && curaHabilidade > 0
+        ? ` ${atacante.nome} recupera ${curaHabilidade} HP!`
         : '');
     const sufixoCritico =
       golpesCriticos === 0
@@ -2658,7 +2745,12 @@ export function turnoDeCombate(
       ...(efeitosDefensivosAplicados ? { efeitosDefensivosAplicados } : {}),
       ...(defensorImortal ? { imortalidadeBreve: true } : {}),
       ...(danoRedirecionado > 0 ? { danoRedirecionado } : {}),
-      ...(ehProfetaAtacante || (resultadoHabilidadeInterceptada && (resultadoHabilidadeInterceptada.curaPercentualDanoCausado > 0 || resultadoHabilidadeInterceptada.curaPercentualHpMax > 0))
+      ...(efeitosCuraAplicados ? { efeitosCuraAplicados } : {}),
+      ...(curaHabilidade !== undefined ? { curaHabilidade } : {}),
+      ...(efeitosNegativosRemovidos !== undefined ? { efeitosNegativosRemovidos } : {}),
+      ...(ressurreicaoDefensor ? { ressurreicaoDefensor: true } : {}),
+      ...(ressurreicaoAtacante ? { ressurreicaoAtacante: true } : {}),
+      ...(ehProfetaAtacante || efeitosCuraAplicados || (resultadoHabilidadeInterceptada && (resultadoHabilidadeInterceptada.curaPercentualDanoCausado > 0 || resultadoHabilidadeInterceptada.curaPercentualHpMax > 0))
         ? { atacanteHpRestante: hpAtacanteAtual }
         : {}),
       ...(cargasFeInabalavelConsumidas !== undefined ? { cargasFeInabalavelConsumidas } : {}),
@@ -2682,6 +2774,14 @@ export function turnoDeCombate(
         hpMax: defensor.hpMax,
       });
       hpAtual = posAtaque.novoHpDefensor;
+      if (hpAtual <= 0 && defensor.ressurreicaoParcial) {
+        const rev = tentarRessurreicaoParcial(defensor.ressurreicaoParcial, hpAtual, defensor.hpMax);
+        if (rev.ressuscitou) {
+          hpAtual = rev.hp;
+          defensor.ressurreicaoParcial = rev.estado;
+          ataques[ataques.length - 1].ressurreicaoDefensor = true;
+        }
+      }
     }
   }
 
@@ -2876,6 +2976,14 @@ export function resolverCombate(
     ataquesDoTurno.push(...tPersonagem.turnoLog.ataques);
 
     for (const atk of tPersonagem.turnoLog.ataques) {
+      // Limpeza (catálogo 1.2): remove de 1 a 3 efeitos negativos do personagem
+      if (atk.efeitosNegativosRemovidos) {
+        const rem = removerEfeitos(efeitosPersonagem, atk.efeitosNegativosRemovidos);
+        efeitosPersonagem = rem.efeitos;
+        for (const efeitoRemovido of rem.removidos) {
+          eventosEfeitosDoTurno.push({ tipo: 'removido', efeito: efeitoRemovido });
+        }
+      }
       if (atk.habilidadeAcionada === 'Bênção Divina') {
         const rem = removerEfeitos(efeitosPersonagem, QUANTIDADE_REMOCAO_BENCAO_DIVINA);
         efeitosPersonagem = rem.efeitos;
@@ -2985,10 +3093,30 @@ export function resolverCombate(
       }
     }
 
+    // Cura e restauração no fim da rodada: Ressurreição Parcial (se o dano contínuo derrubou) e Cura Contínua
+    const eventosCuraDoTurno: EventoCuraRodada[] = [];
+    for (const c of [p, m]) {
+      if (c.hp <= 0 && c.ressurreicaoParcial) {
+        const rev = tentarRessurreicaoParcial(c.ressurreicaoParcial, c.hp, c.hpMax);
+        if (rev.ressuscitou) {
+          c.hp = rev.hp;
+          c.ressurreicaoParcial = rev.estado;
+          eventosCuraDoTurno.push({ tipo: 'ressurreicao', combatente: c.nome, valor: rev.hp });
+        }
+      }
+      if (c.hp > 0 && c.curaContinua) {
+        const tickCura = processarCuraContinua(c.curaContinua, c.hp, c.hpMax);
+        c.hp = tickCura.hp;
+        c.curaContinua = tickCura.estado;
+        eventosCuraDoTurno.push({ tipo: 'curaContinua', combatente: c.nome, valor: tickCura.cura });
+      }
+    }
+
     logTurnos.push({
       numeroTurno: turno,
       ataques: ataquesDoTurno,
       eventosEfeitos: eventosEfeitosDoTurno,
+      ...(eventosCuraDoTurno.length > 0 ? { eventosCura: eventosCuraDoTurno } : {}),
     });
 
     turno++;
