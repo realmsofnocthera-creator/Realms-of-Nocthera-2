@@ -1,6 +1,7 @@
 import { Attributes } from '@/rules/attributes';
 import { GAME_CONFIG } from '@/rules/config';
 import { XP_TABLE } from '@/rules/xpTable';
+import { obterModificadoresPassivaSubclasse } from './combate/habilidades/passivas';
 
 export interface ResultadoDano {
   sobreescudo: number;
@@ -10,7 +11,14 @@ export interface ResultadoDano {
 export interface OpcoesCalculoStatus {
   classeId?: string;
   nivel?: number;
+  /** Subclasse ativa e tiers do personagem; só o Sobreescudo máximo usa (Casca de Pedra, 48E). */
+  subclasseAtualId?: string | null;
+  subclasseTiers?: Record<string, number>;
 }
+
+// Bônus de Sobreescudo máximo das passivas de classe, em % do valor base (regra 1.2.2: somam)
+export const RESISTENCIA_BARBARA_SOBREESCUDO_PERCENTUAL = 5;
+export const MURALHA_DE_FERRO_SOBREESCUDO_PERCENTUAL = 10;
 
 /**
  * Passiva II do Bárbaro (Nível 20+) — Resistência Bárbara:
@@ -35,7 +43,9 @@ export function aplicarResistenciaBarbara(
 
   return {
     hpMax: Math.ceil((hpMaxBase * 110) / 100),
-    sobreescudoMax: Math.ceil((sobreescudoMaxBase * 105) / 100),
+    sobreescudoMax: Math.ceil(
+      (sobreescudoMaxBase * (100 + RESISTENCIA_BARBARA_SOBREESCUDO_PERCENTUAL)) / 100
+    ),
   };
 }
 
@@ -62,7 +72,9 @@ export function aplicarMuralhaDeFerro(
 
   return {
     defesaFisica: Math.ceil((defesaFisicaBase * 110) / 100),
-    sobreescudoMax: Math.ceil((sobreescudoMaxBase * 110) / 100),
+    sobreescudoMax: Math.ceil(
+      (sobreescudoMaxBase * (100 + MURALHA_DE_FERRO_SOBREESCUDO_PERCENTUAL)) / 100
+    ),
   };
 }
 
@@ -252,21 +264,38 @@ export function calcularManaMax(mente: number, opcoes?: OpcoesCalculoStatus): nu
 /**
  * Calcula o sobreescudo máximo baseado nos pontos de Vitalidade.
  * Cada ponto de Vitalidade concede +2 Sobreescudo.
- * - Se for Bárbaro nível 20+, aplica permanentemente "Resistência Bárbara" (+5% Sobreescudo máximo).
- * - Se for Cavaleiro nível 12+, aplica permanentemente "Muralha de Ferro" (+10% Sobreescudo máximo).
+ *
+ * Os bônus percentuais somam num grupo só (regra 1.2.2): total = base × (100 + soma dos %) / 100,
+ * arredondado para cima uma única vez.
+ * - Bárbaro nível 20+: "Resistência Bárbara" (+5%).
+ * - Cavaleiro nível 12+: "Muralha de Ferro" (+10%).
+ * - Subclasse com a passiva ativa (tier 1+): bônus da passiva (Colosso, "Casca de Pedra": +5%).
+ * Ex.: Colosso com a passiva ativa e base 100 = 100 × 110 / 100 = 110 (e não 105 × 1,05 = 111).
  */
 export function calcularSobreescudoMax(vitalidade: number, opcoes?: OpcoesCalculoStatus): number {
   const base = vitalidade * GAME_CONFIG.SOBREESCUDO_POR_PONTO_VITALIDADE;
   const classeNormalizada = opcoes?.classeId?.trim().toLowerCase();
   const nivel = opcoes?.nivel ?? 1;
 
+  let bonusPercentual = 0;
   if (classeNormalizada === 'barbaro' && nivel >= 20) {
-    return aplicarResistenciaBarbara(0, base, nivel, opcoes!.classeId).sobreescudoMax;
+    bonusPercentual += RESISTENCIA_BARBARA_SOBREESCUDO_PERCENTUAL;
   }
   if (classeNormalizada === 'cavaleiro' && nivel >= 12) {
-    return aplicarMuralhaDeFerro(0, base, nivel, opcoes!.classeId).sobreescudoMax;
+    bonusPercentual += MURALHA_DE_FERRO_SOBREESCUDO_PERCENTUAL;
   }
-  return base;
+  bonusPercentual += obterModificadoresPassivaSubclasse({
+    subclasseAtualId: opcoes?.subclasseAtualId,
+    subclasseTiers: opcoes?.subclasseTiers,
+    hp: 0,
+    hpMax: 0,
+    nivel,
+  }).bonusSobreescudoMaxPercentual;
+
+  if (bonusPercentual <= 0) {
+    return base;
+  }
+  return Math.ceil((base * (100 + bonusPercentual)) / 100);
 }
 
 /**

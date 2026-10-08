@@ -56,7 +56,7 @@ export const PASSIVAS_SUBCLASSE = {
   // Passiva do Colosso: Casca de Pedra
   CASCA_DE_PEDRA: {
     REDUCAO_DANO_FISICO_RECEBIDO_PERCENTUAL: 8, // 8% de redução percentual do dano físico recebido
-    BONUS_SOBREESCUDO_MAX_PERCENTUAL: 5, // +5% de Sobreescudo máximo (reservado para a 48E)
+    BONUS_SOBREESCUDO_MAX_PERCENTUAL: 5, // +5% de Sobreescudo máximo; soma com o da classe em calcularSobreescudoMax (48E)
   },
 } as const;
 
