@@ -19,6 +19,7 @@ interface Estado {
   nomes: Map<string, { uid: string; nome: string }>;
   transacoes: TransactionDocument[];
   combates: Map<string, RegistroCombate>;
+  revogacoes: Map<string, number>;
 }
 
 const estado: Estado = {
@@ -26,6 +27,7 @@ const estado: Estado = {
   nomes: new Map(),
   transacoes: [],
   combates: new Map(),
+  revogacoes: new Map(),
 };
 
 let falhaAoGravar: ((operacao: string) => void) | null = null;
@@ -100,6 +102,14 @@ export const repositorio: Repositorio = {
   async lerDonoDoNome(chaveNome: string) {
     return estado.nomes.get(chaveNome)?.uid ?? null;
   },
+
+  async lerRevogacaoSessoes(uid: string) {
+    return estado.revogacoes.get(uid) ?? null;
+  },
+
+  async gravarRevogacaoSessoes(uid: string, revogadoEmSegundos: number) {
+    estado.revogacoes.set(uid, revogadoEmSegundos);
+  },
 };
 
 /** Limpa todos os dados entre testes. */
@@ -108,6 +118,7 @@ export function resetCharacterStore(): void {
   estado.nomes.clear();
   estado.transacoes.length = 0;
   estado.combates.clear();
+  estado.revogacoes.clear();
   falhaAoGravar = null;
 }
 

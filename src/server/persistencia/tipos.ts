@@ -45,6 +45,12 @@ export interface Repositorio {
   executarTransacao<T>(operacao: string, fn: (ctx: ContextoTransacao) => Promise<T>): Promise<T>;
   lerPersonagem(uid: string): Promise<CharacterDocument | null>;
   lerDonoDoNome(chaveNome: string): Promise<string | null>;
+  /**
+   * Instante (epoch em segundos) do último logout no servidor, ou null se nunca houve (0.5-A4).
+   * Tokens cujo auth_time seja menor ou igual a esse valor são recusados.
+   */
+  lerRevogacaoSessoes(uid: string): Promise<number | null>;
+  gravarRevogacaoSessoes(uid: string, revogadoEmSegundos: number): Promise<void>;
 }
 
 /**
