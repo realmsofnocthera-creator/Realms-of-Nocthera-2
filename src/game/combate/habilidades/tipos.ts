@@ -1,3 +1,5 @@
+import type { AplicacaoEfeitoDefensivo } from '@/game/combate/efeitosDefensivos';
+
 export type EspacoHabilidade = 'basico' | 'especial' | 'ultimate';
 export type TipoDanoHabilidade = 'fisico' | 'magico';
 
@@ -32,6 +34,8 @@ export interface ResultadoHabilidade {
   bonusContraSobreescudoPercentual: number; // só vale se alvo.sobreescudo > 0
   curaPercentualDanoCausado: number;
   curaPercentualHpMax: number;
+  /** Efeitos de Mitigação e defesa (catálogo 1.2) que a habilidade coloca em quem a usa. */
+  efeitosNoUsuario?: AplicacaoEfeitoDefensivo[];
 }
 
 export interface DefinicaoHabilidade {

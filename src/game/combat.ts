@@ -38,6 +38,7 @@ import {
   calcularAgilidadeEfetiva,
   calcularDefesaFisica,
   calcularHpMax,
+  calcularSobreescudoMax,
   calcularChanceCritico,
   OpcoesCalculoStatus,
 } from './index';
@@ -51,6 +52,18 @@ import {
 } from './combate/efeitos';
 import { calcularInstintoSobrevivencia } from './combate/passivasClasse';
 import { LadoCombate, multiplicadorCritico, sorteioCritico } from './combate/critico';
+import {
+  EfeitoDefensivoAtivo,
+  TipoEfeitoDefensivo,
+  adicionarEfeitoDefensivo,
+  avancarRodadaEfeitosDefensivos,
+  calcularDanoRedirecionado,
+  consumirAbsorcaoMagica,
+  estaImortal,
+  gastarEscudoTemporario,
+  percentualRedirecionamento,
+  reducaoDanoRecebidoPorEfeitos,
+} from './combate/efeitosDefensivos';
 import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import {
   ContextoHabilidade,
@@ -119,6 +132,8 @@ export interface Combatente {
   contadorFocoAbsoluto?: number;
   cargasFocoAbsoluto?: number;
   contadorCorteDoVazio?: number;
+  /** Efeitos de Mitigação e defesa ativos (só durante a luta; nunca persistidos). */
+  efeitosDefensivos?: EfeitoDefensivoAtivo[];
 }
 
 export interface AtaqueLog {
@@ -166,6 +181,12 @@ export interface AtaqueLog {
   curaHp?: number;
   /** Quantos golpes desta ação foram críticos (dano dobrado depois da defesa). */
   golpesCriticos?: number;
+  /** Efeitos de Mitigação e defesa que a habilidade colocou no atacante. */
+  efeitosDefensivosAplicados?: TipoEfeitoDefensivo[];
+  /** O defensor estava com Imortalidade Breve: o golpe não causou dano. */
+  imortalidadeBreve?: boolean;
+  /** Dano devolvido ao atacante pelo Redirecionamento do defensor. */
+  danoRedirecionado?: number;
   atacanteHpRestante?: number;
   cargasFeInabalavelConsumidas?: number;
   cargasFeInabalavelRestantes?: number;
@@ -649,6 +670,8 @@ export function aplicarDefesaCavaleiro(params: {
   juramentoAtivo?: boolean;
   /** Multiplica o dano depois da defesa (crítico = 2). */
   multiplicadorPosDefesa?: number;
+  /** Outras reduções de dano recebido (efeitos ativos), somadas às do Cavaleiro antes do teto de 80%. */
+  reducaoDanoExtraPercentual?: number;
 }): {
   sobreescudo: number;
   hp: number;
@@ -669,6 +692,7 @@ export function aplicarDefesaCavaleiro(params: {
     posturaAtiva = false,
     juramentoAtivo = false,
     multiplicadorPosDefesa = 1,
+    reducaoDanoExtraPercentual = 0,
   } = params;
 
   const posturaAplicada = nivel >= 5 && posturaAtiva;
@@ -692,7 +716,7 @@ export function aplicarDefesaCavaleiro(params: {
 
   let bonusDefesaPercentual = 0;
   let bonusSobreescudoPercentual = 0;
-  let reducaoDanoPercentual = 0;
+  let reducaoDanoPercentual = Math.max(0, reducaoDanoExtraPercentual);
   let bonusSobreescudoFixo = 0;
 
   if (posturaAplicada) {
@@ -2008,7 +2032,7 @@ export function turnoDeCombate(
   const chanceCriticoAtacante = calcularChanceCritico(atacante.atributos.sorte);
 
   for (let i = 0; i < maxAtaques; i++) {
-    if (hpAtual <= 0) break;
+    if (hpAtual <= 0 || hpAtacanteAtual <= 0) break;
 
     let danoBruto = danoBrutoPadrao;
     let ehDanoFisico = ehDanoFisicoPadrao;
@@ -2176,6 +2200,7 @@ export function turnoDeCombate(
 
     // Interceptação de Habilidade equipada (subclasse ou customizada)
     let resultadoHabilidadeInterceptada: ResultadoHabilidade | undefined;
+    let efeitosDefensivosAplicados: TipoEfeitoDefensivo[] | undefined;
     if (atacante.classeId && atacante.habilidadesEquipadas) {
       const slot = obterSlotAcionado(atacante.classeId, habilidadeAcionada);
       const habId = slot ? atacante.habilidadesEquipadas[slot] : undefined;
@@ -2250,6 +2275,25 @@ export function turnoDeCombate(
         danoGolpeExtraSamuraiPotencial = 0;
 
         resultadoHabilidadeInterceptada = resHab;
+
+        // Mitigação e defesa (catálogo 1.2): efeitos que a habilidade coloca em quem a usou
+        if (resHab.efeitosNoUsuario && resHab.efeitosNoUsuario.length > 0) {
+          const sobreescudoMaxAtacante = calcularSobreescudoMax(atacante.atributos.vitalidade, {
+            classeId: atacante.classeId,
+            nivel: nivelAtacante,
+            subclasseAtualId: atacante.subclasseAtualId,
+            subclasseTiers: atacante.subclasseTiers,
+          });
+          let efeitosAtacante = atacante.efeitosDefensivos ?? [];
+          for (const aplicacao of resHab.efeitosNoUsuario) {
+            const res = adicionarEfeitoDefensivo(efeitosAtacante, aplicacao, sobreescudoMaxAtacante);
+            efeitosAtacante = res.efeitos;
+            atacante.sobreescudo =
+              Math.max(0, atacante.sobreescudo - res.sobreescudoRemovido) + res.sobreescudoGanho;
+          }
+          atacante.efeitosDefensivos = efeitosAtacante;
+          efeitosDefensivosAplicados = resHab.efeitosNoUsuario.map((a) => a.efeito);
+        }
       }
     }
 
@@ -2313,17 +2357,39 @@ export function turnoDeCombate(
       hpMax: defensor.hpMax,
       nivel: nivelDefensor,
     });
-    if (
-      !ehCavaleiroDefensor &&
-      acaoCausaDano &&
-      ehDanoFisico &&
-      modsPassivaDefensor.reducaoDanoFisicoRecebidoPercentual > 0
-    ) {
-      danoBruto = reduzirDanoPercentual(
-        danoBruto,
-        limitarReducaoDanoPercentual(modsPassivaDefensor.reducaoDanoFisicoRecebidoPercentual)
-      );
+    // Efeitos de Mitigação e defesa do defensor (Resistências, Contrapeso, Absorção Mágica, Imortalidade...)
+    const efeitosDefensor = defensor.efeitosDefensivos ?? [];
+    const defensorImortal = acaoCausaDano && estaImortal(efeitosDefensor);
+    const reducaoPorEfeitos = acaoCausaDano
+      ? reducaoDanoRecebidoPorEfeitos(efeitosDefensor, {
+          ehDanoFisico,
+          hp: hpAtual,
+          hpMax: defensor.hpMax,
+        })
+      : 0;
+
+    // Regra 1.2.2: as reduções de dano recebido somam, com teto de 80%
+    // (no Cavaleiro, a soma é feita dentro de aplicarDefesaCavaleiro, junto das reduções dele)
+    const reducaoRecebidaTotal =
+      (ehDanoFisico ? modsPassivaDefensor.reducaoDanoFisicoRecebidoPercentual : 0) +
+      reducaoPorEfeitos;
+    if (!ehCavaleiroDefensor && acaoCausaDano && reducaoRecebidaTotal > 0) {
+      const reducaoLimitada = limitarReducaoDanoPercentual(reducaoRecebidaTotal);
+      if (golpes && golpes.length > 1) {
+        golpes = golpes.map((g) => reduzirDanoPercentual(g, reducaoLimitada));
+        danoPorGolpe = golpes[0];
+        danoBruto = golpes.reduce((acc, val) => acc + val, 0);
+      } else {
+        danoBruto = reduzirDanoPercentual(danoBruto, reducaoLimitada);
+      }
+      if (ehDanoFisico && danoGolpeExtraSamuraiPotencial > 0) {
+        danoGolpeExtraSamuraiPotencial = reduzirDanoPercentual(
+          danoGolpeExtraSamuraiPotencial,
+          reducaoLimitada
+        );
+      }
     }
+    const sobreescudoDefensorAntes = sobreescudoAtual;
 
     // Crítico: cada golpe sorteia; o dano dobra depois da defesa
     let golpesCriticos = 0;
@@ -2344,6 +2410,9 @@ export function turnoDeCombate(
     let danoEfetivo: number;
     if (!acaoCausaDano) {
       danoEfetivo = 0;
+    } else if (defensorImortal) {
+      // Imortalidade Breve: o golpe não causa dano nenhum
+      danoEfetivo = 0;
     } else if (ehBandidoAtacante && golpes && golpes.length > 1) {
       let totalEfetivoGolpes = 0;
       for (const [indiceGolpe, danoGolpeIndividual] of golpes.entries()) {
@@ -2361,6 +2430,7 @@ export function turnoDeCombate(
             posturaAtiva: posturaDefensorAtiva,
             juramentoAtivo: juramentoDefensorAtivo,
             multiplicadorPosDefesa: multCritico,
+            reducaoDanoExtraPercentual: reducaoPorEfeitos,
           });
           sobreescudoAtual = defRes.sobreescudo;
           hpAtual = defRes.hp;
@@ -2398,6 +2468,7 @@ export function turnoDeCombate(
         posturaAtiva: posturaDefensorAtiva,
         juramentoAtivo: juramentoDefensorAtivo,
         multiplicadorPosDefesa: multiplicadorCriticoDoGolpe(0),
+        reducaoDanoExtraPercentual: reducaoPorEfeitos,
       });
       sobreescudoAtual = defRes.sobreescudo;
       hpAtual = defRes.hp;
@@ -2424,7 +2495,7 @@ export function turnoDeCombate(
     // Depois de aplicar o dano do Corte do Vazio, verifica o HP resultante do inimigo:
     // se ficou em 20% do HP máximo dele ou menos, aplica automaticamente um golpe adicional
     // de 100% do dano físico normal (dano separado, mesma mitigação).
-    if (ehSamuraiAtacante && habilidadeAcionada === 'Corte do Vazio') {
+    if (ehSamuraiAtacante && habilidadeAcionada === 'Corte do Vazio' && !defensorImortal) {
       const ficouEm20PorCentoOuMenos =
         defensor.hpMax > 0 && hpAtual <= (defensor.hpMax * 20) / 100;
       if (ficouEm20PorCentoOuMenos) {
@@ -2443,6 +2514,7 @@ export function turnoDeCombate(
             posturaAtiva: false,
             juramentoAtivo: false,
             multiplicadorPosDefesa: multiplicadorCriticoDoGolpe(1),
+            reducaoDanoExtraPercentual: reducaoPorEfeitos,
           });
           sobreescudoAtual = defResExtra.sobreescudo;
           hpAtual = defResExtra.hp;
@@ -2471,6 +2543,28 @@ export function turnoDeCombate(
         danoGolpeExtraCorteDoVazio = 0;
         danoEfetivoGolpeExtraCorteDoVazio = 0;
       }
+    }
+
+    // O Sobreescudo gasto sai primeiro do Escudo Temporário; a Absorção Mágica vale para um ataque mágico só
+    if (acaoCausaDano && efeitosDefensor.length > 0) {
+      let efeitosAtualizados = gastarEscudoTemporario(
+        efeitosDefensor,
+        Math.max(0, sobreescudoDefensorAntes - sobreescudoAtual)
+      );
+      if (!ehDanoFisico) {
+        efeitosAtualizados = consumirAbsorcaoMagica(efeitosAtualizados);
+      }
+      defensor.efeitosDefensivos = efeitosAtualizados;
+    }
+
+    // Redirecionamento (counter): parte do dano recebido volta para o atacante, sem defesa
+    const danoRedirecionado = acaoCausaDano
+      ? calcularDanoRedirecionado(danoEfetivo, percentualRedirecionamento(efeitosDefensor))
+      : 0;
+    if (danoRedirecionado > 0) {
+      const resRedirecionado = aplicarDano(danoRedirecionado, 0, atacante.sobreescudo, hpAtacanteAtual);
+      atacante.sobreescudo = resRedirecionado.sobreescudo;
+      hpAtacanteAtual = resRedirecionado.hp;
     }
 
     if (ehDanoFisico && temSedeDeSangue && racaAtacante) {
@@ -2514,6 +2608,11 @@ export function turnoDeCombate(
           ? ` (elemento: ${elementoGolpe} — ${reacaoElemental})`
           : ` (elemento: ${elementoGolpe})`
         : '';
+    const sufixoDefesa =
+      (defensorImortal ? ` ${defensor.nome} está com Imortalidade Breve!` : '') +
+      (danoRedirecionado > 0
+        ? ` ${defensor.nome} devolve ${danoRedirecionado} de dano (Redirecionamento)!`
+        : '');
     const sufixoCritico =
       golpesCriticos === 0
         ? ''
@@ -2522,7 +2621,7 @@ export function turnoDeCombate(
           : ` ${golpesCriticos} golpes CRÍTICOS!`;
     const mensagem = !acaoCausaDano
       ? `${atacante.nome} canaliza${sufixoHabilidade}${sufixoDuplo} restaurando +${curaHp ?? 0} HP! (${atacante.nome} HP: ${hpAtacanteAtual}/${atacante.hpMax})`
-      : `${atacante.nome} ataca ${defensor.nome}${sufixoHabilidade}${sufixoDuplo} causando ${danoEfetivo} de dano${sufixoElemental}!${sufixoCritico} (${defensor.nome} HP: ${hpAtual}/${defensor.hpMax})`;
+      : `${atacante.nome} ataca ${defensor.nome}${sufixoHabilidade}${sufixoDuplo} causando ${danoEfetivo} de dano${sufixoElemental}!${sufixoCritico}${sufixoDefesa} (${defensor.nome} HP: ${hpAtual}/${defensor.hpMax})`;
 
     ataques.push({
       atacante: atacante.nome,
@@ -2556,6 +2655,9 @@ export function turnoDeCombate(
       ...(ignorarDefesaFisicaPercentual !== undefined ? { ignorarDefesaFisicaPercentual } : {}),
       ...(curaHp !== undefined ? { curaHp } : {}),
       ...(golpesCriticos > 0 ? { golpesCriticos } : {}),
+      ...(efeitosDefensivosAplicados ? { efeitosDefensivosAplicados } : {}),
+      ...(defensorImortal ? { imortalidadeBreve: true } : {}),
+      ...(danoRedirecionado > 0 ? { danoRedirecionado } : {}),
       ...(ehProfetaAtacante || (resultadoHabilidadeInterceptada && (resultadoHabilidadeInterceptada.curaPercentualDanoCausado > 0 || resultadoHabilidadeInterceptada.curaPercentualHpMax > 0))
         ? { atacanteHpRestante: hpAtacanteAtual }
         : {}),
@@ -2751,6 +2853,16 @@ export function resolverCombate(
       ? opcoes.rngCritico(rodada, indiceAtaque, indiceGolpe, lado)
       : sorteioCritico(seed, rodada, indiceAtaque, indiceGolpe, lado);
 
+  // Os efeitos de Mitigação e defesa contam os turnos do inimigo: perdem 1 rodada depois que ele age
+  const passarRodadaEfeitosDefensivos = (alvoDosAtaques: Combatente) => {
+    if (!alvoDosAtaques.efeitosDefensivos || alvoDosAtaques.efeitosDefensivos.length === 0) return;
+    const avanco = avancarRodadaEfeitosDefensivos(alvoDosAtaques.efeitosDefensivos);
+    alvoDosAtaques.efeitosDefensivos = avanco.efeitos;
+    if (avanco.sobreescudoRemovido > 0) {
+      alvoDosAtaques.sobreescudo = Math.max(0, alvoDosAtaques.sobreescudo - avanco.sobreescudoRemovido);
+    }
+  };
+
   const executarAcaoPersonagem = (
     rodada: number,
     ataquesDoTurno: AtaqueLog[],
@@ -2760,6 +2872,7 @@ export function resolverCombate(
       sorteioCritico: (idxAtk, idxGolpe) =>
         obterSorteioCritico(rodada, idxAtk, idxGolpe, 'personagem'),
     });
+    passarRodadaEfeitosDefensivos(m);
     ataquesDoTurno.push(...tPersonagem.turnoLog.ataques);
 
     for (const atk of tPersonagem.turnoLog.ataques) {
@@ -2834,6 +2947,7 @@ export function resolverCombate(
     });
 
     ataquesDoTurno.push(...tMonstro.turnoLog.ataques);
+    passarRodadaEfeitosDefensivos(p);
   };
 
   while (p.hp > 0 && m.hp > 0 && turno <= MAX_TURNOS) {

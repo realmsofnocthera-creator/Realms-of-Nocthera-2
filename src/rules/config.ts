@@ -24,6 +24,8 @@ export const GAME_CONFIG = {
   CHANCE_CRITICO_POR_PONTO_SORTE: 0.1,
   MULTIPLICADOR_CRITICO: 2,
   CHANCE_DROP_POR_PONTO_SORTE: 0.1,
+  // Contrapeso (catálogo 1.2): redução de dano recebido com HP cheio, caindo em linha reta até 0% com HP zerado
+  CONTRAPESO_REDUCAO_MAXIMA_PERCENTUAL: 15,
   // Habilidades raciais ativas: sem custo, só recarga
   RECARGA_HABILIDADE_RACIAL_RODADAS: 8,
   SOBREESCUDO_POR_PONTO_VITALIDADE: 2,
