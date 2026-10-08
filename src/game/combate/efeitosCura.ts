@@ -58,6 +58,8 @@ export function aplicarCuras(params: {
   sobreescudoMax: number;
   curaContinuaAtual?: CuraContinuaAtiva;
   ressurreicaoAtual?: RessurreicaoParcialEstado;
+  /** Eficácia das curas em % (100 = normal; a Cicatrização do inimigo reduz). */
+  eficaciaPercentual?: number;
   aplicacoes: readonly AplicacaoCura[];
 }): ResultadoCuras {
   const { hpMax, sobreescudoMax, aplicacoes } = params;
@@ -105,7 +107,8 @@ export function aplicarCuras(params: {
     aplicados.push(a.efeito);
   }
 
-  const hp = Math.min(hpMax, hpInicial + curaBruta);
+  const curaFinal = Math.floor((curaBruta * Math.max(0, params.eficaciaPercentual ?? 100)) / 100);
+  const hp = Math.min(hpMax, hpInicial + curaFinal);
   return {
     hp,
     sobreescudo: params.sobreescudo + sobreescudoGanho,
@@ -122,12 +125,14 @@ export function aplicarCuras(params: {
 export function processarCuraContinua(
   estado: CuraContinuaAtiva | undefined,
   hp: number,
-  hpMax: number
+  hpMax: number,
+  eficaciaPercentual: number = 100
 ): { hp: number; cura: number; estado?: CuraContinuaAtiva } {
   if (!estado || estado.rodadasRestantes <= 0 || hp <= 0) {
     return { hp, cura: 0, estado: undefined };
   }
-  const novoHp = Math.min(hpMax, hp + calcularCura(hpMax, estado.percentualHpMax));
+  const cura = Math.floor((calcularCura(hpMax, estado.percentualHpMax) * Math.max(0, eficaciaPercentual)) / 100);
+  const novoHp = Math.min(hpMax, hp + cura);
   const rodadasRestantes = estado.rodadasRestantes - 1;
   return {
     hp: novoHp,
