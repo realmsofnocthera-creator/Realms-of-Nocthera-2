@@ -1,10 +1,10 @@
 export const FICHA_ASSETS = {
-  fundo: '/images/ficha/fundo.png',
-  molduraAtributos: '/images/ficha/moldura-atributos.png',
-  molduraHabilidades: '/images/ficha/moldura-habilidades.png',
-  bannerDesenvolvimento: '/images/ficha/banner-desenvolvimento.png',
-  btnPersonagem: '/images/ficha/btn-personagem.png',
-  btnEmblemas: '/images/ficha/btn-emblemas.png',
-  btnEquipamentos: '/images/ficha/btn-equipamentos.png',
-  btnAlma: '/images/ficha/btn-alma.png',
+  fundo: '/images/ficha/fundo.webp',
+  molduraAtributos: '/images/ficha/moldura-atributos.webp',
+  molduraHabilidades: '/images/ficha/moldura-habilidades.webp',
+  bannerDesenvolvimento: '/images/ficha/banner-desenvolvimento.webp',
+  btnPersonagem: '/images/ficha/btn-personagem.webp',
+  btnEmblemas: '/images/ficha/btn-emblemas.webp',
+  btnEquipamentos: '/images/ficha/btn-equipamentos.webp',
+  btnAlma: '/images/ficha/btn-alma.webp',
 } as const;

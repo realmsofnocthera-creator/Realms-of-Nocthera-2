@@ -5,31 +5,21 @@ import {
   AvatarId,
   getAvatarById,
 } from '@/rules/avatars';
-import avatarBarbaroImg from './images/avatares/avatar-barbaro.png';
-import avatarCavaleiroImg from './images/avatares/avatar-cavaleiro.png';
-import avatarFeiticeiroImg from './images/avatares/avatar-feiticeiro.png';
-import avatarBandidoImg from './images/avatares/avatar-bandido.png';
-import avatarProfetaImg from './images/avatares/avatar-profeta.png';
-import avatarSamuraiImg from './images/avatares/avatar-samurai.png';
-
-type ImportedImage = string | { src: string };
-
-function resolveImgSrc(imported: ImportedImage, publicFallback: string): string {
-  if (!imported) return publicFallback;
-  if (typeof imported === 'string') return imported;
-  if (typeof imported === 'object' && typeof imported.src === 'string') {
-    return imported.src;
-  }
-  return publicFallback;
-}
+import avatarBarbaroImg from './images/avatares/avatar-barbaro.webp';
+import avatarCavaleiroImg from './images/avatares/avatar-cavaleiro.webp';
+import avatarFeiticeiroImg from './images/avatares/avatar-feiticeiro.webp';
+import avatarBandidoImg from './images/avatares/avatar-bandido.webp';
+import avatarProfetaImg from './images/avatares/avatar-profeta.webp';
+import avatarSamuraiImg from './images/avatares/avatar-samurai.webp';
+import { srcDaImagem } from '@/assets/srcDaImagem';
 
 export const AVATAR_IMAGES: Record<AvatarAssetKey, string> = {
-  'avatar-barbaro': resolveImgSrc(avatarBarbaroImg, '/images/avatares/avatar-barbaro.png'),
-  'avatar-cavaleiro': resolveImgSrc(avatarCavaleiroImg, '/images/avatares/avatar-cavaleiro.png'),
-  'avatar-feiticeiro': resolveImgSrc(avatarFeiticeiroImg, '/images/avatares/avatar-feiticeiro.png'),
-  'avatar-bandido': resolveImgSrc(avatarBandidoImg, '/images/avatares/avatar-bandido.png'),
-  'avatar-profeta': resolveImgSrc(avatarProfetaImg, '/images/avatares/avatar-profeta.png'),
-  'avatar-samurai': resolveImgSrc(avatarSamuraiImg, '/images/avatares/avatar-samurai.png'),
+  'avatar-barbaro': srcDaImagem(avatarBarbaroImg),
+  'avatar-cavaleiro': srcDaImagem(avatarCavaleiroImg),
+  'avatar-feiticeiro': srcDaImagem(avatarFeiticeiroImg),
+  'avatar-bandido': srcDaImagem(avatarBandidoImg),
+  'avatar-profeta': srcDaImagem(avatarProfetaImg),
+  'avatar-samurai': srcDaImagem(avatarSamuraiImg),
 };
 
 /**

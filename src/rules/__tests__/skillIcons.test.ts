@@ -29,9 +29,9 @@ describe('skillIcons', () => {
     }
   });
 
-  it('aponta ativa e passiva do anão para o mesmo caminho /icons/skills/anao-ativa.png', () => {
-    expect(RACE_SKILL_ICONS['anao'].ativa).toBe('/icons/skills/anao-ativa.png');
-    expect(RACE_SKILL_ICONS['anao'].passiva).toBe('/icons/skills/anao-ativa.png');
+  it('aponta ativa e passiva do anão para o mesmo caminho /icons/skills/anao-ativa.webp', () => {
+    expect(RACE_SKILL_ICONS['anao'].ativa).toBe('/icons/skills/anao-ativa.webp');
+    expect(RACE_SKILL_ICONS['anao'].passiva).toBe('/icons/skills/anao-ativa.webp');
   });
 
   it('nenhum caminho de ícone começa com http', () => {
@@ -47,18 +47,18 @@ describe('skillIcons', () => {
   });
 
   it('getRaceSkillIcon retorna o caminho correto ou null para entradas inválidas', () => {
-    expect(getRaceSkillIcon('humano', 'ativa')).toBe('/icons/skills/humano-ativa.png');
-    expect(getRaceSkillIcon('humano', 'passiva')).toBe('/icons/skills/humano-passiva.png');
-    expect(getRaceSkillIcon('Humano', 'ativa')).toBe('/icons/skills/humano-ativa.png');
+    expect(getRaceSkillIcon('humano', 'ativa')).toBe('/icons/skills/humano-ativa.webp');
+    expect(getRaceSkillIcon('humano', 'passiva')).toBe('/icons/skills/humano-passiva.webp');
+    expect(getRaceSkillIcon('Humano', 'ativa')).toBe('/icons/skills/humano-ativa.webp');
     expect(getRaceSkillIcon('invalido', 'ativa')).toBeNull();
     expect(getRaceSkillIcon('', 'ativa')).toBeNull();
     expect(getRaceSkillIcon(null as unknown as string, 'ativa')).toBeNull();
   });
 
   it('getClassSkillIcon retorna o caminho correto ou null para entradas inválidas', () => {
-    expect(getClassSkillIcon('barbaro', 0)).toBe('/icons/skills/barbaro-1.png');
-    expect(getClassSkillIcon('barbaro', 4)).toBe('/icons/skills/barbaro-5.png');
-    expect(getClassSkillIcon('Barbaro', 0)).toBe('/icons/skills/barbaro-1.png');
+    expect(getClassSkillIcon('barbaro', 0)).toBe('/icons/skills/barbaro-1.webp');
+    expect(getClassSkillIcon('barbaro', 4)).toBe('/icons/skills/barbaro-5.webp');
+    expect(getClassSkillIcon('Barbaro', 0)).toBe('/icons/skills/barbaro-1.webp');
     expect(getClassSkillIcon('barbaro', -1)).toBeNull();
     expect(getClassSkillIcon('barbaro', 5)).toBeNull();
     expect(getClassSkillIcon('invalido', 0)).toBeNull();

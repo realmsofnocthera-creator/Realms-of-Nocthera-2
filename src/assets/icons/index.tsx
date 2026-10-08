@@ -28,20 +28,12 @@ import attrAgilidadeImg from './attr-agilidade.png';
 import resourceHpImg from './resource-hp.png';
 import resourceManaImg from './resource-mana.png';
 import resourceSobreescudoImg from './resource-sobreescudo.webp';
+import { srcDaImagem } from '@/assets/srcDaImagem';
 
-type ImportedImage = string | { src: string };
-
-function resolveImgSrc(imported: ImportedImage, publicFallback: string): string {
-  if (!imported) return publicFallback;
-  if (typeof imported === 'string') return imported;
-  if (typeof imported === 'object' && typeof imported.src === 'string') {
-    return imported.src;
-  }
-  return publicFallback;
-}
+/** Caminho final do arquivo importado (o bundler gera a URL com hash). */
 
 /**
- * Ícones reais das 6 Raças (salvos localmente em src/assets/icons/ e public/icons/)
+ * Ícones reais das 6 Raças (salvos em src/assets/icons/)
  * Referências originais:
  * - Humano: https://i.supaimg.com/833eafd4-e7d2-4d38-abe3-4e18a55991dd/be7a60ea-e6f7-4ec8-923a-a088055fc30e.png
  * - Anão: https://i.ibb.co/DDgv9fK6/Race-Dwarf.png
@@ -51,16 +43,16 @@ function resolveImgSrc(imported: ImportedImage, publicFallback: string): string 
  * - Draconiano: https://i.ibb.co/h1J86v0L/Race-Dragonborn.png
  */
 export const RACE_ICONS: Readonly<Record<string, string>> = {
-  humano: resolveImgSrc(raceHumanoImg, '/icons/race-humano.png'),
-  anao: resolveImgSrc(raceAnaoImg, '/icons/race-anao.png'),
-  elfo: resolveImgSrc(raceElfoImg, '/icons/race-elfo.png'),
-  orc: resolveImgSrc(raceOrcImg, '/icons/race-orc.png'),
-  vampiro: resolveImgSrc(raceVampiroImg, '/icons/race-vampiro.png'),
-  draconiano: resolveImgSrc(raceDraconianoImg, '/icons/race-draconiano.png'),
+  humano: srcDaImagem(raceHumanoImg),
+  anao: srcDaImagem(raceAnaoImg),
+  elfo: srcDaImagem(raceElfoImg),
+  orc: srcDaImagem(raceOrcImg),
+  vampiro: srcDaImagem(raceVampiroImg),
+  draconiano: srcDaImagem(raceDraconianoImg),
 };
 
 /**
- * Ícones reais das 6 Classes (salvos localmente em src/assets/icons/ e public/icons/)
+ * Ícones reais das 6 Classes (salvos em src/assets/icons/)
  * Referências originais:
  * - Bárbaro: https://i.ibb.co/LX3R9sr7/240px-Class-Barbarian-Badge-Icon-png.webp
  * - Cavaleiro: https://i.ibb.co/wZjvrXGR/240px-Class-Fighter-Badge-Icon-png.webp
@@ -70,16 +62,16 @@ export const RACE_ICONS: Readonly<Record<string, string>> = {
  * - Samurai: https://i.ibb.co/sd2HLdWz/240px-Class-Ranger-Badge-Icon-png.webp
  */
 export const CLASS_ICONS: Readonly<Record<string, string>> = {
-  barbaro: resolveImgSrc(classBarbaroImg, '/icons/class-barbaro.webp'),
-  cavaleiro: resolveImgSrc(classCavaleiroImg, '/icons/class-cavaleiro.webp'),
-  feiticeiro: resolveImgSrc(classFeiticeiroImg, '/icons/class-feiticeiro.webp'),
-  bandido: resolveImgSrc(classBandidoImg, '/icons/class-bandido.webp'),
-  profeta: resolveImgSrc(classProfetaImg, '/icons/class-profeta.webp'),
-  samurai: resolveImgSrc(classSamuraiImg, '/icons/class-samurai.webp'),
+  barbaro: srcDaImagem(classBarbaroImg),
+  cavaleiro: srcDaImagem(classCavaleiroImg),
+  feiticeiro: srcDaImagem(classFeiticeiroImg),
+  bandido: srcDaImagem(classBandidoImg),
+  profeta: srcDaImagem(classProfetaImg),
+  samurai: srcDaImagem(classSamuraiImg),
 };
 
 /**
- * Ícones reais dos 7 Atributos (salvos localmente em src/assets/icons/ e public/icons/)
+ * Ícones reais dos 7 Atributos (salvos em src/assets/icons/)
  * Referências originais:
  * - Vigor: https://i.ibb.co/Ld7kLqMr/Constitution-Score-Icon.png
  * - Mente: https://i.ibb.co/6024J43h/Wisdom-Score-Icon.png
@@ -90,26 +82,26 @@ export const CLASS_ICONS: Readonly<Record<string, string>> = {
  * - Agilidade: https://i.ibb.co/gZgsszqV/Dexterity-Score-Icon.png
  */
 export const ATTRIBUTE_ICONS: Readonly<Record<AttributeName, string>> = {
-  vigor: resolveImgSrc(attrVigorImg, '/icons/attr-vigor.png'),
-  mente: resolveImgSrc(attrMenteImg, '/icons/attr-mente.png'),
-  forca: resolveImgSrc(attrForcaImg, '/icons/attr-forca.png'),
-  vitalidade: resolveImgSrc(attrVitalidadeImg, '/icons/attr-vitalidade.png'),
-  arcano: resolveImgSrc(attrArcanoImg, '/icons/attr-arcano.png'),
-  inteligencia: resolveImgSrc(attrInteligenciaImg, '/icons/attr-inteligencia.png'),
-  agilidade: resolveImgSrc(attrAgilidadeImg, '/icons/attr-agilidade.png'),
+  vigor: srcDaImagem(attrVigorImg),
+  mente: srcDaImagem(attrMenteImg),
+  forca: srcDaImagem(attrForcaImg),
+  vitalidade: srcDaImagem(attrVitalidadeImg),
+  arcano: srcDaImagem(attrArcanoImg),
+  inteligencia: srcDaImagem(attrInteligenciaImg),
+  agilidade: srcDaImagem(attrAgilidadeImg),
 };
 
 /**
- * Ícones reais de Recursos (salvos localmente em src/assets/icons/ e public/icons/)
+ * Ícones reais de Recursos (salvos em src/assets/icons/)
  * Referências originais:
  * - HP: https://i.ibb.co/ZRBC99PC/HP-Icon.png
  * - Mana ("The Pointy Hat", resolvido de https://ibb.co/jZf2z41m): https://i.ibb.co/Fq3MX7j2/60px-The-Pointy-Hat-Unfaded-Icon-png.webp
  * - Sobreescudo: https://i.ibb.co/d0f8QZ3p/Heavily-Armoured.webp
  */
 export const RESOURCE_ICONS = {
-  hp: resolveImgSrc(resourceHpImg, '/icons/resource-hp.png'),
-  mana: resolveImgSrc(resourceManaImg, '/icons/resource-mana.png'),
-  sobreescudo: resolveImgSrc(resourceSobreescudoImg, '/icons/resource-sobreescudo.webp'),
+  hp: srcDaImagem(resourceHpImg),
+  mana: srcDaImagem(resourceManaImg),
+  sobreescudo: srcDaImagem(resourceSobreescudoImg),
 } as const;
 
 /**

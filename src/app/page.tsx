@@ -42,11 +42,11 @@ export default function HomePage() {
       <div
         aria-hidden="true"
         className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/images/landing-bg.jpg')" }}
+        style={{ backgroundImage: "url('/images/landing-bg.webp')" }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/images/landing-bg.jpg"
+          src="/images/landing-bg.webp"
           alt="Paisagem sombria de Realms of Nocthera"
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover object-center select-none pointer-events-none"
