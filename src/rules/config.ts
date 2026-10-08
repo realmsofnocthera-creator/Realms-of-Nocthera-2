@@ -28,6 +28,8 @@ export const GAME_CONFIG = {
   CONTRAPESO_REDUCAO_MAXIMA_PERCENTUAL: 15,
   // Habilidades raciais ativas: sem custo, só recarga
   RECARGA_HABILIDADE_RACIAL_RODADAS: 8,
+  // As habilidades raciais ativas disparam sozinhas quando o HP de quem as tem fica abaixo deste valor (% do máximo)
+  LIMITE_HP_RACIAL_PERCENTUAL: 50,
   SOBREESCUDO_POR_PONTO_VITALIDADE: 2,
   CUSTO_RESET_ATRIBUTOS_DIAMANTES: 100,
   SUBCLASSE_NIVEL_MINIMO: 20,

@@ -16,6 +16,8 @@ export type AplicacaoDebuff =
   | { tipo: 'pressao'; percentualDefesa: number; limiteHpPercentual: number; rodadas: number }
   /** Exaustão: a Agilidade do alvo cai X% (o catálogo fixa 30%). */
   | { tipo: 'exaustao'; percentual: number; rodadas: number }
+  /** Redução de defesa: o alvo perde X% da defesa por N rodadas (Sopro Dracônico de terra). */
+  | { tipo: 'reducaoDefesa'; percentual: number; rodadas: number }
   /** Distração: o alvo perde as próximas N ações (o catálogo fixa 1). */
   | { tipo: 'distracao'; acoes: number };
 
@@ -42,6 +44,7 @@ export function adicionarDebuffs(
     switch (a.tipo) {
       case 'enfraquecimento':
       case 'cicatrizacao':
+      case 'reducaoDefesa':
       case 'exaustao':
         if (a.rodadas > 0) {
           resultado.push({ tipo: a.tipo, percentual: a.percentual, rodadasRestantes: a.rodadas });
@@ -77,6 +80,11 @@ function obter(lista: readonly DebuffAtivo[] | undefined, tipo: TipoDebuff) {
 /** Enfraquecimento, como bônus de dano negativo (entra na soma da regra 1.2.2). */
 export function bonusDanoDosDebuffs(lista: readonly DebuffAtivo[] | undefined): number {
   return 0 - (obter(lista, 'enfraquecimento')?.percentual ?? 0);
+}
+
+/** Redução de defesa em % que o alvo sofre por esse debuff. */
+export function reducaoDefesaDosDebuffs(lista: readonly DebuffAtivo[] | undefined): number {
+  return obter(lista, 'reducaoDefesa')?.percentual ?? 0;
 }
 
 /** Fator das curas de quem tem Cicatrização: 100 = cura normal. */
