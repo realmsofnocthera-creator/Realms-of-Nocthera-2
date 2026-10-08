@@ -27,6 +27,8 @@ export interface EventoEfeito {
   efeito: EfeitoStatus;
   dano?: number;
   rodadasRestantes?: number;
+  /** Quem sofre o efeito, quando não é o personagem (ex.: o monstro com Sangramento Forçado). */
+  alvo?: string;
 }
 
 /**
@@ -245,6 +247,23 @@ export function formatarEventoEfeito(
   const nomeEfeito = EFEITOS_STATUS[evento.efeito]?.nome ?? evento.efeito;
   const artigoDefinido = evento.efeito === 'podridaoEscarlate' ? 'a' : 'o';
   const artigoMaiusculo = evento.efeito === 'podridaoEscarlate' ? 'A' : 'O';
+
+  // Efeito que o jogador colocou no monstro (ex.: Sangramento Forçado)
+  if (evento.alvo) {
+    switch (evento.tipo) {
+      case 'aplicado':
+        return `Você aplicou ${nomeEfeito} em ${evento.alvo}`;
+      case 'renovado':
+        return `Você renovou ${artigoDefinido} ${nomeEfeito} em ${evento.alvo}`;
+      case 'instantaneo':
+      case 'dano':
+        return `${nomeEfeito} causa ${evento.dano ?? 0} de dano em ${evento.alvo}`;
+      case 'expirado':
+        return `${artigoMaiusculo} ${nomeEfeito} em ${evento.alvo} se dissipou`;
+      case 'removido':
+        return `${artigoMaiusculo} ${nomeEfeito} em ${evento.alvo} foi removido`;
+    }
+  }
 
   switch (evento.tipo) {
     case 'aplicado':

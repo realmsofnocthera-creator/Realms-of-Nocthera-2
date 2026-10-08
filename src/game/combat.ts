@@ -81,6 +81,20 @@ import {
   bonusDefesaDosBuffs,
   multiplicadorAgilidadeParaDuplo,
 } from './combate/efeitosBuffs';
+import {
+  AplicacaoDebuff,
+  DebuffAtivo,
+  agilidadeComExaustao,
+  avancarDebuffs,
+  adicionarDebuffs,
+  bonusDanoDosDebuffs,
+  consumirDistracao,
+  consumirPontoFraco,
+  estaDistraido,
+  fatorCuraPercentual,
+  percentualPontoFraco,
+  reducaoDefesaPorPressao,
+} from './combate/efeitosDebuffs';
 import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import {
   ContextoHabilidade,
@@ -159,6 +173,8 @@ export interface Combatente {
   danoAcumulativoPercentual?: number;
   /** Buffs temporários ativos (aumentos de atributo, Sincronismo, Delírio Controlado). */
   buffs?: BuffAtivo[];
+  /** Debuffs ativos (Enfraquecimento, Cicatrização, Ponto Fraco, Pressão, Exaustão, Distração). */
+  debuffs?: DebuffAtivo[];
   /** Foco: % de defesa do inimigo que o PRÓXIMO ataque ignora. */
   focoProximoAtaque?: number;
   /** Ímpeto Imprudente ativo: bônus de dano e defesa reduzida pelos próximos ataques de quem o usou. */
@@ -218,6 +234,16 @@ export interface AtaqueLog {
   danoRedirecionado?: number;
   /** Bônus de Dano Acumulativo (%) usado neste golpe. */
   danoAcumulativoPercentual?: number;
+  /** O atacante estava distraído e perdeu a ação. */
+  distraido?: boolean;
+  /** Debuffs que a habilidade colocou no inimigo. */
+  debuffsAplicados?: string[];
+  /** Status (ex.: Sangramento) aplicados no inimigo sem sorteio; quem processa é o resolverCombate. */
+  statusForcadosNoAlvo?: EfeitoStatus[];
+  /** Ponto Fraco do alvo consumido neste golpe (% a mais de dano). */
+  pontoFracoConsumido?: number;
+  /** Dano da Inversão de Sorte no alvo (ignora defesa). */
+  inversaoDeSorteDano?: number;
   /** Buffs que a habilidade colocou em quem a usou. */
   buffsAplicados?: string[];
   /** Foco: % de defesa ignorada neste ataque por causa do Foco. */
@@ -1998,11 +2024,38 @@ export function turnoDeCombate(
   numeroTurno: number = 1,
   opcoesTurno?: OpcoesTurno
 ): ResultadoTurno {
-  // Atributos com os buffs somados valem durante o turno inteiro; os originais voltam no fim
+  // Distração: quem está distraído perde a ação (e a rodada conta)
+  if (estaDistraido(atacante.debuffs)) {
+    atacante.debuffs = consumirDistracao(atacante.debuffs);
+    passarAcaoBuffs(atacante);
+    return {
+      turnoLog: {
+        numeroTurno,
+        ataques: [
+          {
+            atacante: atacante.nome,
+            defensor: defensor.nome,
+            danoBruto: 0,
+            danoEfetivo: 0,
+            sobreescudoRestante: defensor.sobreescudo,
+            hpRestante: defensor.hp,
+            mensagem: `${atacante.nome} está distraído e perde a ação!`,
+            distraido: true,
+          },
+        ],
+        eventosEfeitos: [],
+      },
+      defensorHp: defensor.hp,
+      defensorSobreescudo: defensor.sobreescudo,
+      atacanteHp: atacante.hp,
+    };
+  }
+
+  // Atributos com buffs e debuffs (Exaustão) valem durante o turno inteiro; os originais voltam no fim
   const atributosOriginaisAtacante = atacante.atributos;
   const atributosOriginaisDefensor = defensor.atributos;
-  atacante.atributos = aplicarBuffsAosAtributos(atributosOriginaisAtacante, atacante.buffs);
-  defensor.atributos = aplicarBuffsAosAtributos(atributosOriginaisDefensor, defensor.buffs);
+  atacante.atributos = atributosEfetivos(atributosOriginaisAtacante, atacante);
+  defensor.atributos = atributosEfetivos(atributosOriginaisDefensor, defensor);
   try {
     const resultado = turnoDeCombateInterno(atacante, defensor, numeroTurno, opcoesTurno);
     passarAcaoBuffs(atacante);
@@ -2013,12 +2066,21 @@ export function turnoDeCombate(
   }
 }
 
+function atributosEfetivos(atributos: Attributes, c: Combatente): Attributes {
+  const comBuffs = aplicarBuffsAosAtributos(atributos, c.buffs);
+  return { ...comBuffs, agilidade: agilidadeComExaustao(comBuffs.agilidade, c.debuffs) };
+}
+
 /**
  * Fim da ação de quem atacou: os buffs recém-aplicados passam a valer e os demais perdem 1 rodada.
+ * Os debuffs de duração (Enfraquecimento, Cicatrização, Pressão, Exaustão) também perdem 1 rodada.
  * O Delírio Controlado cobra HP a cada rodada dele; o risco é o desgaste, então nunca mata sozinho
  * (o HP não cai abaixo de 1).
  */
 function passarAcaoBuffs(c: Combatente): void {
+  if (c.debuffs && c.debuffs.length > 0) {
+    c.debuffs = avancarDebuffs(c.debuffs).debuffs;
+  }
   if (!c.buffs || c.buffs.length === 0) return;
   const avanco = avancarBuffs(c.buffs);
   c.buffs = avanco.buffs;
@@ -2190,8 +2252,14 @@ function turnoDeCombateInterno(
     // Bônus de dano de buffs de quem ataca (Ímpeto Imprudente e Delírio Controlado): entram na soma de cada caminho
     const impetoNesteAtaque =
       atacante.impeto && atacante.impeto.ataquesRestantes > 0 ? atacante.impeto : undefined;
+    // Debuffs: o Enfraquecimento de quem ataca reduz o dano; o Ponto Fraco do alvo aumenta (e é consumido no golpe)
+    const pontoFracoNesteAtaque = percentualPontoFraco(defensor.debuffs);
     const bonusDanoBuffs =
-      (impetoNesteAtaque?.bonusDanoPercentual ?? 0) + bonusDanoDosBuffs(atacante.buffs);
+      (impetoNesteAtaque?.bonusDanoPercentual ?? 0) +
+      bonusDanoDosBuffs(atacante.buffs) +
+      bonusDanoDosDebuffs(atacante.debuffs) +
+      pontoFracoNesteAtaque;
+    let debuffsNovosNoAlvo: AplicacaoDebuff[] | undefined;
     // Foco: este ataque ignora parte da defesa do inimigo (consumido ao atacar)
     const focoNesteAtaque = atacante.focoProximoAtaque ?? 0;
 
@@ -2219,8 +2287,11 @@ function turnoDeCombateInterno(
         contadorJuramento,
       });
       danoBruto =
-        bonusDanoBuffs > 0
-          ? Math.ceil((golpeCavaleiro.danoBruto * (100 + bonusDanoBuffs)) / 100)
+        bonusDanoBuffs !== 0
+          ? Math.max(
+              GAME_CONFIG.DANO_MINIMO,
+              Math.ceil((golpeCavaleiro.danoBruto * Math.max(0, 100 + bonusDanoBuffs)) / 100)
+            )
           : golpeCavaleiro.danoBruto;
       contadorPostura = golpeCavaleiro.novoContadorPostura;
       contadorJuramento = golpeCavaleiro.novoContadorJuramento;
@@ -2288,18 +2359,27 @@ function turnoDeCombateInterno(
         cargasFeInabalavel: cargasFe,
         contadorMilagre,
       });
+      // Cicatrização reduz a cura do Profeta (Bênção e Milagre)
+      const fatorCuraProfeta = fatorCuraPercentual(atacante.debuffs) / 100;
+      const curaProfeta = acaoProfeta.curaHp * fatorCuraProfeta;
       danoBruto =
-        acaoProfeta.causaDano && bonusDanoBuffs > 0
-          ? Math.ceil((acaoProfeta.danoBruto * (100 + bonusDanoBuffs)) / 100)
+        acaoProfeta.causaDano && bonusDanoBuffs !== 0
+          ? Math.max(
+              GAME_CONFIG.DANO_MINIMO,
+              Math.ceil((acaoProfeta.danoBruto * Math.max(0, 100 + bonusDanoBuffs)) / 100)
+            )
           : acaoProfeta.danoBruto;
       acaoCausaDano = acaoProfeta.causaDano;
-      hpAtacanteAtual = acaoProfeta.novoHp;
+      hpAtacanteAtual =
+        fatorCuraProfeta === 1
+          ? acaoProfeta.novoHp
+          : Math.min(atacante.hpMax, hpAtacanteAtual + curaProfeta);
       contadorBencao = acaoProfeta.novoContadorBencao;
       contadorFe = acaoProfeta.novoContadorFeInabalavel;
       cargasFe = acaoProfeta.novasCargasFeInabalavel;
       contadorMilagre = acaoProfeta.novoContadorMilagre;
       habilidadeAcionada = acaoProfeta.habilidadeAcionada;
-      curaHp = acaoProfeta.curaHp;
+      curaHp = curaProfeta;
       cargasFeInabalavelConsumidas = acaoProfeta.cargasConsumidas;
       cargasFeInabalavelRestantes = acaoProfeta.novasCargasFeInabalavel;
     } else if (ehSamuraiAtacante) {
@@ -2326,11 +2406,20 @@ function turnoDeCombateInterno(
       cargasFocoAbsolutoConsumidas = golpeSamurai.cargasConsumidas;
       cargasFocoAbsolutoRestantes = golpeSamurai.novasCargasFocoAbsoluto;
       bonusSobreescudoCorteDoVazioAtivo = golpeSamurai.bonusSobreescudoCorteDoVazioAtivo;
+    } else if (bonusDanoBuffs !== 0) {
+      // Combatentes sem classe (monstros): os bônus e debuffs de dano (Enfraquecimento, Ponto Fraco...) valem igual
+      danoBruto = Math.max(
+        GAME_CONFIG.DANO_MINIMO,
+        Math.ceil((danoBruto * Math.max(0, 100 + bonusDanoBuffs)) / 100)
+      );
     }
 
     let novoImpeto: Combatente['impeto'];
     let novoFoco: number | undefined;
     let buffsAplicados: string[] | undefined;
+    let debuffsAplicados: string[] | undefined;
+    let statusForcadosNoAlvo: EfeitoStatus[] | undefined;
+    let inversaoDeSorte: ResultadoHabilidade['inversaoDeSorte'];
     let ignorarResistenciaElementalDoGolpe = false;
     let danoAcumulativoUsado: number | undefined;
 
@@ -2415,6 +2504,15 @@ function turnoDeCombateInterno(
         if (resHab.foco && resHab.foco.ignorarDefesaPercentual > 0) {
           novoFoco = Math.min(100, resHab.foco.ignorarDefesaPercentual);
         }
+        // Debuffs e controle (catálogo 1.2): valem no inimigo a partir da próxima ação dele
+        if (resHab.efeitosNoAlvo && resHab.efeitosNoAlvo.length > 0) {
+          debuffsNovosNoAlvo = resHab.efeitosNoAlvo;
+          debuffsAplicados = resHab.efeitosNoAlvo.map((d) => d.tipo);
+        }
+        if (resHab.statusForcadosNoAlvo && resHab.statusForcadosNoAlvo.length > 0) {
+          statusForcadosNoAlvo = resHab.statusForcadosNoAlvo;
+        }
+        inversaoDeSorte = resHab.inversaoDeSorte;
         // Aceleração: +1 ação extra neste round (uma vez por turno)
         if (resHab.acaoExtra && !acaoExtraConcedida) {
           acaoExtraConcedida = true;
@@ -2493,6 +2591,13 @@ function turnoDeCombateInterno(
     if (novoFoco !== undefined) {
       atacante.focoProximoAtaque = novoFoco;
     }
+    // Ponto Fraco: o golpe que o aproveitou o consome; um novo Ponto Fraco vale a partir do próximo golpe
+    if (acaoCausaDano && pontoFracoNesteAtaque > 0) {
+      defensor.debuffs = consumirPontoFraco(defensor.debuffs);
+    }
+    if (debuffsNovosNoAlvo && acaoCausaDano) {
+      defensor.debuffs = adicionarDebuffs(defensor.debuffs, debuffsNovosNoAlvo);
+    }
 
     // Identifica se o golpe atual possui elemento (via habilidade de classe cadastrada ou elementoAtaque do combatente/monstro)
     let elementoGolpe: Elemento | undefined;
@@ -2569,8 +2674,9 @@ function turnoDeCombateInterno(
       acaoCausaDano
         ? ((100 - (impetoDefensor?.reducaoDefesaPercentual ?? 0)) *
             (100 - focoNesteAtaque) *
-            (100 + bonusDefesaDosBuffs(defensor.buffs))) /
-          10_000
+            (100 + bonusDefesaDosBuffs(defensor.buffs)) *
+            (100 - reducaoDefesaPorPressao(defensor.debuffs, hpAtual, defensor.hpMax))) /
+          1_000_000
         : 100;
     if (fatorDefesaPercentual !== 100 && !ehCavaleiroDefensor) {
       mitigacaoParaAtaque = Math.floor(
@@ -2769,6 +2875,13 @@ function turnoDeCombateInterno(
       }
     }
 
+    // Inversão de Sorte: se a Agilidade do alvo for menor ou igual à de quem usou, o alvo sofre dano direto
+    let inversaoDeSorteDano: number | undefined;
+    if (inversaoDeSorte && acaoCausaDano && !defensorImortal && agilDefensor <= agilAtacante && hpAtual > 0) {
+      inversaoDeSorteDano = Math.ceil((defensor.hpMax * inversaoDeSorte.percentualHpMaxAlvo) / 100);
+      hpAtual = Math.max(0, hpAtual - inversaoDeSorteDano);
+    }
+
     // Ressurreição Parcial: se o defensor caiu a 0, volta com X% do HP (uma vez por luta)
     let ressurreicaoDefensor = false;
     if (hpAtual <= 0 && defensor.ressurreicaoParcial) {
@@ -2811,12 +2924,15 @@ function turnoDeCombateInterno(
       }
     }
 
+    // Cicatrização: as curas de quem a sofre ficam menos eficazes
+    const fatorCura = fatorCuraPercentual(atacante.debuffs) / 100;
+
     if (ehDanoFisico && temSedeDeSangue && racaAtacante) {
       hpAtacanteAtual = aplicarSedeDeSangue(
         hpAtacanteAtual,
         atacante.hpMax,
         danoEfetivo,
-        racaAtacante.passivaRacial.valor
+        racaAtacante.passivaRacial.valor * fatorCura
       );
     }
 
@@ -2826,11 +2942,12 @@ function turnoDeCombateInterno(
           hpAtacanteAtual,
           atacante.hpMax,
           danoEfetivo,
-          resultadoHabilidadeInterceptada.curaPercentualDanoCausado
+          resultadoHabilidadeInterceptada.curaPercentualDanoCausado * fatorCura
         );
       }
       if (resultadoHabilidadeInterceptada.curaPercentualHpMax > 0) {
-        const curaHpMax = (atacante.hpMax * resultadoHabilidadeInterceptada.curaPercentualHpMax) / 100;
+        const curaHpMax =
+          (atacante.hpMax * resultadoHabilidadeInterceptada.curaPercentualHpMax * fatorCura) / 100;
         hpAtacanteAtual = Math.min(atacante.hpMax, hpAtacanteAtual + curaHpMax);
       }
     }
@@ -2851,6 +2968,7 @@ function turnoDeCombateInterno(
           subclasseAtualId: atacante.subclasseAtualId,
           subclasseTiers: atacante.subclasseTiers,
         }),
+        eficaciaPercentual: fatorCura * 100,
         curaContinuaAtual: atacante.curaContinua,
         ressurreicaoAtual: atacante.ressurreicaoParcial,
         aplicacoes: aplicacoesCura,
@@ -2942,6 +3060,10 @@ function turnoDeCombateInterno(
       ...(impetoNesteAtaque ? { impetoImprudenteAtivo: true } : {}),
       ...(acaoCausaDano && focoNesteAtaque > 0 ? { focoPercentual: focoNesteAtaque } : {}),
       ...(buffsAplicados ? { buffsAplicados } : {}),
+      ...(debuffsAplicados ? { debuffsAplicados } : {}),
+      ...(statusForcadosNoAlvo ? { statusForcadosNoAlvo } : {}),
+      ...(acaoCausaDano && pontoFracoNesteAtaque > 0 ? { pontoFracoConsumido: pontoFracoNesteAtaque } : {}),
+      ...(inversaoDeSorteDano ? { inversaoDeSorteDano } : {}),
       ...(acaoExtraConcedida && i === maxAtaques - 1 ? { acaoExtra: true } : {}),
       ...(efeitosCuraAplicados ? { efeitosCuraAplicados } : {}),
       ...(curaHabilidade !== undefined ? { curaHabilidade } : {}),
@@ -3137,6 +3259,8 @@ export function resolverCombate(
 
   // Estado local de efeitos do personagem apenas durante a luta (nunca persistido)
   let efeitosPersonagem: Map<EfeitoStatus, EfeitoAtivo> = new Map();
+  // Status no monstro (só entram por habilidades do jogador, como o Sangramento Forçado)
+  let efeitosMonstroStatus: Map<EfeitoStatus, EfeitoAtivo> = new Map();
   const obterSorteioStatus = (rodada: number, indiceAtaque: number): number =>
     opcoes?.rngStatus
       ? opcoes.rngStatus(rodada, indiceAtaque)
@@ -3174,6 +3298,29 @@ export function resolverCombate(
     ataquesDoTurno.push(...tPersonagem.turnoLog.ataques);
 
     for (const atk of tPersonagem.turnoLog.ataques) {
+      // Sangramento Forçado (catálogo 1.2): status aplicado no monstro sem sorteio de chance
+      for (const efeitoId of atk.statusForcadosNoAlvo ?? []) {
+        const tentativa = tentarAplicarEfeito(efeitosMonstroStatus, efeitoId, 0);
+        efeitosMonstroStatus = tentativa.efeitos;
+        if (tentativa.resultado === 'aplicado' || tentativa.resultado === 'renovado') {
+          eventosEfeitosDoTurno.push({
+            tipo: tentativa.resultado,
+            efeito: efeitoId,
+            rodadasRestantes: EFEITOS_STATUS[efeitoId].duracaoRodadas,
+            alvo: m.nome,
+          });
+        } else if (tentativa.resultado === 'instantaneo') {
+          // Sangramento: dano de uma vez, em % do HP máximo do monstro
+          const danoInstantaneo = calcularDanoEfeito(m.hpMax, EFEITOS_STATUS[efeitoId].percentualHpMax);
+          m.hp = Math.max(0, m.hp - danoInstantaneo);
+          eventosEfeitosDoTurno.push({
+            tipo: 'instantaneo',
+            efeito: efeitoId,
+            dano: danoInstantaneo,
+            alvo: m.nome,
+          });
+        }
+      }
       // Limpeza (catálogo 1.2): remove de 1 a 3 efeitos negativos do personagem
       if (atk.efeitosNegativosRemovidos) {
         const rem = removerEfeitos(efeitosPersonagem, atk.efeitosNegativosRemovidos);
@@ -3291,6 +3438,18 @@ export function resolverCombate(
       }
     }
 
+    // Dano contínuo no monstro (Sangramento Forçado do jogador)
+    if (m.hp > 0 && efeitosMonstroStatus.size > 0) {
+      const tickMonstro = processarTickEfeitos(efeitosMonstroStatus, m.hpMax);
+      efeitosMonstroStatus = tickMonstro.efeitos;
+      for (const e of tickMonstro.eventos) {
+        eventosEfeitosDoTurno.push({ ...e, alvo: m.nome });
+      }
+      if (tickMonstro.danoTotal > 0) {
+        m.hp = Math.max(0, m.hp - tickMonstro.danoTotal);
+      }
+    }
+
     // Cura e restauração no fim da rodada: Ressurreição Parcial (se o dano contínuo derrubou) e Cura Contínua
     const eventosCuraDoTurno: EventoCuraRodada[] = [];
     for (const c of [p, m]) {
@@ -3303,7 +3462,7 @@ export function resolverCombate(
         }
       }
       if (c.hp > 0 && c.curaContinua) {
-        const tickCura = processarCuraContinua(c.curaContinua, c.hp, c.hpMax);
+        const tickCura = processarCuraContinua(c.curaContinua, c.hp, c.hpMax, fatorCuraPercentual(c.debuffs));
         c.hp = tickCura.hp;
         c.curaContinua = tickCura.estado;
         eventosCuraDoTurno.push({ tipo: 'curaContinua', combatente: c.nome, valor: tickCura.cura });

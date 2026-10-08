@@ -1,6 +1,8 @@
 import type { AplicacaoEfeitoDefensivo } from '@/game/combate/efeitosDefensivos';
 import type { AplicacaoCura } from '@/game/combate/efeitosCura';
 import type { AplicacaoBuff } from '@/game/combate/efeitosBuffs';
+import type { AplicacaoDebuff } from '@/game/combate/efeitosDebuffs';
+import type { EfeitoStatus } from '@/rules/statusEffects';
 
 export type EspacoHabilidade = 'basico' | 'especial' | 'ultimate';
 export type TipoDanoHabilidade = 'fisico' | 'magico';
@@ -62,6 +64,14 @@ export interface ResultadoHabilidade {
   foco?: { ignorarDefesaPercentual: number };
   /** Aceleração: +1 ação extra neste round (uma ação a mais, além das do turno). */
   acaoExtra?: boolean;
+
+  // ---- Debuffs e controle (catálogo 1.2, categoria da 1.2.4) ----
+  /** Debuffs que a habilidade coloca no inimigo atingido (Enfraquecimento, Cicatrização, Ponto Fraco, Pressão, Exaustão, Distração). */
+  efeitosNoAlvo?: AplicacaoDebuff[];
+  /** Sangramento Forçado (e outros status de dano contínuo): aplicados no alvo sem sorteio de chance. */
+  statusForcadosNoAlvo?: EfeitoStatus[];
+  /** Inversão de Sorte: se a Agilidade do alvo for menor ou igual à de quem usa, o alvo sofre X% do HP máximo dele (ignora defesa). */
+  inversaoDeSorte?: { percentualHpMaxAlvo: number };
 }
 
 export interface DefinicaoHabilidade {
