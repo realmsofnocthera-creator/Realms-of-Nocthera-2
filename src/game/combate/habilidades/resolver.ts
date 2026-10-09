@@ -4,6 +4,7 @@ import {
   calcularMitigacaoFisicaEfetiva,
   calcularMitigacaoMagicaEfetiva,
 } from '@/game/combate/efeitos';
+import { bonusDanoPorMarcas, bonusDanoPorStatus } from '@/game/combate/bonusStatusAlvo';
 import { ContextoHabilidade, ResultadoHabilidade } from './tipos';
 
 export function resolverDanoHabilidade(
@@ -34,6 +35,8 @@ export function resolverDanoHabilidade(
     r.bonusDanoPercentual,
     ctx.bonusDanoExtraPercentual ?? 0,
     bonusContraSobreescudo,
+    bonusDanoPorStatus(ctx.alvo.condicoes ?? [], r.bonusPorStatusAlvo),
+    r.bonusPorMarca ? bonusDanoPorMarcas(ctx.alvo.marcas) : 0,
   ]);
 
   const mitigacaoEfetiva =

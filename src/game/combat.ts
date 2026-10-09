@@ -54,6 +54,12 @@ import { calcularInstintoSobrevivencia } from './combate/passivasClasse';
 import { LadoCombate, multiplicadorCritico, sorteioCritico } from './combate/critico';
 import { reacaoDoCorpo } from './combate/corpo';
 import { aplicarEfeitoControle, estaImuneAoStatus, imunidadesDeChefe } from './combate/efeitosControle';
+import {
+  EstadoDeLuta,
+  adicionarMarcas,
+  condicoesDoAlvo,
+  registrarEstadoDeLuta,
+} from './combate/bonusStatusAlvo';
 import { obterResistenciasRaciais, reducaoChanceStatusRacial } from './resistenciasRaciais';
 import {
   CategoriaCorporal,
@@ -162,6 +168,12 @@ export interface Combatente {
   elementoAtaque?: Elemento;
   /** Status a que o combatente é imune (chefes: Sono, Paralisia e Congelamento). */
   imunidadesStatus?: EfeitoStatus[];
+  /** Status de dano contínuo ativos (copiado do estado da luta antes de cada ação; base dos bônus por status do alvo). */
+  statusAtivos?: EfeitoStatus[];
+  /** Sangramento e Maldição: duram até o fim da luta. */
+  estadosDeLuta?: EstadoDeLuta[];
+  /** Marcas no combatente (+3% de dano por marca para quem as aproveita, até +15%). */
+  marcas?: number;
   /** Categoria corporal (monstros): define fraquezas e resistências a tipos de dano (roadmap 1.3). */
   categoriaCorporal?: CategoriaCorporal;
   /** Só Aberrante: fraquezas e resistências próprias da criatura. */
@@ -2517,6 +2529,7 @@ function turnoDeCombateInterno(
     let buffsAplicados: string[] | undefined;
     let debuffsAplicados: string[] | undefined;
     let statusForcadosNoAlvo: EfeitoStatus[] | undefined;
+    let golpesMarcadores = 0;
     let inversaoDeSorte: ResultadoHabilidade['inversaoDeSorte'];
     let ignorarResistenciaElementalDoGolpe = false;
     let danoAcumulativoUsado: number | undefined;
@@ -2560,6 +2573,8 @@ function turnoDeCombateInterno(
             sobreescudo: sobreescudoAtual,
             mitigacaoFisica: mitigacao,
             mitigacaoMagica: mitigacao,
+            condicoes: condicoesDoAlvo(defensor),
+            marcas: defensor.marcas ?? 0,
           },
           danoBase,
           bonusDanoExtraPercentual:
@@ -2620,6 +2635,9 @@ function turnoDeCombateInterno(
           statusForcadosNoAlvo = resHab.statusForcadosNoAlvo;
         }
         inversaoDeSorte = resHab.inversaoDeSorte;
+        if (resHab.marcar) {
+          golpesMarcadores = Math.max(1, resHab.numeroGolpes ?? 1);
+        }
         // Aceleração: +1 ação extra neste round (uma vez por turno)
         if (resHab.acaoExtra && !acaoExtraConcedida) {
           acaoExtraConcedida = true;
@@ -2704,6 +2722,10 @@ function turnoDeCombateInterno(
     }
     if (debuffsNovosNoAlvo && acaoCausaDano) {
       defensor.debuffs = adicionarDebuffs(defensor.debuffs, debuffsNovosNoAlvo);
+    }
+    // Marca: cada golpe da habilidade marcadora coloca 1 marca no alvo
+    if (golpesMarcadores > 0 && acaoCausaDano) {
+      adicionarMarcas(defensor, golpesMarcadores);
     }
 
     // Identifica se o golpe atual possui elemento (via habilidade de classe cadastrada ou elementoAtaque do combatente/monstro)
@@ -3474,6 +3496,7 @@ export function resolverCombate(
     ataquesDoTurno: AtaqueLog[],
     eventosEfeitosDoTurno: EventoEfeito[]
   ) => {
+    m.statusAtivos = [...efeitosMonstroStatus.keys()];
     const tPersonagem = turnoDeCombate(p, m, rodada, {
       sorteioCritico: (idxAtk, idxGolpe) =>
         obterSorteioCritico(rodada, idxAtk, idxGolpe, 'personagem'),
@@ -3513,6 +3536,7 @@ export function resolverCombate(
           // Sangramento: dano de uma vez, em % do HP máximo do monstro
           const danoInstantaneo = calcularDanoEfeito(m.hpMax, EFEITOS_STATUS[efeitoId].percentualHpMax);
           m.hp = Math.max(0, m.hp - danoInstantaneo);
+          registrarEstadoDeLuta(m, efeitoId);
           eventosEfeitosDoTurno.push({
             tipo: 'instantaneo',
             efeito: efeitoId,
@@ -3556,6 +3580,7 @@ export function resolverCombate(
     ataquesDoTurno: AtaqueLog[],
     eventosEfeitosDoTurno: EventoEfeito[]
   ) => {
+    p.statusAtivos = [...efeitosPersonagem.keys()];
     const efeitosMonstro = monstro.efeitosAplicados ?? [];
     const tMonstro = turnoDeCombate(m, p, rodada, {
       sorteioCritico: (idxAtk, idxGolpe) => obterSorteioCritico(rodada, idxAtk, idxGolpe, 'monstro'),
@@ -3609,6 +3634,7 @@ export function resolverCombate(
               definicao.percentualHpMax
             );
             hpDefensorAtual = Math.max(0, hpDefensorAtual - danoInstantaneo);
+            registrarEstadoDeLuta(p, efeitoId);
             eventosEfeitosDoTurno.push({
               tipo: 'instantaneo',
               efeito: efeitoId,

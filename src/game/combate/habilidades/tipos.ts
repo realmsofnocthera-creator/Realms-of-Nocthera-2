@@ -3,6 +3,7 @@ import type { AplicacaoCura } from '@/game/combate/efeitosCura';
 import type { AplicacaoBuff } from '@/game/combate/efeitosBuffs';
 import type { AplicacaoDebuff } from '@/game/combate/efeitosDebuffs';
 import type { EfeitoStatus } from '@/rules/statusEffects';
+import type { CondicaoAlvo } from '@/game/combate/bonusStatusAlvo';
 
 export type EspacoHabilidade = 'basico' | 'especial' | 'ultimate';
 export type TipoDanoHabilidade = 'fisico' | 'magico';
@@ -13,6 +14,10 @@ export interface AlvoHabilidade {
   sobreescudo: number;
   mitigacaoFisica: number;
   mitigacaoMagica: number;
+  /** Condições da lista de bônus por status que estão valendo no alvo (Sangramento, Congelado, Dormindo...). */
+  condicoes?: readonly CondicaoAlvo[];
+  /** Marcas que o alvo tem. */
+  marcas?: number;
 }
 
 export interface AtacanteHabilidade {
@@ -70,6 +75,13 @@ export interface ResultadoHabilidade {
   efeitosNoAlvo?: AplicacaoDebuff[];
   /** Sangramento Forçado (e outros status de dano contínuo): aplicados no alvo sem sorteio de chance. */
   statusForcadosNoAlvo?: EfeitoStatus[];
+  // ---- Bônus por status no alvo e Marca (catálogo 1.2, 1.9.1) ----
+  /** Bônus por status no alvo: soma a % de cada condição listada que estiver ativa no alvo (valores da lista do Yuri). */
+  bonusPorStatusAlvo?: CondicaoAlvo[];
+  /** Marca: cada golpe desta habilidade coloca 1 marca no alvo (até 5; dura até o fim da luta). */
+  marcar?: boolean;
+  /** Marca: o dano ganha +3% por marca que o alvo já tem, no máximo +15%. */
+  bonusPorMarca?: boolean;
   /** Inversão de Sorte: se a Agilidade do alvo for menor ou igual à de quem usa, o alvo sofre X% do HP máximo dele (ignora defesa). */
   inversaoDeSorte?: { percentualHpMaxAlvo: number };
 }
