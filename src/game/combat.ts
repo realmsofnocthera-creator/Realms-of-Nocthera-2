@@ -53,6 +53,8 @@ import {
 import { calcularInstintoSobrevivencia } from './combate/passivasClasse';
 import { LadoCombate, multiplicadorCritico, sorteioCritico } from './combate/critico';
 import { reacaoDoCorpo } from './combate/corpo';
+import { aplicarBonusElemental } from './combate/bonusElemento';
+import { decidirDesfecho } from './combate/desfecho';
 import { aplicarEfeitoControle, estaImuneAoStatus, imunidadesDeChefe } from './combate/efeitosControle';
 import {
   EstadoDeLuta,
@@ -290,6 +292,8 @@ export interface AtaqueLog {
   debuffsAplicados?: string[];
   /** Status (ex.: Sangramento) aplicados no inimigo sem sorteio; quem processa é o resolverCombate. */
   statusForcadosNoAlvo?: EfeitoStatus[];
+  /** Status que a habilidade tenta aplicar no alvo, com sorteio de chance (Bloco C / catálogo). */
+  statusComChanceNoAlvo?: { status: EfeitoStatus; chanceExtraPercentual?: number }[];
   /** Ponto Fraco do alvo consumido neste golpe (% a mais de dano). */
   pontoFracoConsumido?: number;
   /** Dano da Inversão de Sorte no alvo (ignora defesa). */
@@ -357,6 +361,10 @@ export interface OpcoesResolverCombate {
 
 export interface ResultadoCombate {
   vencedor: 'personagem' | 'monstro';
+  /** O combate terminou em empate (no PvE o jogador perde). */
+  empate?: boolean;
+  /** Por que acabou: um lado caiu ou passou do limite de rodadas. */
+  motivoFim?: 'derrota' | 'limite_rodadas';
   logTurnos: TurnoLog[];
   mensagens: string[];
   xpGanho: number;
@@ -2530,6 +2538,8 @@ function turnoDeCombateInterno(
     let debuffsAplicados: string[] | undefined;
     let statusForcadosNoAlvo: EfeitoStatus[] | undefined;
     let golpesMarcadores = 0;
+    let elementoDaHabilidade: Elemento | undefined;
+    let statusComChance: { status: EfeitoStatus; chanceExtraPercentual?: number }[] | undefined;
     let inversaoDeSorte: ResultadoHabilidade['inversaoDeSorte'];
     let ignorarResistenciaElementalDoGolpe = false;
     let danoAcumulativoUsado: number | undefined;
@@ -2575,6 +2585,7 @@ function turnoDeCombateInterno(
             mitigacaoMagica: mitigacao,
             condicoes: condicoesDoAlvo(defensor),
             marcas: defensor.marcas ?? 0,
+            elemento: defensor.elementoAtaque,
           },
           danoBase,
           bonusDanoExtraPercentual:
@@ -2582,7 +2593,7 @@ function turnoDeCombateInterno(
             (tipoPrevisto === 'fisico' ? modsPassivaAtacante.bonusDanoFisicoPercentual : 0),
         };
 
-        const resHab = defHab.executar(ctxHab);
+        const resHab = aplicarBonusElemental(defHab.executar(ctxHab));
         if (resHab.tipoDano !== tipoPrevisto) {
           throw new Error(
             `Tipo de dano retornado (${resHab.tipoDano}) difere do tipo de dano definido na habilidade "${defHab.id}" (${tipoPrevisto}).`
@@ -2635,6 +2646,10 @@ function turnoDeCombateInterno(
           statusForcadosNoAlvo = resHab.statusForcadosNoAlvo;
         }
         inversaoDeSorte = resHab.inversaoDeSorte;
+        elementoDaHabilidade = resHab.elemento;
+        if (resHab.statusComChanceNoAlvo && resHab.statusComChanceNoAlvo.length > 0) {
+          statusComChance = resHab.statusComChanceNoAlvo;
+        }
         if (resHab.marcar) {
           golpesMarcadores = Math.max(1, resHab.numeroGolpes ?? 1);
         }
@@ -2731,7 +2746,9 @@ function turnoDeCombateInterno(
     // Identifica se o golpe atual possui elemento (via habilidade de classe cadastrada ou elementoAtaque do combatente/monstro)
     let elementoGolpe: Elemento | undefined;
     if (acaoCausaDano) {
-      if (atacante.classeId && habilidadeAcionada) {
+      // Habilidade de registro com elemento próprio (ex.: subclasses) vale mais que o elemento da classe
+      elementoGolpe = elementoDaHabilidade;
+      if (elementoGolpe === undefined && atacante.classeId && habilidadeAcionada) {
         const classeDef = getClassById(atacante.classeId);
         if (classeDef) {
           const { ataqueBasico, habilidadeEspecial, ultimate } = classeDef.progressao;
@@ -3260,6 +3277,7 @@ function turnoDeCombateInterno(
       ...(buffsAplicados ? { buffsAplicados } : {}),
       ...(debuffsAplicados ? { debuffsAplicados } : {}),
       ...(statusForcadosNoAlvo ? { statusForcadosNoAlvo } : {}),
+      ...(statusComChance ? { statusComChanceNoAlvo: statusComChance } : {}),
       ...(acaoCausaDano && pontoFracoNesteAtaque > 0 ? { pontoFracoConsumido: pontoFracoNesteAtaque } : {}),
       ...(inversaoDeSorteDano ? { inversaoDeSorteDano } : {}),
       ...(acaoExtraConcedida && i === maxAtaques - 1 ? { acaoExtra: true } : {}),
@@ -3491,6 +3509,52 @@ export function resolverCombate(
     }
   };
 
+  /** Aplica um status no monstro (jogador → monstro): forçado (sorteio 0) ou com chance; trata imunidade de chefes. */
+  const aplicarStatusNoMonstro = (
+    efeitoId: EfeitoStatus,
+    sorteio: number,
+    chanceExtraPontos: number,
+    eventosEfeitosDoTurno: EventoEfeito[]
+  ) => {
+    if (estaImuneAoStatus(m, efeitoId)) {
+      eventosEfeitosDoTurno.push({ tipo: 'imune', efeito: efeitoId, alvo: m.nome });
+      return;
+    }
+    const tentativa = tentarAplicarEfeito(efeitosMonstroStatus, efeitoId, sorteio, 0, chanceExtraPontos);
+    efeitosMonstroStatus = tentativa.efeitos;
+    if (tentativa.resultado === 'controle') {
+      // Bloco C: dano imediato (se houver) e debuffs de controle no monstro
+      const def = EFEITOS_STATUS[efeitoId];
+      const danoImediato = def.percentualHpMax > 0 ? calcularDanoEfeito(m.hpMax, def.percentualHpMax) : 0;
+      m.hp = Math.max(0, m.hp - danoImediato);
+      aplicarEfeitoControle(m, efeitoId);
+      eventosEfeitosDoTurno.push({
+        tipo: 'controle',
+        efeito: efeitoId,
+        ...(danoImediato > 0 ? { dano: danoImediato } : {}),
+        alvo: m.nome,
+      });
+    } else if (tentativa.resultado === 'aplicado' || tentativa.resultado === 'renovado') {
+      eventosEfeitosDoTurno.push({
+        tipo: tentativa.resultado,
+        efeito: efeitoId,
+        rodadasRestantes: EFEITOS_STATUS[efeitoId].duracaoRodadas,
+        alvo: m.nome,
+      });
+    } else if (tentativa.resultado === 'instantaneo') {
+      // Sangramento e Maldição: dano de uma vez, em % do HP máximo do monstro
+      const danoInstantaneo = calcularDanoEfeito(m.hpMax, EFEITOS_STATUS[efeitoId].percentualHpMax);
+      m.hp = Math.max(0, m.hp - danoInstantaneo);
+      registrarEstadoDeLuta(m, efeitoId);
+      eventosEfeitosDoTurno.push({
+        tipo: 'instantaneo',
+        efeito: efeitoId,
+        dano: danoInstantaneo,
+        alvo: m.nome,
+      });
+    }
+  };
+
   const executarAcaoPersonagem = (
     rodada: number,
     ataquesDoTurno: AtaqueLog[],
@@ -3507,44 +3571,17 @@ export function resolverCombate(
     for (const atk of tPersonagem.turnoLog.ataques) {
       // Sangramento Forçado (catálogo 1.2): status aplicado no monstro sem sorteio de chance
       for (const efeitoId of atk.statusForcadosNoAlvo ?? []) {
-        if (estaImuneAoStatus(m, efeitoId)) {
-          eventosEfeitosDoTurno.push({ tipo: 'imune', efeito: efeitoId, alvo: m.nome });
-          continue;
-        }
-        const tentativa = tentarAplicarEfeito(efeitosMonstroStatus, efeitoId, 0);
-        efeitosMonstroStatus = tentativa.efeitos;
-        if (tentativa.resultado === 'controle') {
-          // Bloco C: dano imediato (se houver) e debuffs de controle no monstro
-          const def = EFEITOS_STATUS[efeitoId];
-          const danoImediato = def.percentualHpMax > 0 ? calcularDanoEfeito(m.hpMax, def.percentualHpMax) : 0;
-          m.hp = Math.max(0, m.hp - danoImediato);
-          aplicarEfeitoControle(m, efeitoId);
-          eventosEfeitosDoTurno.push({
-            tipo: 'controle',
-            efeito: efeitoId,
-            ...(danoImediato > 0 ? { dano: danoImediato } : {}),
-            alvo: m.nome,
-          });
-        } else if (tentativa.resultado === 'aplicado' || tentativa.resultado === 'renovado') {
-          eventosEfeitosDoTurno.push({
-            tipo: tentativa.resultado,
-            efeito: efeitoId,
-            rodadasRestantes: EFEITOS_STATUS[efeitoId].duracaoRodadas,
-            alvo: m.nome,
-          });
-        } else if (tentativa.resultado === 'instantaneo') {
-          // Sangramento: dano de uma vez, em % do HP máximo do monstro
-          const danoInstantaneo = calcularDanoEfeito(m.hpMax, EFEITOS_STATUS[efeitoId].percentualHpMax);
-          m.hp = Math.max(0, m.hp - danoInstantaneo);
-          registrarEstadoDeLuta(m, efeitoId);
-          eventosEfeitosDoTurno.push({
-            tipo: 'instantaneo',
-            efeito: efeitoId,
-            dano: danoInstantaneo,
-            alvo: m.nome,
-          });
-        }
+        aplicarStatusNoMonstro(efeitoId, 0, 0, eventosEfeitosDoTurno);
       }
+      // Status com chance (ex.: Paralisia de uma habilidade de Relâmpago, com +5% de chance): sorteia a ativação
+      (atk.statusComChanceNoAlvo ?? []).forEach((s, i) => {
+        aplicarStatusNoMonstro(
+          s.status,
+          obterSorteioStatus(rodada, 100 + i),
+          s.chanceExtraPercentual ?? 0,
+          eventosEfeitosDoTurno
+        );
+      });
       // Limpeza (catálogo 1.2): remove de 1 a 3 efeitos negativos do personagem
       if (atk.efeitosNegativosRemovidos) {
         const rem = removerEfeitos(efeitosPersonagem, atk.efeitosNegativosRemovidos);
@@ -3727,7 +3764,23 @@ export function resolverCombate(
     turno++;
   }
 
-  if (p.hp > 0) {
+  // 1.11.1: empate e limite de rodadas (PvE: o jogador perde no empate; ganha quem tiver mais HP no limite)
+  const desfecho = decidirDesfecho({
+    hpJogador: p.hp,
+    hpOponente: m.hp,
+    limiteAtingido: p.hp > 0 && m.hp > 0,
+    modo: 'pve',
+  });
+  if (desfecho.motivo === 'limite_rodadas') {
+    mensagens.push(
+      `Limite de ${MAX_TURNOS} rodadas atingido: vence quem tem mais HP (${p.nome} ${p.hp} × ${m.nome} ${m.hp}).`
+    );
+  }
+  if (desfecho.empate) {
+    mensagens.push(`Empate! Contra monstros, o jogador perde no empate.`);
+  }
+
+  if (desfecho.vencedor === 'jogador') {
     // Vitória do Personagem
     const xpGanho = monstro.xpConcedido;
     const diffOuro = monstro.ouroConcedido.max - monstro.ouroConcedido.min;
@@ -3739,6 +3792,7 @@ export function resolverCombate(
 
     return {
       vencedor: 'personagem',
+      motivoFim: desfecho.motivo,
       logTurnos,
       mensagens,
       xpGanho,
@@ -3767,6 +3821,8 @@ export function resolverCombate(
 
     return {
       vencedor: 'monstro',
+      ...(desfecho.empate ? { empate: true } : {}),
+      motivoFim: desfecho.motivo,
       logTurnos,
       mensagens,
       xpGanho: 0,

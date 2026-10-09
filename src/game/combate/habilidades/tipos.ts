@@ -4,6 +4,7 @@ import type { AplicacaoBuff } from '@/game/combate/efeitosBuffs';
 import type { AplicacaoDebuff } from '@/game/combate/efeitosDebuffs';
 import type { EfeitoStatus } from '@/rules/statusEffects';
 import type { CondicaoAlvo } from '@/game/combate/bonusStatusAlvo';
+import type { Elemento } from '@/rules/elements';
 
 export type EspacoHabilidade = 'basico' | 'especial' | 'ultimate';
 export type TipoDanoHabilidade = 'fisico' | 'magico';
@@ -18,6 +19,8 @@ export interface AlvoHabilidade {
   condicoes?: readonly CondicaoAlvo[];
   /** Marcas que o alvo tem. */
   marcas?: number;
+  /** Elemento do alvo (o elemento com que ele ataca), base do bônus de Sagrado e Sombrio. */
+  elemento?: Elemento;
 }
 
 export interface AtacanteHabilidade {
@@ -78,6 +81,14 @@ export interface ResultadoHabilidade {
   // ---- Bônus por status no alvo e Marca (catálogo 1.2, 1.9.1) ----
   /** Bônus por status no alvo: soma a % de cada condição listada que estiver ativa no alvo (valores da lista do Yuri). */
   bonusPorStatusAlvo?: CondicaoAlvo[];
+  /** Elemento da habilidade (vale para o cálculo elemental do golpe e para o bônus por elemento). */
+  elemento?: Elemento;
+  /** Bônus por elemento ativo: o elemento da habilidade concede o seu pacote de bônus por 2 rodadas. */
+  bonusElemental?: boolean;
+  /** +% de dano contra alvo do elemento indicado (Sagrado contra Sombrio e Sombrio contra Sagrado). */
+  bonusContraElementoAlvo?: { elemento: Elemento; percentual: number };
+  /** Status aplicado no alvo com sorteio de chance (chance do status + chanceExtraPercentual, em pontos). */
+  statusComChanceNoAlvo?: { status: EfeitoStatus; chanceExtraPercentual?: number }[];
   /** Marca: cada golpe desta habilidade coloca 1 marca no alvo (até 5; dura até o fim da luta). */
   marcar?: boolean;
   /** Marca: o dano ganha +3% por marca que o alvo já tem, no máximo +15%. */

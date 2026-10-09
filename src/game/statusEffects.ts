@@ -57,7 +57,8 @@ export function tentarAplicarEfeito(
   efeitos: Map<EfeitoStatus, EfeitoAtivo>,
   id: EfeitoStatus,
   sorteio: number,
-  reducaoChancePercentual = 0
+  reducaoChancePercentual = 0,
+  chanceExtraPontos = 0
 ): {
   efeitos: Map<EfeitoStatus, EfeitoAtivo>;
   resultado: ResultadoTentativaEfeito;
@@ -67,7 +68,8 @@ export function tentarAplicarEfeito(
 
   const chanceEfetiva = definicao
     ? (definicao.chanceAtivacao * (BASE_PERCENTUAL_EFEITO - Math.min(BASE_PERCENTUAL_EFEITO, Math.max(0, reducaoChancePercentual)))) /
-      BASE_PERCENTUAL_EFEITO
+        BASE_PERCENTUAL_EFEITO +
+      Math.max(0, chanceExtraPontos)
     : 0;
 
   if (!definicao || sorteio >= chanceEfetiva) {
