@@ -103,6 +103,27 @@ export const BASTIAO_KIT = {
   },
 } as const;
 
+export const KENSEI_KIT = {
+  // Corte Perfeito (ataqueBasico)
+  CORTE_PERFEITO: {
+    PERCENTUAL_DANO: 110, // % do danoBase (físico)
+    IGNORAR_DEFESA_PERCENTUAL: 10, // % da Defesa Física / Mitigação ignorada
+  },
+  // Lâmina Desembainhada (habilidadeEspecial)
+  LAMINA_DESEMBAINHADA: {
+    PERCENTUAL_DANO: 175, // % do danoBase (físico)
+    IGNORAR_DEFESA_PERCENTUAL: 15, // % da Defesa Física / Mitigação ignorada
+    FOCO_IGNORAR_DEFESA_PERCENTUAL: 30, // Foco: o próximo ataque ignora 30% da defesa
+  },
+  // Corte Decisivo (ultimate)
+  CORTE_DECISIVO: {
+    PERCENTUAL_DANO: 340, // % do danoBase (físico)
+    IGNORAR_DEFESA_PERCENTUAL: 15, // % da Defesa Física / Mitigação ignorada
+    BONUS_ALVO_ABAIXO_30_HP_PERCENTUAL: 20, // % de dano adicional se o alvo estiver abaixo do limiar de HP
+    LIMIAR_HP_ALVO_PERCENTUAL: 30, // % do HP máximo do alvo
+  },
+} as const;
+
 /**
  * Constantes das passivas de subclasse.
  */
@@ -121,6 +142,10 @@ export const PASSIVAS_SUBCLASSE = {
   FORTALEZA_VIVA: {
     BONUS_SOBREESCUDO_MAX_PERCENTUAL: 10, // +10% de Sobreescudo máximo
     REDUCAO_DANO_FISICO_RECEBIDO_PERCENTUAL: 5, // −5% de dano físico recebido
+  },
+  // Passiva do Kensei: Lâmina Perfeita
+  LAMINA_PERFEITA: {
+    BONUS_DANO_FISICO_PERCENTUAL: 5, // +5% de dano físico, sempre
   },
   // Passiva do Colosso: Casca de Pedra
   CASCA_DE_PEDRA: {
@@ -142,5 +167,6 @@ export const PASSIVA_POR_SUBCLASSE: Record<string, string> = {
   colosso: 'colosso_casca_de_pedra',
   vanguarda: 'vanguarda_linha_de_frente',
   bastiao: 'bastiao_fortaleza_viva',
+  kensei: 'kensei_lamina_perfeita',
 };
 
