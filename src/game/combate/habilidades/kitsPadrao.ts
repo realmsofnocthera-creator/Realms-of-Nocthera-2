@@ -1,5 +1,6 @@
 import { HABILIDADES_BERSERKER, PASSIVA_BERSERKER } from './subclasses/berserker';
 import { HABILIDADES_COLOSSO, PASSIVA_COLOSSO } from './subclasses/colosso';
+import { HABILIDADES_ASSASSINO, PASSIVA_ASSASSINO } from './subclasses/assassino';
 import { HABILIDADES_RONIN, PASSIVA_RONIN } from './subclasses/ronin';
 import { HABILIDADES_KENSEI, PASSIVA_KENSEI } from './subclasses/kensei';
 import { HABILIDADES_BASTIAO, PASSIVA_BASTIAO } from './subclasses/bastiao';
@@ -14,6 +15,7 @@ export const HABILIDADES_PADRAO: readonly DefinicaoHabilidade[] = [
   ...HABILIDADES_BASTIAO,
   ...HABILIDADES_KENSEI,
   ...HABILIDADES_RONIN,
+  ...HABILIDADES_ASSASSINO,
 ];
 
-export const PASSIVAS_PADRAO: readonly DefinicaoPassiva[] = [PASSIVA_BERSERKER, PASSIVA_COLOSSO, PASSIVA_VANGUARDA, PASSIVA_BASTIAO, PASSIVA_KENSEI, PASSIVA_RONIN];
+export const PASSIVAS_PADRAO: readonly DefinicaoPassiva[] = [PASSIVA_BERSERKER, PASSIVA_COLOSSO, PASSIVA_VANGUARDA, PASSIVA_BASTIAO, PASSIVA_KENSEI, PASSIVA_RONIN, PASSIVA_ASSASSINO];

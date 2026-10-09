@@ -148,6 +148,26 @@ export const RONIN_KIT = {
   },
 } as const;
 
+export const ASSASSINO_KIT = {
+  // Estocada Furtiva (ataqueBasico)
+  ESTOCADA_FURTIVA: {
+    PERCENTUAL_DANO: 100, // % do danoBase (físico)
+    PONTO_FRACO_PERCENTUAL: 15, // o próximo dano que o alvo receber causa +15%
+  },
+  // Golpe nas Sombras (habilidadeEspecial)
+  GOLPE_NAS_SOMBRAS: {
+    GOLPES: 2,
+    PERCENTUAL_DANO_POR_GOLPE: 80, // % do danoBase por golpe (físico); 160% no total
+    SANGRAMENTO_CHANCE_EXTRA_PERCENTUAL: 17, // pontos somados à chance base do Sangramento (3%): 20% no total
+  },
+  // Execução Silenciosa (ultimate)
+  EXECUCAO_SILENCIOSA: {
+    PERCENTUAL_DANO: 340, // % do danoBase (físico)
+    IGNORAR_DEFESA_PERCENTUAL: 20, // % da Defesa Física / Mitigação ignorada
+    SANGRAMENTO_CHANCE_EXTRA_PERCENTUAL: 22, // pontos somados à chance base do Sangramento (3%): 25% no total
+  },
+} as const;
+
 /**
  * Constantes das passivas de subclasse.
  */
@@ -166,6 +186,10 @@ export const PASSIVAS_SUBCLASSE = {
   FORTALEZA_VIVA: {
     BONUS_SOBREESCUDO_MAX_PERCENTUAL: 10, // +10% de Sobreescudo máximo
     REDUCAO_DANO_FISICO_RECEBIDO_PERCENTUAL: 5, // −5% de dano físico recebido
+  },
+  // Passiva do Assassino: Instinto Letal
+  INSTINTO_LETAL: {
+    BONUS_DANO_FISICO_PERCENTUAL: 6, // +6% de dano físico, sempre
   },
   // Passiva do Ronin: Passo Livre
   PASSO_LIVRE: {
@@ -198,5 +222,6 @@ export const PASSIVA_POR_SUBCLASSE: Record<string, string> = {
   bastiao: 'bastiao_fortaleza_viva',
   kensei: 'kensei_lamina_perfeita',
   ronin: 'ronin_passo_livre',
+  assassino: 'assassino_instinto_letal',
 };
 
