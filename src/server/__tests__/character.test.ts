@@ -325,7 +325,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
       expect(somaBonus).toBe(5);
       expect(anao?.passivaRacial).toEqual({
         nome: 'Resistência Ancestral',
-        descricao: '+10% de resistência a efeitos negativos físicos.',
+        descricao: '-10% de dano físico recebido e -10% de chance de sofrer status físicos (Sangramento, Veneno).',
         efeito: 'resistenciaEfeitosFisicos',
         valor: 10,
       });
@@ -336,7 +336,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
         duracaoTurnos: 3,
         efeito: '+3 Força, +2 Vitalidade, -20% dano físico recebido, -2 Agilidade',
       });
-      expect(anao?.resistencias).toEqual([{ tipo: 'danoFisico', valor: 15 }]);
+      expect(anao?.resistencias).toEqual([{ tipo: 'danoFisico', valor: 5 }]);
       expect(anao?.fraquezas).toEqual([{ tipo: 'resistenciaReducaoAgilidade', valor: -10 }]);
     });
 
@@ -429,7 +429,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
         efeito:
           '+3 Inteligência, +2 Agilidade, +2 Arcano; próximo ataque/habilidade mágica no efeito recebe +15% de dano mágico',
       });
-      expect(elfo?.resistencias).toEqual([{ tipo: 'efeitosMagicos', valor: 15 }]);
+      expect(elfo?.resistencias).toEqual([{ tipo: 'danoMagico', valor: 5 }]);
       expect(elfo?.fraquezas).toEqual([{ tipo: 'resistenciaDanoFisico', valor: -10 }]);
     });
 
@@ -523,7 +523,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
         duracaoTurnos: 3,
         efeito: '+4 Força, +2 Vigor, +10% de dano físico, -2 Agilidade',
       });
-      expect(orc?.resistencias).toEqual([{ tipo: 'reducaoFisicaForcaVitalidade', valor: 10 }]);
+      expect(orc?.resistencias).toEqual([{ tipo: 'danoFisico', valor: 5 }]);
       expect(orc?.fraquezas).toEqual([{ tipo: 'resistenciaControleMagico', valor: -10 }]);
     });
 
@@ -594,7 +594,7 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
           'dano mágico por Inteligência; cura 50% do dano causado, ou 75% se o alvo estiver abaixo de 30% HP',
       });
       expect(vampiro?.resistencias).toEqual([
-        { tipo: 'danoTrevas', valor: 15 },
+        { tipo: 'danoTrevas', valor: 5 },
         { tipo: 'drenagemVida', valor: 10 },
       ]);
       expect(vampiro?.fraquezas).toEqual([

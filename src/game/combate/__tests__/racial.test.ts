@@ -71,11 +71,12 @@ describe('1.8.1 — racias de buff (Humano, Anão, Elfo, Orc)', () => {
     const h = heroi('anao', 'barbaro', { mitigacao: 0 });
     const atacante: Combatente = alvo({ nome: 'Atacante', atributos: { ...alvo().atributos, forca: 50 } });
     const antes = turnoDeCombate(atacante, { ...h, hp: 100 }, 1).turnoLog.ataques[0].danoEfetivo;
-    expect(antes).toBe(50);
+    // Anão já resiste 15% do dano físico (1.4: passiva Resistência Ancestral 10% + racial 5%): 50 → 42
+    expect(antes).toBe(42);
     const primeiro = turnoDeCombate(h, alvo(), 1).turnoLog.ataques[0];
     expect(primeiro.racialAcionada).toBe('Fúria da Forja');
     expect(primeiro.danoBruto).toBe(23); // 20 + 3
-    expect(turnoDeCombate(atacante, h, 2).turnoLog.ataques[0].danoEfetivo).toBe(40); // 50 − 20%
+    expect(turnoDeCombate(atacante, h, 2).turnoLog.ataques[0].danoEfetivo).toBe(32); // 50 − (15% + 20% da Fúria da Forja, somados)
   });
 
   it('Orc: +10% de dano físico (soma na regra 1.2.2) e −2 de Agilidade', () => {

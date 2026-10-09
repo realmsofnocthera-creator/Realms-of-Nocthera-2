@@ -53,6 +53,7 @@ import {
 import { calcularInstintoSobrevivencia } from './combate/passivasClasse';
 import { LadoCombate, multiplicadorCritico, sorteioCritico } from './combate/critico';
 import { reacaoDoCorpo } from './combate/corpo';
+import { obterResistenciasRaciais, reducaoChanceStatusRacial } from './resistenciasRaciais';
 import {
   CategoriaCorporal,
   NOMES_TIPO_GOLPE,
@@ -2804,12 +2805,17 @@ function turnoDeCombateInterno(
     // Efeitos de Mitigação e defesa do defensor (Resistências, Contrapeso, Absorção Mágica, Imortalidade...)
     const efeitosDefensor = defensor.efeitosDefensivos ?? [];
     const defensorImortal = acaoCausaDano && estaImortal(efeitosDefensor);
+    // Resistência racial de dano recebido (1.4.1/1.4.2) entra na mesma soma, junto das reduções dos efeitos
+    const resistenciaRacialDefensor = acaoCausaDano ? obterResistenciasRaciais(defensor.racaId) : undefined;
     const reducaoPorEfeitos = acaoCausaDano
       ? reducaoDanoRecebidoPorEfeitos(efeitosDefensor, {
           ehDanoFisico,
           hp: hpAtual,
           hpMax: defensor.hpMax,
-        })
+        }) +
+        (ehDanoFisico
+          ? resistenciaRacialDefensor?.danoFisicoPercentual ?? 0
+          : resistenciaRacialDefensor?.danoMagicoPercentual ?? 0)
       : 0;
 
     // Regra 1.2.2: as reduções de dano recebido somam, com teto de 80%
@@ -3494,7 +3500,12 @@ export function resolverCombate(
         // Sorteio de efeitos acontece em todo ataque do monstro, mesmo que o Sobreescudo absorva o golpe inteiro
         for (const efeitoId of efeitosMonstro) {
           const valorSorteio = obterSorteioStatus(rodada, idxAtk);
-          const tentativa = tentarAplicarEfeito(efeitosPersonagem, efeitoId, valorSorteio);
+          const tentativa = tentarAplicarEfeito(
+            efeitosPersonagem,
+            efeitoId,
+            valorSorteio,
+            reducaoChanceStatusRacial(p.racaId, efeitoId)
+          );
           efeitosPersonagem = tentativa.efeitos;
           const definicao = EFEITOS_STATUS[efeitoId];
 

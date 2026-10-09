@@ -12,6 +12,8 @@ export interface DefinicaoEfeito {
   percentualHpMax: number;
   duracaoRodadas?: number;
   chanceAtivacao: number;
+  /** Natureza do status, usada pelas resistências raciais (1.4.3). */
+  natureza: 'fisico' | 'magico';
 }
 
 export const SANGRAMENTO_PERCENTUAL_HP_MAX = 30;
@@ -43,6 +45,7 @@ export const EFEITOS_STATUS: Record<EfeitoStatus, DefinicaoEfeito> = {
     tipo: 'instantaneo',
     percentualHpMax: SANGRAMENTO_PERCENTUAL_HP_MAX,
     chanceAtivacao: SANGRAMENTO_CHANCE_ATIVACAO,
+    natureza: 'fisico',
   },
   veneno: {
     id: 'veneno',
@@ -51,6 +54,7 @@ export const EFEITOS_STATUS: Record<EfeitoStatus, DefinicaoEfeito> = {
     percentualHpMax: VENENO_PERCENTUAL_HP_MAX,
     duracaoRodadas: VENENO_DURACAO_RODADAS,
     chanceAtivacao: VENENO_CHANCE_ATIVACAO,
+    natureza: 'fisico',
   },
   podridaoEscarlate: {
     id: 'podridaoEscarlate',
@@ -59,5 +63,6 @@ export const EFEITOS_STATUS: Record<EfeitoStatus, DefinicaoEfeito> = {
     percentualHpMax: PODRIDAO_ESCARLATE_PERCENTUAL_HP_MAX,
     duracaoRodadas: PODRIDAO_ESCARLATE_DURACAO_RODADAS,
     chanceAtivacao: PODRIDAO_ESCARLATE_CHANCE_ATIVACAO,
+    natureza: 'magico',
   },
 };

@@ -46,7 +46,7 @@ function clonarMapaEfeitos(
 
 /**
  * Tenta aplicar um efeito de status a partir de um sorteio em [0, 100):
- * - Ativa somente se `sorteio < chanceAtivacao`.
+ * - Ativa somente se `sorteio < chanceAtivacao`; a resistência do alvo (1.4.3) reduz essa chance em % relativo.
  * - Se for 'instantaneo', retorna 'instantaneo' sem guardar nada no Map.
  * - Se for 'dot' e não existir no Map, cria com `rodadasRestantes = duracaoRodadas` ('aplicado').
  * - Se for 'dot' e já existir no Map, redefine `rodadasRestantes = duracaoRodadas` sem empilhar ('renovado').
@@ -55,7 +55,8 @@ function clonarMapaEfeitos(
 export function tentarAplicarEfeito(
   efeitos: Map<EfeitoStatus, EfeitoAtivo>,
   id: EfeitoStatus,
-  sorteio: number
+  sorteio: number,
+  reducaoChancePercentual = 0
 ): {
   efeitos: Map<EfeitoStatus, EfeitoAtivo>;
   resultado: ResultadoTentativaEfeito;
@@ -63,7 +64,12 @@ export function tentarAplicarEfeito(
   const novoMapa = clonarMapaEfeitos(efeitos);
   const definicao = EFEITOS_STATUS[id];
 
-  if (!definicao || sorteio >= definicao.chanceAtivacao) {
+  const chanceEfetiva = definicao
+    ? (definicao.chanceAtivacao * (BASE_PERCENTUAL_EFEITO - Math.min(BASE_PERCENTUAL_EFEITO, Math.max(0, reducaoChancePercentual)))) /
+      BASE_PERCENTUAL_EFEITO
+    : 0;
+
+  if (!definicao || sorteio >= chanceEfetiva) {
     return {
       efeitos: novoMapa,
       resultado: 'nao_ativou',

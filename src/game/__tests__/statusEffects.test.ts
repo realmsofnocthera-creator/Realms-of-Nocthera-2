@@ -35,6 +35,7 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
         tipo: 'instantaneo',
         percentualHpMax: 30,
         chanceAtivacao: 7,
+        natureza: 'fisico',
       });
 
       expect(EFEITOS_STATUS.veneno).toEqual({
@@ -44,6 +45,7 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
         percentualHpMax: 3,
         duracaoRodadas: 10,
         chanceAtivacao: 10,
+        natureza: 'fisico',
       });
 
       expect(EFEITOS_STATUS.podridaoEscarlate).toEqual({
@@ -53,6 +55,7 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
         percentualHpMax: 8,
         duracaoRodadas: 6,
         chanceAtivacao: 3,
+        natureza: 'magico',
       });
 
       expect(MONSTERS_MAP['rato-da-peste'].efeitosAplicados).toEqual(['veneno']);
