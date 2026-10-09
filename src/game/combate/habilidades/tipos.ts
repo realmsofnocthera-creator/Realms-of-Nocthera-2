@@ -68,6 +68,8 @@ export interface ResultadoHabilidade {
   // ---- Atributos e buffs (catálogo 1.2, categoria da 1.2.4) ----
   /** Buffs temporários em quem usa a habilidade (Aumento de Força/Sorte/Agilidade/Geral, Sincronismo, Delírio Controlado). */
   buffs?: AplicacaoBuff[];
+  /** Buffs que só entram com uma chance (sorteio determinístico por golpe; sem sorteio de crítico na luta, não entram). */
+  buffsComChance?: { buff: AplicacaoBuff; chancePercentual: number }[];
   /** Foco: o próximo ataque de quem usa a habilidade ignora X% da defesa do inimigo. */
   foco?: { ignorarDefesaPercentual: number };
   /** Aceleração: +1 ação extra neste round (uma ação a mais, além das do turno). */
