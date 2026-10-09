@@ -6,7 +6,8 @@ export type EfeitoStatus =
   | 'sono'
   | 'loucura'
   | 'maldicao'
-  | 'paralisia';
+  | 'paralisia'
+  | 'queimadura';
 
 /**
  * Tipo de efeito extensível (Bloco B implementa 'instantaneo' e 'dot'; Bloco C adicionará efeitos de controle/debuff).
@@ -40,6 +41,11 @@ export const SANGRAMENTO_CHANCE_ATIVACAO = 3;
 export const VENENO_PERCENTUAL_HP_MAX = 3;
 export const VENENO_DURACAO_RODADAS = 10;
 export const VENENO_CHANCE_ATIVACAO = 8;
+
+// Queimadura (1.6.5): dano contínuo de fogo, proposta aprovada pelo Yuri em 09/10/2026
+export const QUEIMADURA_PERCENTUAL_HP_MAX = 6;
+export const QUEIMADURA_DURACAO_RODADAS = 5;
+export const QUEIMADURA_CHANCE_ATIVACAO = 6;
 
 // Chances de ativação (decisão do Yuri de 09/10/2026)
 export const CONGELAMENTO_CHANCE_ATIVACAO = 5;
@@ -140,6 +146,15 @@ export const EFEITOS_STATUS: Record<EfeitoStatus, DefinicaoEfeito> = {
     tipo: 'instantaneo',
     percentualHpMax: MALDICAO_PERCENTUAL_HP_MAX,
     chanceAtivacao: MALDICAO_CHANCE_ATIVACAO,
+    natureza: 'magico',
+  },
+  queimadura: {
+    id: 'queimadura',
+    nome: 'Queimadura',
+    tipo: 'dot',
+    percentualHpMax: QUEIMADURA_PERCENTUAL_HP_MAX,
+    duracaoRodadas: QUEIMADURA_DURACAO_RODADAS,
+    chanceAtivacao: QUEIMADURA_CHANCE_ATIVACAO,
     natureza: 'magico',
   },
   paralisia: {
