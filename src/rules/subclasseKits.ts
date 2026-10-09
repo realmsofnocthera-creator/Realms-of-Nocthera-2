@@ -44,6 +44,28 @@ export const COLOSSO_KIT = {
   },
 } as const;
 
+export const VANGUARDA_KIT = {
+  // Estocada da Vanguarda (ataqueBasico): coloca 1 Marca; +3% de dano por Marca já no alvo
+  ESTOCADA_DA_VANGUARDA: {
+    PERCENTUAL_DANO: 110, // % do danoBase (físico)
+  },
+  // Carga Esmagadora (habilidadeEspecial)
+  CARGA_ESMAGADORA: {
+    PERCENTUAL_DANO: 165, // % do danoBase (físico)
+    IGNORAR_DEFESA_PERCENTUAL: 15, // % da Defesa Física / Mitigação ignorada
+    ENFRAQUECIMENTO_PERCENTUAL: 20, // −% do dano que o alvo causa
+    ENFRAQUECIMENTO_RODADAS: 2, // ações do alvo
+  },
+  // Estandarte de Guerra (ultimate)
+  ESTANDARTE_DE_GUERRA: {
+    PERCENTUAL_DANO: 330, // % do danoBase (físico)
+    IGNORAR_DEFESA_PERCENTUAL: 20, // % da Defesa Física / Mitigação ignorada
+    BONUS_CONTRA_SOBREESCUDO_PERCENTUAL: 25, // % de dano adicional se o alvo tiver Sobreescudo > 0
+    BONUS_FORCA: 4, // +Força em quem usa
+    BONUS_FORCA_RODADAS: 3, // rodadas do bônus de Força
+  },
+} as const;
+
 /**
  * Constantes das passivas de subclasse.
  */
@@ -52,6 +74,11 @@ export const PASSIVAS_SUBCLASSE = {
   FRENESI: {
     PONTOS_PERCENTUAIS_POR_BONUS: 5, // A cada 5% de HP perdido, +1% de dano físico
     TETO_BONUS_DANO_PERCENTUAL: 20, // Teto máximo de +20% de bônus de dano físico
+  },
+  // Passiva da Vanguarda: Linha de Frente
+  LINHA_DE_FRENTE: {
+    BONUS_DANO_FISICO_PERCENTUAL: 5, // +5% de dano físico, sempre
+    REDUCAO_DANO_FISICO_RECEBIDO_PERCENTUAL: 5, // −5% de dano físico recebido, sempre
   },
   // Passiva do Colosso: Casca de Pedra
   CASCA_DE_PEDRA: {
@@ -71,5 +98,6 @@ export const TIER_PASSIVA_SUBCLASSE = 1;
 export const PASSIVA_POR_SUBCLASSE: Record<string, string> = {
   berserker: 'berserker_frenesi',
   colosso: 'colosso_casca_de_pedra',
+  vanguarda: 'vanguarda_linha_de_frente',
 };
 
