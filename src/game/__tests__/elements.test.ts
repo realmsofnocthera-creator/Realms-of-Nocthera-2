@@ -142,9 +142,9 @@ describe('ORDEM 22 — Sistema de Elementos (Bloco A)', () => {
       });
     });
 
-    it('obterModificadoresRaciais — Vampiro retorna {sombrio: -15, fogo: +10} e demais raças retornam {}', () => {
+    it('obterModificadoresRaciais — Vampiro retorna {sombrio: -5, fogo: +10} e demais raças retornam {}', () => {
       expect(obterModificadoresRaciais('vampiro')).toEqual({
-        sombrio: -15,
+        sombrio: -5,
         fogo: 10,
       });
 

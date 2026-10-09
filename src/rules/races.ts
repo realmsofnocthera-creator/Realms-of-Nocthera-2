@@ -28,6 +28,9 @@ export interface RacialSkill {
   efeito: string;
 }
 
+/** Teto da resistência racial de dano recebido por tipo (decisão 1.4.1). */
+export const RESISTENCIA_RACIAL_DANO_MAXIMA_PERCENTUAL = 5;
+
 export interface RaceModifier {
   // aguardando sistema de efeitos/resistências
   tipo: string;
@@ -130,7 +133,7 @@ export const RACES: readonly RaceDefinition[] = [
     // aguardando sistema de efeitos/resistências
     passivaRacial: {
       nome: 'Resistência Ancestral',
-      descricao: '+10% de resistência a efeitos negativos físicos.',
+      descricao: '-10% de dano físico recebido e -10% de chance de sofrer status físicos (Sangramento, Veneno).',
       efeito: 'resistenciaEfeitosFisicos',
       valor: 10,
     },
@@ -143,7 +146,8 @@ export const RACES: readonly RaceDefinition[] = [
       efeito: '+3 Força, +2 Vitalidade, -20% dano físico recebido, -2 Agilidade',
     },
     // aguardando sistema de efeitos/resistências
-    resistencias: [{ tipo: 'danoFisico', valor: 15 }],
+    // Roadmap 1.4.1: resistência racial de dano recebido, no máximo 5% por raça (a Resistência Ancestral soma +10% de dano físico no motor)
+    resistencias: [{ tipo: 'danoFisico', valor: 5 }],
     // aguardando sistema de efeitos/resistências
     fraquezas: [{ tipo: 'resistenciaReducaoAgilidade', valor: -10 }],
     relacoes: {
@@ -191,7 +195,7 @@ export const RACES: readonly RaceDefinition[] = [
         '+3 Inteligência, +2 Agilidade, +2 Arcano; próximo ataque/habilidade mágica no efeito recebe +15% de dano mágico',
     },
     // aguardando sistema de efeitos/resistências
-    resistencias: [{ tipo: 'efeitosMagicos', valor: 15 }],
+    resistencias: [{ tipo: 'danoMagico', valor: 5 }],
     // aguardando sistema de efeitos/resistências
     fraquezas: [{ tipo: 'resistenciaDanoFisico', valor: -10 }],
     relacoes: {
@@ -240,7 +244,7 @@ export const RACES: readonly RaceDefinition[] = [
       efeito: '+4 Força, +2 Vigor, +10% de dano físico, -2 Agilidade',
     },
     // aguardando sistema de efeitos/resistências
-    resistencias: [{ tipo: 'reducaoFisicaForcaVitalidade', valor: 10 }],
+    resistencias: [{ tipo: 'danoFisico', valor: 5 }],
     // aguardando sistema de efeitos/resistências
     fraquezas: [{ tipo: 'resistenciaControleMagico', valor: -10 }],
     relacoes: {
@@ -292,7 +296,7 @@ export const RACES: readonly RaceDefinition[] = [
         'dano mágico por Inteligência; cura 50% do dano causado, ou 75% se o alvo estiver abaixo de 30% HP',
     },
     resistencias: [
-      { tipo: 'danoTrevas', valor: 15 },
+      { tipo: 'danoTrevas', valor: 5 },
       // aguardando sistema de efeitos/resistências
       { tipo: 'drenagemVida', valor: 10 },
     ],
