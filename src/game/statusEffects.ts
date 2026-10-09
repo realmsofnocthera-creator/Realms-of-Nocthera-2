@@ -20,10 +20,11 @@ export type ResultadoTentativaEfeito =
   | 'nao_ativou'
   | 'aplicado'
   | 'renovado'
-  | 'instantaneo';
+  | 'instantaneo'
+  | 'controle';
 
 export interface EventoEfeito {
-  tipo: 'aplicado' | 'renovado' | 'instantaneo' | 'dano' | 'expirado' | 'removido';
+  tipo: 'aplicado' | 'renovado' | 'instantaneo' | 'controle' | 'imune' | 'dano' | 'expirado' | 'removido';
   efeito: EfeitoStatus;
   dano?: number;
   rodadasRestantes?: number;
@@ -80,6 +81,13 @@ export function tentarAplicarEfeito(
     return {
       efeitos: novoMapa,
       resultado: 'instantaneo',
+    };
+  }
+
+  if (definicao.tipo === 'controle') {
+    return {
+      efeitos: novoMapa,
+      resultado: 'controle',
     };
   }
 
@@ -264,6 +272,10 @@ export function formatarEventoEfeito(
       case 'instantaneo':
       case 'dano':
         return `${nomeEfeito} causa ${evento.dano ?? 0} de dano em ${evento.alvo}`;
+      case 'controle':
+        return `Você aplicou ${nomeEfeito} em ${evento.alvo}${evento.dano ? ` (${evento.dano} de dano)` : ''}`;
+      case 'imune':
+        return `${evento.alvo} é imune a ${nomeEfeito}`;
       case 'expirado':
         return `${artigoMaiusculo} ${nomeEfeito} em ${evento.alvo} se dissipou`;
       case 'removido':
@@ -281,6 +293,10 @@ export function formatarEventoEfeito(
       return `O ${nomeMonstro} renovou ${artigoDefinido} ${nomeEfeito}`;
     case 'instantaneo':
       return `${nomeEfeito} causa ${evento.dano ?? 0} de dano`;
+    case 'controle':
+      return `O ${nomeMonstro} aplicou ${nomeEfeito} em você${evento.dano ? ` (${evento.dano} de dano)` : ''}`;
+    case 'imune':
+      return `Você é imune a ${nomeEfeito}`;
     case 'dano':
       return `${nomeEfeito} causa ${evento.dano ?? 0} de dano (restam ${evento.rodadasRestantes ?? 0} rodadas)`;
     case 'expirado':

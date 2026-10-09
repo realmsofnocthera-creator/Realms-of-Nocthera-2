@@ -19,6 +19,8 @@ export interface MonsterDefinition {
   nome: string;
   nivel: number;
   hp: number;
+  /** Chefe: imune a Sono, Paralisia e Congelamento (recebe dano contínuo e debuffs). */
+  chefe?: boolean;
   /** Todo monstro pertence a uma categoria corporal (define fraquezas e resistências a tipos de dano). */
   categoriaCorporal: CategoriaCorporal;
   /** Só para a categoria Aberrante: as fraquezas e resistências próprias da criatura. */

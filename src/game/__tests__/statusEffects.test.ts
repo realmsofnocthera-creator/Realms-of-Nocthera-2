@@ -34,7 +34,7 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
         nome: 'Sangramento',
         tipo: 'instantaneo',
         percentualHpMax: 30,
-        chanceAtivacao: 7,
+        chanceAtivacao: 3,
         natureza: 'fisico',
       });
 
@@ -44,7 +44,7 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
         tipo: 'dot',
         percentualHpMax: 3,
         duracaoRodadas: 10,
-        chanceAtivacao: 10,
+        chanceAtivacao: 8,
         natureza: 'fisico',
       });
 
@@ -54,7 +54,7 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
         tipo: 'dot',
         percentualHpMax: 8,
         duracaoRodadas: 6,
-        chanceAtivacao: 3,
+        chanceAtivacao: 5,
         natureza: 'magico',
       });
 
@@ -65,19 +65,19 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
   });
 
   describe('2. Funções Puras de Efeitos (src/game/statusEffects.ts)', () => {
-    it('tentarAplicarEfeito: testa fronteira (9.99 ativa Veneno, 10 não), DOT novo vs renovado sem empilhar, Sangramento instantâneo e imutabilidade do Map', () => {
+    it('tentarAplicarEfeito: testa fronteira (7.99 ativa Veneno, 8 não), DOT novo vs renovado sem empilhar, Sangramento instantâneo e imutabilidade do Map', () => {
       const mapaInicial = new Map<EfeitoStatus, EfeitoAtivo>();
 
-      // Fronteira do Veneno (chanceAtivacao = 10): 10 não ativa, 9.99 ativa
-      const naoAtivouFronteira = tentarAplicarEfeito(mapaInicial, 'veneno', 10);
+      // Fronteira do Veneno (chanceAtivacao = 8): 8 não ativa, 7.99 ativa
+      const naoAtivouFronteira = tentarAplicarEfeito(mapaInicial, 'veneno', 8);
       expect(naoAtivouFronteira.resultado).toBe('nao_ativou');
       expect(naoAtivouFronteira.efeitos.size).toBe(0);
 
       const naoAtivouAcima = tentarAplicarEfeito(mapaInicial, 'veneno', 45);
       expect(naoAtivouAcima.resultado).toBe('nao_ativou');
 
-      // Sorteio 9.99 ativa Veneno como 'aplicado' com 10 rodadas
-      const aplicado = tentarAplicarEfeito(mapaInicial, 'veneno', 9.99);
+      // Sorteio 7.99 ativa Veneno como 'aplicado' com 10 rodadas
+      const aplicado = tentarAplicarEfeito(mapaInicial, 'veneno', 7.99);
       expect(aplicado.resultado).toBe('aplicado');
       expect(aplicado.efeitos.size).toBe(1);
       expect(aplicado.efeitos.get('veneno')).toEqual({
@@ -98,12 +98,12 @@ describe('ORDEM 23 — Efeitos de Dano ao Longo do Tempo (Bloco B)', () => {
       // Map anterior não foi mutado (continua com 4)
       expect(mapaComVenenoParcial.get('veneno')?.rodadasRestantes).toBe(4);
 
-      // Sangramento (tipo 'instantaneo', chance 7): retorna 'instantaneo' e o Map continua vazio
-      const sangramentoAtivo = tentarAplicarEfeito(mapaInicial, 'sangramento', 6.99);
+      // Sangramento (tipo 'instantaneo', chance 3): retorna 'instantaneo' e o Map continua vazio
+      const sangramentoAtivo = tentarAplicarEfeito(mapaInicial, 'sangramento', 2.99);
       expect(sangramentoAtivo.resultado).toBe('instantaneo');
       expect(sangramentoAtivo.efeitos.size).toBe(0);
 
-      const sangramentoFalho = tentarAplicarEfeito(mapaInicial, 'sangramento', 7);
+      const sangramentoFalho = tentarAplicarEfeito(mapaInicial, 'sangramento', 3);
       expect(sangramentoFalho.resultado).toBe('nao_ativou');
       expect(sangramentoFalho.efeitos.size).toBe(0);
     });

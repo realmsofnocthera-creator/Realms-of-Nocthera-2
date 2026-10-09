@@ -19,7 +19,19 @@ export type AplicacaoDebuff =
   /** Redução de defesa: o alvo perde X% da defesa por N rodadas (Sopro Dracônico de terra). */
   | { tipo: 'reducaoDefesa'; percentual: number; rodadas: number }
   /** Distração: o alvo perde as próximas N ações (o catálogo fixa 1). */
-  | { tipo: 'distracao'; acoes: number };
+  | { tipo: 'distracao'; acoes: number }
+  /** Bloco C — Sono: o alvo perde as próximas N ações. */
+  | { tipo: 'sono'; acoes: number }
+  /** Bloco C — Loucura: o alvo perde as próximas N ações (além do dano imediato). */
+  | { tipo: 'loucura'; acoes: number }
+  /** Bloco C — Paralisia: o alvo não age até ser atingido uma vez. */
+  | { tipo: 'paralisia' }
+  /** Bloco C — Lentidão: a Agilidade do alvo cai X% (Congelamento; Paralisia ao acordar). */
+  | { tipo: 'lentidao'; percentual: number; rodadas: number; origem?: OrigemLentidao };
+
+export type OrigemLentidao = 'congelamento' | 'paralisia';
+/** Debuffs que fazem o alvo perder a ação. */
+export type TipoIncapacitacao = 'paralisia' | 'sono' | 'loucura' | 'distracao';
 
 export type TipoDebuff = AplicacaoDebuff['tipo'];
 
@@ -27,6 +39,7 @@ export interface DebuffAtivo {
   tipo: TipoDebuff;
   percentual?: number;
   limiteHpPercentual?: number;
+  origem?: OrigemLentidao;
   /** Rodadas (ações do alvo) que faltam; no Ponto Fraco e na Distração não é usado como duração. */
   rodadasRestantes: number;
 }
@@ -66,6 +79,25 @@ export function adicionarDebuffs(
       case 'distracao':
         if (a.acoes > 0) {
           resultado.push({ tipo: 'distracao', rodadasRestantes: a.acoes });
+        }
+        break;
+      case 'sono':
+      case 'loucura':
+        if (a.acoes > 0) {
+          resultado.push({ tipo: a.tipo, rodadasRestantes: a.acoes });
+        }
+        break;
+      case 'paralisia':
+        resultado.push({ tipo: 'paralisia', rodadasRestantes: 1 });
+        break;
+      case 'lentidao':
+        if (a.rodadas > 0) {
+          resultado.push({
+            tipo: 'lentidao',
+            percentual: a.percentual,
+            origem: a.origem,
+            rodadasRestantes: a.rodadas,
+          });
         }
         break;
     }
@@ -118,8 +150,11 @@ export function agilidadeComExaustao(
   lista: readonly DebuffAtivo[] | undefined
 ): number {
   const e = obter(lista, 'exaustao');
-  if (!e) return agilidade;
-  return Math.floor((agilidade * Math.max(0, 100 - (e.percentual ?? PERCENTUAL_EXAUSTAO_PADRAO))) / 100);
+  const l = obter(lista, 'lentidao');
+  if (!e && !l) return agilidade;
+  const fatorExaustao = e ? Math.max(0, 100 - (e.percentual ?? PERCENTUAL_EXAUSTAO_PADRAO)) : 100;
+  const fatorLentidao = l ? Math.max(0, 100 - (l.percentual ?? 0)) : 100;
+  return Math.floor((agilidade * fatorExaustao * fatorLentidao) / 10_000);
 }
 
 export function estaDistraido(lista: readonly DebuffAtivo[] | undefined): boolean {
@@ -141,7 +176,60 @@ export function consumirDistracao(lista: readonly DebuffAtivo[] | undefined): De
   return resultado;
 }
 
-/** Fim de uma ação de quem sofre os debuffs: os de duração perdem 1 rodada (Ponto Fraco e Distração não). */
+const ORDEM_INCAPACITACAO: readonly TipoIncapacitacao[] = ['paralisia', 'sono', 'loucura', 'distracao'];
+
+/** Qual debuff está impedindo o alvo de agir (paralisia, sono, loucura ou distração), se algum. */
+export function incapacitacaoAtiva(
+  lista: readonly DebuffAtivo[] | undefined
+): TipoIncapacitacao | undefined {
+  return ORDEM_INCAPACITACAO.find((tipo) => obter(lista, tipo) !== undefined);
+}
+
+/** O alvo perdeu a ação: gasta 1 ação do Sono, da Loucura ou da Distração. A Paralisia só acaba quando o alvo é atingido. */
+export function consumirIncapacitacao(
+  lista: readonly DebuffAtivo[] | undefined,
+  tipo: TipoIncapacitacao
+): DebuffAtivo[] {
+  if (tipo === 'paralisia') return [...(lista ?? [])];
+  const resultado: DebuffAtivo[] = [];
+  let gasta = false;
+  for (const d of lista ?? []) {
+    if (d.tipo === tipo && !gasta) {
+      gasta = true;
+      if (d.rodadasRestantes - 1 > 0) resultado.push({ ...d, rodadasRestantes: d.rodadasRestantes - 1 });
+    } else {
+      resultado.push(d);
+    }
+  }
+  return resultado;
+}
+
+/** Paralisia: o alvo foi atingido, então acorda e fica mais lento (queda de Agilidade por algumas rodadas). */
+export function acordarDaParalisia(
+  lista: readonly DebuffAtivo[] | undefined,
+  lentidao: { percentual: number; rodadas: number }
+): { debuffs: DebuffAtivo[]; acordou: boolean } {
+  const paralisado = obter(lista, 'paralisia') !== undefined;
+  if (!paralisado) return { debuffs: [...(lista ?? [])], acordou: false };
+  const semParalisia = (lista ?? []).filter((d) => d.tipo !== 'paralisia');
+  return {
+    debuffs: adicionarDebuffs(semParalisia, [
+      { tipo: 'lentidao', percentual: lentidao.percentual, rodadas: lentidao.rodadas, origem: 'paralisia' },
+    ]),
+    acordou: true,
+  };
+}
+
+/** Congelamento: um golpe de fogo encerra a lentidão do congelamento antes do fim. */
+export function removerLentidaoDeOrigem(
+  lista: readonly DebuffAtivo[] | undefined,
+  origem: OrigemLentidao
+): { debuffs: DebuffAtivo[]; removeu: boolean } {
+  const debuffs = (lista ?? []).filter((d) => !(d.tipo === 'lentidao' && d.origem === origem));
+  return { debuffs, removeu: debuffs.length !== (lista ?? []).length };
+}
+
+/** Fim de uma ação de quem sofre os debuffs: os de duração perdem 1 rodada (Ponto Fraco, Distração, Sono, Loucura e Paralisia não: acabam por ação perdida ou golpe). */
 export function avancarDebuffs(lista: readonly DebuffAtivo[] | undefined): {
   debuffs: DebuffAtivo[];
   expirados: TipoDebuff[];
@@ -149,7 +237,13 @@ export function avancarDebuffs(lista: readonly DebuffAtivo[] | undefined): {
   const debuffs: DebuffAtivo[] = [];
   const expirados: TipoDebuff[] = [];
   for (const d of lista ?? []) {
-    if (d.tipo === 'pontoFraco' || d.tipo === 'distracao') {
+    if (
+      d.tipo === 'pontoFraco' ||
+      d.tipo === 'distracao' ||
+      d.tipo === 'sono' ||
+      d.tipo === 'loucura' ||
+      d.tipo === 'paralisia'
+    ) {
       debuffs.push(d);
       continue;
     }
