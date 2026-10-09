@@ -1,5 +1,6 @@
 import { HABILIDADES_BERSERKER, PASSIVA_BERSERKER } from './subclasses/berserker';
 import { HABILIDADES_COLOSSO, PASSIVA_COLOSSO } from './subclasses/colosso';
+import { HABILIDADES_BASTIAO, PASSIVA_BASTIAO } from './subclasses/bastiao';
 import { HABILIDADES_VANGUARDA, PASSIVA_VANGUARDA } from './subclasses/vanguarda';
 import { DefinicaoHabilidade, DefinicaoPassiva } from './tipos';
 
@@ -8,6 +9,7 @@ export const HABILIDADES_PADRAO: readonly DefinicaoHabilidade[] = [
   ...HABILIDADES_BERSERKER,
   ...HABILIDADES_COLOSSO,
   ...HABILIDADES_VANGUARDA,
+  ...HABILIDADES_BASTIAO,
 ];
 
-export const PASSIVAS_PADRAO: readonly DefinicaoPassiva[] = [PASSIVA_BERSERKER, PASSIVA_COLOSSO, PASSIVA_VANGUARDA];
+export const PASSIVAS_PADRAO: readonly DefinicaoPassiva[] = [PASSIVA_BERSERKER, PASSIVA_COLOSSO, PASSIVA_VANGUARDA, PASSIVA_BASTIAO];

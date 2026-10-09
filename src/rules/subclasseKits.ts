@@ -66,6 +66,30 @@ export const VANGUARDA_KIT = {
   },
 } as const;
 
+export const BASTIAO_KIT = {
+  // Golpe de Escudo (ataqueBasico)
+  GOLPE_DE_ESCUDO: {
+    PERCENTUAL_DANO: 95, // % do danoBase (físico)
+    RESISTENCIA_FISICA_PERCENTUAL: 3, // −% de dano físico recebido
+    RESISTENCIA_FISICA_RODADAS: 1, // renova a cada golpe
+  },
+  // Muralha Inabalável (habilidadeEspecial)
+  MURALHA_INABALAVEL: {
+    PERCENTUAL_DANO: 120, // % do danoBase (físico)
+    ESCUDO_TEMPORARIO_PERCENTUAL: 15, // % do Sobreescudo máximo concedido
+    RESISTENCIA_PERCENTUAL: 10, // −% de dano físico e mágico recebido
+    RODADAS: 2,
+  },
+  // Último Juramento (ultimate)
+  ULTIMO_JURAMENTO: {
+    PERCENTUAL_DANO: 260, // % do danoBase (físico)
+    IMORTALIDADE_RODADAS: 1, // rodadas sem receber dano
+    REDIRECIONAMENTO_PERCENTUAL: 25, // % do dano recebido devolvido ao inimigo
+    ESCUDO_TEMPORARIO_PERCENTUAL: 25, // % do Sobreescudo máximo concedido
+    RODADAS: 2, // duração do Redirecionamento e do Escudo Temporário
+  },
+} as const;
+
 /**
  * Constantes das passivas de subclasse.
  */
@@ -79,6 +103,11 @@ export const PASSIVAS_SUBCLASSE = {
   LINHA_DE_FRENTE: {
     BONUS_DANO_FISICO_PERCENTUAL: 5, // +5% de dano físico, sempre
     REDUCAO_DANO_FISICO_RECEBIDO_PERCENTUAL: 5, // −5% de dano físico recebido, sempre
+  },
+  // Passiva do Bastião: Fortaleza Viva
+  FORTALEZA_VIVA: {
+    BONUS_SOBREESCUDO_MAX_PERCENTUAL: 10, // +10% de Sobreescudo máximo
+    REDUCAO_DANO_FISICO_RECEBIDO_PERCENTUAL: 5, // −5% de dano físico recebido
   },
   // Passiva do Colosso: Casca de Pedra
   CASCA_DE_PEDRA: {
@@ -99,5 +128,6 @@ export const PASSIVA_POR_SUBCLASSE: Record<string, string> = {
   berserker: 'berserker_frenesi',
   colosso: 'colosso_casca_de_pedra',
   vanguarda: 'vanguarda_linha_de_frente',
+  bastiao: 'bastiao_fortaleza_viva',
 };
 
