@@ -2731,6 +2731,18 @@ function turnoDeCombateInterno(
     if (novoFoco !== undefined) {
       atacante.focoProximoAtaque = novoFoco;
     }
+    // Milagre Divino (ultimate do Profeta): +15% de dano e de defesa nas 2 rodadas seguintes (decisão do Yuri, 09/10/2026)
+    if (habilidadeAcionada === 'Milagre Divino') {
+      atacante.buffs = adicionarBuffs(atacante.buffs, [
+        {
+          tipo: 'bonusDanoDefesa',
+          id: 'milagreDivino',
+          danoPercentual: GAME_CONFIG.MILAGRE_DIVINO_BONUS_PERCENTUAL,
+          defesaPercentual: GAME_CONFIG.MILAGRE_DIVINO_BONUS_PERCENTUAL,
+          rodadas: GAME_CONFIG.MILAGRE_DIVINO_BONUS_RODADAS,
+        },
+      ]);
+    }
     // Ponto Fraco: o golpe que o aproveitou o consome; um novo Ponto Fraco vale a partir do próximo golpe
     if (acaoCausaDano && pontoFracoNesteAtaque > 0) {
       defensor.debuffs = consumirPontoFraco(defensor.debuffs);
