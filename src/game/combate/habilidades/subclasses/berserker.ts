@@ -15,6 +15,10 @@ export const HABILIDADES_BERSERKER: DefinicaoHabilidade[] = [
       bonusContraSobreescudoPercentual: 0,
       curaPercentualDanoCausado: 0,
       curaPercentualHpMax: 0,
+      acumulativo: {
+        percentualPorAtaque: BERSERKER_KIT.GOLPE_DESENFREADO.ACUMULATIVO_PERCENTUAL_POR_ATAQUE,
+        limitePercentual: BERSERKER_KIT.GOLPE_DESENFREADO.ACUMULATIVO_LIMITE_PERCENTUAL,
+      },
     }),
   },
   {
@@ -40,6 +44,12 @@ export const HABILIDADES_BERSERKER: DefinicaoHabilidade[] = [
         bonusContraSobreescudoPercentual: 0,
         curaPercentualDanoCausado: 0,
         curaPercentualHpMax: 0,
+        statusComChanceNoAlvo: [
+          {
+            status: 'sangramento',
+            chanceExtraPercentual: BERSERKER_KIT.INVESTIDA_SANGRENTA.SANGRAMENTO_CHANCE_EXTRA_PERCENTUAL,
+          },
+        ],
       };
     },
   },
@@ -67,6 +77,11 @@ export const HABILIDADES_BERSERKER: DefinicaoHabilidade[] = [
           BERSERKER_KIT.DESVARIO_FINAL.BONUS_CONTRA_SOBREESCUDO_PERCENTUAL,
         curaPercentualDanoCausado: 0,
         curaPercentualHpMax: 0,
+        impeto: {
+          ataques: BERSERKER_KIT.DESVARIO_FINAL.IMPETO_ATAQUES,
+          bonusDanoPercentual: BERSERKER_KIT.DESVARIO_FINAL.IMPETO_BONUS_DANO_PERCENTUAL,
+          reducaoDefesaPercentual: BERSERKER_KIT.DESVARIO_FINAL.IMPETO_REDUCAO_DEFESA_PERCENTUAL,
+        },
       };
     },
   },
