@@ -20,6 +20,9 @@ export const GAME_CONFIG = {
   TETO_REDUCAO_DANO_PERCENTUAL: 80,
   // Roadmap 1.3: tipo do golpe contra o corpo do alvo (fraqueza +25%, resistência −25%)
   MODIFICADOR_TIPO_DANO_PERCENTUAL: 25,
+  // Marca (catálogo 1.2): +3% de dano por marca, no máximo +15%; dura até o fim da luta
+  MARCA_BONUS_POR_MARCA_PERCENTUAL: 3,
+  MARCA_BONUS_MAXIMO_PERCENTUAL: 15,
   HP_POR_PONTO_VIGOR: 5,
   // Sorte: crítico (dobra o dano depois da defesa) e chance de drop
   CHANCE_CRITICO_BASE_PERCENTUAL: 2,
