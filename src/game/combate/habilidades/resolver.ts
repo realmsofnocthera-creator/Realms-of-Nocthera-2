@@ -37,6 +37,9 @@ export function resolverDanoHabilidade(
     bonusContraSobreescudo,
     bonusDanoPorStatus(ctx.alvo.condicoes ?? [], r.bonusPorStatusAlvo),
     r.bonusPorMarca ? bonusDanoPorMarcas(ctx.alvo.marcas) : 0,
+    r.bonusContraElementoAlvo && ctx.alvo.elemento === r.bonusContraElementoAlvo.elemento
+      ? r.bonusContraElementoAlvo.percentual
+      : 0,
   ]);
 
   const mitigacaoEfetiva =
