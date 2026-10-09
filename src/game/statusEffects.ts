@@ -251,6 +251,9 @@ export function sorteioStatus(
   return (h % ESCALA_PRECISAO_SORTEIO) / DIVISOR_PRECISAO_SORTEIO;
 }
 
+/** Status de nome feminino ("a Queimadura"), para o texto do relatório. */
+const FEMININOS: readonly EfeitoStatus[] = ['podridaoEscarlate', 'queimadura', 'maldicao', 'paralisia'];
+
 /**
  * Formata um EventoEfeito em texto legível para exibição no relatório do combate.
  */
@@ -259,8 +262,8 @@ export function formatarEventoEfeito(
   nomeMonstro: string = 'monstro'
 ): string {
   const nomeEfeito = EFEITOS_STATUS[evento.efeito]?.nome ?? evento.efeito;
-  const artigoDefinido = evento.efeito === 'podridaoEscarlate' ? 'a' : 'o';
-  const artigoMaiusculo = evento.efeito === 'podridaoEscarlate' ? 'A' : 'O';
+  const artigoDefinido = FEMININOS.includes(evento.efeito) ? 'a' : 'o';
+  const artigoMaiusculo = FEMININOS.includes(evento.efeito) ? 'A' : 'O';
 
   // Efeito que o jogador colocou no monstro (ex.: Sangramento Forçado)
   if (evento.alvo) {
