@@ -7,6 +7,8 @@ export const BERSERKER_KIT = {
   // Golpe Desenfreado (ataqueBasico)
   GOLPE_DESENFREADO: {
     PERCENTUAL_DANO: 115, // % do danoBase (físico)
+    ACUMULATIVO_PERCENTUAL_POR_ATAQUE: 2, // Dano Acumulativo: +2% de dano a cada golpe
+    ACUMULATIVO_LIMITE_PERCENTUAL: 10, // até +10%
   },
   // Investida Sangrenta (habilidadeEspecial)
   INVESTIDA_SANGRENTA: {
@@ -14,6 +16,7 @@ export const BERSERKER_KIT = {
     PERCENTUAL_DANO_ABAIXO_50_HP: 210, // % do danoBase se HP < 50% do HP máximo
     IGNORAR_DEFESA_PERCENTUAL: 10, // % da Defesa Física / Mitigação ignorada (0 a 100)
     LIMIAR_HP_CONDICIONAL_PERCENTUAL: 50, // % do HP máximo para ativação do dano ampliado
+    SANGRAMENTO_CHANCE_EXTRA_PERCENTUAL: 17, // pontos somados à chance base do Sangramento (3%): 20% no total
   },
   // Desvario Final (ultimate)
   DESVARIO_FINAL: {
@@ -22,6 +25,9 @@ export const BERSERKER_KIT = {
     BONUS_CONTRA_SOBREESCUDO_PERCENTUAL: 25, // % de dano adicional se o alvo tiver Sobreescudo > 0
     BONUS_DANO_ABAIXO_30_HP_PERCENTUAL: 30, // % bônus condicional somado se HP < 30% do HP máximo
     LIMIAR_HP_CONDICIONAL_PERCENTUAL: 30, // % do HP máximo para ativação do bônus condicional
+    IMPETO_ATAQUES: 3, // Ímpeto Imprudente: nos próximos 3 ataques
+    IMPETO_BONUS_DANO_PERCENTUAL: 25, // +25% de dano
+    IMPETO_REDUCAO_DEFESA_PERCENTUAL: 20, // −20% de defesa
   },
 } as const;
 
@@ -30,17 +36,24 @@ export const COLOSSO_KIT = {
   GOLPE_ESMAGADOR: {
     PERCENTUAL_DANO: 105, // % do danoBase (físico)
     CURA_PERCENTUAL_DANO_CAUSADO: 5, // % do danoEfetivo curado no HP do atacante
+    RESISTENCIA_FISICA_PERCENTUAL: 3, // −% de dano físico recebido
+    RESISTENCIA_FISICA_RODADAS: 1, // renova a cada golpe
   },
   // Impacto Sísmico (habilidadeEspecial)
   IMPACTO_SISMICO: {
     PERCENTUAL_DANO: 160, // % do danoBase (físico)
     CURA_PERCENTUAL_HP_MAX: 10, // % do HP máximo do atacante curado
+    ESCUDO_TEMPORARIO_PERCENTUAL: 10, // % do Sobreescudo máximo concedido
+    ESCUDO_TEMPORARIO_RODADAS: 2,
   },
   // Fúria do Colosso (ultimate)
   FURIA_DO_COLOSSO: {
     PERCENTUAL_DANO: 320, // % do danoBase (físico)
     BONUS_CONTRA_SOBREESCUDO_PERCENTUAL: 25, // % de dano adicional se o alvo tiver Sobreescudo > 0
     CURA_PERCENTUAL_HP_MAX: 15, // % do HP máximo do atacante curado
+    ESCUDO_TEMPORARIO_PERCENTUAL: 15, // % do Sobreescudo máximo concedido
+    RESISTENCIA_FISICA_PERCENTUAL: 10, // −% de dano físico recebido
+    RODADAS: 2, // duração do escudo e da resistência
   },
 } as const;
 
