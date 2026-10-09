@@ -53,6 +53,7 @@ import {
 import { calcularInstintoSobrevivencia } from './combate/passivasClasse';
 import { LadoCombate, multiplicadorCritico, sorteioCritico } from './combate/critico';
 import { reacaoDoCorpo } from './combate/corpo';
+import { aplicarEfeitoControle, estaImuneAoStatus, imunidadesDeChefe } from './combate/efeitosControle';
 import { obterResistenciasRaciais, reducaoChanceStatusRacial } from './resistenciasRaciais';
 import {
   CategoriaCorporal,
@@ -97,9 +98,12 @@ import {
   avancarDebuffs,
   adicionarDebuffs,
   bonusDanoDosDebuffs,
-  consumirDistracao,
+  acordarDaParalisia,
+  consumirIncapacitacao,
   consumirPontoFraco,
-  estaDistraido,
+  incapacitacaoAtiva,
+  removerLentidaoDeOrigem,
+  TipoIncapacitacao,
   fatorCuraPercentual,
   percentualPontoFraco,
   reducaoDefesaDosDebuffs,
@@ -156,6 +160,8 @@ export interface Combatente {
   subclasseTiers?: Record<string, number>;
   modificadoresElementais?: ModificadoresElementais;
   elementoAtaque?: Elemento;
+  /** Status a que o combatente é imune (chefes: Sono, Paralisia e Congelamento). */
+  imunidadesStatus?: EfeitoStatus[];
   /** Categoria corporal (monstros): define fraquezas e resistências a tipos de dano (roadmap 1.3). */
   categoriaCorporal?: CategoriaCorporal;
   /** Só Aberrante: fraquezas e resistências próprias da criatura. */
@@ -264,6 +270,10 @@ export interface AtaqueLog {
   racialAcionada?: string;
   /** O atacante estava distraído e perdeu a ação. */
   distraido?: boolean;
+  /** O atacante perdeu a ação por Paralisia, Sono, Loucura ou Distração (Bloco C). */
+  incapacitado?: TipoIncapacitacao;
+  /** Um golpe de fogo encerrou a lentidão do Congelamento, ou a Paralisia acabou com este golpe. */
+  statusEncerrado?: 'congelamento' | 'paralisia';
   /** Debuffs que a habilidade colocou no inimigo. */
   debuffsAplicados?: string[];
   /** Status (ex.: Sangramento) aplicados no inimigo sem sorteio; quem processa é o resolverCombate. */
@@ -2055,10 +2065,17 @@ export function turnoDeCombate(
   numeroTurno: number = 1,
   opcoesTurno?: OpcoesTurno
 ): ResultadoTurno {
-  // Distração: quem está distraído perde a ação (e a rodada conta)
-  if (estaDistraido(atacante.debuffs)) {
-    atacante.debuffs = consumirDistracao(atacante.debuffs);
+  // Paralisia, Sono, Loucura ou Distração: quem está incapacitado perde a ação (e a rodada conta)
+  const incapacitacao = incapacitacaoAtiva(atacante.debuffs);
+  if (incapacitacao) {
+    atacante.debuffs = consumirIncapacitacao(atacante.debuffs, incapacitacao);
     passarAcaoBuffs(atacante);
+    const motivo = {
+      distracao: 'está distraído',
+      sono: 'está dormindo',
+      loucura: 'está em surto de loucura',
+      paralisia: 'está paralisado',
+    }[incapacitacao];
     return {
       turnoLog: {
         numeroTurno,
@@ -2070,8 +2087,9 @@ export function turnoDeCombate(
             danoEfetivo: 0,
             sobreescudoRestante: defensor.sobreescudo,
             hpRestante: defensor.hp,
-            mensagem: `${atacante.nome} está distraído e perde a ação!`,
-            distraido: true,
+            mensagem: `${atacante.nome} ${motivo} e perde a ação!`,
+            ...(incapacitacao === 'distracao' ? { distraido: true } : {}),
+            incapacitado: incapacitacao,
           },
         ],
         eventosEfeitos: [],
@@ -2775,6 +2793,28 @@ function turnoDeCombateInterno(
       }
     }
 
+    // Bloco C: o golpe pode encerrar status de controle do defensor
+    let statusEncerrado: 'congelamento' | 'paralisia' | undefined;
+    if (acaoCausaDano) {
+      if (elementoGolpe === 'fogo') {
+        // Congelamento: o dano de fogo encerra a lentidão antes do fim
+        const semGelo = removerLentidaoDeOrigem(defensor.debuffs, 'congelamento');
+        if (semGelo.removeu) {
+          defensor.debuffs = semGelo.debuffs;
+          statusEncerrado = 'congelamento';
+        }
+      }
+      // Paralisia: ao ser atingido o alvo acorda e perde Agilidade por 2 rodadas
+      const lentidaoAoAcordar = EFEITOS_STATUS.paralisia.lentidaoAoAcordar;
+      if (lentidaoAoAcordar && danoBruto > 0) {
+        const acordou = acordarDaParalisia(defensor.debuffs, lentidaoAoAcordar);
+        if (acordou.acordou) {
+          defensor.debuffs = acordou.debuffs;
+          statusEncerrado = 'paralisia';
+        }
+      }
+    }
+
     // Modificadores de passiva de subclasse do defensor (ex: Casca de Pedra do Colosso)
     const modsPassivaDefensor = obterModificadoresPassivaSubclasse({
       subclasseAtualId: defensor.subclasseAtualId,
@@ -3128,7 +3168,14 @@ function turnoDeCombateInterno(
       reacaoTipoDano && tipoGolpe
         ? ` [${NOMES_TIPO_GOLPE[tipoGolpe]}: ${reacaoTipoDano === 'fraqueza' ? 'fraqueza' : 'resistência'} do corpo]`
         : '';
+    const sufixoControle =
+      statusEncerrado === 'congelamento'
+        ? ` O fogo derreteu o gelo de ${defensor.nome}!`
+        : statusEncerrado === 'paralisia'
+          ? ` ${defensor.nome} acorda da paralisia, mas fica mais lento!`
+          : '';
     const sufixoDefesa =
+      sufixoControle +
       (defensorImortal ? ` ${defensor.nome} está com Imortalidade Breve!` : '') +
       (danoRedirecionado > 0
         ? ` ${defensor.nome} devolve ${danoRedirecionado} de dano (Redirecionamento)!`
@@ -3161,6 +3208,7 @@ function turnoDeCombateInterno(
       ...(multiplicadorElemental !== undefined ? { multiplicadorElemental } : {}),
       ...(reacaoElemental !== undefined ? { reacaoElemental } : {}),
       ...(multiplicadorTipoDano !== undefined ? { tipoGolpe, multiplicadorTipoDano, reacaoTipoDano } : {}),
+      ...(statusEncerrado ? { statusEncerrado } : {}),
       ...(instintoSobrevivenciaAtivo !== undefined ? { instintoSobrevivenciaAtivo } : {}),
       ...(iraAbaixo30Ativo !== undefined ? { iraAbaixo30Ativo } : {}),
       ...(ultimoBastiaoAtivo !== undefined ? { ultimoBastiaoAtivo } : {}),
@@ -3358,6 +3406,7 @@ export function resolverCombate(
       ...(monstro.modificadoresElementais ?? {}),
     },
     elementoAtaque: monstro.elementoAtaque,
+    imunidadesStatus: monstro.chefe ? [...imunidadesDeChefe()] : undefined,
     categoriaCorporal: monstro.categoriaCorporal,
     fraquezasProprias: monstro.fraquezasProprias ? [...monstro.fraquezasProprias] : undefined,
     resistenciasProprias: monstro.resistenciasProprias
@@ -3435,9 +3484,25 @@ export function resolverCombate(
     for (const atk of tPersonagem.turnoLog.ataques) {
       // Sangramento Forçado (catálogo 1.2): status aplicado no monstro sem sorteio de chance
       for (const efeitoId of atk.statusForcadosNoAlvo ?? []) {
+        if (estaImuneAoStatus(m, efeitoId)) {
+          eventosEfeitosDoTurno.push({ tipo: 'imune', efeito: efeitoId, alvo: m.nome });
+          continue;
+        }
         const tentativa = tentarAplicarEfeito(efeitosMonstroStatus, efeitoId, 0);
         efeitosMonstroStatus = tentativa.efeitos;
-        if (tentativa.resultado === 'aplicado' || tentativa.resultado === 'renovado') {
+        if (tentativa.resultado === 'controle') {
+          // Bloco C: dano imediato (se houver) e debuffs de controle no monstro
+          const def = EFEITOS_STATUS[efeitoId];
+          const danoImediato = def.percentualHpMax > 0 ? calcularDanoEfeito(m.hpMax, def.percentualHpMax) : 0;
+          m.hp = Math.max(0, m.hp - danoImediato);
+          aplicarEfeitoControle(m, efeitoId);
+          eventosEfeitosDoTurno.push({
+            tipo: 'controle',
+            efeito: efeitoId,
+            ...(danoImediato > 0 ? { dano: danoImediato } : {}),
+            alvo: m.nome,
+          });
+        } else if (tentativa.resultado === 'aplicado' || tentativa.resultado === 'renovado') {
           eventosEfeitosDoTurno.push({
             tipo: tentativa.resultado,
             efeito: efeitoId,
@@ -3509,7 +3574,24 @@ export function resolverCombate(
           efeitosPersonagem = tentativa.efeitos;
           const definicao = EFEITOS_STATUS[efeitoId];
 
-          if (tentativa.resultado === 'aplicado') {
+          if (tentativa.resultado === 'controle') {
+            // Bloco C: dano imediato (se houver) e debuffs de controle no personagem
+            if (estaImuneAoStatus(p, efeitoId)) {
+              eventosEfeitosDoTurno.push({ tipo: 'imune', efeito: efeitoId });
+            } else {
+              const danoImediato =
+                definicao.percentualHpMax > 0
+                  ? calcularDanoEfeito(estadoDefensor.hpMax, definicao.percentualHpMax)
+                  : 0;
+              hpDefensorAtual = Math.max(0, hpDefensorAtual - danoImediato);
+              aplicarEfeitoControle(p, efeitoId);
+              eventosEfeitosDoTurno.push({
+                tipo: 'controle',
+                efeito: efeitoId,
+                ...(danoImediato > 0 ? { dano: danoImediato } : {}),
+              });
+            }
+          } else if (tentativa.resultado === 'aplicado') {
             eventosEfeitosDoTurno.push({
               tipo: 'aplicado',
               efeito: efeitoId,

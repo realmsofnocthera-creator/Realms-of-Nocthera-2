@@ -70,16 +70,16 @@ describe('1.4.3 — resistência a status reduz a chance de ativação (não a d
     expect(reducaoChanceStatusRacial('humano', 'veneno')).toBe(0);
   });
 
-  it('com 10% de resistência a chance do Veneno vai de 10 para 9 (fronteira do sorteio)', () => {
+  it('com 10% de resistência a chance do Veneno vai de 8 para 7,2 (fronteira do sorteio)', () => {
     const base = new Map();
-    expect(tentarAplicarEfeito(base, 'veneno', 9.5).resultado).toBe('aplicado');
-    expect(tentarAplicarEfeito(base, 'veneno', 9.5, 10).resultado).toBe('nao_ativou');
-    expect(tentarAplicarEfeito(base, 'veneno', 8.99, 10).resultado).toBe('aplicado');
+    expect(tentarAplicarEfeito(base, 'veneno', 7.5).resultado).toBe('aplicado');
+    expect(tentarAplicarEfeito(base, 'veneno', 7.5, 10).resultado).toBe('nao_ativou');
+    expect(tentarAplicarEfeito(base, 'veneno', 7.19, 10).resultado).toBe('aplicado');
   });
 
   it('sem resistência nada muda; resistência de 100% ou mais anula o status', () => {
     const base = new Map();
-    expect(tentarAplicarEfeito(base, 'veneno', 9.99).resultado).toBe('aplicado');
+    expect(tentarAplicarEfeito(base, 'veneno', 7.99).resultado).toBe('aplicado');
     expect(tentarAplicarEfeito(base, 'veneno', 0, 100).resultado).toBe('nao_ativou');
   });
 
