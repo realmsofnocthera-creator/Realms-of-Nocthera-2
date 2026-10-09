@@ -124,6 +124,30 @@ export const KENSEI_KIT = {
   },
 } as const;
 
+export const RONIN_KIT = {
+  // Corte Relâmpago (ataqueBasico): Golpe Duplo
+  CORTE_RELAMPAGO: {
+    GOLPES: 2,
+    PERCENTUAL_DANO_POR_GOLPE: 55, // % do danoBase por golpe (físico); 110% no total
+  },
+  // Dança da Lâmina Solitária (habilidadeEspecial): Dano Replicado
+  DANCA_DA_LAMINA_SOLITARIA: {
+    GOLPES: 3,
+    PERCENTUAL_DANO_POR_GOLPE: 55, // % do danoBase por golpe (físico); 165% no total
+    EXAUSTAO_PERCENTUAL: 30, // −% de Agilidade do alvo
+    EXAUSTAO_RODADAS: 2,
+  },
+  // Quatro Ventos (ultimate)
+  QUATRO_VENTOS: {
+    GOLPES: 4,
+    PERCENTUAL_DANO_POR_GOLPE: 85, // % do danoBase por golpe (físico); 340% no total
+    BONUS_AGILIDADE: 4, // +Agilidade em quem usa
+    BONUS_AGILIDADE_RODADAS: 3,
+    SINCRONISMO_CHANCE_PERCENTUAL: 30, // chance de ativar o Sincronismo a cada uso
+    SINCRONISMO_RODADAS: 3,
+  },
+} as const;
+
 /**
  * Constantes das passivas de subclasse.
  */
@@ -142,6 +166,11 @@ export const PASSIVAS_SUBCLASSE = {
   FORTALEZA_VIVA: {
     BONUS_SOBREESCUDO_MAX_PERCENTUAL: 10, // +10% de Sobreescudo máximo
     REDUCAO_DANO_FISICO_RECEBIDO_PERCENTUAL: 5, // −5% de dano físico recebido
+  },
+  // Passiva do Ronin: Passo Livre
+  PASSO_LIVRE: {
+    BONUS_DANO_FISICO_PERCENTUAL: 5, // +5% de dano físico, sempre
+    REDUCAO_DANO_FISICO_RECEBIDO_PERCENTUAL: 5, // −5% de dano físico recebido, sempre
   },
   // Passiva do Kensei: Lâmina Perfeita
   LAMINA_PERFEITA: {
@@ -168,5 +197,6 @@ export const PASSIVA_POR_SUBCLASSE: Record<string, string> = {
   vanguarda: 'vanguarda_linha_de_frente',
   bastiao: 'bastiao_fortaleza_viva',
   kensei: 'kensei_lamina_perfeita',
+  ronin: 'ronin_passo_livre',
 };
 

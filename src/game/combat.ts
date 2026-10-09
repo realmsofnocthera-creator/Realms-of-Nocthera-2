@@ -2634,6 +2634,14 @@ function turnoDeCombateInterno(
           atacante.buffs = adicionarBuffs(atacante.buffs, resHab.buffs);
           buffsAplicados = resHab.buffs.map((b) => (b.tipo === 'atributo' ? `atributo:${b.atributo}` : b.tipo));
         }
+        // Buffs com chance (ex.: Sincronismo do Quatro Ventos, 30%): o sorteio é o do próprio ataque (golpe 99, fora dos golpes reais)
+        for (const { buff, chancePercentual } of resHab.buffsComChance ?? []) {
+          const sorteio = opcoesTurno?.sorteioCritico?.(i, 99);
+          if (sorteio !== undefined && sorteio < chancePercentual) {
+            atacante.buffs = adicionarBuffs(atacante.buffs, [buff]);
+            buffsAplicados = [...(buffsAplicados ?? []), buff.tipo === 'atributo' ? `atributo:${buff.atributo}` : buff.tipo];
+          }
+        }
         if (resHab.foco && resHab.foco.ignorarDefesaPercentual > 0) {
           novoFoco = Math.min(100, resHab.foco.ignorarDefesaPercentual);
         }
