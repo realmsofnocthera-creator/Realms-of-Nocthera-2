@@ -168,6 +168,26 @@ export const ASSASSINO_KIT = {
   },
 } as const;
 
+export const DUELISTA_KIT = {
+  // Estocada Dupla (ataqueBasico): Golpe Duplo
+  ESTOCADA_DUPLA: {
+    GOLPES: 2,
+    PERCENTUAL_DANO_POR_GOLPE: 55, // % do danoBase por golpe (físico); 110% no total
+  },
+  // Finta (habilidadeEspecial): Dano Replicado + Distração
+  FINTA: {
+    GOLPES: 3,
+    PERCENTUAL_DANO_POR_GOLPE: 55, // % do danoBase por golpe (físico); 165% no total
+    DISTRACAO_ACOES: 1, // o inimigo perde a próxima ação
+  },
+  // Duelo Final (ultimate)
+  DUELO_FINAL: {
+    GOLPES: 5,
+    PERCENTUAL_DANO_POR_GOLPE: 68, // % do danoBase por golpe (físico); 340% no total
+    SINCRONISMO_RODADAS: 2, // Sincronismo garantido
+  },
+} as const;
+
 /**
  * Constantes das passivas de subclasse.
  */
@@ -186,6 +206,11 @@ export const PASSIVAS_SUBCLASSE = {
   FORTALEZA_VIVA: {
     BONUS_SOBREESCUDO_MAX_PERCENTUAL: 10, // +10% de Sobreescudo máximo
     REDUCAO_DANO_FISICO_RECEBIDO_PERCENTUAL: 5, // −5% de dano físico recebido
+  },
+  // Passiva do Duelista: Postura de Duelo
+  POSTURA_DE_DUELO: {
+    BONUS_DANO_FISICO_PERCENTUAL: 3, // +3% de dano físico, sempre
+    REDUCAO_DANO_FISICO_RECEBIDO_PERCENTUAL: 6, // −6% de dano físico recebido, sempre
   },
   // Passiva do Assassino: Instinto Letal
   INSTINTO_LETAL: {
@@ -223,5 +248,6 @@ export const PASSIVA_POR_SUBCLASSE: Record<string, string> = {
   kensei: 'kensei_lamina_perfeita',
   ronin: 'ronin_passo_livre',
   assassino: 'assassino_instinto_letal',
+  duelista: 'duelista_postura_de_duelo',
 };
 
