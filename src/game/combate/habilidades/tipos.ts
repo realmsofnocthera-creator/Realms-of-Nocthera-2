@@ -112,6 +112,10 @@ export interface ModificadoresPassiva {
   bonusSobreescudoMaxPercentual: number;
   /** −% de dano mágico recebido (soma com as demais reduções, teto de 80%). */
   reducaoDanoMagicoRecebidoPercentual?: number;
+  /** +% de dano mágico causado, sempre. */
+  bonusDanoMagicoPercentual?: number;
+  /** +% de dano mágico causado a mais contra alvo com status negativo. */
+  bonusDanoMagicoContraStatusPercentual?: number;
   /** +% de eficácia de cura (soma com Fé Inabalável e Cicatrização). */
   bonusEficaciaCuraPercentual?: number;
 }

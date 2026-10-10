@@ -210,6 +210,28 @@ export const SACERDOTE_KIT = {
   },
 } as const;
 
+export const INQUISIDOR_KIT = {
+  // Sentença (ataqueBasico): dano sagrado com bônus contra Sombrio
+  SENTENCA: {
+    PERCENTUAL_DANO: 115, // % do danoBase (mágico, sagrado)
+    BONUS_CONTRA_SOMBRIO_PERCENTUAL: 15, // 10% da habilidade + 5% do pacote do elemento Sagrado
+  },
+  // Fogo Sagrado (habilidadeEspecial): dano sagrado + Queimadura + Enfraquecimento
+  FOGO_SAGRADO: {
+    PERCENTUAL_DANO: 165, // % do danoBase (mágico, sagrado)
+    QUEIMADURA_CHANCE_EXTRA_PERCENTUAL: 20, // pontos somados à chance base da Queimadura (6%): 26% no total
+    ENFRAQUECIMENTO_PERCENTUAL: 20, // o alvo causa 20% menos dano
+    ENFRAQUECIMENTO_RODADAS: 2,
+  },
+  // Julgamento Final (ultimate)
+  JULGAMENTO_FINAL: {
+    PERCENTUAL_DANO: 330, // % do danoBase (mágico, sagrado)
+    IGNORAR_DEFESA_PERCENTUAL: 15, // % da Defesa Mágica / Mitigação ignorada
+    BONUS_CONTRA_SOMBRIO_PERCENTUAL: 25, // % de dano adicional contra alvo do elemento Sombrio
+    CURA_PERCENTUAL_DANO_CAUSADO: 15, // % do dano causado vira cura
+  },
+} as const;
+
 /**
  * Constantes das passivas de subclasse.
  */
@@ -228,6 +250,11 @@ export const PASSIVAS_SUBCLASSE = {
   FORTALEZA_VIVA: {
     BONUS_SOBREESCUDO_MAX_PERCENTUAL: 10, // +10% de Sobreescudo máximo
     REDUCAO_DANO_FISICO_RECEBIDO_PERCENTUAL: 5, // −5% de dano físico recebido
+  },
+  // Passiva do Inquisidor: Olhar Julgador
+  OLHAR_JULGADOR: {
+    BONUS_DANO_MAGICO_PERCENTUAL: 6, // +6% de dano mágico, sempre
+    BONUS_DANO_MAGICO_CONTRA_STATUS_PERCENTUAL: 5, // +5% extra contra alvo com status negativo
   },
   // Passiva do Sacerdote: Aura Sagrada
   AURA_SAGRADA: {
@@ -277,5 +304,6 @@ export const PASSIVA_POR_SUBCLASSE: Record<string, string> = {
   assassino: 'assassino_instinto_letal',
   duelista: 'duelista_postura_de_duelo',
   sacerdote: 'sacerdote_aura_sagrada',
+  inquisidor: 'inquisidor_olhar_julgador',
 };
 

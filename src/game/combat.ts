@@ -2359,6 +2359,12 @@ function turnoDeCombateInterno(
       nivel: nivelAtacante,
     });
 
+    // Bônus de dano mágico da passiva da subclasse (ex.: Olhar Julgador do Inquisidor), com o extra contra alvo com status negativo
+    const alvoComStatusNegativo =
+      (defensor.statusAtivos?.length ?? 0) > 0 || condicoesDoAlvo(defensor).length > 0;
+    const bonusDanoMagicoPassiva =
+      (modsPassivaAtacante.bonusDanoMagicoPercentual ?? 0) +
+      (alvoComStatusNegativo ? modsPassivaAtacante.bonusDanoMagicoContraStatusPercentual ?? 0 : 0);
     // Eficácia de cura da passiva da subclasse (ex.: Aura Sagrada do Sacerdote): soma com Fé Inabalável e Cicatrização
     const bonusEficaciaCuraAtacante = modsPassivaAtacante.bonusEficaciaCuraPercentual ?? 0;
     // O Profeta calcula a ação da classe antes da habilidade equipada: se a habilidade da subclasse tomar o lugar, a cura da classe é desfeita
@@ -2486,10 +2492,10 @@ function turnoDeCombateInterno(
       const fatorCuraProfeta = Math.max(0, fatorCuraPercentual(atacante.debuffs) + bonusEficaciaCuraAtacante) / 100;
       const curaProfeta = acaoProfeta.curaHp * fatorCuraProfeta;
       danoBruto =
-        acaoProfeta.causaDano && bonusDanoBuffs !== 0
+        acaoProfeta.causaDano && bonusDanoBuffs + bonusDanoMagicoPassiva !== 0
           ? Math.max(
               GAME_CONFIG.DANO_MINIMO,
-              Math.ceil((acaoProfeta.danoBruto * Math.max(0, 100 + bonusDanoBuffs)) / 100)
+              Math.ceil((acaoProfeta.danoBruto * Math.max(0, 100 + bonusDanoBuffs + bonusDanoMagicoPassiva)) / 100)
             )
           : acaoProfeta.danoBruto;
       acaoCausaDano = acaoProfeta.causaDano;
@@ -2595,7 +2601,7 @@ function turnoDeCombateInterno(
           danoBase,
           bonusDanoExtraPercentual:
             passivasClasse.bonusDanoPercentual +
-            (tipoPrevisto === 'fisico' ? modsPassivaAtacante.bonusDanoFisicoPercentual : 0),
+            (tipoPrevisto === 'fisico' ? modsPassivaAtacante.bonusDanoFisicoPercentual : bonusDanoMagicoPassiva),
         };
 
         const resHab = aplicarBonusElemental(defHab.executar(ctxHab));
