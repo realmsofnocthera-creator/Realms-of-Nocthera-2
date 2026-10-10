@@ -251,6 +251,25 @@ export const ARQUIMAGO_KIT = {
   },
 } as const;
 
+export const SABIO_ARCANO_KIT = {
+  // Lança de Gelo (ataqueBasico): dano de Gelo com o pacote do elemento + Congelamento
+  LANCA_DE_GELO: {
+    PERCENTUAL_DANO: 105, // % do danoBase (mágico, Gelo)
+    CONGELAMENTO_CHANCE_EXTRA_PERCENTUAL: 5, // pontos somados à chance base do Congelamento (5%): 10% no total
+  },
+  // Feitiço do Torpor (habilidadeEspecial): dano mágico + Sono
+  FEITICO_DO_TORPOR: {
+    PERCENTUAL_DANO: 160, // % do danoBase (mágico)
+    SONO_CHANCE_EXTRA_PERCENTUAL: 12, // pontos somados à chance base do Sono (3%): 15% no total
+  },
+  // Eclipse da Mente (ultimate)
+  ECLIPSE_DA_MENTE: {
+    PERCENTUAL_DANO: 330, // % do danoBase (mágico)
+    IGNORAR_DEFESA_PERCENTUAL: 10, // % da Defesa Mágica / Mitigação ignorada
+    LOUCURA_CHANCE_EXTRA_PERCENTUAL: 10, // pontos somados à chance base da Loucura (5%): 15% no total
+  },
+} as const;
+
 /**
  * Constantes das passivas de subclasse.
  */
@@ -269,6 +288,11 @@ export const PASSIVAS_SUBCLASSE = {
   FORTALEZA_VIVA: {
     BONUS_SOBREESCUDO_MAX_PERCENTUAL: 10, // +10% de Sobreescudo máximo
     REDUCAO_DANO_FISICO_RECEBIDO_PERCENTUAL: 5, // −5% de dano físico recebido
+  },
+  // Passiva do Sábio Arcano: Sabedoria Arcana
+  SABEDORIA_ARCANA: {
+    BONUS_DANO_MAGICO_PERCENTUAL: 4, // +4% de dano mágico, sempre
+    REDUCAO_DANO_MAGICO_RECEBIDO_PERCENTUAL: 5, // −5% de dano mágico recebido, sempre
   },
   // Passiva do Arquimago: Poder Arcano
   PODER_ARCANO: {
@@ -329,5 +353,6 @@ export const PASSIVA_POR_SUBCLASSE: Record<string, string> = {
   sacerdote: 'sacerdote_aura_sagrada',
   inquisidor: 'inquisidor_olhar_julgador',
   arquimago: 'arquimago_poder_arcano',
+  sabio_arcano: 'sabio_arcano_sabedoria_arcana',
 };
 
