@@ -5,6 +5,7 @@ import { getClassById } from '@/rules/classes';
 import { getAvatarById } from '@/rules/avatars';
 import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import { SUBCLASSES } from '@/rules/subclasses';
+import { custoDoTier } from '@/rules/subclasseTiers';
 import { MONSTERS_MAP } from '@/rules/monsters';
 import {
   calcularAgilidadeEfetiva,
@@ -59,6 +60,8 @@ export interface CharacterDocument {
   fragmentosAlma?: number;
   subclasseAtualId?: string | null;
   subclasseTiers?: Record<string, number>;
+  /** Fragmentos de cada subclasse (dropam na batalha sangrenta, Etapa 5); o tier 4 gasta 5 da própria subclasse. */
+  fragmentosSubclasse?: Record<string, number>;
   bonusSubclasseAplicado?: Attributes;
   atributos: Attributes;
   ouro: number;
@@ -103,7 +106,7 @@ export interface TransactionDocument {
   uid: string;
   tipo: 'ganho' | 'perda';
   quantidade: number;
-  moeda?: 'ouro' | 'diamantes' | 'fragmentosAlma';
+  moeda?: 'ouro' | 'diamantes' | 'fragmentosAlma' | 'fragmentosSubclasse';
   motivo: string;
   timestamp: string;
 }
@@ -184,6 +187,7 @@ function normalizarPersonagem(char: CharacterDocument): CharacterDocument {
     fragmentosAlma: char.fragmentosAlma ?? 0,
     subclasseAtualId: char.subclasseAtualId ?? null,
     subclasseTiers: char.subclasseTiers ?? {},
+    fragmentosSubclasse: char.fragmentosSubclasse ?? {},
     pontosAlocadosPorNivel: char.pontosAlocadosPorNivel ?? { ...ZEROS_ATRIBUTOS },
     habilidadesEquipadas: normalizarHabilidadesEquipadas(char.classeId, char.habilidadesEquipadas),
     ...calcularAtributosDerivados(char.atributos, char.classeId, char.nivel, char),
@@ -204,6 +208,7 @@ function mesclarPersonagem(
         ? updates.subclasseAtualId
         : (current.subclasseAtualId ?? null),
     subclasseTiers: updates.subclasseTiers ?? current.subclasseTiers ?? {},
+    fragmentosSubclasse: updates.fragmentosSubclasse ?? current.fragmentosSubclasse ?? {},
     bonusSubclasseAplicado:
       updates.bonusSubclasseAplicado !== undefined
         ? updates.bonusSubclasseAplicado
@@ -504,6 +509,7 @@ export async function createCharacter(
     fragmentosAlma: 0,
     subclasseAtualId: null,
     subclasseTiers: {},
+    fragmentosSubclasse: {},
     atributos: atributosFinais,
     ouro: 0,
     diamantes: 0,
@@ -700,8 +706,9 @@ export async function resetarAtributos(uid: string): Promise<CharacterDocument> 
 
 /**
  * Desbloqueia ou troca a subclasse do personagem.
- * - Primeiro desbloqueio: valida requisitos de nível, ouro e fragmentos de alma; cobra ouro e fragmentos.
- * - Troca de subclasse: cobra diamantes; não cobra ouro nem fragmentos.
+ * - Subclasse nova (nunca desbloqueada por este personagem): paga o tier 0 (30 fragmentos de alma e 10.000 de ouro)
+ *   e começa no tier 0. Vale também para a 1ª subclasse e para as seguintes.
+ * - Subclasse já desbloqueada (o tier dela fica guardado): a troca custa só os diamantes, sem ouro nem fragmentos.
  * - Cobrança e troca são gravadas na mesma transação.
  */
 export async function escolherSubclasse(
@@ -726,8 +733,10 @@ export async function escolherSubclasse(
     }
 
     const original = character;
-    if (!character.subclasseAtualId) {
-      // A) Primeiro desbloqueio
+    const custoDesbloqueio = custoDoTier(0);
+    const jaDesbloqueada = (character.subclasseTiers ?? {})[novaSubclasse.id] !== undefined;
+    if (!jaDesbloqueada) {
+      // A) Subclasse nova: paga o tier 0
       const validacaoReq = verificarRequisitosDesbloqueio({
         nivel: character.nivel,
         ouro: character.ouro,
@@ -741,18 +750,18 @@ export async function escolherSubclasse(
         ctx,
         character,
         'ouro',
-        -GAME_CONFIG.SUBCLASSE_CUSTO_OURO,
+        -custoDesbloqueio.ouro,
         'Desbloqueio de subclasse'
       ).character;
       character = alterarSaldoEm(
         ctx,
         character,
         'fragmentosAlma',
-        -GAME_CONFIG.SUBCLASSE_CUSTO_FRAGMENTOS_ALMA,
+        -custoDesbloqueio.fragmentosAlma,
         'Desbloqueio de subclasse'
       ).character;
     } else {
-      // B) Troca de subclasse (já tem subclasseAtualId)
+      // B) Troca para uma subclasse já desbloqueada
       character = alterarSaldoEm(
         ctx,
         character,
@@ -782,6 +791,71 @@ export async function escolherSubclasse(
       bonusSubclasseAplicado: novaSubclasse.bonusAtributos,
       subclasseAtualId: novaSubclasse.id,
       subclasseTiers: novosTiers,
+    });
+  });
+}
+
+/**
+ * Sobe a subclasse ao próximo tier (1 a 4), em ordem, pagando ouro e fragmentos de alma.
+ * O tier 4 também gasta 5 fragmentos da própria subclasse. A subclasse precisa estar desbloqueada
+ * (não precisa estar ativa). Nada é gravado se faltar qualquer recurso.
+ */
+export async function subirTierSubclasse(
+  uid: string,
+  subclasseId: unknown
+): Promise<CharacterDocument> {
+  return repositorio.executarTransacao('subirTierSubclasse', async (ctx) => {
+    let character = await carregarPersonagem(ctx, uid);
+
+    if (typeof subclasseId !== 'string' || !subclasseId.trim()) {
+      throw new Error('Subclasse inválida');
+    }
+    const idNormalizado = subclasseId.trim().toLowerCase();
+    const subclasse = SUBCLASSES.find((s) => s.id === idNormalizado);
+    if (!subclasse || subclasse.classeId !== character.classeId) {
+      throw new Error('Subclasse inválida');
+    }
+
+    const tiers = character.subclasseTiers ?? {};
+    const tierAtual = tiers[subclasse.id];
+    if (tierAtual === undefined) {
+      throw new Error('Subclasse não desbloqueada');
+    }
+    if (tierAtual >= GAME_CONFIG.SUBCLASSE_TIER_MAX) {
+      throw new Error('Tier máximo atingido');
+    }
+
+    const proximoTier = tierAtual + 1;
+    const custo = custoDoTier(proximoTier);
+    const original = character;
+    const motivo = `Tier ${proximoTier} da subclasse ${subclasse.nome}`;
+
+    character = alterarSaldoEm(ctx, character, 'ouro', -custo.ouro, motivo).character;
+    character = alterarSaldoEm(ctx, character, 'fragmentosAlma', -custo.fragmentosAlma, motivo).character;
+
+    let fragmentosSubclasse = character.fragmentosSubclasse ?? {};
+    if (custo.fragmentosSubclasse > 0) {
+      const saldo = fragmentosSubclasse[subclasse.id] ?? 0;
+      if (saldo < custo.fragmentosSubclasse) {
+        throw new Error('Fragmentos de subclasse insuficientes');
+      }
+      fragmentosSubclasse = { ...fragmentosSubclasse, [subclasse.id]: saldo - custo.fragmentosSubclasse };
+      ctx.registrarTransacao({
+        id: novoIdTransacao(),
+        uid: character.uid,
+        tipo: 'perda',
+        quantidade: custo.fragmentosSubclasse,
+        moeda: 'fragmentosSubclasse',
+        motivo,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    return salvarPersonagem(ctx, original, {
+      ouro: character.ouro,
+      fragmentosAlma: character.fragmentosAlma,
+      fragmentosSubclasse,
+      subclasseTiers: { ...tiers, [subclasse.id]: proximoTier },
     });
   });
 }

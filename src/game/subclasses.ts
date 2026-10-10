@@ -1,6 +1,7 @@
 import { ATTRIBUTES, Attributes } from '@/rules/attributes';
 import { GAME_CONFIG } from '@/rules/config';
 import { Subclasse, SUBCLASSES } from '@/rules/subclasses';
+import { custoDoTier } from '@/rules/subclasseTiers';
 
 /**
  * Retorna as subclasses pertencentes à classe informada.
@@ -39,11 +40,12 @@ export function verificarRequisitosDesbloqueio(
     return { ok: false, motivo: 'Nível insuficiente' };
   }
 
-  if (input.ouro < GAME_CONFIG.SUBCLASSE_CUSTO_OURO) {
+  const custo = custoDoTier(0);
+  if (input.ouro < custo.ouro) {
     return { ok: false, motivo: 'Ouro insuficiente' };
   }
 
-  if (input.fragmentosAlma < GAME_CONFIG.SUBCLASSE_CUSTO_FRAGMENTOS_ALMA) {
+  if (input.fragmentosAlma < custo.fragmentosAlma) {
     return { ok: false, motivo: 'Fragmentos de alma insuficientes' };
   }
 

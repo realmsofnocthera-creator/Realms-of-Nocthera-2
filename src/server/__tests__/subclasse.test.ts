@@ -9,6 +9,7 @@ import {
 } from '@/server/characterService';
 import { getTransactionsByUid, resetCharacterStore, setTestPersistenceFailHook } from '@/test/repositorioMemoria';
 import { GAME_CONFIG } from '@/rules/config';
+import { custoDoTier } from '@/rules/subclasseTiers';
 import { obterSubclasse } from '@/game/subclasses';
 import { tokenDeTeste } from '@/test/firebaseAdminMock';
 
@@ -38,14 +39,14 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
 
     return await updateCharacter(uid, {
       nivel: 20,
-      ouro: 15000,
-      fragmentosAlma: 10,
+      ouro: 100000,
+      fragmentosAlma: 100,
       diamantes: 200,
       ...overrides,
     });
   }
 
-  it('(a) primeiro desbloqueio com requisitos ok: cobra exatamente 10000 de ouro e 5 fragmentos, soma os 40 pontos nos atributos finais, define subclasseAtualId, bonusSubclasseAplicado e subclasseTiers[id] = 0, e grava transações de ouro e de fragmentos', async () => {
+  it('(a) primeiro desbloqueio com requisitos ok: cobra exatamente 10000 de ouro e 30 fragmentos (tier 0), soma os 40 pontos nos atributos finais, define subclasseAtualId, bonusSubclasseAplicado e subclasseTiers[id] = 0, e grava transações de ouro e de fragmentos', async () => {
     const charInicial = await setupPersonagem('user_sub_a');
     const atributosAntes = { ...charInicial.atributos };
 
@@ -53,8 +54,8 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
     const charApos = await escolherSubclasse('user_sub_a', 'berserker');
 
     // Cobrança
-    expect(charApos.ouro).toBe(15000 - GAME_CONFIG.SUBCLASSE_CUSTO_OURO); // 5000
-    expect(charApos.fragmentosAlma).toBe(10 - GAME_CONFIG.SUBCLASSE_CUSTO_FRAGMENTOS_ALMA); // 5
+    expect(charApos.ouro).toBe(100000 - custoDoTier(0).ouro); // 90000
+    expect(charApos.fragmentosAlma).toBe(100 - custoDoTier(0).fragmentosAlma); // 70
 
     // Atributos somados
     expect(charApos.atributos.forca).toBe(atributosAntes.forca + berserker.bonusAtributos.forca);
@@ -79,7 +80,7 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
     expect(txOuro?.quantidade).toBe(10000);
 
     expect(txFragmentos).toBeDefined();
-    expect(txFragmentos?.quantidade).toBe(5);
+    expect(txFragmentos?.quantidade).toBe(30);
   });
 
   it('(b) requisitos insuficientes (um teste por motivo: nível, ouro, fragmentos): lança a mensagem certa e NÃO altera ouro, fragmentos nem atributos', async () => {
@@ -105,8 +106,8 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
     expect(depois2?.fragmentosAlma).toBe(snap2?.fragmentosAlma);
     expect(depois2?.atributos).toEqual(snap2?.atributos);
 
-    // 3. Fragmentos de alma insuficientes (< 5)
-    await setupPersonagem('user_sub_b3', 'barbaro', { fragmentosAlma: 4 });
+    // 3. Fragmentos de alma insuficientes (< 30)
+    await setupPersonagem('user_sub_b3', 'barbaro', { fragmentosAlma: 29 });
     const snap3 = await getCharacterByUid('user_sub_b3');
 
     await expect(escolherSubclasse('user_sub_b3', 'berserker')).rejects.toThrow(
@@ -115,7 +116,7 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
 
     const depois3 = await getCharacterByUid('user_sub_b3');
     expect(depois3?.ouro).toBe(snap3?.ouro);
-    expect(depois3?.fragmentosAlma).toBe(4);
+    expect(depois3?.fragmentosAlma).toBe(29);
     expect(depois3?.atributos).toEqual(snap3?.atributos);
   });
 
@@ -149,7 +150,7 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
     expect(snapFinal?.subclasseAtualId).toBe('berserker');
   });
 
-  it('(d) troca: cobra só 100 diamantes (ouro e fragmentos intactos), remove o bônus antigo e aplica o novo (atributos finais corretos), tier da nova começa em 0', async () => {
+  it('(d) subclasse nova: paga o tier 0 (sem diamantes), remove o bônus antigo e aplica o novo (atributos finais corretos), tier da nova começa em 0; voltar para uma já desbloqueada custa só 100 diamantes', async () => {
     await setupPersonagem('user_sub_d', 'barbaro');
     const charBase = await getCharacterByUid('user_sub_d');
     const atributosBase = { ...charBase!.atributos };
@@ -163,13 +164,11 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
 
     const colosso = obterSubclasse('colosso')!;
 
-    // Troca para Colosso
+    // Troca para Colosso (nunca desbloqueada): paga o tier 0 e não paga diamantes
     const charColosso = await escolherSubclasse('user_sub_d', 'colosso');
-
-    // Diamantes cobrados, ouro e fragmentos intactos
-    expect(charColosso.diamantes).toBe(diamantesAntesTroca - GAME_CONFIG.SUBCLASSE_CUSTO_TROCA_DIAMANTES);
-    expect(charColosso.ouro).toBe(ouroAposDesbloqueio);
-    expect(charColosso.fragmentosAlma).toBe(fragmentosAposDesbloqueio);
+    expect(charColosso.diamantes).toBe(diamantesAntesTroca);
+    expect(charColosso.ouro).toBe(ouroAposDesbloqueio - custoDoTier(0).ouro);
+    expect(charColosso.fragmentosAlma).toBe(fragmentosAposDesbloqueio! - custoDoTier(0).fragmentosAlma);
 
     // Atributos: retirou Berserker (+20 for, +12 vig, +8 agi) e somou Colosso (+6 for, +18 vig, +16 vit)
     expect(charColosso.atributos.forca).toBe(atributosBase.forca + colosso.bonusAtributos.forca);
@@ -181,6 +180,13 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
     expect(charColosso.subclasseAtualId).toBe('colosso');
     expect(charColosso.bonusSubclasseAplicado).toEqual(colosso.bonusAtributos);
     expect(charColosso.subclasseTiers?.['colosso']).toBe(0);
+
+    // Voltar para o Berserker (já desbloqueado): só diamantes, ouro e fragmentos intactos
+    const charVolta = await escolherSubclasse('user_sub_d', 'berserker');
+    expect(charVolta.diamantes).toBe(diamantesAntesTroca - GAME_CONFIG.SUBCLASSE_CUSTO_TROCA_DIAMANTES);
+    expect(charVolta.ouro).toBe(charColosso.ouro);
+    expect(charVolta.fragmentosAlma).toBe(charColosso.fragmentosAlma);
+    expect(charVolta.subclasseAtualId).toBe('berserker');
 
     // Transação de troca
     const txs = getTransactionsByUid('user_sub_d');
@@ -219,16 +225,17 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
   it('(f) troca sem diamantes suficientes: lança "Diamantes insuficientes" e não altera nada', async () => {
     await setupPersonagem('user_sub_f', 'barbaro');
     await escolherSubclasse('user_sub_f', 'berserker');
+    await escolherSubclasse('user_sub_f', 'colosso');
 
-    // Deixa saldo de diamantes abaixo de 100
+    // Deixa saldo de diamantes abaixo de 100 e tenta voltar para o Berserker (já desbloqueado)
     await updateCharacter('user_sub_f', { diamantes: 50 });
     const snapAntes = (await getCharacterByUid('user_sub_f'))!;
 
-    await expect(escolherSubclasse('user_sub_f', 'colosso')).rejects.toThrow('Diamantes insuficientes');
+    await expect(escolherSubclasse('user_sub_f', 'berserker')).rejects.toThrow('Diamantes insuficientes');
 
     const snapDepois = (await getCharacterByUid('user_sub_f'))!;
     expect(snapDepois.diamantes).toBe(50);
-    expect(snapDepois.subclasseAtualId).toBe('berserker');
+    expect(snapDepois.subclasseAtualId).toBe('colosso');
     expect(snapDepois.atributos).toEqual(snapAntes.atributos);
   });
 
@@ -249,14 +256,15 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
     setTestPersistenceFailHook(null);
 
     const charG1 = (await getCharacterByUid('user_sub_g1'))!;
-    expect(charG1.ouro).toBe(15000);
-    expect(charG1.fragmentosAlma).toBe(10);
+    expect(charG1.ouro).toBe(100000);
+    expect(charG1.fragmentosAlma).toBe(100);
     expect(charG1.subclasseAtualId).toBeNull();
     expect(getTransactionsByUid('user_sub_g1').length).toBe(txAntesG1);
 
     // 2. Troca de subclasse
     await setupPersonagem('user_sub_g2', 'barbaro');
     await escolherSubclasse('user_sub_g2', 'berserker');
+    await escolherSubclasse('user_sub_g2', 'colosso');
     const diamantesAntesG2 = (await getCharacterByUid('user_sub_g2'))!.diamantes!;
     const txAntesG2 = getTransactionsByUid('user_sub_g2').length;
 
@@ -266,14 +274,14 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
       }
     });
 
-    await expect(escolherSubclasse('user_sub_g2', 'colosso')).rejects.toThrow(
+    await expect(escolherSubclasse('user_sub_g2', 'berserker')).rejects.toThrow(
       'Falha simulada na troca de subclasse'
     );
     setTestPersistenceFailHook(null);
 
     const charG2 = (await getCharacterByUid('user_sub_g2'))!;
     expect(charG2.diamantes).toBe(diamantesAntesG2);
-    expect(charG2.subclasseAtualId).toBe('berserker');
+    expect(charG2.subclasseAtualId).toBe('colosso');
     expect(getTransactionsByUid('user_sub_g2').length).toBe(txAntesG2);
   });
 
@@ -293,8 +301,8 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
     expect(rejeitado.reason?.message).toBe('Subclasse já ativa');
 
     const charFinal = (await getCharacterByUid('user_sub_h'))!;
-    expect(charFinal.ouro).toBe(15000 - GAME_CONFIG.SUBCLASSE_CUSTO_OURO); // Cobrou só uma vez (10000)
-    expect(charFinal.fragmentosAlma).toBe(10 - GAME_CONFIG.SUBCLASSE_CUSTO_FRAGMENTOS_ALMA); // Cobrou só uma vez (5)
+    expect(charFinal.ouro).toBe(100000 - custoDoTier(0).ouro); // Cobrou só uma vez (10000)
+    expect(charFinal.fragmentosAlma).toBe(100 - custoDoTier(0).fragmentosAlma); // Cobrou só uma vez (30)
     expect(charFinal.subclasseAtualId).toBe('berserker');
   });
 

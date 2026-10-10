@@ -23,3 +23,4 @@ export { obterSlotAcionado } from './slot';
 export { registrarHabilidadesDeSubclasse } from './registrarSubclasses';
 export { aplicarPassivasDanoDaClasse, separarPassivasDanoDaClasse } from './danoBase';
 export { obterModificadoresPassivaSubclasse } from './passivas';
+export { habilidadeLiberadaPorTier, subclasseDaHabilidade } from './tiers';
