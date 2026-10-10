@@ -8,6 +8,7 @@ import { HABILIDADES_BASTIAO, PASSIVA_BASTIAO } from './subclasses/bastiao';
 import { HABILIDADES_VANGUARDA, PASSIVA_VANGUARDA } from './subclasses/vanguarda';
 import { HABILIDADES_SACERDOTE, PASSIVA_SACERDOTE } from './subclasses/sacerdote';
 import { HABILIDADES_INQUISIDOR, PASSIVA_INQUISIDOR } from './subclasses/inquisidor';
+import { HABILIDADES_ARQUIMAGO, PASSIVA_ARQUIMAGO } from './subclasses/arquimago';
 import { DefinicaoHabilidade, DefinicaoPassiva } from './tipos';
 
 /** Kits de subclasse que o jogo já tem. Novas subclasses entram aqui. */
@@ -22,6 +23,7 @@ export const HABILIDADES_PADRAO: readonly DefinicaoHabilidade[] = [
   ...HABILIDADES_DUELISTA,
   ...HABILIDADES_SACERDOTE,
   ...HABILIDADES_INQUISIDOR,
+  ...HABILIDADES_ARQUIMAGO,
 ];
 
-export const PASSIVAS_PADRAO: readonly DefinicaoPassiva[] = [PASSIVA_BERSERKER, PASSIVA_COLOSSO, PASSIVA_VANGUARDA, PASSIVA_BASTIAO, PASSIVA_KENSEI, PASSIVA_RONIN, PASSIVA_ASSASSINO, PASSIVA_DUELISTA, PASSIVA_SACERDOTE, PASSIVA_INQUISIDOR];
+export const PASSIVAS_PADRAO: readonly DefinicaoPassiva[] = [PASSIVA_BERSERKER, PASSIVA_COLOSSO, PASSIVA_VANGUARDA, PASSIVA_BASTIAO, PASSIVA_KENSEI, PASSIVA_RONIN, PASSIVA_ASSASSINO, PASSIVA_DUELISTA, PASSIVA_SACERDOTE, PASSIVA_INQUISIDOR, PASSIVA_ARQUIMAGO];

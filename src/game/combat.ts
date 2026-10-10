@@ -2618,6 +2618,10 @@ function turnoDeCombateInterno(
           bonusDanoExtraPercentual:
             (ctxHab.bonusDanoExtraPercentual ?? 0) +
             bonusAcumulativo +
+            // Acúmulo Arcano do Feiticeiro: as cargas gastas neste ataque valem também para a habilidade equipada
+            (ehFeiticeiroAtacante && !racialDeAtaque && cargasAcumuloConsumidas
+              ? aplicarCargasAcumuloArcano(0, cargasAcumuloConsumidas, nivelAtacante).percentualBonusAplicado
+              : 0) +
             bonusDanoBuffsPorTipo(tipoPrevisto),
         };
         const { danoBruto: novoDanoBruto, mitigacaoEfetiva } = resolverDanoHabilidade(
@@ -2701,8 +2705,10 @@ function turnoDeCombateInterno(
         curaHp = undefined;
         instintoSobrevivenciaAtivo = undefined;
         iraAbaixo30Ativo = undefined;
-        cargasAcumuloConsumidas = undefined;
-        cargasAcumuloRestantes = undefined;
+        if (!ehFeiticeiroAtacante || racialDeAtaque) {
+          cargasAcumuloConsumidas = undefined;
+          cargasAcumuloRestantes = undefined;
+        }
         bonusSobreescudoCataclismoAtivo = undefined;
         cargasSedeSangueBandidoConsumidas = undefined;
         cargasSedeSangueBandidoRestantes = undefined;

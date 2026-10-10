@@ -232,6 +232,25 @@ export const INQUISIDOR_KIT = {
   },
 } as const;
 
+export const ARQUIMAGO_KIT = {
+  // Bola de Fogo (ataqueBasico): dano de Fogo com o pacote do elemento
+  BOLA_DE_FOGO: {
+    PERCENTUAL_DANO: 115, // % do danoBase (mágico, Fogo)
+  },
+  // Tempestade de Raios (habilidadeEspecial): Dano Replicado de Relâmpago + Paralisia
+  TEMPESTADE_DE_RAIOS: {
+    GOLPES: 3,
+    PERCENTUAL_DANO_POR_GOLPE: 60, // % do danoBase por golpe (mágico, Relâmpago); 180% no total
+    PARALISIA_CHANCE_EXTRA_PERCENTUAL: 7, // pontos somados à chance base da Paralisia (3%) e aos +5 do Relâmpago: 15% no total
+  },
+  // Meteoro (ultimate)
+  METEORO: {
+    PERCENTUAL_DANO: 360, // % do danoBase (mágico, Fogo)
+    IGNORAR_DEFESA_PERCENTUAL: 20, // % da Defesa Mágica / Mitigação ignorada
+    BONUS_CONTRA_SOBREESCUDO_PERCENTUAL: 25, // % de dano adicional se o alvo tiver Sobreescudo > 0
+  },
+} as const;
+
 /**
  * Constantes das passivas de subclasse.
  */
@@ -250,6 +269,10 @@ export const PASSIVAS_SUBCLASSE = {
   FORTALEZA_VIVA: {
     BONUS_SOBREESCUDO_MAX_PERCENTUAL: 10, // +10% de Sobreescudo máximo
     REDUCAO_DANO_FISICO_RECEBIDO_PERCENTUAL: 5, // −5% de dano físico recebido
+  },
+  // Passiva do Arquimago: Poder Arcano
+  PODER_ARCANO: {
+    BONUS_DANO_MAGICO_PERCENTUAL: 8, // +8% de dano mágico, sempre
   },
   // Passiva do Inquisidor: Olhar Julgador
   OLHAR_JULGADOR: {
@@ -305,5 +328,6 @@ export const PASSIVA_POR_SUBCLASSE: Record<string, string> = {
   duelista: 'duelista_postura_de_duelo',
   sacerdote: 'sacerdote_aura_sagrada',
   inquisidor: 'inquisidor_olhar_julgador',
+  arquimago: 'arquimago_poder_arcano',
 };
 
