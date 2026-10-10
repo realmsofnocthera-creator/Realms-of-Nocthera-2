@@ -2359,6 +2359,11 @@ function turnoDeCombateInterno(
       nivel: nivelAtacante,
     });
 
+    // Eficácia de cura da passiva da subclasse (ex.: Aura Sagrada do Sacerdote): soma com Fé Inabalável e Cicatrização
+    const bonusEficaciaCuraAtacante = modsPassivaAtacante.bonusEficaciaCuraPercentual ?? 0;
+    // O Profeta calcula a ação da classe antes da habilidade equipada: se a habilidade da subclasse tomar o lugar, a cura da classe é desfeita
+    const hpAntesAcaoProfeta = hpAtacanteAtual;
+
     // Bônus de dano de buffs de quem ataca (Ímpeto Imprudente e Delírio Controlado): entram na soma de cada caminho
     const impetoNesteAtaque =
       atacante.impeto && atacante.impeto.ataquesRestantes > 0 ? atacante.impeto : undefined;
@@ -2478,7 +2483,7 @@ function turnoDeCombateInterno(
         contadorMilagre,
       });
       // Cicatrização reduz a cura do Profeta (Bênção e Milagre)
-      const fatorCuraProfeta = fatorCuraPercentual(atacante.debuffs) / 100;
+      const fatorCuraProfeta = Math.max(0, fatorCuraPercentual(atacante.debuffs) + bonusEficaciaCuraAtacante) / 100;
       const curaProfeta = acaoProfeta.curaHp * fatorCuraProfeta;
       danoBruto =
         acaoProfeta.causaDano && bonusDanoBuffs !== 0
@@ -2681,6 +2686,11 @@ function turnoDeCombateInterno(
           danoPorGolpe = novoDanoBruto;
           golpes = Array.from({ length: resHab.numeroGolpes }, () => novoDanoBruto);
           danoBruto = novoDanoBruto * resHab.numeroGolpes;
+        }
+        // (o ataque racial não mexe nisso: a cura da classe continua valendo junto dele)
+        if (ehProfetaAtacante && !racialDeAtaque) {
+          hpAtacanteAtual = hpAntesAcaoProfeta;
+          cargasFe += cargasFeInabalavelConsumidas ?? 0;
         }
         curaHp = undefined;
         instintoSobrevivenciaAtivo = undefined;
@@ -2920,7 +2930,9 @@ function turnoDeCombateInterno(
     // Regra 1.2.2: as reduções de dano recebido somam, com teto de 80%
     // (no Cavaleiro, a soma é feita dentro de aplicarDefesaCavaleiro, junto das reduções dele)
     const reducaoRecebidaTotal =
-      (ehDanoFisico ? modsPassivaDefensor.reducaoDanoFisicoRecebidoPercentual : 0) +
+      (ehDanoFisico
+        ? modsPassivaDefensor.reducaoDanoFisicoRecebidoPercentual
+        : modsPassivaDefensor.reducaoDanoMagicoRecebidoPercentual ?? 0) +
       reducaoPorEfeitos;
     if (!ehCavaleiroDefensor && acaoCausaDano && reducaoRecebidaTotal > 0) {
       const reducaoLimitada = limitarReducaoDanoPercentual(reducaoRecebidaTotal);
@@ -3147,7 +3159,7 @@ function turnoDeCombateInterno(
     }
 
     // Cicatrização: as curas de quem a sofre ficam menos eficazes
-    const fatorCura = fatorCuraPercentual(atacante.debuffs) / 100;
+    const fatorCura = Math.max(0, fatorCuraPercentual(atacante.debuffs) + bonusEficaciaCuraAtacante) / 100;
 
     if (ehDanoFisico && temSedeDeSangue && racaAtacante) {
       hpAtacanteAtual = aplicarSedeDeSangue(
@@ -3767,7 +3779,20 @@ export function resolverCombate(
         }
       }
       if (c.hp > 0 && c.curaContinua) {
-        const tickCura = processarCuraContinua(c.curaContinua, c.hp, c.hpMax, fatorCuraPercentual(c.debuffs));
+        const bonusEficaciaCura =
+          obterModificadoresPassivaSubclasse({
+            subclasseAtualId: c.subclasseAtualId,
+            subclasseTiers: c.subclasseTiers,
+            hp: c.hp,
+            hpMax: c.hpMax,
+            nivel: c.nivel,
+          }).bonusEficaciaCuraPercentual ?? 0;
+        const tickCura = processarCuraContinua(
+          c.curaContinua,
+          c.hp,
+          c.hpMax,
+          Math.max(0, fatorCuraPercentual(c.debuffs) + bonusEficaciaCura)
+        );
         c.hp = tickCura.hp;
         c.curaContinua = tickCura.estado;
         eventosCuraDoTurno.push({ tipo: 'curaContinua', combatente: c.nome, valor: tickCura.cura });

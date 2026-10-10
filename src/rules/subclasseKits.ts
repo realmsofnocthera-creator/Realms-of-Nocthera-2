@@ -188,6 +188,28 @@ export const DUELISTA_KIT = {
   },
 } as const;
 
+export const SACERDOTE_KIT = {
+  // Toque Sagrado (ataqueBasico): dano sagrado + Cura Direta
+  TOQUE_SAGRADO: {
+    PERCENTUAL_DANO: 100, // % do danoBase (mágico, sagrado)
+    CURA_DIRETA_PERCENTUAL_HP_MAX: 3, // % do HP máximo
+  },
+  // Prece de Cura (habilidadeEspecial): dano sagrado + Limpeza + cura
+  PRECE_DE_CURA: {
+    PERCENTUAL_DANO: 85, // % do danoBase (mágico, sagrado)
+    LIMPEZA_EFEITOS: 1, // remove 1 efeito negativo
+    CURA_PERCENTUAL_HP_MAX: 10, // % do HP máximo
+  },
+  // Graça Redentora (ultimate): dano sagrado + Limpeza + Cura Contínua + Ressurreição Parcial
+  GRACA_REDENTORA: {
+    PERCENTUAL_DANO: 200, // % do danoBase (mágico, sagrado)
+    LIMPEZA_EFEITOS: 3, // remove até 3 efeitos negativos
+    CURA_CONTINUA_PERCENTUAL_HP_MAX: 5, // % do HP máximo por rodada
+    CURA_CONTINUA_RODADAS: 3,
+    RESSURREICAO_PERCENTUAL_HP_MAX: 30, // volta com 30% do HP se cair a 0 (uma vez por luta)
+  },
+} as const;
+
 /**
  * Constantes das passivas de subclasse.
  */
@@ -206,6 +228,11 @@ export const PASSIVAS_SUBCLASSE = {
   FORTALEZA_VIVA: {
     BONUS_SOBREESCUDO_MAX_PERCENTUAL: 10, // +10% de Sobreescudo máximo
     REDUCAO_DANO_FISICO_RECEBIDO_PERCENTUAL: 5, // −5% de dano físico recebido
+  },
+  // Passiva do Sacerdote: Aura Sagrada
+  AURA_SAGRADA: {
+    BONUS_EFICACIA_CURA_PERCENTUAL: 10, // +10% de eficácia de cura (soma com Fé Inabalável e Cicatrização)
+    REDUCAO_DANO_MAGICO_RECEBIDO_PERCENTUAL: 5, // −5% de dano mágico recebido, sempre
   },
   // Passiva do Duelista: Postura de Duelo
   POSTURA_DE_DUELO: {
@@ -249,5 +276,6 @@ export const PASSIVA_POR_SUBCLASSE: Record<string, string> = {
   ronin: 'ronin_passo_livre',
   assassino: 'assassino_instinto_letal',
   duelista: 'duelista_postura_de_duelo',
+  sacerdote: 'sacerdote_aura_sagrada',
 };
 

@@ -110,6 +110,10 @@ export interface ModificadoresPassiva {
   bonusDanoFisicoPercentual: number;
   reducaoDanoFisicoRecebidoPercentual: number;
   bonusSobreescudoMaxPercentual: number;
+  /** −% de dano mágico recebido (soma com as demais reduções, teto de 80%). */
+  reducaoDanoMagicoRecebidoPercentual?: number;
+  /** +% de eficácia de cura (soma com Fé Inabalável e Cicatrização). */
+  bonusEficaciaCuraPercentual?: number;
 }
 
 export interface DefinicaoPassiva {
