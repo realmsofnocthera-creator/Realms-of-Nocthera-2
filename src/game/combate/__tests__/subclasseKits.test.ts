@@ -302,6 +302,8 @@ describe('ORDEM 48C — Habilidades Ativas do Berserker e do Colosso', () => {
           inteligencia: 0,
           agilidade: 15,
         },
+        subclasseAtualId: 'berserker',
+        subclasseTiers: { berserker: 4 },
         habilidadesEquipadas: {
           ataqueBasico: 'berserker_golpe_desenfreado',
           habilidadeEspecial: 'berserker_investida_sangrenta',
@@ -357,6 +359,8 @@ describe('ORDEM 48C — Habilidades Ativas do Berserker e do Colosso', () => {
           inteligencia: 0,
           agilidade: 15,
         },
+        subclasseAtualId: 'colosso',
+        subclasseTiers: { colosso: 4 },
         habilidadesEquipadas: {
           ataqueBasico: 'colosso_golpe_esmagador',
           habilidadeEspecial: 'colosso_impacto_sismico',

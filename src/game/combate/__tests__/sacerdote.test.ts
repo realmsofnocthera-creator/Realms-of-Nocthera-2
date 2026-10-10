@@ -87,10 +87,13 @@ describe('Sacerdote — em combate', () => {
     expect(s.hp).toBe(500 + 33);
   });
 
-  it('sem a passiva (tier 0) o Toque Sagrado cura os 3% exatos', () => {
-    const s = sacerdote({ subclasseTiers: { sacerdote: 0 }, contadorBencaoDivina: 0, contadorMilagreDivino: 0 });
-    turnoDeCombate(s, alvo(), 1);
-    expect(s.hp).toBe(500 + 30);
+  it('sem o tier do espaço comprado a habilidade não vale e age a da classe (Toque Sagrado só no tier 2)', () => {
+    const s1 = sacerdote({ subclasseTiers: { sacerdote: 1 }, contadorBencaoDivina: 0, contadorMilagreDivino: 0 });
+    const atk = turnoDeCombate(s1, alvo(), 1).turnoLog.ataques[0];
+    expect(atk.habilidadeAcionada).toBe('Luz Sagrada');
+    expect(atk.efeitosCuraAplicados).toBeUndefined();
+    const s2 = sacerdote({ subclasseTiers: { sacerdote: 2 }, contadorBencaoDivina: 0, contadorMilagreDivino: 0 });
+    expect(turnoDeCombate(s2, alvo(), 1).turnoLog.ataques[0].habilidadeAcionada).toBe('Toque Sagrado');
   });
 
   it('a Prece de Cura toma o lugar da Bênção Divina sem somar a cura da classe', () => {

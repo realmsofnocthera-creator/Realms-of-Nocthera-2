@@ -128,6 +128,7 @@ import {
   ResultadoHabilidade,
   separarPassivasDanoDaClasse,
   obterHabilidade,
+  habilidadeLiberadaPorTier,
   obterModificadoresPassivaSubclasse,
   obterSlotAcionado,
   resolverDanoHabilidade,
@@ -2566,7 +2567,9 @@ function turnoDeCombateInterno(
     let elementoRacial: Elemento | undefined;
     if (atacante.classeId && (racialDeAtaque || atacante.habilidadesEquipadas)) {
       const slot = obterSlotAcionado(atacante.classeId, habilidadeAcionada);
-      const habId = slot && atacante.habilidadesEquipadas ? atacante.habilidadesEquipadas[slot] : undefined;
+      const habEquipada = slot && atacante.habilidadesEquipadas ? atacante.habilidadesEquipadas[slot] : undefined;
+      // Habilidade de subclasse só vale com a subclasse ativa e o tier do espaço comprado (2.1.4); senão age a da classe
+      const habId = habEquipada && habilidadeLiberadaPorTier(habEquipada, atacante) ? habEquipada : undefined;
       const defHab = racialDeAtaque?.definicao ?? (habId ? obterHabilidade(habId) : undefined);
       if (racialDeAtaque) {
         elementoRacial = racialDeAtaque.elemento;

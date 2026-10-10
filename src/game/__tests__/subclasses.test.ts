@@ -129,12 +129,12 @@ describe('ORDEM 43 — Dados e Funções Puras de Subclasses', () => {
     }
   });
 
-  it('(e) verificarRequisitosDesbloqueio: ok com nível 20, 10000 de ouro e 5 fragmentos; falha com 19 níveis, 9999 de ouro e 4 fragmentos (um caso por motivo)', () => {
+  it('(e) verificarRequisitosDesbloqueio: ok com nível 20, 10000 de ouro e 30 fragmentos; falha com 19 níveis, 9999 de ouro e 29 fragmentos (um caso por motivo)', () => {
     // Caso de sucesso exato
     const sucesso = verificarRequisitosDesbloqueio({
       nivel: 20,
       ouro: 10000,
-      fragmentosAlma: 5,
+      fragmentosAlma: 30,
     });
     expect(sucesso).toEqual({ ok: true });
 
@@ -142,7 +142,7 @@ describe('ORDEM 43 — Dados e Funções Puras de Subclasses', () => {
     const sucessoAcima = verificarRequisitosDesbloqueio({
       nivel: 25,
       ouro: 20000,
-      fragmentosAlma: 10,
+      fragmentosAlma: 40,
     });
     expect(sucessoAcima).toEqual({ ok: true });
 
@@ -150,7 +150,7 @@ describe('ORDEM 43 — Dados e Funções Puras de Subclasses', () => {
     const falhaNivel = verificarRequisitosDesbloqueio({
       nivel: 19,
       ouro: 10000,
-      fragmentosAlma: 5,
+      fragmentosAlma: 30,
     });
     expect(falhaNivel).toEqual({
       ok: false,
@@ -161,7 +161,7 @@ describe('ORDEM 43 — Dados e Funções Puras de Subclasses', () => {
     const falhaOuro = verificarRequisitosDesbloqueio({
       nivel: 20,
       ouro: 9999,
-      fragmentosAlma: 5,
+      fragmentosAlma: 30,
     });
     expect(falhaOuro).toEqual({
       ok: false,
@@ -172,7 +172,7 @@ describe('ORDEM 43 — Dados e Funções Puras de Subclasses', () => {
     const falhaFragmentos = verificarRequisitosDesbloqueio({
       nivel: 20,
       ouro: 10000,
-      fragmentosAlma: 4,
+      fragmentosAlma: 29,
     });
     expect(falhaFragmentos).toEqual({
       ok: false,
