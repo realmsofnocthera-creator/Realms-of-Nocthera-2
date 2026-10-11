@@ -23,6 +23,7 @@ import {
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { DesenvolvimentoMenu } from './DesenvolvimentoMenu';
 import { AtributosPanel } from './AtributosPanel';
+import { SubclassePanel } from './SubclassePanel';
 
 export function DesenvolvimentoScreen() {
   const router = useRouter();
@@ -286,6 +287,14 @@ export function DesenvolvimentoScreen() {
               isResetting={isResetting}
               feedback={feedback}
               className="h-full flex flex-col justify-between"
+            />
+          )}
+          {secaoAtiva === 'subclasse' && (
+            <SubclassePanel
+              character={character}
+              idToken={idToken}
+              onCharacterChange={setCharacter}
+              className="h-full"
             />
           )}
         </section>
