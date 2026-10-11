@@ -26,6 +26,13 @@ export const TIER_POR_ESPACO_HABILIDADE = {
   ultimate: 4,
 } as const;
 
+/** Espaço do kit que cada slot equipável recebe. */
+export const ESPACO_DO_SLOT = {
+  ataqueBasico: 'basico',
+  habilidadeEspecial: 'especial',
+  ultimate: 'ultimate',
+} as const;
+
 export function custoDoTier(tier: number): CustoTierSubclasse {
   if (!Number.isInteger(tier) || tier < 0 || tier > GAME_CONFIG.SUBCLASSE_TIER_MAX) {
     throw new Error(`Tier inválido: ${tier}`);

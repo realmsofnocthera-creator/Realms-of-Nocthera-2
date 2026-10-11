@@ -22,6 +22,8 @@ import {
   ZEROS_ATRIBUTOS,
   habilidadesPadraoDaClasse,
   normalizarHabilidadesEquipadas,
+  liberarHabilidadesDeOutraSubclasse,
+  equiparHabilidadeNoSlot,
   verificarRequisitosDesbloqueio,
   aplicarBonusSubclasse,
   removerBonusSubclasse,
@@ -791,7 +793,32 @@ export async function escolherSubclasse(
       bonusSubclasseAplicado: novaSubclasse.bonusAtributos,
       subclasseAtualId: novaSubclasse.id,
       subclasseTiers: novosTiers,
+      // Habilidades de outra subclasse voltam para as da classe
+      habilidadesEquipadas: liberarHabilidadesDeOutraSubclasse(
+        character.classeId,
+        normalizarHabilidadesEquipadas(character.classeId, character.habilidadesEquipadas),
+        novaSubclasse.id
+      ),
     });
+  });
+}
+
+/**
+ * Equipa, num espaço (ataqueBasico, habilidadeEspecial ou ultimate), a habilidade da classe ou a de kit
+ * da subclasse ativa com o tier comprado. Não cobra nada.
+ */
+export async function equiparHabilidade(
+  uid: string,
+  slot: unknown,
+  habilidadeId: unknown
+): Promise<CharacterDocument> {
+  return repositorio.executarTransacao('equiparHabilidade', async (ctx) => {
+    const character = await carregarPersonagem(ctx, uid);
+    const res = equiparHabilidadeNoSlot(character, slot, habilidadeId);
+    if (!res.ok) {
+      throw new Error(res.erro);
+    }
+    return salvarPersonagem(ctx, character, { habilidadesEquipadas: res.equipadas });
   });
 }
 
