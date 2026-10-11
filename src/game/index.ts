@@ -381,6 +381,8 @@ export {
   idsHabilidadesDaClasse,
   habilidadesPadraoDaClasse,
   normalizarHabilidadesEquipadas,
+  liberarHabilidadesDeOutraSubclasse,
+  equiparHabilidadeNoSlot,
 } from './habilidades';
 
 export {

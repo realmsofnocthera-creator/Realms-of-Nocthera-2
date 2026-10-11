@@ -1,6 +1,8 @@
 import { TIER_POR_ESPACO_HABILIDADE } from '@/rules/subclasseTiers';
 import { Subclasse, SUBCLASSES } from '@/rules/subclasses';
 import { obterHabilidade } from './registro';
+import { HABILIDADES_PADRAO } from './kitsPadrao';
+import { EspacoHabilidade } from './tipos';
 
 /** Subclasse dona de uma habilidade de kit (o id da habilidade começa com o id da subclasse). */
 export function subclasseDaHabilidade(habilidadeId: string): Subclasse | undefined {
@@ -23,4 +25,9 @@ export function habilidadeLiberadaPorTier(habilidadeId: string, c: ContextoTierH
   const espaco = obterHabilidade(habilidadeId)?.espaco;
   if (!espaco) return true;
   return (c.subclasseTiers?.[sub.id] ?? 0) >= TIER_POR_ESPACO_HABILIDADE[espaco];
+}
+
+/** Ids das habilidades do kit de uma subclasse, com o espaço de cada uma. */
+export function habilidadesDoKitDaSubclasse(subclasseId: string): { id: string; espaco: EspacoHabilidade }[] {
+  return HABILIDADES_PADRAO.filter((h) => h.id.startsWith(`${subclasseId}_`)).map((h) => ({ id: h.id, espaco: h.espaco }));
 }
