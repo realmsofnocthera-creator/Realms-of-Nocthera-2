@@ -707,11 +707,9 @@ export async function resetarAtributos(uid: string): Promise<CharacterDocument> 
 }
 
 /**
- * Desbloqueia ou troca a subclasse do personagem.
- * - Subclasse nova (nunca desbloqueada por este personagem): paga o tier 0 (30 fragmentos de alma e 10.000 de ouro)
- *   e começa no tier 0. Vale também para a 1ª subclasse e para as seguintes.
- * - Subclasse já desbloqueada (o tier dela fica guardado): a troca custa só os diamantes, sem ouro nem fragmentos.
- * - Cobrança e troca são gravadas na mesma transação.
+ * Escolhe (desbloqueia) a subclasse do personagem. Cada personagem tem uma subclasse só:
+ * paga o tier 0 (30 fragmentos de alma e 10.000 de ouro), começa no tier 0 e ganha o bônus de atributos.
+ * Quem já tem uma subclasse precisa resetar antes (resetarSubclasse). Cobrança e escolha na mesma transação.
  */
 export async function escolherSubclasse(
   uid: string,
@@ -733,45 +731,29 @@ export async function escolherSubclasse(
     if (character.subclasseAtualId === novaSubclasse.id) {
       throw new Error('Subclasse já ativa');
     }
+    if (character.subclasseAtualId) {
+      throw new Error('Você já tem uma subclasse. Resete para escolher outra.');
+    }
 
     const original = character;
     const custoDesbloqueio = custoDoTier(0);
-    const jaDesbloqueada = (character.subclasseTiers ?? {})[novaSubclasse.id] !== undefined;
-    if (!jaDesbloqueada) {
-      // A) Subclasse nova: paga o tier 0
-      const validacaoReq = verificarRequisitosDesbloqueio({
-        nivel: character.nivel,
-        ouro: character.ouro,
-        fragmentosAlma: character.fragmentosAlma ?? 0,
-      });
-      if (!validacaoReq.ok) {
-        throw new Error(validacaoReq.motivo || 'Requisitos não atendidos');
-      }
-
-      character = alterarSaldoEm(
-        ctx,
-        character,
-        'ouro',
-        -custoDesbloqueio.ouro,
-        'Desbloqueio de subclasse'
-      ).character;
-      character = alterarSaldoEm(
-        ctx,
-        character,
-        'fragmentosAlma',
-        -custoDesbloqueio.fragmentosAlma,
-        'Desbloqueio de subclasse'
-      ).character;
-    } else {
-      // B) Troca para uma subclasse já desbloqueada
-      character = alterarSaldoEm(
-        ctx,
-        character,
-        'diamantes',
-        -GAME_CONFIG.SUBCLASSE_CUSTO_TROCA_DIAMANTES,
-        'Troca de subclasse'
-      ).character;
+    const validacaoReq = verificarRequisitosDesbloqueio({
+      nivel: character.nivel,
+      ouro: character.ouro,
+      fragmentosAlma: character.fragmentosAlma ?? 0,
+    });
+    if (!validacaoReq.ok) {
+      throw new Error(validacaoReq.motivo || 'Requisitos não atendidos');
     }
+
+    character = alterarSaldoEm(ctx, character, 'ouro', -custoDesbloqueio.ouro, 'Desbloqueio de subclasse').character;
+    character = alterarSaldoEm(
+      ctx,
+      character,
+      'fragmentosAlma',
+      -custoDesbloqueio.fragmentosAlma,
+      'Desbloqueio de subclasse'
+    ).character;
 
     let atributosBase = character.atributos;
     if (character.bonusSubclasseAplicado) {
@@ -779,25 +761,51 @@ export async function escolherSubclasse(
     }
     const novosAtributos = aplicarBonusSubclasse(atributosBase, novaSubclasse.bonusAtributos);
 
-    const atuaisTiers = character.subclasseTiers ?? {};
-    const novosTiers: Record<string, number> = {
-      ...atuaisTiers,
-      [novaSubclasse.id]: atuaisTiers[novaSubclasse.id] ?? 0,
-    };
-
     return salvarPersonagem(ctx, original, {
       ouro: character.ouro,
       fragmentosAlma: character.fragmentosAlma,
-      diamantes: character.diamantes,
       atributos: novosAtributos,
       bonusSubclasseAplicado: novaSubclasse.bonusAtributos,
       subclasseAtualId: novaSubclasse.id,
-      subclasseTiers: novosTiers,
-      // Habilidades de outra subclasse voltam para as da classe
+      subclasseTiers: { [novaSubclasse.id]: 0 },
+    });
+  });
+}
+
+/**
+ * Reseta a subclasse (100 diamantes): o personagem perde a subclasse e os tiers, o bônus de atributos sai e as
+ * habilidades de subclasse voltam para as da classe. Para ter uma subclasse de novo, paga tudo outra vez
+ * (tier 0 em diante). Os fragmentos da própria subclasse continuam com o personagem.
+ */
+export async function resetarSubclasse(uid: string): Promise<CharacterDocument> {
+  return repositorio.executarTransacao('resetarSubclasse', async (ctx) => {
+    const character = await carregarPersonagem(ctx, uid);
+    if (!character.subclasseAtualId) {
+      throw new Error('Nenhuma subclasse para resetar');
+    }
+
+    const cobrado = alterarSaldoEm(
+      ctx,
+      character,
+      'diamantes',
+      -GAME_CONFIG.SUBCLASSE_CUSTO_RESET_DIAMANTES,
+      'Reset de subclasse'
+    ).character;
+
+    const atributos = character.bonusSubclasseAplicado
+      ? removerBonusSubclasse(character.atributos, character.bonusSubclasseAplicado)
+      : character.atributos;
+
+    return salvarPersonagem(ctx, character, {
+      diamantes: cobrado.diamantes,
+      atributos,
+      bonusSubclasseAplicado: { ...ZEROS_ATRIBUTOS },
+      subclasseAtualId: null,
+      subclasseTiers: {},
       habilidadesEquipadas: liberarHabilidadesDeOutraSubclasse(
         character.classeId,
         normalizarHabilidadesEquipadas(character.classeId, character.habilidadesEquipadas),
-        novaSubclasse.id
+        null
       ),
     });
   });
@@ -824,8 +832,8 @@ export async function equiparHabilidade(
 
 /**
  * Sobe a subclasse ao próximo tier (1 a 4), em ordem, pagando ouro e fragmentos de alma.
- * O tier 4 também gasta 5 fragmentos da própria subclasse. A subclasse precisa estar desbloqueada
- * (não precisa estar ativa). Nada é gravado se faltar qualquer recurso.
+ * O tier 4 também gasta 5 fragmentos da própria subclasse. Só vale para a subclasse do personagem.
+ * Nada é gravado se faltar qualquer recurso.
  */
 export async function subirTierSubclasse(
   uid: string,
@@ -845,7 +853,7 @@ export async function subirTierSubclasse(
 
     const tiers = character.subclasseTiers ?? {};
     const tierAtual = tiers[subclasse.id];
-    if (tierAtual === undefined) {
+    if (character.subclasseAtualId !== subclasse.id || tierAtual === undefined) {
       throw new Error('Subclasse não desbloqueada');
     }
     if (tierAtual >= GAME_CONFIG.SUBCLASSE_TIER_MAX) {

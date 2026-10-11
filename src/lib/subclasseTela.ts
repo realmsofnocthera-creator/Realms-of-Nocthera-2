@@ -11,8 +11,9 @@ import { TEXTOS_SUBCLASSE } from '@/rules/subclasseTextos';
 
 /** Lógica pura da Tela de Subclasse (2.1.5): estado, ações, custos e o que cada espaço mostra. */
 
-export type EstadoSubclasse = 'bloqueadaPorNivel' | 'naoDesbloqueada' | 'desbloqueada' | 'ativa';
-export type TipoAcaoSubclasse = 'desbloquear' | 'ativar' | 'subirTier';
+export type EstadoSubclasse = 'bloqueadaPorNivel' | 'disponivel' | 'ativa';
+export type ModoTela = 'escolha' | 'evolucao';
+export type TipoAcaoSubclasse = 'desbloquear' | 'subirTier' | 'resetar';
 
 export interface AcaoSubclasse {
   tipo: TipoAcaoSubclasse;
@@ -23,14 +24,9 @@ export interface AcaoSubclasse {
   habilitada: boolean;
 }
 
-export interface AcoesSubclasse {
-  estado: EstadoSubclasse;
-  tier: number | null;
-  principal: AcaoSubclasse | null;
-  /** Subclasse já desbloqueada e que não é a ativa: pode ativar (diamantes) além de subir de tier. */
-  secundaria: AcaoSubclasse | null;
-  /** Motivo de não haver ação principal (nível baixo ou tier máximo). */
-  aviso: string | null;
+/** Cada personagem tem uma subclasse só: sem ela aparece a escolha; com ela, a evolução por tiers. */
+export function modoDaTela(char: Pick<CharacterDocument, 'subclasseAtualId'>): ModoTela {
+  return char.subclasseAtualId ? 'evolucao' : 'escolha';
 }
 
 export function tierDaSubclasse(char: Pick<CharacterDocument, 'subclasseTiers'>, subclasseId: string): number | null {
@@ -39,63 +35,89 @@ export function tierDaSubclasse(char: Pick<CharacterDocument, 'subclasseTiers'>,
 }
 
 export function estadoDaSubclasse(
-  char: Pick<CharacterDocument, 'nivel' | 'subclasseTiers' | 'subclasseAtualId'>,
+  char: Pick<CharacterDocument, 'nivel' | 'subclasseAtualId'>,
   subclasseId: string
 ): EstadoSubclasse {
   if (char.subclasseAtualId === subclasseId) return 'ativa';
-  if (tierDaSubclasse(char, subclasseId) !== null) return 'desbloqueada';
   if (char.nivel < GAME_CONFIG.SUBCLASSE_NIVEL_MINIMO) return 'bloqueadaPorNivel';
-  return 'naoDesbloqueada';
+  return 'disponivel';
 }
 
-function faltando(
-  char: Pick<CharacterDocument, 'ouro' | 'fragmentosAlma' | 'diamantes' | 'fragmentosSubclasse'>,
+type Recursos = Pick<CharacterDocument, 'ouro' | 'fragmentosAlma' | 'diamantes' | 'fragmentosSubclasse'>;
+
+function montar(
+  char: Recursos,
   subclasseId: string,
-  custo: AcaoSubclasse['custo']
-): string[] {
+  tipo: TipoAcaoSubclasse,
+  rotulo: string,
+  c: Partial<AcaoSubclasse['custo']>
+): AcaoSubclasse {
+  const custo = { ouro: 0, fragmentosAlma: 0, fragmentosSubclasse: 0, diamantes: 0, ...c };
   const f: string[] = [];
   if ((char.ouro ?? 0) < custo.ouro) f.push('ouro');
   if ((char.fragmentosAlma ?? 0) < custo.fragmentosAlma) f.push('fragmentos de alma');
   if ((char.diamantes ?? 0) < custo.diamantes) f.push('diamantes');
   if ((char.fragmentosSubclasse?.[subclasseId] ?? 0) < custo.fragmentosSubclasse) f.push('fragmentos da subclasse');
-  return f;
+  return { tipo, rotulo, custo, faltando: f, habilitada: f.length === 0 };
 }
 
-export function acoesDaSubclasse(
-  char: Pick<
-    CharacterDocument,
-    'nivel' | 'ouro' | 'fragmentosAlma' | 'diamantes' | 'fragmentosSubclasse' | 'subclasseTiers' | 'subclasseAtualId'
-  >,
+/** Tela de escolha: botão Desbloquear (tier 0) de cada subclasse, ou o aviso de nível. */
+export function acaoDeEscolha(
+  char: Pick<CharacterDocument, 'nivel'> & Recursos,
   subclasseId: string
-): AcoesSubclasse {
-  const estado = estadoDaSubclasse(char, subclasseId);
-  const tier = tierDaSubclasse(char, subclasseId);
-  const montar = (tipo: TipoAcaoSubclasse, rotulo: string, c: Partial<AcaoSubclasse['custo']>): AcaoSubclasse => {
-    const custo = { ouro: 0, fragmentosAlma: 0, fragmentosSubclasse: 0, diamantes: 0, ...c };
-    const f = faltando(char, subclasseId, custo);
-    return { tipo, rotulo, custo, faltando: f, habilitada: f.length === 0 };
-  };
+): { acao: AcaoSubclasse | null; aviso: string | null } {
+  if (char.nivel < GAME_CONFIG.SUBCLASSE_NIVEL_MINIMO) {
+    return { acao: null, aviso: `Disponível a partir do nível ${GAME_CONFIG.SUBCLASSE_NIVEL_MINIMO}` };
+  }
+  return { acao: montar(char, subclasseId, 'desbloquear', 'Desbloquear', custoDoTier(0)), aviso: null };
+}
 
-  if (estado === 'bloqueadaPorNivel') {
-    return { estado, tier, principal: null, secundaria: null, aviso: `Disponível a partir do nível ${GAME_CONFIG.SUBCLASSE_NIVEL_MINIMO}` };
-  }
-  if (estado === 'naoDesbloqueada') {
-    const c = custoDoTier(0);
-    return { estado, tier, principal: montar('desbloquear', 'Desbloquear', c), secundaria: null, aviso: null };
-  }
+export type EstadoDoTier = 'comprado' | 'proximo' | 'bloqueado';
+export interface TierDaLinha {
+  tier: number;
+  estado: EstadoDoTier;
+  espaco: 'passiva' | ChaveEspaco;
+  rotulo: string;
+}
 
-  const ativar = estado === 'desbloqueada' ? montar('ativar', 'Ativar', { diamantes: GAME_CONFIG.SUBCLASSE_CUSTO_TROCA_DIAMANTES }) : null;
-  if ((tier ?? 0) >= GAME_CONFIG.SUBCLASSE_TIER_MAX) {
-    return { estado, tier, principal: null, secundaria: ativar, aviso: 'Tier máximo' };
-  }
-  const proximo = (tier ?? 0) + 1;
-  return {
-    estado,
+const ESPACO_DO_TIER: Record<number, TierDaLinha['espaco']> = { 1: 'passiva', 2: 'basico', 3: 'especial', 4: 'ultimate' };
+const ROTULO_DO_ESPACO: Record<TierDaLinha['espaco'], string> = {
+  passiva: 'Passiva',
+  basico: 'Ataque básico',
+  especial: 'Habilidade especial',
+  ultimate: 'Ultimate',
+};
+
+/** A linha T1 a T4 da tela de evolução (o tier 0 é a escolha da subclasse). */
+export function linhaDeTiers(char: Pick<CharacterDocument, 'subclasseTiers' | 'subclasseAtualId'>): TierDaLinha[] {
+  const atual = char.subclasseAtualId ? tierDaSubclasse(char, char.subclasseAtualId) ?? 0 : 0;
+  return [1, 2, 3, 4].map((tier) => ({
     tier,
-    principal: montar('subirTier', `Subir para o tier ${proximo}`, custoDoTier(proximo)),
-    secundaria: ativar,
-    aviso: null,
-  };
+    estado: tier <= atual ? 'comprado' : tier === atual + 1 ? 'proximo' : 'bloqueado',
+    espaco: ESPACO_DO_TIER[tier],
+    rotulo: ROTULO_DO_ESPACO[ESPACO_DO_TIER[tier]],
+  }));
+}
+
+/** Botão do tier selecionado: só o próximo tier pode ser comprado. */
+export function acaoDoTier(
+  char: Pick<CharacterDocument, 'subclasseTiers' | 'subclasseAtualId'> & Recursos,
+  tier: number
+): { acao: AcaoSubclasse | null; aviso: string | null } {
+  const sub = char.subclasseAtualId;
+  const atual = sub ? tierDaSubclasse(char, sub) ?? 0 : 0;
+  if (!sub) return { acao: null, aviso: 'Escolha uma subclasse' };
+  if (tier <= atual) return { acao: null, aviso: 'Comprado' };
+  if (tier > atual + 1) return { acao: null, aviso: `Compre o tier ${tier - 1} antes` };
+  return { acao: montar(char, sub, 'subirTier', `Subir para o tier ${tier}`, custoDoTier(tier)), aviso: null };
+}
+
+/** Resetar a subclasse custa 100 diamantes e zera os tiers. */
+export function acaoDeReset(char: Pick<CharacterDocument, 'subclasseAtualId'> & Recursos): AcaoSubclasse | null {
+  if (!char.subclasseAtualId) return null;
+  return montar(char, char.subclasseAtualId, 'resetar', 'Resetar subclasse', {
+    diamantes: GAME_CONFIG.SUBCLASSE_CUSTO_RESET_DIAMANTES,
+  });
 }
 
 export type ChaveEspaco = 'basico' | 'especial' | 'ultimate';

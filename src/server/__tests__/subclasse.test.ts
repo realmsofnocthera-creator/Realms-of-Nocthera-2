@@ -6,6 +6,7 @@ import {
   distribuirPontos,
   resetarAtributos,
   escolherSubclasse,
+  resetarSubclasse,
 } from '@/server/characterService';
 import { getTransactionsByUid, resetCharacterStore, setTestPersistenceFailHook } from '@/test/repositorioMemoria';
 import { GAME_CONFIG } from '@/rules/config';
@@ -13,7 +14,7 @@ import { custoDoTier } from '@/rules/subclasseTiers';
 import { obterSubclasse } from '@/game/subclasses';
 import { tokenDeTeste } from '@/test/firebaseAdminMock';
 
-describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
+describe('ORDEM 44 — Desbloqueio, Reset e uma Subclasse por Personagem (Servidor)', () => {
   beforeEach(() => {
     (process.env as Record<string, string | undefined>).NODE_ENV = 'test';
     resetCharacterStore();
@@ -150,97 +151,70 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
     expect(snapFinal?.subclasseAtualId).toBe('berserker');
   });
 
-  it('(d) subclasse nova: paga o tier 0 (sem diamantes), remove o bônus antigo e aplica o novo (atributos finais corretos), tier da nova começa em 0; voltar para uma já desbloqueada custa só 100 diamantes', async () => {
+  it('(d) só uma subclasse por personagem: com uma ativa, escolher outra é recusado e nada é cobrado', async () => {
     await setupPersonagem('user_sub_d', 'barbaro');
-    const charBase = await getCharacterByUid('user_sub_d');
-    const atributosBase = { ...charBase!.atributos };
-
-    // 1º desbloqueio: Berserker
     await escolherSubclasse('user_sub_d', 'berserker');
-    const charBerserker = (await getCharacterByUid('user_sub_d'))!;
-    const ouroAposDesbloqueio = charBerserker.ouro;
-    const fragmentosAposDesbloqueio = charBerserker.fragmentosAlma;
-    const diamantesAntesTroca = charBerserker.diamantes!;
+    const antes = (await getCharacterByUid('user_sub_d'))!;
 
-    const colosso = obterSubclasse('colosso')!;
+    await expect(escolherSubclasse('user_sub_d', 'colosso')).rejects.toThrow('Você já tem uma subclasse. Resete para escolher outra.');
 
-    // Troca para Colosso (nunca desbloqueada): paga o tier 0 e não paga diamantes
-    const charColosso = await escolherSubclasse('user_sub_d', 'colosso');
-    expect(charColosso.diamantes).toBe(diamantesAntesTroca);
-    expect(charColosso.ouro).toBe(ouroAposDesbloqueio - custoDoTier(0).ouro);
-    expect(charColosso.fragmentosAlma).toBe(fragmentosAposDesbloqueio! - custoDoTier(0).fragmentosAlma);
-
-    // Atributos: retirou Berserker (+20 for, +12 vig, +8 agi) e somou Colosso (+6 for, +18 vig, +16 vit)
-    expect(charColosso.atributos.forca).toBe(atributosBase.forca + colosso.bonusAtributos.forca);
-    expect(charColosso.atributos.vigor).toBe(atributosBase.vigor + colosso.bonusAtributos.vigor);
-    expect(charColosso.atributos.vitalidade).toBe(atributosBase.vitalidade + colosso.bonusAtributos.vitalidade);
-    expect(charColosso.atributos.agilidade).toBe(atributosBase.agilidade + colosso.bonusAtributos.agilidade);
-
-    // Subclasse atual e tiers
-    expect(charColosso.subclasseAtualId).toBe('colosso');
-    expect(charColosso.bonusSubclasseAplicado).toEqual(colosso.bonusAtributos);
-    expect(charColosso.subclasseTiers?.['colosso']).toBe(0);
-
-    // Voltar para o Berserker (já desbloqueado): só diamantes, ouro e fragmentos intactos
-    const charVolta = await escolherSubclasse('user_sub_d', 'berserker');
-    expect(charVolta.diamantes).toBe(diamantesAntesTroca - GAME_CONFIG.SUBCLASSE_CUSTO_TROCA_DIAMANTES);
-    expect(charVolta.ouro).toBe(charColosso.ouro);
-    expect(charVolta.fragmentosAlma).toBe(charColosso.fragmentosAlma);
-    expect(charVolta.subclasseAtualId).toBe('berserker');
-
-    // Transação de troca
-    const txs = getTransactionsByUid('user_sub_d');
-    const txTroca = txs.find(
-      (t) => t.tipo === 'perda' && t.moeda === 'diamantes' && t.motivo === 'Troca de subclasse'
-    );
-    expect(txTroca).toBeDefined();
-    expect(txTroca?.quantidade).toBe(100);
+    const depois = (await getCharacterByUid('user_sub_d'))!;
+    expect(depois.subclasseAtualId).toBe('berserker');
+    expect(depois.ouro).toBe(antes.ouro);
+    expect(depois.fragmentosAlma).toBe(antes.fragmentosAlma);
+    expect(depois.diamantes).toBe(antes.diamantes);
+    expect(depois.atributos).toEqual(antes.atributos);
   });
 
-  it('(e) troca de volta para uma subclasse já usada mantém o tier dela (ex.: coloque subclasseTiers[a] = 2, troque para b e volte para a: tier 2)', async () => {
+  it('(e) reset: cobra 100 diamantes, tira o bônus, zera os tiers e libera a escolha; escolher de novo paga o tier 0 outra vez', async () => {
     await setupPersonagem('user_sub_e', 'barbaro');
+    const base = (await getCharacterByUid('user_sub_e'))!;
+    const atributosBase = { ...base.atributos };
+
     await escolherSubclasse('user_sub_e', 'berserker');
+    await updateCharacter('user_sub_e', { subclasseTiers: { berserker: 2 } }); // simula a evolução
+    const antes = (await getCharacterByUid('user_sub_e'))!;
 
-    // Simula evolução da subclasse berserker para tier 2
-    await updateCharacter('user_sub_e', {
-      subclasseTiers: { berserker: 2 },
-    });
+    const depois = await resetarSubclasse('user_sub_e');
+    expect(depois.diamantes).toBe(antes.diamantes! - GAME_CONFIG.SUBCLASSE_CUSTO_RESET_DIAMANTES);
+    expect(depois.subclasseAtualId).toBeNull();
+    expect(depois.subclasseTiers).toEqual({});
+    expect(depois.atributos).toEqual(atributosBase);
+    // ouro e fragmentos não voltam
+    expect(depois.ouro).toBe(antes.ouro);
+    expect(depois.fragmentosAlma).toBe(antes.fragmentosAlma);
 
-    // Troca para colosso
-    await escolherSubclasse('user_sub_e', 'colosso');
-    const charColosso = (await getCharacterByUid('user_sub_e'))!;
-    expect(charColosso.subclasseTiers?.['berserker']).toBe(2);
-    expect(charColosso.subclasseTiers?.['colosso']).toBe(0);
+    const tx = getTransactionsByUid('user_sub_e').find((t) => t.moeda === 'diamantes' && t.motivo === 'Reset de subclasse');
+    expect(tx).toMatchObject({ tipo: 'perda', quantidade: 100 });
 
-    // Troca de volta para berserker
-    await updateCharacter('user_sub_e', { diamantes: 300 }); // garante saldo
-    await escolherSubclasse('user_sub_e', 'berserker');
-
-    const charVolta = (await getCharacterByUid('user_sub_e'))!;
-    expect(charVolta.subclasseAtualId).toBe('berserker');
-    expect(charVolta.subclasseTiers?.['berserker']).toBe(2);
-    expect(charVolta.subclasseTiers?.['colosso']).toBe(0);
+    // Escolher outra (ou a mesma) paga o tier 0 de novo e começa em 0
+    const colosso = obterSubclasse('colosso')!;
+    const nova = await escolherSubclasse('user_sub_e', 'colosso');
+    expect(nova.ouro).toBe(depois.ouro - custoDoTier(0).ouro);
+    expect(nova.fragmentosAlma).toBe(depois.fragmentosAlma! - custoDoTier(0).fragmentosAlma);
+    expect(nova.subclasseTiers).toEqual({ colosso: 0 });
+    expect(nova.atributos.forca).toBe(atributosBase.forca + colosso.bonusAtributos.forca);
+    expect(nova.atributos.vigor).toBe(atributosBase.vigor + colosso.bonusAtributos.vigor);
   });
 
-  it('(f) troca sem diamantes suficientes: lança "Diamantes insuficientes" e não altera nada', async () => {
+  it('(f) reset sem diamantes ou sem subclasse: erro e nada muda', async () => {
     await setupPersonagem('user_sub_f', 'barbaro');
+    await expect(resetarSubclasse('user_sub_f')).rejects.toThrow('Nenhuma subclasse para resetar');
+
     await escolherSubclasse('user_sub_f', 'berserker');
-    await escolherSubclasse('user_sub_f', 'colosso');
+    await updateCharacter('user_sub_f', { diamantes: 99 });
+    const antes = (await getCharacterByUid('user_sub_f'))!;
 
-    // Deixa saldo de diamantes abaixo de 100 e tenta voltar para o Berserker (já desbloqueado)
-    await updateCharacter('user_sub_f', { diamantes: 50 });
-    const snapAntes = (await getCharacterByUid('user_sub_f'))!;
+    await expect(resetarSubclasse('user_sub_f')).rejects.toThrow('Diamantes insuficientes');
 
-    await expect(escolherSubclasse('user_sub_f', 'berserker')).rejects.toThrow('Diamantes insuficientes');
-
-    const snapDepois = (await getCharacterByUid('user_sub_f'))!;
-    expect(snapDepois.diamantes).toBe(50);
-    expect(snapDepois.subclasseAtualId).toBe('colosso');
-    expect(snapDepois.atributos).toEqual(snapAntes.atributos);
+    const depois = (await getCharacterByUid('user_sub_f'))!;
+    expect(depois.diamantes).toBe(99);
+    expect(depois.subclasseAtualId).toBe('berserker');
+    expect(depois.atributos).toEqual(antes.atributos);
   });
 
-  it('(g) 0.5-C2: se o commit falhar, ouro, fragmentos e diamantes ficam intactos (desbloqueio e troca)', async () => {
-    // 1. Primeiro desbloqueio
+  it('(g) 0.5-C2: se o commit falhar, ouro, fragmentos e diamantes ficam intactos (desbloqueio e reset)', async () => {
+    // 1. Desbloqueio
     await setupPersonagem('user_sub_g1', 'barbaro');
     const txAntesG1 = getTransactionsByUid('user_sub_g1').length;
 
@@ -261,27 +235,25 @@ describe('ORDEM 44 — Desbloqueio e Troca de Subclasse (Servidor)', () => {
     expect(charG1.subclasseAtualId).toBeNull();
     expect(getTransactionsByUid('user_sub_g1').length).toBe(txAntesG1);
 
-    // 2. Troca de subclasse
+    // 2. Reset da subclasse
     await setupPersonagem('user_sub_g2', 'barbaro');
     await escolherSubclasse('user_sub_g2', 'berserker');
-    await escolherSubclasse('user_sub_g2', 'colosso');
-    const diamantesAntesG2 = (await getCharacterByUid('user_sub_g2'))!.diamantes!;
+    const antesG2 = (await getCharacterByUid('user_sub_g2'))!;
     const txAntesG2 = getTransactionsByUid('user_sub_g2').length;
 
     setTestPersistenceFailHook((operacao) => {
-      if (operacao === 'escolherSubclasse') {
-        throw new Error('Falha simulada na troca de subclasse');
+      if (operacao === 'resetarSubclasse') {
+        throw new Error('Falha simulada no reset da subclasse');
       }
     });
 
-    await expect(escolherSubclasse('user_sub_g2', 'berserker')).rejects.toThrow(
-      'Falha simulada na troca de subclasse'
-    );
+    await expect(resetarSubclasse('user_sub_g2')).rejects.toThrow('Falha simulada no reset da subclasse');
     setTestPersistenceFailHook(null);
 
     const charG2 = (await getCharacterByUid('user_sub_g2'))!;
-    expect(charG2.diamantes).toBe(diamantesAntesG2);
-    expect(charG2.subclasseAtualId).toBe('colosso');
+    expect(charG2.diamantes).toBe(antesG2.diamantes);
+    expect(charG2.subclasseAtualId).toBe('berserker');
+    expect(charG2.atributos).toEqual(antesG2.atributos);
     expect(getTransactionsByUid('user_sub_g2').length).toBe(txAntesG2);
   });
 

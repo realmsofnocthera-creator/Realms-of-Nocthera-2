@@ -7,10 +7,14 @@ import { TIER_POR_ESPACO_HABILIDADE } from '@/rules/subclasseTiers';
 import { iconeDaHabilidadeSubclasse, SUBCLASSE_ICONE_BASE } from '@/rules/subclasseAssets';
 import { obterHabilidade, obterPassiva } from '@/game/combate/habilidades';
 import {
-  acoesDaSubclasse,
+  acaoDeEscolha,
+  acaoDeReset,
+  acaoDoTier,
   bonusDeAtributosDaSubclasse,
   estadoDaSubclasse,
   habilidadeDoKitLiberada,
+  linhaDeTiers,
+  modoDaTela,
   passivaDaSubclasseLiberada,
 } from '@/lib/subclasseTela';
 
@@ -48,63 +52,74 @@ describe('Textos das subclasses', () => {
   });
 });
 
-describe('Estado e ações da subclasse', () => {
-  it('nível abaixo de 20: bloqueada por nível, sem ação', () => {
-    const c = char({ nivel: 19 });
-    expect(estadoDaSubclasse(c, 'arquimago')).toBe('bloqueadaPorNivel');
-    const a = acoesDaSubclasse(c, 'arquimago');
-    expect(a.principal).toBeNull();
-    expect(a.aviso).toContain('nível 20');
+describe('Escolha, evolução e reset', () => {
+  it('sem subclasse mostra a escolha; com subclasse, a evolução', () => {
+    expect(modoDaTela({ subclasseAtualId: null })).toBe('escolha');
+    expect(modoDaTela({ subclasseAtualId: 'arquimago' })).toBe('evolucao');
   });
 
-  it('subclasse nova: Desbloquear com o custo do tier 0 (30 fragmentos e 10.000 de ouro)', () => {
-    const a = acoesDaSubclasse(char(), 'arquimago');
-    expect(a.estado).toBe('naoDesbloqueada');
-    expect(a.principal).toMatchObject({ tipo: 'desbloquear', rotulo: 'Desbloquear', habilitada: true });
-    expect(a.principal?.custo).toEqual({ ouro: 10_000, fragmentosAlma: 30, fragmentosSubclasse: 0, diamantes: 0 });
+  it('nível abaixo de 20: aviso e nenhum botão de desbloquear', () => {
+    const c = char({ nivel: 19 });
+    expect(estadoDaSubclasse(c, 'arquimago')).toBe('bloqueadaPorNivel');
+    const r = acaoDeEscolha(c, 'arquimago');
+    expect(r.acao).toBeNull();
+    expect(r.aviso).toContain('nível 20');
+  });
+
+  it('Desbloquear tem o custo do tier 0 (30 fragmentos e 10.000 de ouro)', () => {
+    const r = acaoDeEscolha(char(), 'arquimago');
+    expect(estadoDaSubclasse(char(), 'arquimago')).toBe('disponivel');
+    expect(r.acao).toMatchObject({ tipo: 'desbloquear', rotulo: 'Desbloquear', habilitada: true });
+    expect(r.acao?.custo).toEqual({ ouro: 10_000, fragmentosAlma: 30, fragmentosSubclasse: 0, diamantes: 0 });
   });
 
   it('desabilitado e lista o que falta', () => {
-    const a = acoesDaSubclasse(char({ ouro: 9_999, fragmentosAlma: 29 }), 'arquimago');
-    expect(a.principal?.habilitada).toBe(false);
-    expect(a.principal?.faltando).toEqual(['ouro', 'fragmentos de alma']);
+    const r = acaoDeEscolha(char({ ouro: 9_999, fragmentosAlma: 29 }), 'arquimago');
+    expect(r.acao?.habilitada).toBe(false);
+    expect(r.acao?.faltando).toEqual(['ouro', 'fragmentos de alma']);
   });
 
-  it('subclasse ativa: sobe para o próximo tier, com o custo dele', () => {
+  it('a linha tem 4 círculos (T1 a T4): comprados, o próximo e os bloqueados', () => {
+    const c = char({ subclasseAtualId: 'arquimago', subclasseTiers: { arquimago: 2 } });
+    const linha = linhaDeTiers(c);
+    expect(linha.map((t) => t.tier)).toEqual([1, 2, 3, 4]);
+    expect(linha.map((t) => t.estado)).toEqual(['comprado', 'comprado', 'proximo', 'bloqueado']);
+    expect(linha.map((t) => t.espaco)).toEqual(['passiva', 'basico', 'especial', 'ultimate']);
+    // recém-desbloqueada (tier 0): o T1 é o próximo
+    expect(linhaDeTiers(char({ subclasseAtualId: 'arquimago', subclasseTiers: { arquimago: 0 } })).map((t) => t.estado)).toEqual(['proximo', 'bloqueado', 'bloqueado', 'bloqueado']);
+    expect(linhaDeTiers(char({ subclasseAtualId: 'arquimago', subclasseTiers: { arquimago: 4 } })).every((t) => t.estado === 'comprado')).toBe(true);
+  });
+
+  it('só o próximo tier tem botão, com o custo dele', () => {
     const c = char({ subclasseAtualId: 'arquimago', subclasseTiers: { arquimago: 1 } });
-    const a = acoesDaSubclasse(c, 'arquimago');
-    expect(a.estado).toBe('ativa');
-    expect(a.principal).toMatchObject({ tipo: 'subirTier', rotulo: 'Subir para o tier 2' });
-    expect(a.principal?.custo).toEqual({ ouro: 20_000, fragmentosAlma: 25, fragmentosSubclasse: 0, diamantes: 0 });
-    expect(a.secundaria).toBeNull();
+    expect(acaoDoTier(c, 1)).toEqual({ acao: null, aviso: 'Comprado' });
+    const prox = acaoDoTier(c, 2);
+    expect(prox.acao).toMatchObject({ tipo: 'subirTier', rotulo: 'Subir para o tier 2', habilitada: true });
+    expect(prox.acao?.custo).toEqual({ ouro: 20_000, fragmentosAlma: 25, fragmentosSubclasse: 0, diamantes: 0 });
+    expect(acaoDoTier(c, 4)).toEqual({ acao: null, aviso: 'Compre o tier 3 antes' });
   });
 
   it('tier 4 pede os fragmentos da própria subclasse', () => {
     const base = { subclasseAtualId: 'arquimago', subclasseTiers: { arquimago: 3 } };
-    const sem = acoesDaSubclasse(char(base), 'arquimago');
-    expect(sem.principal?.custo.fragmentosSubclasse).toBe(5);
-    expect(sem.principal?.faltando).toEqual(['fragmentos da subclasse']);
-    const com = acoesDaSubclasse(char({ ...base, fragmentosSubclasse: { arquimago: 5 } }), 'arquimago');
-    expect(com.principal?.habilitada).toBe(true);
+    const sem = acaoDoTier(char(base), 4).acao;
+    expect(sem?.custo).toEqual({ ouro: 40_000, fragmentosAlma: 60, fragmentosSubclasse: 5, diamantes: 0 });
+    expect(sem?.faltando).toEqual(['fragmentos da subclasse']);
+    expect(acaoDoTier(char({ ...base, fragmentosSubclasse: { arquimago: 5 } }), 4).acao?.habilitada).toBe(true);
     // os fragmentos são por subclasse
-    const outra = acoesDaSubclasse(char({ ...base, fragmentosSubclasse: { sabio_arcano: 9 } }), 'arquimago');
-    expect(outra.principal?.habilitada).toBe(false);
+    expect(acaoDoTier(char({ ...base, fragmentosSubclasse: { sabio_arcano: 9 } }), 4).acao?.habilitada).toBe(false);
   });
 
-  it('tier máximo: sem ação principal', () => {
-    const a = acoesDaSubclasse(char({ subclasseAtualId: 'arquimago', subclasseTiers: { arquimago: 4 } }), 'arquimago');
-    expect(a.principal).toBeNull();
-    expect(a.aviso).toBe('Tier máximo');
+  it('com tudo comprado não há mais botão', () => {
+    const c = char({ subclasseAtualId: 'arquimago', subclasseTiers: { arquimago: 4 } });
+    expect(acaoDoTier(c, 4)).toEqual({ acao: null, aviso: 'Comprado' });
   });
 
-  it('desbloqueada e não ativa: oferece subir de tier e também Ativar (100 diamantes)', () => {
-    const c = char({ subclasseAtualId: 'sabio_arcano', subclasseTiers: { sabio_arcano: 0, arquimago: 2 } });
-    const a = acoesDaSubclasse(c, 'arquimago');
-    expect(a.estado).toBe('desbloqueada');
-    expect(a.principal?.rotulo).toBe('Subir para o tier 3');
-    expect(a.secundaria).toMatchObject({ tipo: 'ativar', rotulo: 'Ativar' });
-    expect(a.secundaria?.custo).toEqual({ ouro: 0, fragmentosAlma: 0, fragmentosSubclasse: 0, diamantes: 100 });
-    expect(acoesDaSubclasse({ ...c, diamantes: 99 }, 'arquimago').secundaria?.habilitada).toBe(false);
+  it('resetar custa 100 diamantes e só existe com subclasse', () => {
+    expect(acaoDeReset(char())).toBeNull();
+    const a = acaoDeReset(char({ subclasseAtualId: 'arquimago', subclasseTiers: { arquimago: 1 } }));
+    expect(a).toMatchObject({ tipo: 'resetar', habilitada: true });
+    expect(a?.custo).toEqual({ ouro: 0, fragmentosAlma: 0, fragmentosSubclasse: 0, diamantes: 100 });
+    expect(acaoDeReset(char({ subclasseAtualId: 'arquimago', diamantes: 99 }))?.habilitada).toBe(false);
   });
 });
 

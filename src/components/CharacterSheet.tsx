@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, LogOut } from 'lucide-react';
 import { CharacterDocument } from '@/server/characterService';
+import type { SlotHabilidade } from '@/rules/habilidadesEquipadas';
 import { FICHA_ASSETS } from '@/rules/fichaAssets';
 import {
   FichaHero,
@@ -17,11 +18,13 @@ interface CharacterSheetProps {
   onLogout: () => void;
   userEmail: string;
   onAvatarChange?: (newAvatarId: string) => void;
+  onEquiparHabilidade?: (slot: SlotHabilidade, habilidadeId: string) => Promise<string | null>;
 }
 
 export function CharacterSheet({
   character,
   onLogout,
+  onEquiparHabilidade,
 }: CharacterSheetProps) {
   const router = useRouter();
   const [activeSkillPopoverId, setActiveSkillPopoverId] = useState<string | null>(null);
@@ -84,6 +87,7 @@ export function CharacterSheet({
           character={character}
           activePopoverId={activeSkillPopoverId}
           onTogglePopover={handleTogglePopover}
+          onEquiparHabilidade={onEquiparHabilidade}
           className="shrink-0"
         />
 

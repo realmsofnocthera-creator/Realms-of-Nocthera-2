@@ -4,6 +4,7 @@ import {
   getCharacterByUid,
   updateCharacter,
   escolherSubclasse,
+  resetarSubclasse,
   equiparHabilidade,
   executarCombate,
 } from '@/server/characterService';
@@ -71,17 +72,19 @@ describe('Equipar habilidade da classe ou da subclasse (servidor)', () => {
     expect((await getCharacterByUid('eq_c'))?.habilidadesEquipadas).toEqual(antes.habilidadesEquipadas);
   });
 
-  it('(d) trocar de subclasse devolve as habilidades da antiga para as da classe', async () => {
+  it('(d) resetar a subclasse devolve as habilidades dela para as da classe', async () => {
     await setup('eq_d', 4);
     await equiparHabilidade('eq_d', 'ataqueBasico', 'arquimago_bola_de_fogo');
     await equiparHabilidade('eq_d', 'ultimate', 'arquimago_meteoro');
 
-    const c = await escolherSubclasse('eq_d', 'sabio_arcano'); // nova: paga o tier 0
+    const c = await resetarSubclasse('eq_d');
     expect(c.habilidadesEquipadas).toEqual({
       ataqueBasico: 'feiticeiro_faisca_arcana',
       habilidadeEspecial: 'feiticeiro_explosao_arcana',
       ultimate: 'feiticeiro_cataclismo_arcano',
     });
+    // sem subclasse, a habilidade de kit não pode mais ser equipada
+    await expect(equiparHabilidade('eq_d', 'ataqueBasico', 'arquimago_bola_de_fogo')).rejects.toThrow('Habilidade ainda não liberada');
   });
 
   it('(e) em combate a habilidade equipada da subclasse é a usada', async () => {
