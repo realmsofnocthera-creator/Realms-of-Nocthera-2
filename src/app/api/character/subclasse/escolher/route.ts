@@ -7,6 +7,7 @@ import { limitarPorConta, limitarPorIp } from '@/server/rateLimit';
 const ERROS_REGRA = new Set([
   'Subclasse inválida',
   'Subclasse já ativa',
+  'Você já tem uma subclasse. Resete para escolher outra.',
   'Nível insuficiente',
   'Ouro insuficiente',
   'Fragmentos de alma insuficientes',

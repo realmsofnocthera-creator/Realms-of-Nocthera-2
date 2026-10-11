@@ -4,6 +4,7 @@ import {
   getCharacterByUid,
   updateCharacter,
   escolherSubclasse,
+  resetarSubclasse,
   subirTierSubclasse,
 } from '@/server/characterService';
 import { getTransactionsByUid, resetCharacterStore, setTestPersistenceFailHook } from '@/test/repositorioMemoria';
@@ -26,9 +27,10 @@ describe('2.1.4 — Subir o tier da subclasse (servidor)', () => {
       classeId: 'feiticeiro',
       pontos: { vigor: 0, sorte: 0, forca: 0, vitalidade: 0, arcano: 5, inteligencia: 5, agilidade: 0 },
     });
-    await updateCharacter(uid, { nivel: 20, ouro: 200_000, fragmentosAlma: 300, diamantes: 200, ...overrides });
-    // Ativa o Arquimago: se o setup não gravou tier, paga o tier 0 (10.000 de ouro e 30 fragmentos)
-    await escolherSubclasse(uid, 'arquimago');
+    const { subclasseTiers, ...resto } = overrides;
+    await updateCharacter(uid, { nivel: 20, ouro: 200_000, fragmentosAlma: 300, diamantes: 200, ...resto });
+    await escolherSubclasse(uid, 'arquimago'); // paga o tier 0 (10.000 de ouro e 30 fragmentos)
+    if (subclasseTiers) await updateCharacter(uid, { subclasseTiers: subclasseTiers as Record<string, number> });
     return (await getCharacterByUid(uid))!;
   }
 
@@ -57,7 +59,7 @@ describe('2.1.4 — Subir o tier da subclasse (servidor)', () => {
 
   it('(c) tier 4: exige 5 fragmentos da própria subclasse; sem eles nada é cobrado', async () => {
     await setup('t_c', { subclasseTiers: { arquimago: 3 } });
-    // o setup grava o tier 3 direto (antes de ativar a subclasse)
+    // o setup grava o tier 3 direto, depois de escolher a subclasse
     const antes = (await getCharacterByUid('t_c'))!;
     expect(antes.subclasseTiers?.arquimago).toBe(3);
 
@@ -82,7 +84,7 @@ describe('2.1.4 — Subir o tier da subclasse (servidor)', () => {
     expect(tx).toMatchObject({ tipo: 'perda', quantidade: 5, motivo: 'Tier 4 da subclasse Arquimago' });
   });
 
-  it('(d) tier máximo, subclasse não desbloqueada, de outra classe ou inexistente: erro e nada cobrado', async () => {
+  it('(d) tier máximo, outra subclasse (não é a do personagem), de outra classe ou inexistente: erro e nada cobrado', async () => {
     await setup('t_d', { subclasseTiers: { arquimago: 4 } });
     const antes = (await getCharacterByUid('t_d'))!;
 
@@ -113,12 +115,21 @@ describe('2.1.4 — Subir o tier da subclasse (servidor)', () => {
     expect(depois.subclasseTiers?.arquimago).toBe(0);
   });
 
-  it('(f) uma subclasse desbloqueada, mas não ativa, também sobe de tier (os tiers são por subclasse)', async () => {
-    await setup('t_f');
-    await escolherSubclasse('t_f', 'sabio_arcano'); // nova: paga o tier 0 e vira a ativa
-    const c = await subirTierSubclasse('t_f', 'arquimago'); // a anterior continua desbloqueada
-    expect(c.subclasseAtualId).toBe('sabio_arcano');
-    expect(c.subclasseTiers).toMatchObject({ arquimago: 1, sabio_arcano: 0 });
+  it('(f) só a subclasse do personagem sobe de tier; depois do reset os tiers voltam a zero e tudo é pago de novo', async () => {
+    await setup('t_f', { subclasseTiers: { arquimago: 2 } });
+    await expect(subirTierSubclasse('t_f', 'sabio_arcano')).rejects.toThrow('Subclasse não desbloqueada');
+
+    await resetarSubclasse('t_f');
+    const reset = (await getCharacterByUid('t_f'))!;
+    expect(reset.subclasseAtualId).toBeNull();
+    expect(reset.subclasseTiers).toEqual({});
+    // sem subclasse não há tier para subir
+    await expect(subirTierSubclasse('t_f', 'arquimago')).rejects.toThrow('Subclasse não desbloqueada');
+
+    // volta a escolher: tier 0 de novo, e o tier 1 de novo
+    await escolherSubclasse('t_f', 'arquimago');
+    const c = await subirTierSubclasse('t_f', 'arquimago');
+    expect(c.subclasseTiers).toEqual({ arquimago: 1 });
   });
 
   it('(g) 0.5-C2: se o commit falhar, ouro, fragmentos e tier ficam intactos', async () => {
@@ -140,12 +151,9 @@ describe('2.1.4 — Subir o tier da subclasse (servidor)', () => {
     expect(getTransactionsByUid('t_g').length).toBe(txAntes);
   });
 
-  it('(h) escolher subclasse nova paga o tier 0 de novo (30 fragmentos e 10.000 de ouro), sem diamantes', async () => {
-    const antes = await setup('t_h');
-    const depois = await escolherSubclasse('t_h', 'sabio_arcano');
-    expect(depois.ouro).toBe(antes.ouro - 10_000);
-    expect(depois.fragmentosAlma).toBe(antes.fragmentosAlma! - 30);
-    expect(depois.diamantes).toBe(antes.diamantes);
-    expect(depois.subclasseTiers?.sabio_arcano).toBe(0);
+  it('(h) o reset mantém os fragmentos da própria subclasse', async () => {
+    await setup('t_h', { subclasseTiers: { arquimago: 3 }, fragmentosSubclasse: { arquimago: 4 } });
+    const depois = await resetarSubclasse('t_h');
+    expect(depois.fragmentosSubclasse?.arquimago).toBe(4);
   });
 });

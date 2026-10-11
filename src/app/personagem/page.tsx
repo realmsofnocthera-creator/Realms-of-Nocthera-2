@@ -6,6 +6,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, logoutUser } from '@/lib/firebase';
 import { CharacterSheet } from '@/components/CharacterSheet';
 import { CharacterDocument } from '@/server/characterService';
+import type { SlotHabilidade } from '@/rules/habilidadesEquipadas';
 
 interface SessionUser {
   uid: string;
@@ -75,6 +76,25 @@ export default function PersonagemPage() {
     };
   }, [router]);
 
+  /** Troca a habilidade de um espaço entre a da classe e a da subclasse. Devolve a mensagem de erro, se houver. */
+  const handleEquiparHabilidade = async (slot: SlotHabilidade, habilidadeId: string): Promise<string | null> => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return 'Sessão expirada. Entre de novo.';
+      const res = await fetch('/api/character/habilidades/equipar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ slot, habilidadeId }),
+      });
+      const data = await res.json();
+      if (!res.ok) return data.error || 'Não foi possível trocar a habilidade.';
+      if (data.character) setCharacter(data.character);
+      return null;
+    } catch {
+      return 'Erro ao trocar a habilidade.';
+    }
+  };
+
   const handleLogout = async () => {
     await logoutUser();
     router.replace('/login');
@@ -98,6 +118,7 @@ export default function PersonagemPage() {
       <CharacterSheet
         character={character}
         onLogout={handleLogout}
+        onEquiparHabilidade={handleEquiparHabilidade}
         userEmail={user.email || 'Aventureiro'}
       />
     </main>
