@@ -24,6 +24,8 @@ import { NOCTHERA_THEME } from '@/theme/theme';
 import { DesenvolvimentoMenu } from './DesenvolvimentoMenu';
 import { AtributosPanel } from './AtributosPanel';
 import { SubclassePanel } from './SubclassePanel';
+import { ReforcoPanel } from './ReforcoPanel';
+import { AscensaoPanel } from './AscensaoPanel';
 
 export function DesenvolvimentoScreen() {
   const router = useRouter();
@@ -129,7 +131,10 @@ export function DesenvolvimentoScreen() {
   const podeResetar =
     temPontosAlocados && saldoDiamantes >= custoReset && !isSubmitting && !isResetting;
 
-  const poderTotal = calcularPoderTotal(character.atributos);
+  // Poder Total com o bônus do Reforço de Habilidade (atributos efetivos)
+  const poderTotal =
+    calcularPoderTotal(character.atributos) +
+    Object.values(character.bonusReforco ?? {}).reduce((soma, v) => soma + Number(v || 0), 0);
 
   const handleAdjust = (attr: AttributeName, delta: number) => {
     if (isSubmitting || isResetting) return;
@@ -291,6 +296,22 @@ export function DesenvolvimentoScreen() {
           )}
           {secaoAtiva === 'subclasse' && (
             <SubclassePanel
+              character={character}
+              idToken={idToken}
+              onCharacterChange={setCharacter}
+              className="h-full"
+            />
+          )}
+          {secaoAtiva === 'melhorarHabilidade' && (
+            <ReforcoPanel
+              character={character}
+              idToken={idToken}
+              onCharacterChange={setCharacter}
+              className="h-full"
+            />
+          )}
+          {secaoAtiva === 'avancoHabilidade' && (
+            <AscensaoPanel
               character={character}
               idToken={idToken}
               onCharacterChange={setCharacter}

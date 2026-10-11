@@ -17,15 +17,10 @@ describe('DESENVOLVIMENTO_MENU', () => {
     ]);
   });
 
-  it('"atributos" e "subclasse" estão disponíveis; os outros 3 ainda são "Em breve"', () => {
+  it('só "maestrias" ainda é "Em breve" (Reforço e Ascensão de Habilidade liberados na 2.2)', () => {
     const liberados = DESENVOLVIMENTO_MENU.filter((item) => item.disponivel).map((item) => item.id);
-    expect(liberados).toEqual(['atributos', 'subclasse']);
-
-    const outrosItens = DESENVOLVIMENTO_MENU.filter((item) => item.id !== 'atributos' && item.id !== 'subclasse');
-    expect(outrosItens).toHaveLength(3);
-    for (const item of outrosItens) {
-      expect(item.disponivel).toBe(false);
-    }
+    expect(liberados).toEqual(['atributos', 'subclasse', 'melhorarHabilidade', 'avancoHabilidade']);
+    expect(DESENVOLVIMENTO_MENU.find((item) => item.id === 'maestrias')?.disponivel).toBe(false);
   });
 
   it('DESENVOLVIMENTO_SECAO_PADRAO é "atributos"', () => {

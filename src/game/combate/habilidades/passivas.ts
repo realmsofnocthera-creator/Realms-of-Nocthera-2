@@ -1,4 +1,5 @@
 import { PASSIVA_POR_SUBCLASSE, TIER_PASSIVA_SUBCLASSE } from '@/rules/subclasseKits';
+import { escalarPorNivelHabilidade } from '@/rules/progressaoHabilidade';
 import { obterPassiva } from './registro';
 import { ModificadoresPassiva } from './tipos';
 
@@ -14,6 +15,8 @@ export interface ContextoPassivaSubclasse {
   hp: number;
   hpMax: number;
   nivel?: number;
+  /** Bônus do nível da passiva (Ascensão, junto com a Passiva I): +10% ou +20% sobre cada valor. */
+  bonusNivelPercentual?: number;
 }
 
 /**
@@ -47,9 +50,15 @@ export function obterModificadoresPassivaSubclasse(
     return MODIFICADORES_ZERADOS;
   }
 
-  return passivaDef.modificadores({
+  const mods = passivaDef.modificadores({
     hp: c.hp,
     hpMax: c.hpMax,
     nivel: c.nivel ?? 1,
   });
+  if (!c.bonusNivelPercentual) return mods;
+  const escalados = { ...mods } as Record<string, number | undefined>;
+  for (const [chave, valor] of Object.entries(mods)) {
+    if (typeof valor === 'number') escalados[chave] = escalarPorNivelHabilidade(valor, c.bonusNivelPercentual);
+  }
+  return escalados as unknown as ModificadoresPassiva;
 }

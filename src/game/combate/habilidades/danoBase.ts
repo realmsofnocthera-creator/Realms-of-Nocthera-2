@@ -17,6 +17,8 @@ export function separarPassivasDanoDaClasse(params: {
   hp: number;
   hpMax: number;
   nivel: number;
+  /** Bônus do nível da Passiva I (Ascensão), em %. */
+  bonusNivelPassivaI?: number;
 }): { danoBase: number; bonusDanoPercentual: number } {
   const { classeId, danoBasePlano, hp, hpMax, nivel } = params;
   const classeNorm = classeId.trim().toLowerCase();
@@ -24,7 +26,7 @@ export function separarPassivasDanoDaClasse(params: {
   if (classeNorm === 'barbaro') {
     // O bônus fixo de Força entra no dano base; o percentual do Instinto vai para o grupo
     // de soma (regra 1.2.2), junto com os demais bônus de dano.
-    const instinto = calcularInstintoSobrevivencia(hp, hpMax, nivel);
+    const instinto = calcularInstintoSobrevivencia(hp, hpMax, nivel, params.bonusNivelPassivaI);
     return {
       danoBase: danoBasePlano + instinto.bonusForca,
       bonusDanoPercentual: instinto.percentualBonusDano,

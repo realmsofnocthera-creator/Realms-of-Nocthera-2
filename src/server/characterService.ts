@@ -27,7 +27,12 @@ import {
   verificarRequisitosDesbloqueio,
   aplicarBonusSubclasse,
   removerBonusSubclasse,
+  aplicarReforcoAtributos,
+  bonusReforcoEmAtributos,
+  proximoNivelReforco,
+  proximaAscensao,
 } from '@/game';
+import { ASCENSAO_CUSTO_FRAGMENTOS, PASSOS_ASCENSAO, ROTULO_ESPACO_ASCENSAO } from '@/rules/progressaoHabilidade';
 import { calcularDanoFisico, Combatente, resolverCombate, ResultadoCombate } from '@/game/combat';
 import { registrarLog } from './log';
 import {
@@ -65,6 +70,16 @@ export interface CharacterDocument {
   /** Fragmentos de cada subclasse (dropam na batalha sangrenta, Etapa 5); o tier 4 gasta 5 da própria subclasse. */
   fragmentosSubclasse?: Record<string, number>;
   bonusSubclasseAplicado?: Attributes;
+  /** Reforço de Habilidade (0 a 30, roadmap 2.2.2): +% nos 7 atributos, até +25%. */
+  reforcoHabilidade?: number;
+  /** Ascensão de Habilidade (A0 a A10, roadmap 2.2.1): nível 2 ou 3 de cada habilidade. */
+  ascensaoHabilidade?: number;
+  /** Essência de habilidade: paga o Reforço (fonte a definir). */
+  essenciaHabilidade?: number;
+  /** Fragmentos de ascensão: cada Ascensão gasta 1 (fonte a definir). */
+  fragmentosAscensao?: number;
+  /** Quanto o Reforço soma em cada atributo. Derivado, não é gravado. */
+  bonusReforco?: Attributes;
   atributos: Attributes;
   ouro: number;
   diamantes?: number;
@@ -108,7 +123,13 @@ export interface TransactionDocument {
   uid: string;
   tipo: 'ganho' | 'perda';
   quantidade: number;
-  moeda?: 'ouro' | 'diamantes' | 'fragmentosAlma' | 'fragmentosSubclasse';
+  moeda?:
+    | 'ouro'
+    | 'diamantes'
+    | 'fragmentosAlma'
+    | 'fragmentosSubclasse'
+    | 'essenciaHabilidade'
+    | 'fragmentosAscensao';
   motivo: string;
   timestamp: string;
 }
@@ -125,12 +146,14 @@ export function calcularXpComBonusRacial(xpBase: number, racaId: string): number
   return xpBase;
 }
 
-type Moeda = 'ouro' | 'diamantes' | 'fragmentosAlma';
+type Moeda = 'ouro' | 'diamantes' | 'fragmentosAlma' | 'essenciaHabilidade' | 'fragmentosAscensao';
 
 const MENSAGEM_SALDO_INSUFICIENTE: Record<Moeda, string> = {
   ouro: 'Ouro insuficiente',
   diamantes: 'Diamantes insuficientes',
   fragmentosAlma: 'Fragmentos de alma insuficientes',
+  essenciaHabilidade: 'Essência de habilidade insuficiente',
+  fragmentosAscensao: 'Fragmentos de ascensão insuficientes',
 };
 
 const MENSAGEM_DELTA_INVALIDO: Record<Moeda, string> = {
@@ -138,6 +161,10 @@ const MENSAGEM_DELTA_INVALIDO: Record<Moeda, string> = {
   diamantes: 'Delta de diamantes inválido: deve ser um número inteiro diferente de zero.',
   fragmentosAlma:
     'Delta de fragmentos de alma inválido: deve ser um número inteiro diferente de zero.',
+  essenciaHabilidade:
+    'Delta de essência de habilidade inválido: deve ser um número inteiro diferente de zero.',
+  fragmentosAscensao:
+    'Delta de fragmentos de ascensão inválido: deve ser um número inteiro diferente de zero.',
 };
 
 function novoIdTransacao(): string {
@@ -151,7 +178,12 @@ export function calcularAtributosDerivados(
   atributos: Attributes,
   classeId: string,
   nivel: number,
-  subclasse?: { subclasseAtualId?: string | null; subclasseTiers?: Record<string, number> }
+  subclasse?: {
+    subclasseAtualId?: string | null;
+    subclasseTiers?: Record<string, number>;
+    /** Ascensão de Habilidade: nível das passivas (2.2.1). */
+    ascensaoHabilidade?: number;
+  }
 ): {
   hpMax: number;
   sobreescudoMax: number;
@@ -161,20 +193,22 @@ export function calcularAtributosDerivados(
   agilidadeEfetiva: number;
   danoFisicoBase: number;
 } {
+  const ascensaoHabilidade = subclasse?.ascensaoHabilidade;
   return {
-    hpMax: calcularHpMax(atributos.vigor, { classeId, nivel }),
+    hpMax: calcularHpMax(atributos.vigor, { classeId, nivel, ascensaoHabilidade }),
     // A passiva da subclasse (Casca de Pedra) entra no Sobreescudo máximo junto com a da classe
     sobreescudoMax: calcularSobreescudoMax(atributos.vitalidade, {
       classeId,
       nivel,
       subclasseAtualId: subclasse?.subclasseAtualId,
       subclasseTiers: subclasse?.subclasseTiers,
+      ascensaoHabilidade,
     }),
     chanceCritico: calcularChanceCritico(atributos.sorte),
     bonusChanceDrop: calcularBonusChanceDrop(atributos.sorte),
-    defesaFisica: calcularDefesaFisica(atributos.vitalidade, { classeId, nivel }),
+    defesaFisica: calcularDefesaFisica(atributos.vitalidade, { classeId, nivel, ascensaoHabilidade }),
     agilidadeEfetiva: calcularAgilidadeEfetiva(atributos.agilidade, { classeId, nivel }),
-    danoFisicoBase: calcularDanoFisico(atributos.forca, { classeId, nivel }),
+    danoFisicoBase: calcularDanoFisico(atributos.forca, { classeId, nivel, ascensaoHabilidade }),
   };
 }
 
@@ -190,9 +224,13 @@ function normalizarPersonagem(char: CharacterDocument): CharacterDocument {
     subclasseAtualId: char.subclasseAtualId ?? null,
     subclasseTiers: char.subclasseTiers ?? {},
     fragmentosSubclasse: char.fragmentosSubclasse ?? {},
+    reforcoHabilidade: char.reforcoHabilidade ?? 0,
+    ascensaoHabilidade: char.ascensaoHabilidade ?? 0,
+    essenciaHabilidade: char.essenciaHabilidade ?? 0,
+    fragmentosAscensao: char.fragmentosAscensao ?? 0,
     pontosAlocadosPorNivel: char.pontosAlocadosPorNivel ?? { ...ZEROS_ATRIBUTOS },
     habilidadesEquipadas: normalizarHabilidadesEquipadas(char.classeId, char.habilidadesEquipadas),
-    ...calcularAtributosDerivados(char.atributos, char.classeId, char.nivel, char),
+    ...derivadosComReforco(char),
   };
 }
 
@@ -211,6 +249,10 @@ function mesclarPersonagem(
         : (current.subclasseAtualId ?? null),
     subclasseTiers: updates.subclasseTiers ?? current.subclasseTiers ?? {},
     fragmentosSubclasse: updates.fragmentosSubclasse ?? current.fragmentosSubclasse ?? {},
+    reforcoHabilidade: updates.reforcoHabilidade ?? current.reforcoHabilidade ?? 0,
+    ascensaoHabilidade: updates.ascensaoHabilidade ?? current.ascensaoHabilidade ?? 0,
+    essenciaHabilidade: updates.essenciaHabilidade ?? current.essenciaHabilidade ?? 0,
+    fragmentosAscensao: updates.fragmentosAscensao ?? current.fragmentosAscensao ?? 0,
     bonusSubclasseAplicado:
       updates.bonusSubclasseAplicado !== undefined
         ? updates.bonusSubclasseAplicado
@@ -226,7 +268,20 @@ function mesclarPersonagem(
   };
   return {
     ...updated,
-    ...calcularAtributosDerivados(updated.atributos, updated.classeId, updated.nivel, updated),
+    ...derivadosComReforco(updated),
+  };
+}
+
+/** Atributos que valem em combate e nos derivados: os gravados mais o bônus do Reforço de Habilidade. */
+export function atributosEfetivos(char: Pick<CharacterDocument, 'atributos' | 'reforcoHabilidade'>): Attributes {
+  return aplicarReforcoAtributos(char.atributos, char.reforcoHabilidade);
+}
+
+/** Derivados calculados com o Reforço (atributos) e a Ascensão (nível das passivas). */
+function derivadosComReforco(char: CharacterDocument) {
+  return {
+    bonusReforco: bonusReforcoEmAtributos(char.atributos, char.reforcoHabilidade),
+    ...calcularAtributosDerivados(atributosEfetivos(char), char.classeId, char.nivel, char),
   };
 }
 
@@ -330,7 +385,7 @@ export async function getPublicCharacterByName(
 function toPublicCharacterProfile(char: CharacterDocument): PublicCharacterProfile {
   const racaDef = getRaceById(char.racaId);
   const classeDef = getClassById(char.classeId);
-  const atributosFinais: Attributes = { ...char.atributos };
+  const atributosFinais: Attributes = { ...atributosEfetivos(char) };
 
   return {
     nome: char.nome,
@@ -895,6 +950,70 @@ export async function subirTierSubclasse(
   });
 }
 
+/**
+ * Reforço de Habilidade (2.2.2): sobe 1 nível (0 a 30) gastando essência de habilidade.
+ * Cada nível soma % nos 7 atributos (até +25% no nível 30).
+ */
+export async function reforcarHabilidade(uid: string): Promise<CharacterDocument> {
+  return repositorio.executarTransacao('reforcarHabilidade', async (ctx) => {
+    const character = await carregarPersonagem(ctx, uid);
+    const proximo = proximoNivelReforco(character.reforcoHabilidade, character.essenciaHabilidade);
+    if (!proximo) {
+      throw new Error('Reforço no nível máximo');
+    }
+    if (proximo.motivo === 'essenciaInsuficiente') {
+      throw new Error(MENSAGEM_SALDO_INSUFICIENTE.essenciaHabilidade);
+    }
+    const pago = alterarSaldoEm(
+      ctx,
+      character,
+      'essenciaHabilidade',
+      -proximo.custo,
+      `Reforço de Habilidade nível ${proximo.nivel}`
+    ).character;
+    return salvarPersonagem(ctx, character, {
+      essenciaHabilidade: pago.essenciaHabilidade,
+      reforcoHabilidade: proximo.nivel,
+    });
+  });
+}
+
+/**
+ * Ascensão de Habilidade (2.2.1): sobe do A0 ao A10, 1 fragmento de ascensão por passo.
+ * Só libera com o Reforço no nível 30.
+ */
+export async function ascenderHabilidade(uid: string): Promise<CharacterDocument> {
+  return repositorio.executarTransacao('ascenderHabilidade', async (ctx) => {
+    const character = await carregarPersonagem(ctx, uid);
+    const proxima = proximaAscensao(
+      character.ascensaoHabilidade,
+      character.reforcoHabilidade,
+      character.fragmentosAscensao
+    );
+    if (!proxima) {
+      throw new Error('Ascensão no nível máximo');
+    }
+    if (proxima.motivo === 'reforcoIncompleto') {
+      throw new Error('Ascensão bloqueada: Reforço de Habilidade abaixo do nível 30');
+    }
+    if (proxima.motivo === 'fragmentosInsuficientes') {
+      throw new Error(MENSAGEM_SALDO_INSUFICIENTE.fragmentosAscensao);
+    }
+    const passo = PASSOS_ASCENSAO[proxima.ascensao - 1];
+    const pago = alterarSaldoEm(
+      ctx,
+      character,
+      'fragmentosAscensao',
+      -ASCENSAO_CUSTO_FRAGMENTOS,
+      `Ascensão A${proxima.ascensao}: ${ROTULO_ESPACO_ASCENSAO[passo.espaco]} nível ${passo.nivelHabilidade}`
+    ).character;
+    return salvarPersonagem(ctx, character, {
+      fragmentosAscensao: pago.fragmentosAscensao,
+      ascensaoHabilidade: proxima.ascensao,
+    });
+  });
+}
+
 export interface ResultadoPosCombate {
   character: CharacterDocument;
   levelUps: number;
@@ -1067,10 +1186,11 @@ export async function executarCombate(
       hp: current.hpMax,
       hpMax: current.hpMax,
       sobreescudo: current.sobreescudoMax,
-      atributos: current.atributos,
+      atributos: atributosEfetivos(current),
       habilidadesEquipadas: current.habilidadesEquipadas,
       subclasseAtualId: current.subclasseAtualId,
       subclasseTiers: current.subclasseTiers,
+      ascensaoHabilidade: current.ascensaoHabilidade,
       ouro: current.ouro,
       mitigacao: 0,
     };
