@@ -17,12 +17,12 @@ describe('DESENVOLVIMENTO_MENU', () => {
     ]);
   });
 
-  it('apenas o item "atributos" possui disponivel=true, os outros são false', () => {
-    const atributosItem = DESENVOLVIMENTO_MENU.find((item) => item.id === 'atributos');
-    expect(atributosItem?.disponivel).toBe(true);
+  it('"atributos" e "subclasse" estão disponíveis; os outros 3 ainda são "Em breve"', () => {
+    const liberados = DESENVOLVIMENTO_MENU.filter((item) => item.disponivel).map((item) => item.id);
+    expect(liberados).toEqual(['atributos', 'subclasse']);
 
-    const outrosItens = DESENVOLVIMENTO_MENU.filter((item) => item.id !== 'atributos');
-    expect(outrosItens).toHaveLength(4);
+    const outrosItens = DESENVOLVIMENTO_MENU.filter((item) => item.id !== 'atributos' && item.id !== 'subclasse');
+    expect(outrosItens).toHaveLength(3);
     for (const item of outrosItens) {
       expect(item.disponivel).toBe(false);
     }

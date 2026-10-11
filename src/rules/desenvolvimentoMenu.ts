@@ -25,7 +25,7 @@ export const DESENVOLVIMENTO_MENU: readonly DesenvolvimentoMenuItem[] = [
     id: 'subclasse',
     label: 'Subclasse',
     icone: DESENVOLVIMENTO_ASSETS.iconeSubclasse,
-    disponivel: false,
+    disponivel: true,
   },
   {
     id: 'melhorarHabilidade',
