@@ -31,13 +31,13 @@ export const DESENVOLVIMENTO_MENU: readonly DesenvolvimentoMenuItem[] = [
     id: 'melhorarHabilidade',
     label: 'Melhorar Habilidade',
     icone: DESENVOLVIMENTO_ASSETS.botaoMelhorarHabilidade,
-    disponivel: false,
+    disponivel: true,
   },
   {
     id: 'avancoHabilidade',
     label: 'Avanço de Habilidade',
     icone: DESENVOLVIMENTO_ASSETS.botaoAvancarHabilidade,
-    disponivel: false,
+    disponivel: true,
   },
   {
     id: 'maestrias',

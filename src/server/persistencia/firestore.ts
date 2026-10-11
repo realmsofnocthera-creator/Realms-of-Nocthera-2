@@ -97,6 +97,10 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
       data.fragmentosSubclasse && typeof data.fragmentosSubclasse === 'object'
         ? (data.fragmentosSubclasse as Record<string, number>)
         : {},
+    reforcoHabilidade: Number(data.reforcoHabilidade || 0),
+    ascensaoHabilidade: Number(data.ascensaoHabilidade || 0),
+    essenciaHabilidade: Number(data.essenciaHabilidade || 0),
+    fragmentosAscensao: Number(data.fragmentosAscensao || 0),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
       ? { bonusSubclasseAplicado: lerAtributos(data.bonusSubclasseAplicado, ZEROS_ATRIBUTOS) }
       : {}),
@@ -128,6 +132,10 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     subclasseTiers: char.subclasseTiers ?? {},
     fragmentosSubclasse: char.fragmentosSubclasse ?? {},
     ...(char.bonusSubclasseAplicado ? { bonusSubclasseAplicado: char.bonusSubclasseAplicado } : {}),
+    reforcoHabilidade: char.reforcoHabilidade ?? 0,
+    ascensaoHabilidade: char.ascensaoHabilidade ?? 0,
+    essenciaHabilidade: char.essenciaHabilidade ?? 0,
+    fragmentosAscensao: char.fragmentosAscensao ?? 0,
     hpMax: char.hpMax,
     sobreescudoMax: char.sobreescudoMax,
     criadoEm: char.criadoEm,

@@ -36,19 +36,23 @@ export function FichaAtributos({
     },
   ];
 
+  // Atributos efetivos: os gravados mais o bônus do Reforço de Habilidade (2.2.2)
+  const efetivo = (attr: keyof typeof character.atributos) =>
+    character.atributos[attr] + (character.bonusReforco?.[attr] ?? 0);
+
   // Chance de crítico (2% de base + 0,1% por ponto de Sorte)
   const chanceCritico = `${String(
     character.chanceCritico ?? calcularChanceCritico(character.atributos.sorte)
   ).replace('.', ',')}%`;
 
   const atributos = [
-    { id: 'vigor', nome: 'Vigor', icone: ATTRIBUTE_ICONS.vigor, valor: character.atributos.vigor },
-    { id: 'sorte', nome: 'Sorte', icone: ATTRIBUTE_ICONS.sorte, valor: character.atributos.sorte },
-    { id: 'forca', nome: 'Força', icone: ATTRIBUTE_ICONS.forca, valor: character.atributos.forca },
-    { id: 'vitalidade', nome: 'Vitalidade', icone: ATTRIBUTE_ICONS.vitalidade, valor: character.atributos.vitalidade },
-    { id: 'arcano', nome: 'Arcano', icone: ATTRIBUTE_ICONS.arcano, valor: character.atributos.arcano },
-    { id: 'inteligencia', nome: 'Inteligência', icone: ATTRIBUTE_ICONS.inteligencia, valor: character.atributos.inteligencia },
-    { id: 'agilidade', nome: 'Agilidade', icone: ATTRIBUTE_ICONS.agilidade, valor: character.atributos.agilidade },
+    { id: 'vigor', nome: 'Vigor', icone: ATTRIBUTE_ICONS.vigor, valor: efetivo('vigor') },
+    { id: 'sorte', nome: 'Sorte', icone: ATTRIBUTE_ICONS.sorte, valor: efetivo('sorte') },
+    { id: 'forca', nome: 'Força', icone: ATTRIBUTE_ICONS.forca, valor: efetivo('forca') },
+    { id: 'vitalidade', nome: 'Vitalidade', icone: ATTRIBUTE_ICONS.vitalidade, valor: efetivo('vitalidade') },
+    { id: 'arcano', nome: 'Arcano', icone: ATTRIBUTE_ICONS.arcano, valor: efetivo('arcano') },
+    { id: 'inteligencia', nome: 'Inteligência', icone: ATTRIBUTE_ICONS.inteligencia, valor: efetivo('inteligencia') },
+    { id: 'agilidade', nome: 'Agilidade', icone: ATTRIBUTE_ICONS.agilidade, valor: efetivo('agilidade') },
   ];
 
   return (

@@ -133,6 +133,29 @@ import {
   obterSlotAcionado,
   resolverDanoHabilidade,
 } from './combate/habilidades';
+import {
+  bonusHabilidadePorAscensao,
+  escalarPorNivelHabilidade,
+  NiveisHabilidade,
+} from '@/rules/progressaoHabilidade';
+
+/**
+ * Bônus (%) do nível da habilidade da classe que disparou neste ataque (Ascensão, 2.2.1):
+ * a primeira é o ataque básico, a segunda a habilidade especial e a terceira o ultimate.
+ */
+function bonusDoNivelDaAcionada(
+  bonusNivel: Partial<NiveisHabilidade> | undefined,
+  acionada: string,
+  basico: string,
+  especial: string,
+  ultimate: string
+): number {
+  if (!bonusNivel) return 0;
+  if (acionada === ultimate) return bonusNivel.ultimate ?? 0;
+  if (acionada === especial) return bonusNivel.habilidadeEspecial ?? 0;
+  if (acionada === basico) return bonusNivel.ataqueBasico ?? 0;
+  return 0;
+}
 
 // Mantém a API pública de combat.ts (a função mora em combate/passivasClasse.ts)
 export { calcularInstintoSobrevivencia };
@@ -167,6 +190,8 @@ export interface Combatente {
   habilidadesEquipadas?: HabilidadesEquipadas;
   subclasseAtualId?: string | null;
   subclasseTiers?: Record<string, number>;
+  /** Ascensão de Habilidade (A0 a A10, roadmap 2.2.1): define o nível de cada habilidade. */
+  ascensaoHabilidade?: number;
   modificadoresElementais?: ModificadoresElementais;
   elementoAtaque?: Elemento;
   /** Status a que o combatente é imune (chefes: Sono, Paralisia e Congelamento). */
@@ -404,11 +429,12 @@ export function calcularDanoFisico(forca: number, opcoes?: OpcoesCalculoStatus):
   const base = Math.max(0, forca);
   const classeNormalizada = opcoes?.classeId?.trim().toLowerCase();
   const nivel = opcoes?.nivel ?? 1;
+  const bonusPassivaI = bonusHabilidadePorAscensao(opcoes?.ascensaoHabilidade).passivaI;
   if (classeNormalizada === 'bandido' && nivel >= 12) {
-    return aplicarPassosRapidos(0, base, nivel, opcoes!.classeId).danoFisico;
+    return aplicarPassosRapidos(0, base, nivel, opcoes!.classeId, bonusPassivaI).danoFisico;
   }
   if (classeNormalizada === 'samurai' && nivel >= 12) {
-    return aplicarDisciplinaDoGuerreiro(0, base, nivel, opcoes!.classeId).danoFisico;
+    return aplicarDisciplinaDoGuerreiro(0, base, nivel, opcoes!.classeId, bonusPassivaI).danoFisico;
   }
   return base;
 }
@@ -422,7 +448,8 @@ export function calcularDanoMagico(inteligencia: number, opcoes?: OpcoesCalculoS
   const classeNormalizada = opcoes?.classeId?.trim().toLowerCase();
   const nivel = opcoes?.nivel ?? 1;
   if (classeNormalizada === 'feiticeiro' && nivel >= 12) {
-    return aplicarFluxoArcano(base, nivel, opcoes!.classeId).danoMagico;
+    const bonusPassivaI = bonusHabilidadePorAscensao(opcoes?.ascensaoHabilidade).passivaI;
+    return aplicarFluxoArcano(base, nivel, opcoes!.classeId, bonusPassivaI).danoMagico;
   }
   return base;
 }
@@ -560,6 +587,8 @@ export function calcularGolpeBarbaro(params: {
   contadorIra: number;
   /** Bônus de dano de passivas de subclasse (Frenesi), em %, somado ao Instinto e à Ira. */
   bonusDanoExtraPercentual?: number;
+  /** Bônus do nível de cada habilidade (Ascensão, 2.2.1), em %. */
+  bonusNivel?: Partial<NiveisHabilidade>;
 }): {
   habilidadeAcionada: 'Golpe Bárbaro' | 'Fúria Selvagem' | 'Ira do Bárbaro';
   danoBruto: number;
@@ -571,7 +600,7 @@ export function calcularGolpeBarbaro(params: {
   const { forcaBase, hpAtual, hpMax, nivel, contadorFuria, contadorIra } = params;
   const bonusDanoExtraPercentual = params.bonusDanoExtraPercentual ?? 0;
 
-  const instinto = calcularInstintoSobrevivencia(hpAtual, hpMax, nivel);
+  const instinto = calcularInstintoSobrevivencia(hpAtual, hpMax, nivel, params.bonusNivel?.passivaI);
   const furia = processarFuriaSelvagem(contadorFuria, nivel);
   const ira = processarIraDoBarbaro(contadorIra, hpAtual, hpMax, nivel);
 
@@ -590,7 +619,9 @@ export function calcularGolpeBarbaro(params: {
     danoAdicionalFixo += furia.danoAdicional;
   }
 
-  const danoComPercentual = Math.ceil(forcaEfetiva * (1 + percentualBonusTotal / 100));
+  // Nível da habilidade acionada (Ascensão): soma no mesmo grupo de bônus
+  percentualBonusTotal += bonusDoNivelDaAcionada(params.bonusNivel, habilidadeAcionada, 'Golpe Bárbaro', 'Fúria Selvagem', 'Ira do Bárbaro');
+  const danoComPercentual = Math.ceil((forcaEfetiva * (100 + percentualBonusTotal)) / 100);
   const danoTotal = Math.max(GAME_CONFIG.DANO_MINIMO, danoComPercentual + danoAdicionalFixo);
 
   return {
@@ -663,7 +694,9 @@ export function processarPosturaDoGuardiao(
 export function calcularUltimoBastiao(
   hpAtual: number,
   hpMax: number,
-  nivel: number = 20
+  nivel: number = 20,
+  /** Bônus do nível da Passiva II (Ascensão), em %. */
+  bonusNivelPercentual = 0
 ): {
   ativo: boolean;
   bonusDefesaFisicaPercentual: number;
@@ -683,9 +716,9 @@ export function calcularUltimoBastiao(
   if (percentualHp < 30) {
     return {
       ativo: true,
-      bonusDefesaFisicaPercentual: 15,
-      bonusSobreescudoPercentual: 15,
-      reducaoDanoFisicoPercentual: 10,
+      bonusDefesaFisicaPercentual: escalarPorNivelHabilidade(15, bonusNivelPercentual),
+      bonusSobreescudoPercentual: escalarPorNivelHabilidade(15, bonusNivelPercentual),
+      reducaoDanoFisicoPercentual: escalarPorNivelHabilidade(10, bonusNivelPercentual),
     };
   }
 
@@ -762,6 +795,8 @@ export function calcularAtaqueCavaleiro(params: {
   nivel: number;
   contadorPostura: number;
   contadorJuramento: number;
+  /** Bônus do nível de cada habilidade (Ascensão, 2.2.1), em %. */
+  bonusNivel?: Partial<NiveisHabilidade>;
 }): {
   habilidadeAcionada: 'Golpe do Guardião' | 'Postura do Guardião' | 'Juramento do Guardião';
   danoBruto: number;
@@ -783,7 +818,17 @@ export function calcularAtaqueCavaleiro(params: {
     habilidadeAcionada = 'Postura do Guardião';
   }
 
-  const danoBruto = Math.max(GAME_CONFIG.DANO_MINIMO, calcularDanoFisico(forcaBase));
+  const bonusNivelAcionada = bonusDoNivelDaAcionada(
+    params.bonusNivel,
+    habilidadeAcionada,
+    'Golpe do Guardião',
+    'Postura do Guardião',
+    'Juramento do Guardião'
+  );
+  const danoBruto = Math.max(
+    GAME_CONFIG.DANO_MINIMO,
+    Math.ceil((calcularDanoFisico(forcaBase) * (100 + bonusNivelAcionada)) / 100)
+  );
 
   return {
     habilidadeAcionada,
@@ -820,6 +865,8 @@ export function aplicarDefesaCavaleiro(params: {
   reducaoDanoExtraPercentual?: number;
   /** Ajuste da defesa total em % (100 = sem ajuste; Ímpeto, Foco e Delírio entram aqui). */
   fatorDefesaPercentual?: number;
+  /** Ascensão de Habilidade: o nível das passivas (Muralha de Ferro e Último Bastião). */
+  ascensaoHabilidade?: number;
 }): {
   sobreescudo: number;
   hp: number;
@@ -846,7 +893,12 @@ export function aplicarDefesaCavaleiro(params: {
 
   const posturaAplicada = nivel >= 5 && posturaAtiva;
   const juramentoAplicado = nivel >= 30 && juramentoAtivo;
-  const ultimoBastiao = calcularUltimoBastiao(hpAtual, hpMax, nivel);
+  const ultimoBastiao = calcularUltimoBastiao(
+    hpAtual,
+    hpMax,
+    nivel,
+    bonusHabilidadePorAscensao(params.ascensaoHabilidade).passivaII
+  );
 
   // Vitalidade efetiva temporária do turno defensivo
   let vitalidadeTurn = vitalidadeBase;
@@ -861,6 +913,7 @@ export function aplicarDefesaCavaleiro(params: {
   let defesaFisica = calcularDefesaFisica(vitalidadeTurn, {
     classeId: 'cavaleiro',
     nivel,
+    ascensaoHabilidade: params.ascensaoHabilidade,
   });
 
   let bonusDefesaPercentual = 0;
@@ -1018,7 +1071,9 @@ export function processarAcumuloArcano(
 export function aplicarCargasAcumuloArcano(
   danoMagico: number,
   cargasAtuais: number,
-  nivel: number = 20
+  nivel: number = 20,
+  /** Bônus do nível da Passiva II (Ascensão), em %. */
+  bonusNivelPercentual = 0
 ): {
   danoComCargas: number;
   cargasConsumidas: number;
@@ -1035,7 +1090,7 @@ export function aplicarCargasAcumuloArcano(
   }
 
   const cargasEfetivas = Math.min(3, Math.max(0, cargasAtuais));
-  const percentualBonusAplicado = cargasEfetivas * 10;
+  const percentualBonusAplicado = cargasEfetivas * escalarPorNivelHabilidade(10, bonusNivelPercentual);
   const danoComCargas = Math.ceil((danoMagico * (100 + percentualBonusAplicado)) / 100);
 
   return {
@@ -1115,6 +1170,8 @@ export function calcularGolpeFeiticeiro(params: {
   mitigacaoMagicaAlvo?: number;
   /** Bônus de dano de buffs (Ímpeto, Delírio), em %, somado no mesmo grupo dos outros bônus. */
   bonusDanoExtraPercentual?: number;
+  /** Bônus do nível de cada habilidade (Ascensão, 2.2.1), em %. */
+  bonusNivel?: Partial<NiveisHabilidade>;
 }): {
   habilidadeAcionada: 'Faísca Arcana' | 'Explosão Arcana' | 'Cataclismo Arcano';
   danoMagicoBase: number;
@@ -1148,10 +1205,10 @@ export function calcularGolpeFeiticeiro(params: {
   // Regra 1.2.2: o dano parte do valor SEM passivas; Fluxo Arcano, cargas e bônus contra
   // Sobreescudo entram juntos num único grupo de soma (ver calcularDanoComBonusSomados)
   const danoMagicoBruto = calcularDanoMagico(inteligenciaBase);
-  const bonusFluxoArcano = bonusPassivaPermanenteDanoPercentual('feiticeiro', nivel, 'magico');
+  const bonusFluxoArcano = bonusPassivaPermanenteDanoPercentual('feiticeiro', nivel, 'magico', params.bonusNivel?.passivaI);
 
   // Se houver cargas acumuladas antes deste ataque, consome todas as cargas para amplificar este golpe
-  const consumo = aplicarCargasAcumuloArcano(danoMagicoBruto, cargasAcumulo, nivel);
+  const consumo = aplicarCargasAcumuloArcano(danoMagicoBruto, cargasAcumulo, nivel, params.bonusNivel?.passivaII);
 
   // Processa os 3 contadores independentes (A: Explosão Arcana, B: Acúmulo Arcano, C: Cataclismo Arcano)
   const explosao = processarExplosaoArcana(contadorExplosao, nivel);
@@ -1180,6 +1237,7 @@ export function calcularGolpeFeiticeiro(params: {
     params.bonusDanoExtraPercentual ?? 0,
     consumo.percentualBonusAplicado,
     bonusSobreescudoCataclismoAtivo ? cataclismo.bonusDanoContraSobreescudoPercentual : 0,
+    bonusDoNivelDaAcionada(params.bonusNivel, habilidadeAcionada, 'Faísca Arcana', 'Explosão Arcana', 'Cataclismo Arcano'),
   ]);
 
   const danoBruto = Math.max(GAME_CONFIG.DANO_MINIMO, danoCalculado);
@@ -1304,7 +1362,9 @@ export function aplicarCargasSedeDeSangueBandido(
   danoBaseGolpe: number,
   cargasAtuais: number,
   nivel: number = 20,
-  ehGolpeEspecialOuUltimate: boolean = false
+  ehGolpeEspecialOuUltimate: boolean = false,
+  /** Bônus do nível da Passiva II (Ascensão), em %. */
+  bonusNivelPercentual = 0
 ): {
   danoComCargas: number;
   cargasConsumidas: number;
@@ -1330,7 +1390,7 @@ export function aplicarCargasSedeDeSangueBandido(
     };
   }
 
-  const percentualBonusAplicado = cargasNormalizadas * 5;
+  const percentualBonusAplicado = cargasNormalizadas * escalarPorNivelHabilidade(5, bonusNivelPercentual);
   const danoComCargas = Math.ceil((danoBaseGolpe * (100 + percentualBonusAplicado)) / 100);
 
   return {
@@ -1412,6 +1472,8 @@ export function calcularGolpeBandido(params: {
   mitigacaoFisicaAlvo?: number;
   /** Bônus de dano de buffs (Ímpeto, Delírio), em %, somado no mesmo grupo dos outros bônus. */
   bonusDanoExtraPercentual?: number;
+  /** Bônus do nível de cada habilidade (Ascensão, 2.2.1), em %. */
+  bonusNivel?: Partial<NiveisHabilidade>;
 }): {
   habilidadeAcionada: 'Golpe Rápido' | 'Rajada de Golpes' | 'Dança das Lâminas';
   danoFisicoBase: number;
@@ -1473,14 +1535,15 @@ export function calcularGolpeBandido(params: {
 
   // Regra 1.2.2: o dano parte do valor SEM passivas; Passos Rápidos e as cargas somam num grupo só
   const danoFisicoBruto = calcularDanoFisico(forcaBase);
-  const bonusPassosRapidos = bonusPassivaPermanenteDanoPercentual('bandido', nivel, 'fisico');
+  const bonusPassosRapidos = bonusPassivaPermanenteDanoPercentual('bandido', nivel, 'fisico', params.bonusNivel?.passivaI);
 
   // As cargas de Sede de Sangue (Bandido) SÓ são aplicadas e consumidas se Rajada de Golpes ou Dança das Lâminas disparar
   const consumo = aplicarCargasSedeDeSangueBandido(
     danoFisicoBruto,
     cargasSedeSangue,
     nivel,
-    ehGolpeEspecialOuUltimate
+    ehGolpeEspecialOuUltimate,
+    params.bonusNivel?.passivaII
   );
 
   // Avança o contador B independente (Sede de Sangue do Bandido) a partir das cargas restantes
@@ -1496,6 +1559,7 @@ export function calcularGolpeBandido(params: {
       bonusPassosRapidos,
       params.bonusDanoExtraPercentual ?? 0,
       consumo.percentualBonusAplicado,
+      bonusDoNivelDaAcionada(params.bonusNivel, habilidadeAcionada, 'Golpe Rápido', 'Rajada de Golpes', 'Dança das Lâminas'),
     ])
   );
   const golpes = Array.from({ length: numeroGolpes }, () => danoPorGolpe);
@@ -1614,7 +1678,9 @@ export function aplicarCargasFeInabalavel(
   curaHpBase: number,
   cargasAtuais: number,
   nivel: number = 20,
-  ehEfeitoCura: boolean = true
+  ehEfeitoCura: boolean = true,
+  /** Bônus do nível da Passiva II (Ascensão), em %. */
+  bonusNivelPercentual = 0
 ): {
   curaHpFinal: number;
   cargasConsumidas: number;
@@ -1640,7 +1706,7 @@ export function aplicarCargasFeInabalavel(
     };
   }
 
-  const percentualBonusEficacia = cargasNormalizadas * 15;
+  const percentualBonusEficacia = cargasNormalizadas * escalarPorNivelHabilidade(15, bonusNivelPercentual);
   const curaHpFinal = Number(((curaHpBase * (100 + percentualBonusEficacia)) / 100).toFixed(4));
 
   return {
@@ -1715,6 +1781,8 @@ export function calcularAcaoProfeta(params: {
   contadorFeInabalavel: number;
   cargasFeInabalavel: number;
   contadorMilagre: number;
+  /** Bônus do nível de cada habilidade (Ascensão, 2.2.1), em %: vale no dano e na cura da habilidade. */
+  bonusNivel?: Partial<NiveisHabilidade>;
 }): {
   habilidadeAcionada: 'Luz Sagrada' | 'Bênção Divina' | 'Milagre Divino';
   causaDano: boolean;
@@ -1770,12 +1838,26 @@ export function calcularAcaoProfeta(params: {
 
   const ehEfeitoCura = milagre.acionada || bencao.acionada;
 
+  // Nível da habilidade acionada (Ascensão): aumenta o dano e a cura dela
+  const bonusNivelAcionada = bonusDoNivelDaAcionada(
+    params.bonusNivel,
+    habilidadeAcionada,
+    'Luz Sagrada',
+    'Bênção Divina',
+    'Milagre Divino'
+  );
+  if (bonusNivelAcionada > 0) {
+    if (danoBruto > 0) danoBruto = Math.ceil((danoBruto * (100 + bonusNivelAcionada)) / 100);
+    curaHpBase = (curaHpBase * (100 + bonusNivelAcionada)) / 100;
+  }
+
   // Se este turno tem efeito de cura (Bênção Divina ou Milagre Divino), aplica e consome as cargas acumuladas de Fé Inabalável
   const consumo = aplicarCargasFeInabalavel(
     curaHpBase,
     cargasFeInabalavel,
     nivel,
-    ehEfeitoCura
+    ehEfeitoCura,
+    params.bonusNivel?.passivaII
   );
 
   // Avança o contador B independente (Fé Inabalável) a partir das cargas restantes
@@ -1875,7 +1957,9 @@ export function aplicarCargasFocoAbsoluto(
   danoBaseGolpe: number,
   cargasAtuais: number,
   nivel: number = 20,
-  ehGolpeEspecialOuUltimate: boolean = false
+  ehGolpeEspecialOuUltimate: boolean = false,
+  /** Bônus do nível da Passiva II (Ascensão), em %. */
+  bonusNivelPercentual = 0
 ): {
   danoComCargas: number;
   cargasConsumidas: number;
@@ -1886,7 +1970,8 @@ export function aplicarCargasFocoAbsoluto(
     danoBaseGolpe,
     cargasAtuais,
     nivel,
-    ehGolpeEspecialOuUltimate
+    ehGolpeEspecialOuUltimate,
+    bonusNivelPercentual
   );
 }
 
@@ -1968,6 +2053,8 @@ export function calcularGolpeSamurai(params: {
   mitigacaoFisicaAlvo?: number;
   /** Bônus de dano de buffs (Ímpeto, Delírio), em %, somado no mesmo grupo dos outros bônus. */
   bonusDanoExtraPercentual?: number;
+  /** Bônus do nível de cada habilidade (Ascensão, 2.2.1), em %. */
+  bonusNivel?: Partial<NiveisHabilidade>;
 }): {
   habilidadeAcionada: 'Corte Preciso' | 'Iaijutsu' | 'Corte do Vazio';
   danoFisicoBase: number;
@@ -2024,14 +2111,15 @@ export function calcularGolpeSamurai(params: {
   // Regra 1.2.2: o dano parte do valor SEM passivas; Disciplina, cargas e bônus contra
   // Sobreescudo somam num grupo só
   const danoFisicoBruto = calcularDanoFisico(forcaBase);
-  const bonusDisciplina = bonusPassivaPermanenteDanoPercentual('samurai', nivel, 'fisico');
+  const bonusDisciplina = bonusPassivaPermanenteDanoPercentual('samurai', nivel, 'fisico', params.bonusNivel?.passivaI);
 
   // Aplica e consome cargas de Foco Absoluto SOMENTE em Iaijutsu ou Corte do Vazio (nunca em ataques comuns)
   const consumo = aplicarCargasFocoAbsoluto(
     danoFisicoBruto,
     cargasFocoAbsoluto,
     nivel,
-    ehGolpeEspecialOuUltimate
+    ehGolpeEspecialOuUltimate,
+    params.bonusNivel?.passivaII
   );
 
   // Avança o contador B independente (Foco Absoluto) a partir das cargas restantes
@@ -2046,6 +2134,7 @@ export function calcularGolpeSamurai(params: {
     params.bonusDanoExtraPercentual ?? 0,
     consumo.percentualBonusAplicado,
     bonusSobreescudoCorteDoVazioAtivo ? corteDoVazio.bonusDanoContraSobreescudoPercentual : 0,
+    bonusDoNivelDaAcionada(params.bonusNivel, habilidadeAcionada, 'Corte Preciso', 'Iaijutsu', 'Corte do Vazio'),
   ]);
 
   const danoBrutoPrincipal = Math.max(GAME_CONFIG.DANO_MINIMO, danoCalculado);
@@ -2251,15 +2340,20 @@ function turnoDeCombateInterno(
   const ehBandidoAtacante = classeAtacante === 'bandido';
   const ehProfetaAtacante = classeAtacante === 'profeta';
   const ehSamuraiAtacante = classeAtacante === 'samurai';
+  // Ascensão de Habilidade (2.2.1): nível de cada habilidade de quem ataca e de quem defende
+  const bonusNivelAtacante = bonusHabilidadePorAscensao(atacante.ascensaoHabilidade);
+  const bonusNivelDefensor = bonusHabilidadePorAscensao(defensor.ascensaoHabilidade);
 
   // Determina dano do atacante (físico ou mágico, o que for maior; Feiticeiro e Profeta sempre usam dano mágico; Bandido e Samurai sempre usam dano físico)
   const danoFisico = calcularDanoFisico(atacante.atributos.forca, {
     classeId: atacante.classeId,
     nivel: nivelAtacante,
+    ascensaoHabilidade: atacante.ascensaoHabilidade,
   });
   const danoMagico = calcularDanoMagico(atacante.atributos.inteligencia, {
     classeId: atacante.classeId,
     nivel: nivelAtacante,
+    ascensaoHabilidade: atacante.ascensaoHabilidade,
   });
   const ehDanoFisicoPadrao =
     ehFeiticeiroAtacante || ehProfetaAtacante
@@ -2358,6 +2452,7 @@ function turnoDeCombateInterno(
       hp: hpAtacanteAtual,
       hpMax: atacante.hpMax,
       nivel: nivelAtacante,
+      bonusNivelPercentual: bonusNivelAtacante.passivaI,
     });
 
     // Bônus de dano mágico da passiva da subclasse (ex.: Olhar Julgador do Inquisidor), com o extra contra alvo com status negativo
@@ -2402,6 +2497,7 @@ function turnoDeCombateInterno(
         contadorFuria,
         contadorIra,
         bonusDanoExtraPercentual: modsPassivaAtacante.bonusDanoFisicoPercentual + bonusDanoBuffs,
+        bonusNivel: bonusNivelAtacante,
       });
       danoBruto = golpe.danoBruto;
       contadorFuria = golpe.novoContadorFuria;
@@ -2415,6 +2511,7 @@ function turnoDeCombateInterno(
         nivel: nivelAtacante,
         contadorPostura,
         contadorJuramento,
+        bonusNivel: bonusNivelAtacante,
       });
       danoBruto =
         bonusDanoBuffs !== 0
@@ -2443,6 +2540,7 @@ function turnoDeCombateInterno(
         sobreescudoAlvo: sobreescudoAtual,
         mitigacaoMagicaAlvo: mitigacao,
         bonusDanoExtraPercentual: bonusDanoBuffs,
+        bonusNivel: bonusNivelAtacante,
       });
       danoBruto = golpeFeiticeiro.danoBruto;
       mitigacaoParaAtaque = golpeFeiticeiro.mitigacaoEfetiva;
@@ -2464,6 +2562,7 @@ function turnoDeCombateInterno(
         contadorDanca,
         mitigacaoFisicaAlvo: mitigacao,
         bonusDanoExtraPercentual: bonusDanoBuffs,
+        bonusNivel: bonusNivelAtacante,
       });
       danoBruto = golpeBandido.danoBruto;
       mitigacaoParaAtaque = golpeBandido.mitigacaoPorGolpeEfetiva;
@@ -2488,6 +2587,7 @@ function turnoDeCombateInterno(
         contadorFeInabalavel: contadorFe,
         cargasFeInabalavel: cargasFe,
         contadorMilagre,
+        bonusNivel: bonusNivelAtacante,
       });
       // Cicatrização reduz a cura do Profeta (Bênção e Milagre)
       const fatorCuraProfeta = Math.max(0, fatorCuraPercentual(atacante.debuffs) + bonusEficaciaCuraAtacante) / 100;
@@ -2523,6 +2623,7 @@ function turnoDeCombateInterno(
         sobreescudoAlvo: sobreescudoAtual,
         mitigacaoFisicaAlvo: mitigacao,
         bonusDanoExtraPercentual: bonusDanoBuffs,
+        bonusNivel: bonusNivelAtacante,
       });
       danoBruto = golpeSamurai.danoBrutoPrincipal;
       danoGolpeExtraSamuraiPotencial = golpeSamurai.danoGolpeExtraBase;
@@ -2583,6 +2684,7 @@ function turnoDeCombateInterno(
           hp: hpAtacanteAtual,
           hpMax: atacante.hpMax,
           nivel: nivelAtacante,
+          bonusNivelPassivaI: bonusNivelAtacante.passivaI,
         });
         const danoBase = passivasClasse.danoBase;
         const ctxHab: ContextoHabilidade = {
@@ -2623,9 +2725,12 @@ function turnoDeCombateInterno(
             bonusAcumulativo +
             // Acúmulo Arcano do Feiticeiro: as cargas gastas neste ataque valem também para a habilidade equipada
             (ehFeiticeiroAtacante && !racialDeAtaque && cargasAcumuloConsumidas
-              ? aplicarCargasAcumuloArcano(0, cargasAcumuloConsumidas, nivelAtacante).percentualBonusAplicado
+              ? aplicarCargasAcumuloArcano(0, cargasAcumuloConsumidas, nivelAtacante, bonusNivelAtacante.passivaII)
+                  .percentualBonusAplicado
               : 0) +
-            bonusDanoBuffsPorTipo(tipoPrevisto),
+            bonusDanoBuffsPorTipo(tipoPrevisto) +
+            // Nível da habilidade equipada no espaço (Ascensão, 2.2.1); a racial de ataque não tem nível
+            (!racialDeAtaque && slot ? bonusNivelAtacante[slot] : 0),
         };
         const { danoBruto: novoDanoBruto, mitigacaoEfetiva } = resolverDanoHabilidade(
           resHab,
@@ -2735,6 +2840,7 @@ function turnoDeCombateInterno(
             nivel: nivelAtacante,
             subclasseAtualId: atacante.subclasseAtualId,
             subclasseTiers: atacante.subclasseTiers,
+            ascensaoHabilidade: atacante.ascensaoHabilidade,
           });
           let efeitosAtacante = atacante.efeitosDefensivos ?? [];
           for (const aplicacao of resHab.efeitosNoUsuario) {
@@ -2906,6 +3012,7 @@ function turnoDeCombateInterno(
       hp: hpAtual,
       hpMax: defensor.hpMax,
       nivel: nivelDefensor,
+      bonusNivelPercentual: bonusNivelDefensor.passivaI,
     });
     // Ímpeto Imprudente do defensor: a defesa dele cai enquanto durar (o Cavaleiro calcula a própria defesa à parte)
     const impetoDefensor =
@@ -3002,6 +3109,7 @@ function turnoDeCombateInterno(
             hpAtual,
             hpMax: defensor.hpMax,
             nivel: nivelDefensor,
+            ascensaoHabilidade: defensor.ascensaoHabilidade,
             ehDanoFisico,
             posturaAtiva: posturaDefensorAtiva,
             juramentoAtivo: juramentoDefensorAtivo,
@@ -3041,6 +3149,7 @@ function turnoDeCombateInterno(
         hpAtual,
         hpMax: defensor.hpMax,
         nivel: nivelDefensor,
+        ascensaoHabilidade: defensor.ascensaoHabilidade,
         ehDanoFisico,
         posturaAtiva: posturaDefensorAtiva,
         juramentoAtivo: juramentoDefensorAtivo,
@@ -3088,6 +3197,7 @@ function turnoDeCombateInterno(
             hpAtual,
             hpMax: defensor.hpMax,
             nivel: nivelDefensor,
+            ascensaoHabilidade: defensor.ascensaoHabilidade,
             ehDanoFisico,
             posturaAtiva: false,
             juramentoAtivo: false,
@@ -3216,6 +3326,7 @@ function turnoDeCombateInterno(
           nivel: nivelAtacante,
           subclasseAtualId: atacante.subclasseAtualId,
           subclasseTiers: atacante.subclasseTiers,
+            ascensaoHabilidade: atacante.ascensaoHabilidade,
         }),
         eficaciaPercentual: fatorCura * 100,
         curaContinuaAtual: atacante.curaContinua,
@@ -3451,6 +3562,7 @@ export function resolverCombate(
     subclasseTiers: personagem.subclasseTiers
       ? { ...personagem.subclasseTiers }
       : undefined,
+    ascensaoHabilidade: personagem.ascensaoHabilidade,
     modificadoresElementais: personagem.modificadoresElementais
       ? { ...personagem.modificadoresElementais }
       : undefined,
@@ -3801,6 +3913,7 @@ export function resolverCombate(
             hp: c.hp,
             hpMax: c.hpMax,
             nivel: c.nivel,
+            bonusNivelPercentual: bonusHabilidadePorAscensao(c.ascensaoHabilidade).passivaI,
           }).bonusEficaciaCuraPercentual ?? 0;
         const tickCura = processarCuraContinua(
           c.curaContinua,
@@ -3873,6 +3986,7 @@ export function resolverCombate(
     const hpMaximo = calcularHpMax(p.atributos.vigor, {
       classeId: p.classeId,
       nivel: p.nivel,
+      ascensaoHabilidade: p.ascensaoHabilidade,
     });
 
     mensagens.push(

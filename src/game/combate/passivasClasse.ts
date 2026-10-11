@@ -14,7 +14,9 @@
 export function calcularInstintoSobrevivencia(
   hpAtual: number,
   hpMax: number,
-  nivel: number = 12
+  nivel: number = 12,
+  /** Bônus do nível da Passiva I (Ascensão, 2.2.1): +10% ou +20% sobre o bônus de dano. */
+  bonusNivelPercentual = 0
 ): {
   ativo: boolean;
   faixa: 'normal' | 'abaixo50' | 'abaixo25';
@@ -38,7 +40,7 @@ export function calcularInstintoSobrevivencia(
       ativo: true,
       faixa: 'abaixo25',
       bonusForca: 4,
-      percentualBonusDano: 20,
+      percentualBonusDano: bonusNivelPercentual ? (20 * (100 + bonusNivelPercentual)) / 100 : 20,
     };
   }
 
@@ -48,7 +50,7 @@ export function calcularInstintoSobrevivencia(
       ativo: true,
       faixa: 'abaixo50',
       bonusForca: 2,
-      percentualBonusDano: 10,
+      percentualBonusDano: bonusNivelPercentual ? (10 * (100 + bonusNivelPercentual)) / 100 : 10,
     };
   }
 

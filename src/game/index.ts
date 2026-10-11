@@ -2,6 +2,7 @@ import { Attributes } from '@/rules/attributes';
 import { GAME_CONFIG } from '@/rules/config';
 import { XP_TABLE } from '@/rules/xpTable';
 import { obterModificadoresPassivaSubclasse } from './combate/habilidades/passivas';
+import { bonusHabilidadePorAscensao, escalarPorNivelHabilidade } from '@/rules/progressaoHabilidade';
 
 export interface ResultadoDano {
   sobreescudo: number;
@@ -14,6 +15,8 @@ export interface OpcoesCalculoStatus {
   /** Subclasse ativa e tiers do personagem; só o Sobreescudo máximo usa (Casca de Pedra, 48E). */
   subclasseAtualId?: string | null;
   subclasseTiers?: Record<string, number>;
+  /** Ascensão de Habilidade (A0 a A10): o nível das passivas aumenta os percentuais delas (2.2.1). */
+  ascensaoHabilidade?: number;
 }
 
 // Bônus de Sobreescudo máximo das passivas de classe, em % do valor base (regra 1.2.2: somam)
@@ -33,13 +36,15 @@ export const DISCIPLINA_DO_GUERREIRO_DANO_PERCENTUAL = 5;
 export function bonusPassivaPermanenteDanoPercentual(
   classeId: string | undefined,
   nivel: number,
-  tipoDano: 'fisico' | 'magico'
+  tipoDano: 'fisico' | 'magico',
+  /** Bônus do nível da Passiva I (Ascensão): +10% ou +20% sobre o percentual da passiva. */
+  bonusNivelPercentual = 0
 ): number {
   const classe = classeId?.trim().toLowerCase();
   if (nivel < 12) return 0;
-  if (tipoDano === 'magico' && classe === 'feiticeiro') return FLUXO_ARCANO_DANO_PERCENTUAL;
-  if (tipoDano === 'fisico' && classe === 'bandido') return PASSOS_RAPIDOS_DANO_PERCENTUAL;
-  if (tipoDano === 'fisico' && classe === 'samurai') return DISCIPLINA_DO_GUERREIRO_DANO_PERCENTUAL;
+  if (tipoDano === 'magico' && classe === 'feiticeiro') return escalarPorNivelHabilidade(FLUXO_ARCANO_DANO_PERCENTUAL, bonusNivelPercentual);
+  if (tipoDano === 'fisico' && classe === 'bandido') return escalarPorNivelHabilidade(PASSOS_RAPIDOS_DANO_PERCENTUAL, bonusNivelPercentual);
+  if (tipoDano === 'fisico' && classe === 'samurai') return escalarPorNivelHabilidade(DISCIPLINA_DO_GUERREIRO_DANO_PERCENTUAL, bonusNivelPercentual);
   return 0;
 }
 
@@ -52,7 +57,8 @@ export function aplicarResistenciaBarbara(
   hpMaxBase: number,
   sobreescudoMaxBase: number,
   nivel: number,
-  classeId: string = 'barbaro'
+  classeId: string = 'barbaro',
+  bonusNivelPercentual = 0
 ): { hpMax: number; sobreescudoMax: number } {
   const ehBarbaroNivel20 =
     classeId.trim().toLowerCase() === 'barbaro' && nivel >= 20;
@@ -65,9 +71,11 @@ export function aplicarResistenciaBarbara(
   }
 
   return {
-    hpMax: Math.ceil((hpMaxBase * 110) / 100),
+    hpMax: Math.ceil((hpMaxBase * (100 + escalarPorNivelHabilidade(10, bonusNivelPercentual))) / 100),
     sobreescudoMax: Math.ceil(
-      (sobreescudoMaxBase * (100 + RESISTENCIA_BARBARA_SOBREESCUDO_PERCENTUAL)) / 100
+      (sobreescudoMaxBase *
+        (100 + escalarPorNivelHabilidade(RESISTENCIA_BARBARA_SOBREESCUDO_PERCENTUAL, bonusNivelPercentual))) /
+        100
     ),
   };
 }
@@ -81,7 +89,8 @@ export function aplicarMuralhaDeFerro(
   defesaFisicaBase: number,
   sobreescudoMaxBase: number,
   nivel: number,
-  classeId: string = 'cavaleiro'
+  classeId: string = 'cavaleiro',
+  bonusNivelPercentual = 0
 ): { defesaFisica: number; sobreescudoMax: number } {
   const ehCavaleiroNivel12 =
     classeId.trim().toLowerCase() === 'cavaleiro' && nivel >= 12;
@@ -94,9 +103,11 @@ export function aplicarMuralhaDeFerro(
   }
 
   return {
-    defesaFisica: Math.ceil((defesaFisicaBase * 110) / 100),
+    defesaFisica: Math.ceil((defesaFisicaBase * (100 + escalarPorNivelHabilidade(10, bonusNivelPercentual))) / 100),
     sobreescudoMax: Math.ceil(
-      (sobreescudoMaxBase * (100 + MURALHA_DE_FERRO_SOBREESCUDO_PERCENTUAL)) / 100
+      (sobreescudoMaxBase *
+        (100 + escalarPorNivelHabilidade(MURALHA_DE_FERRO_SOBREESCUDO_PERCENTUAL, bonusNivelPercentual))) /
+        100
     ),
   };
 }
@@ -109,7 +120,8 @@ export function aplicarMuralhaDeFerro(
 export function aplicarFluxoArcano(
   danoMagicoBase: number,
   nivel: number,
-  classeId: string = 'feiticeiro'
+  classeId: string = 'feiticeiro',
+  bonusNivelPercentual = 0
 ): { danoMagico: number } {
   const ehFeiticeiroNivel12 =
     classeId.trim().toLowerCase() === 'feiticeiro' && nivel >= 12;
@@ -119,7 +131,9 @@ export function aplicarFluxoArcano(
   }
 
   return {
-    danoMagico: Math.ceil((danoMagicoBase * (100 + FLUXO_ARCANO_DANO_PERCENTUAL)) / 100),
+    danoMagico: Math.ceil(
+      (danoMagicoBase * (100 + escalarPorNivelHabilidade(FLUXO_ARCANO_DANO_PERCENTUAL, bonusNivelPercentual))) / 100
+    ),
   };
 }
 
@@ -132,7 +146,8 @@ export function aplicarPassosRapidos(
   agilidadeBase: number,
   danoFisicoBase: number,
   nivel: number,
-  classeId: string = 'bandido'
+  classeId: string = 'bandido',
+  bonusNivelPercentual = 0
 ): { agilidade: number; danoFisico: number } {
   const ehBandidoNivel12 =
     classeId.trim().toLowerCase() === 'bandido' && nivel >= 12;
@@ -146,7 +161,9 @@ export function aplicarPassosRapidos(
 
   return {
     agilidade: agilidadeBase + 2,
-    danoFisico: Math.ceil((danoFisicoBase * (100 + PASSOS_RAPIDOS_DANO_PERCENTUAL)) / 100),
+    danoFisico: Math.ceil(
+      (danoFisicoBase * (100 + escalarPorNivelHabilidade(PASSOS_RAPIDOS_DANO_PERCENTUAL, bonusNivelPercentual))) / 100
+    ),
   };
 }
 
@@ -158,7 +175,8 @@ export function aplicarPassosRapidos(
 export function aplicarGracaDivina(
   hpMaxBase: number,
   nivel: number,
-  classeId: string = 'profeta'
+  classeId: string = 'profeta',
+  bonusNivelPercentual = 0
 ): { hpMax: number } {
   const ehProfetaNivel12 =
     classeId.trim().toLowerCase() === 'profeta' && nivel >= 12;
@@ -167,7 +185,7 @@ export function aplicarGracaDivina(
     return { hpMax: hpMaxBase };
   }
 
-  return { hpMax: Math.ceil((hpMaxBase * 110) / 100) };
+  return { hpMax: Math.ceil((hpMaxBase * (100 + escalarPorNivelHabilidade(10, bonusNivelPercentual))) / 100) };
 }
 
 /**
@@ -179,7 +197,8 @@ export function aplicarDisciplinaDoGuerreiro(
   agilidadeBase: number,
   danoFisicoBase: number,
   nivel: number,
-  classeId: string = 'samurai'
+  classeId: string = 'samurai',
+  bonusNivelPercentual = 0
 ): { agilidade: number; danoFisico: number } {
   const ehSamuraiNivel12 =
     classeId.trim().toLowerCase() === 'samurai' && nivel >= 12;
@@ -193,7 +212,11 @@ export function aplicarDisciplinaDoGuerreiro(
 
   return {
     agilidade: agilidadeBase + 2,
-    danoFisico: Math.ceil((danoFisicoBase * (100 + DISCIPLINA_DO_GUERREIRO_DANO_PERCENTUAL)) / 100),
+    danoFisico: Math.ceil(
+      (danoFisicoBase *
+        (100 + escalarPorNivelHabilidade(DISCIPLINA_DO_GUERREIRO_DANO_PERCENTUAL, bonusNivelPercentual))) /
+        100
+    ),
   };
 }
 
@@ -227,7 +250,8 @@ export function calcularDefesaFisica(vitalidade: number, opcoes?: OpcoesCalculoS
   const classeNormalizada = opcoes?.classeId?.trim().toLowerCase();
   const nivel = opcoes?.nivel ?? 1;
   if (classeNormalizada === 'cavaleiro' && nivel >= 12) {
-    return aplicarMuralhaDeFerro(base, 0, nivel, opcoes!.classeId).defesaFisica;
+    const bonusPassivaI = bonusHabilidadePorAscensao(opcoes?.ascensaoHabilidade).passivaI;
+    return aplicarMuralhaDeFerro(base, 0, nivel, opcoes!.classeId, bonusPassivaI).defesaFisica;
   }
   return base;
 }
@@ -244,10 +268,12 @@ export function calcularHpMax(vigor: number, opcoes?: OpcoesCalculoStatus): numb
   const nivel = opcoes?.nivel ?? 1;
 
   if (classeNormalizada === 'barbaro' && nivel >= 20) {
-    return aplicarResistenciaBarbara(base, 0, nivel, opcoes!.classeId).hpMax;
+    const bonusPassivaII = bonusHabilidadePorAscensao(opcoes?.ascensaoHabilidade).passivaII;
+    return aplicarResistenciaBarbara(base, 0, nivel, opcoes!.classeId, bonusPassivaII).hpMax;
   }
   if (classeNormalizada === 'profeta' && nivel >= 12) {
-    return aplicarGracaDivina(base, nivel, opcoes!.classeId).hpMax;
+    const bonusPassivaI = bonusHabilidadePorAscensao(opcoes?.ascensaoHabilidade).passivaI;
+    return aplicarGracaDivina(base, nivel, opcoes!.classeId, bonusPassivaI).hpMax;
   }
   return base;
 }
@@ -287,12 +313,14 @@ export function calcularSobreescudoMax(vitalidade: number, opcoes?: OpcoesCalcul
   const classeNormalizada = opcoes?.classeId?.trim().toLowerCase();
   const nivel = opcoes?.nivel ?? 1;
 
+  // Nível das passivas (Ascensão): a Passiva II e a Passiva I (com a passiva da subclasse) ganham +10% ou +20%
+  const bonusNivel = bonusHabilidadePorAscensao(opcoes?.ascensaoHabilidade);
   let bonusPercentual = 0;
   if (classeNormalizada === 'barbaro' && nivel >= 20) {
-    bonusPercentual += RESISTENCIA_BARBARA_SOBREESCUDO_PERCENTUAL;
+    bonusPercentual += escalarPorNivelHabilidade(RESISTENCIA_BARBARA_SOBREESCUDO_PERCENTUAL, bonusNivel.passivaII);
   }
   if (classeNormalizada === 'cavaleiro' && nivel >= 12) {
-    bonusPercentual += MURALHA_DE_FERRO_SOBREESCUDO_PERCENTUAL;
+    bonusPercentual += escalarPorNivelHabilidade(MURALHA_DE_FERRO_SOBREESCUDO_PERCENTUAL, bonusNivel.passivaI);
   }
   bonusPercentual += obterModificadoresPassivaSubclasse({
     subclasseAtualId: opcoes?.subclasseAtualId,
@@ -300,6 +328,7 @@ export function calcularSobreescudoMax(vitalidade: number, opcoes?: OpcoesCalcul
     hp: 0,
     hpMax: 0,
     nivel,
+    bonusNivelPercentual: bonusNivel.passivaI,
   }).bonusSobreescudoMaxPercentual;
 
   if (bonusPercentual <= 0) {
@@ -384,6 +413,13 @@ export {
   liberarHabilidadesDeOutraSubclasse,
   equiparHabilidadeNoSlot,
 } from './habilidades';
+
+export {
+  aplicarReforcoAtributos,
+  bonusReforcoEmAtributos,
+  proximoNivelReforco,
+  proximaAscensao,
+} from './progressaoHabilidade';
 
 export {
   subclassesDaClasse,

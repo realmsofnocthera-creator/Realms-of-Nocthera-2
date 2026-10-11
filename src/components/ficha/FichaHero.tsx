@@ -24,7 +24,10 @@ export function FichaHero({
   const raca = getRaceById(character.racaId);
   const classe = getClassById(character.classeId);
   const avatarSrc = resolveAvatarSrc(character.avatarId, character.classeId);
-  const poderTotal = calcularPoderTotal(character.atributos);
+  // Poder Total com o bônus do Reforço de Habilidade (2.2.2)
+  const poderTotal =
+    calcularPoderTotal(character.atributos) +
+    Object.values(character.bonusReforco ?? {}).reduce((soma, v) => soma + Number(v || 0), 0);
 
   // Cálculo de XP e Nível
   const isMaxLevel = character.nivel >= 30;
