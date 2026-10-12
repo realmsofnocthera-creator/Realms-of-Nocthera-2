@@ -19,7 +19,18 @@ export interface RegistroCombate {
     levelUps: number;
     transaction?: TransactionDocument;
     mensagens: string[];
+    /** Caçada: drops, XP depois da trava e progresso (estrela do monstro-chave vencido). */
+    cacada?: ResultadoCacadaRegistro;
   };
+}
+
+export interface ResultadoCacadaRegistro {
+  monstroId: string;
+  estrela: number;
+  drops: { materialId: string; quantidade: number }[];
+  xpBase: number;
+  xpGanho: number;
+  chaveVencida?: number;
 }
 
 /**

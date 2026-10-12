@@ -7,6 +7,15 @@ import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import { SUBCLASSES } from '@/rules/subclasses';
 import { custoDoTier } from '@/rules/subclasseTiers';
 import { MONSTERS_MAP } from '@/rules/monsters';
+import { MATERIAIS_MAP } from '@/rules/materiais';
+import {
+  DropSorteado,
+  MENSAGEM_BLOQUEIO_CACADA,
+  sortearDrops,
+  sorteioDeDrops,
+  validarEntradaCacada,
+  xpDaCacada,
+} from '@/game/cacada';
 import {
   calcularAgilidadeEfetiva,
   calcularDefesaFisica,
@@ -78,6 +87,10 @@ export interface CharacterDocument {
   essenciaHabilidade?: number;
   /** Fragmentos de ascensão: cada Ascensão gasta 1 (fonte a definir). */
   fragmentosAscensao?: number;
+  /** Inventário de materiais: quantidade por id de material (drops da Caçada). */
+  inventario?: Record<string, number>;
+  /** Caçada: estrelas cujo monstro-chave o personagem já venceu (abre a estrela seguinte). */
+  cacadaChavesVencidas?: number[];
   /** Quanto o Reforço soma em cada atributo. Derivado, não é gravado. */
   bonusReforco?: Attributes;
   atributos: Attributes;
@@ -228,6 +241,8 @@ function normalizarPersonagem(char: CharacterDocument): CharacterDocument {
     ascensaoHabilidade: char.ascensaoHabilidade ?? 0,
     essenciaHabilidade: char.essenciaHabilidade ?? 0,
     fragmentosAscensao: char.fragmentosAscensao ?? 0,
+    inventario: char.inventario ?? {},
+    cacadaChavesVencidas: char.cacadaChavesVencidas ?? [],
     pontosAlocadosPorNivel: char.pontosAlocadosPorNivel ?? { ...ZEROS_ATRIBUTOS },
     habilidadesEquipadas: normalizarHabilidadesEquipadas(char.classeId, char.habilidadesEquipadas),
     ...derivadosComReforco(char),
@@ -253,6 +268,8 @@ function mesclarPersonagem(
     ascensaoHabilidade: updates.ascensaoHabilidade ?? current.ascensaoHabilidade ?? 0,
     essenciaHabilidade: updates.essenciaHabilidade ?? current.essenciaHabilidade ?? 0,
     fragmentosAscensao: updates.fragmentosAscensao ?? current.fragmentosAscensao ?? 0,
+    inventario: updates.inventario ?? current.inventario ?? {},
+    cacadaChavesVencidas: updates.cacadaChavesVencidas ?? current.cacadaChavesVencidas ?? [],
     bonusSubclasseAplicado:
       updates.bonusSubclasseAplicado !== undefined
         ? updates.bonusSubclasseAplicado
@@ -1140,6 +1157,27 @@ function idDoRegistroCombate(uid: string, combateId: string): string {
   return `${uid}__${combateId}`;
 }
 
+/** Monta o personagem para o combate: HP cheio, Sobreescudo e atributos com o Reforço de Habilidade. */
+function combatenteDoPersonagem(current: CharacterDocument): Combatente {
+  return {
+    nome: current.nome,
+    racaId: current.racaId,
+    classeId: current.classeId,
+    linhagem: current.linhagem,
+    nivel: current.nivel,
+    hp: current.hpMax,
+    hpMax: current.hpMax,
+    sobreescudo: current.sobreescudoMax,
+    atributos: atributosEfetivos(current),
+    habilidadesEquipadas: current.habilidadesEquipadas,
+    subclasseAtualId: current.subclasseAtualId,
+    subclasseTiers: current.subclasseTiers,
+    ascensaoHabilidade: current.ascensaoHabilidade,
+    ouro: current.ouro,
+    mitigacao: 0,
+  };
+}
+
 /**
  * Resolve um combate no servidor e aplica o resultado, tudo na mesma transação.
  * - A semente vem do servidor e fica gravada em combates/{id} com a entrada do combate (auditoria/replay).
@@ -1177,23 +1215,7 @@ export async function executarCombate(
     }
 
     // Combatente com HP cheio e Sobreescudo calculados
-    const combatentePersonagem: Combatente = {
-      nome: current.nome,
-      racaId: current.racaId,
-      classeId: current.classeId,
-      linhagem: current.linhagem,
-      nivel: current.nivel,
-      hp: current.hpMax,
-      hpMax: current.hpMax,
-      sobreescudo: current.sobreescudoMax,
-      atributos: atributosEfetivos(current),
-      habilidadesEquipadas: current.habilidadesEquipadas,
-      subclasseAtualId: current.subclasseAtualId,
-      subclasseTiers: current.subclasseTiers,
-      ascensaoHabilidade: current.ascensaoHabilidade,
-      ouro: current.ouro,
-      mitigacao: 0,
-    };
+    const combatentePersonagem = combatenteDoPersonagem(current);
     const entrada = structuredClone(combatentePersonagem);
 
     const resultado = resolverCombate(combatentePersonagem, monstro, opcoes.seed);
@@ -1232,5 +1254,127 @@ export async function executarCombate(
     ctx.gravarCombate(registro);
 
     return { ...pos, resultado, combateId, repetido: false };
+  });
+}
+
+export interface RespostaCacada extends RespostaCombate {
+  cacada: {
+    monstroId: string;
+    estrela: number;
+    drops: DropSorteado[];
+    /** XP do monstro antes da trava contra farm. */
+    xpBase: number;
+    /** XP que entrou de fato (com a trava e a passiva racial). */
+    xpGanho: number;
+    /** Estrela cujo monstro-chave foi vencido pela primeira vez nesta caçada (abre a seguinte). */
+    chaveVencida?: number;
+  };
+}
+
+/**
+ * Provação da Caçada: valida no servidor a estrela (nível e monstro-chave anterior), resolve a luta e aplica
+ * XP (com a trava contra farm), ouro, drops no inventário e o progresso, tudo na mesma transação.
+ * Derrota: perde até 50 de ouro (regra de morte). Reenvio com o mesmo combateId devolve o resultado gravado.
+ */
+export async function executarCacada(
+  uid: string,
+  monstroId: unknown,
+  opcoes: OpcoesCombate
+): Promise<RespostaCacada> {
+  const combateId = opcoes.combateId ?? `cac-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const idRegistro = idDoRegistroCombate(uid, combateId);
+
+  return repositorio.executarTransacao('cacada', async (ctx) => {
+    const anterior = await ctx.lerCombate(idRegistro);
+    const current = await carregarPersonagem(
+      ctx,
+      uid,
+      'Personagem não encontrado. Crie um personagem antes de caçar.'
+    );
+
+    if (anterior) {
+      if (!anterior.resposta.cacada) {
+        throw new Error('Identificador de combate já usado fora da Caçada.');
+      }
+      return {
+        ...anterior.resposta,
+        resultado: anterior.resposta.resultado as ResultadoCombate,
+        character: current,
+        combateId,
+        repetido: true,
+        cacada: anterior.resposta.cacada,
+      };
+    }
+
+    const entradaCacada = validarEntradaCacada(monstroId, current.nivel, current.cacadaChavesVencidas);
+    if (!entradaCacada.ok) {
+      throw new Error(MENSAGEM_BLOQUEIO_CACADA[entradaCacada.motivo]);
+    }
+    const { monstro, dados, estrela } = entradaCacada;
+
+    const combatentePersonagem = combatenteDoPersonagem(current);
+    const entrada = structuredClone(combatentePersonagem);
+    const resultado = resolverCombate(combatentePersonagem, monstro, opcoes.seed);
+
+    const xpBase = monstro.xpConcedido;
+    let drops: DropSorteado[] = [];
+    let chaveVencida: number | undefined;
+    if (resultado.vencedor === 'personagem') {
+      // XP curto com a trava contra farm; a passiva racial de XP entra por cima
+      resultado.xpGanho = calcularXpComBonusRacial(
+        xpDaCacada(xpBase, estrela.nivelMinimo, current.nivel),
+        current.racaId
+      );
+      drops = sortearDrops(dados.drops, sorteioDeDrops(opcoes.seed), current.bonusChanceDrop ?? 0);
+      if (dados.chave && !(current.cacadaChavesVencidas ?? []).includes(dados.estrela)) {
+        chaveVencida = dados.estrela;
+      }
+    } else {
+      resultado.xpGanho = 0;
+    }
+
+    const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome);
+    let character = pos.character;
+    const mensagens = [...pos.mensagens];
+
+    if (resultado.vencedor === 'personagem') {
+      const inventario = { ...(character.inventario ?? {}) };
+      for (const d of drops) inventario[d.materialId] = (inventario[d.materialId] ?? 0) + d.quantidade;
+      const chaves = chaveVencida
+        ? [...(character.cacadaChavesVencidas ?? []), chaveVencida].sort((a, b) => a - b)
+        : character.cacadaChavesVencidas ?? [];
+      character = salvarPersonagem(ctx, character, { inventario, cacadaChavesVencidas: chaves });
+
+      mensagens.push(
+        `Drops: ${drops.map((d) => `${MATERIAIS_MAP[d.materialId]?.nome ?? d.materialId} x${d.quantidade}`).join(', ')}.`
+      );
+      if (resultado.xpGanho < xpBase) {
+        mensagens.push(`XP da Caçada reduzido pelo seu nível (${resultado.xpGanho} de ${xpBase}).`);
+      }
+      if (chaveVencida) {
+        mensagens.push(
+          chaveVencida < 9
+            ? `Monstro-chave vencido! A estrela ${chaveVencida + 1}★ da Caçada foi liberada (se você tiver o nível).`
+            : 'Monstro-chave vencido!'
+        );
+      }
+    }
+
+    const cacada = { monstroId: monstro.id, estrela: dados.estrela, drops, xpBase, xpGanho: resultado.xpGanho, ...(chaveVencida ? { chaveVencida } : {}) };
+    const registro: RegistroCombate = {
+      id: idRegistro,
+      uid,
+      monstroId: monstro.id,
+      seed: opcoes.seed,
+      vencedor: resultado.vencedor,
+      xpGanho: resultado.xpGanho,
+      ouroGanho: resultado.ouroGanho,
+      criadoEm: new Date().toISOString(),
+      entrada: { combatente: entrada, monstroId: monstro.id, seed: opcoes.seed, modo: 'cacada' },
+      resposta: { resultado, levelUps: pos.levelUps, transaction: pos.transaction, mensagens, cacada },
+    };
+    ctx.gravarCombate(registro);
+
+    return { ...pos, character, mensagens, resultado, combateId, repetido: false, cacada };
   });
 }
