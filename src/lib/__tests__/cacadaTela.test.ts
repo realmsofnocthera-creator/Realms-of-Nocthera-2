@@ -1,0 +1,93 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import React from 'react';
+import { createCharacter, executarCacada, getCharacterByUid, updateCharacter } from '@/server/characterService';
+import { resetCharacterStore } from '@/test/repositorioMemoria';
+import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
+import { dropsTela, estrelaDoMonstro, estrelasDoRanque, itensDoInventario, monstrosDaEstrela, ranquesDaCacada } from '@/lib/cacadaTela';
+import { CICLO_ESPECIAL, espacosDoPersonagem, larguraDasBarras, montarQuadros } from '@/lib/cacadaReplay';
+import { MochilaScreen } from '@/components/mochila/MochilaScreen';
+import { BarraVidaEscudo } from '@/components/cacada/CombateCacada';
+
+/** Telas da Caçada: ranque, estrelas, catálogo, replay da luta e Mochila. */
+describe('Caçada (telas)', () => {
+  beforeEach(() => {
+    (process.env as Record<string, string | undefined>).NODE_ENV = 'test';
+    resetCharacterStore();
+  });
+
+  it('ranques: baixo no nível 2; alto pede nível 20 e a chave da 5★', () => {
+    expect(ranquesDaCacada({ nivel: 1, cacadaChavesVencidas: [] }).map((r) => r.liberado)).toEqual([false, false]);
+    expect(ranquesDaCacada({ nivel: 2, cacadaChavesVencidas: [] }).map((r) => r.liberado)).toEqual([true, false]);
+    expect(ranquesDaCacada({ nivel: 20, cacadaChavesVencidas: [] })[1].liberado).toBe(false);
+    expect(ranquesDaCacada({ nivel: 20, cacadaChavesVencidas: [1, 2, 3, 4, 5] })[1].liberado).toBe(true);
+  });
+
+  it('estrelas mostram o motivo do bloqueio e a chave vencida', () => {
+    const e = estrelasDoRanque({ nivel: 6, cacadaChavesVencidas: [1] }, 'baixo');
+    expect(e.map((x) => x.estrela)).toEqual([1, 2, 3, 4, 5]);
+    expect(e[0]).toMatchObject({ liberada: true, chaveVencida: true, bloqueio: null });
+    expect(e[1]).toMatchObject({ liberada: true, chaveVencida: false });
+    expect(e[2].bloqueio).toBe('Requer nível 8');
+    const semChave = estrelasDoRanque({ nivel: 30, cacadaChavesVencidas: [] }, 'baixo');
+    expect(semChave[1].bloqueio).toBe('Vença o monstro-chave da 1★');
+    expect(estrelasDoRanque({ nivel: 30, cacadaChavesVencidas: [] }, 'alto').map((x) => x.estrela)).toEqual([6, 7, 8, 9]);
+  });
+
+  it('catálogo traz os monstros da estrela com drops e chances', () => {
+    const m = monstrosDaEstrela(1);
+    expect(m.length).toBeGreaterThan(0);
+    expect(m.filter((x) => x.chave)).toHaveLength(1);
+    for (const x of m) {
+      expect(estrelaDoMonstro(x.id)).toBe(1);
+      expect(x.drops[0].chance).toBe('Garantido');
+    }
+    expect(dropsTela(['nao-existe'])).toEqual([]);
+  });
+
+  it('Mochila ordena do mais raro ao comum e ignora vazio ou desconhecido', () => {
+    const comum = monstrosDaEstrela(1)[0].drops.find((d) => d.raridade === 'comum')!;
+    const raro = monstrosDaEstrela(1)[0].drops.find((d) => d.raridade !== 'comum')!;
+    const itens = itensDoInventario({ [comum.id]: 3, [raro.id]: 1, inexistente: 5, [monstrosDaEstrela(2)[0].drops[0].id]: 0 });
+    expect(itens.map((i) => i.id)).toEqual([raro.id, comum.id]);
+    expect(itens[1]).toMatchObject({ quantidade: 3, estrelaOrigem: 1 });
+    expect(itensDoInventario(undefined)).toEqual([]);
+    const html = renderToStaticMarkup(React.createElement(MochilaScreen, { character: { nome: 'Yuri', nivel: 3, inventario: { [comum.id]: 3 } } as never }));
+    expect(html).toContain(comum.nome);
+    expect(html).toContain('×3');
+    expect(renderToStaticMarkup(React.createElement(MochilaScreen, { character: { nome: 'Yuri', nivel: 3 } as never }))).toContain('mochila está vazia');
+  });
+
+  it('barra única: escudo azul por cima da vida', () => {
+    expect(larguraDasBarras({ hp: 50, hpMax: 100, escudo: 0, escudoMax: 0 })).toEqual({ vida: 50, escudo: 0 });
+    const b = larguraDasBarras({ hp: 100, hpMax: 100, escudo: 20, escudoMax: 40 });
+    expect(b.vida).toBe(100);
+    expect(b.escudo).toBeGreaterThan(0);
+    const html = renderToStaticMarkup(React.createElement(BarraVidaEscudo, { painel: { nome: 'x', nivel: 1, hp: 30, hpMax: 60, escudo: 10, escudoMax: 10, status: [], enfurecido: false } } as never));
+    expect(html).toContain('30');
+  });
+
+  it('replay de uma caçada real: quadros, 5 habilidades e fim com o perdedor zerado', async () => {
+    await createCharacter('t1', {
+      nome: 'Cacador',
+      racaId: 'elfo',
+      classeId: 'cavaleiro',
+      pontos: { vigor: 5, sorte: 0, forca: 5, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 0 },
+    });
+    await updateCharacter('t1', { nivel: 2, atributos: { vigor: 400, sorte: 0, forca: 300, vitalidade: 100, arcano: 0, inteligencia: 0, agilidade: 50 } });
+    const antes = (await getCharacterByUid('t1'))!;
+    const r = await executarCacada('t1', 'lobo-cinzento', { seed: 7, combateId: 'cacada-tela-0001' });
+    const quadros = montarQuadros(r.resultado, antes, MONSTROS_CACADA_MAP['lobo-cinzento']);
+    expect(quadros.length).toBeGreaterThan(1);
+    for (const q of quadros) {
+      expect(q.habilidades).toHaveLength(5);
+      expect(q.linhas.length).toBeLessThanOrEqual(6);
+      expect(q.jogador.hp).toBeGreaterThanOrEqual(0);
+    }
+    const fim = quadros[quadros.length - 1];
+    expect(fim.monstro.hp).toBe(0);
+    expect(fim.jogador.hp).toBeGreaterThan(0);
+    expect(espacosDoPersonagem(antes)).toHaveLength(5);
+    expect(CICLO_ESPECIAL).toBe(3);
+  });
+});

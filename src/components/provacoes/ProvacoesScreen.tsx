@@ -108,10 +108,11 @@ function ProvacaoCard({
     );
   }
 
-  return (
+  // Provações com tela própria (por enquanto, a Caçada) viram link
+  const destino = provacao.id === 'cacada' ? '/cacada' : null;
+  const card = (
     <article
       aria-label={`${provacao.nome} - Nível ${provacao.nivelRequerido}`}
-      onClick={() => {}}
       className={`group relative w-full ${heightClasses} rounded-sm border-2 overflow-hidden flex flex-col justify-end shadow-xl select-none`}
       style={{
         backgroundColor: colors.background.secondary,
@@ -142,6 +143,13 @@ function ProvacaoCard({
         </span>
       </div>
     </article>
+  );
+  return destino ? (
+    <Link href={destino} className="block w-full h-full cursor-pointer" aria-label={`Entrar na ${provacao.nome}`}>
+      {card}
+    </Link>
+  ) : (
+    card
   );
 }
 

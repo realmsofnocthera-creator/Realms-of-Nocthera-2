@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Home } from 'lucide-react';
 import { CharacterDocument } from '@/server/characterService';
 import { MENU_PRINCIPAL } from '@/rules/menuPrincipal';
@@ -50,6 +51,7 @@ const MENU_BENTO_GRID_AREAS = `
 
 export function MenuScreen({ personagem }: MenuScreenProps) {
   const { colors } = NOCTHERA_THEME;
+  const router = useRouter();
 
   return (
     <main
@@ -140,7 +142,10 @@ export function MenuScreen({ personagem }: MenuScreenProps) {
               <article
                 key={item.id}
                 aria-label={item.nome}
-                onClick={() => {}}
+                onClick={() => {
+                  // Telas que já existem: a Mochila mostra os materiais da Caçada
+                  if (item.id === 'mochila') router.push('/mochila');
+                }}
                 style={{
                   gridArea: item.id,
                   backgroundColor: colors.background.secondary,
