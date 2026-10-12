@@ -143,8 +143,9 @@ export function MenuScreen({ personagem }: MenuScreenProps) {
                 key={item.id}
                 aria-label={item.nome}
                 onClick={() => {
-                  // Telas que já existem: a Mochila mostra os materiais da Caçada
+                  // Telas que já existem: a Mochila mostra os materiais da Caçada; Produção leva ao Ferreiro
                   if (item.id === 'mochila') router.push('/mochila');
+                  if (item.id === 'producao') router.push('/ferreiro');
                 }}
                 style={{
                   gridArea: item.id,
