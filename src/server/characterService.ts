@@ -7,11 +7,11 @@ import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import { SUBCLASSES } from '@/rules/subclasses';
 import { custoDoTier } from '@/rules/subclasseTiers';
 import { MONSTERS_MAP } from '@/rules/monsters';
-import { MATERIAIS_MAP } from '@/rules/materiais';
 import {
   DropSorteado,
   MENSAGEM_BLOQUEIO_CACADA,
   sortearDrops,
+  sortearDropsExtras,
   sorteioDeDrops,
   validarEntradaCacada,
   xpDaCacada,
@@ -43,6 +43,16 @@ import {
 } from '@/game';
 import { ASCENSAO_CUSTO_FRAGMENTOS, PASSOS_ASCENSAO, ROTULO_ESPACO_ASCENSAO } from '@/rules/progressaoHabilidade';
 import { calcularDanoFisico, Combatente, resolverCombate, ResultadoCombate } from '@/game/combat';
+import {
+  ArmaPersonagem,
+  EstadoForja,
+  MENSAGEM_BLOQUEIO_FORJA,
+  nomeDoItem,
+  planejarCustomizacao,
+  planejarFabricacao,
+  planejarReforja,
+} from '@/game/forja';
+import { randomInt, randomUUID } from 'node:crypto';
 import { registrarLog } from './log';
 import {
   chaveDoNome,
@@ -91,6 +101,8 @@ export interface CharacterDocument {
   inventario?: Record<string, number>;
   /** Caçada: estrelas cujo monstro-chave o personagem já venceu (abre a estrela seguinte). */
   cacadaChavesVencidas?: number[];
+  /** Armas fabricadas na Forja. */
+  armas?: ArmaPersonagem[];
   /** Quanto o Reforço soma em cada atributo. Derivado, não é gravado. */
   bonusReforco?: Attributes;
   atributos: Attributes;
@@ -270,6 +282,7 @@ function mesclarPersonagem(
     fragmentosAscensao: updates.fragmentosAscensao ?? current.fragmentosAscensao ?? 0,
     inventario: updates.inventario ?? current.inventario ?? {},
     cacadaChavesVencidas: updates.cacadaChavesVencidas ?? current.cacadaChavesVencidas ?? [],
+    armas: updates.armas ?? current.armas ?? [],
     bonusSubclasseAplicado:
       updates.bonusSubclasseAplicado !== undefined
         ? updates.bonusSubclasseAplicado
@@ -1325,7 +1338,11 @@ export async function executarCacada(
         xpDaCacada(xpBase, estrela.nivelMinimo, current.nivel),
         current.racaId
       );
-      drops = sortearDrops(dados.drops, sorteioDeDrops(opcoes.seed), current.bonusChanceDrop ?? 0);
+      const sorteio = sorteioDeDrops(opcoes.seed);
+      drops = [
+        ...sortearDrops(dados.drops, sorteio, current.bonusChanceDrop ?? 0),
+        ...sortearDropsExtras(dados.drops, dados.estrela, sorteio),
+      ];
       if (dados.chave && !(current.cacadaChavesVencidas ?? []).includes(dados.estrela)) {
         chaveVencida = dados.estrela;
       }
@@ -1346,7 +1363,7 @@ export async function executarCacada(
       character = salvarPersonagem(ctx, character, { inventario, cacadaChavesVencidas: chaves });
 
       mensagens.push(
-        `Drops: ${drops.map((d) => `${MATERIAIS_MAP[d.materialId]?.nome ?? d.materialId} x${d.quantidade}`).join(', ')}.`
+        `Drops: ${drops.map((d) => `${nomeDoItem(d.materialId)} x${d.quantidade}`).join(', ')}.`
       );
       if (resultado.xpGanho < xpBase) {
         mensagens.push(`XP da Caçada reduzido pelo seu nível (${resultado.xpGanho} de ${xpBase}).`);
@@ -1378,3 +1395,80 @@ export async function executarCacada(
     return { ...pos, character, mensagens, resultado, combateId, repetido: false, cacada };
   });
 }
+
+// ---------------------------------------------------------------------------
+// Forja: fabricar, evoluir, reforjar e customizar armas
+// ---------------------------------------------------------------------------
+
+export interface OpcoesForja {
+  /** Gerador em [0, 1); só os testes passam o seu. O padrão usa o crypto do servidor. */
+  aleatorio?: () => number;
+}
+
+const aleatorioDoServidor = (): number => randomInt(0, 2 ** 32) / 2 ** 32;
+
+export interface RespostaForja {
+  character: CharacterDocument;
+  arma: ArmaPersonagem;
+  transaction: TransactionDocument;
+}
+
+function estadoForja(char: CharacterDocument): EstadoForja {
+  return { inventario: char.inventario ?? {}, ouro: char.ouro, armas: char.armas ?? [] };
+}
+
+/** Grava o resultado da Forja: inventário, armas e o ouro gasto (com a transação de moeda). */
+function gravarForja(
+  ctx: ContextoTransacao,
+  current: CharacterDocument,
+  plano: { inventario: Record<string, number>; ouroGasto: number; armas: ArmaPersonagem[]; arma: ArmaPersonagem },
+  motivo: string
+): RespostaForja {
+  const pago = alterarSaldoEm(ctx, current, 'ouro', -plano.ouroGasto, motivo);
+  const character = salvarPersonagem(ctx, current, {
+    ouro: pago.character.ouro,
+    inventario: plano.inventario,
+    armas: plano.armas,
+  });
+  return { character, arma: plano.arma, transaction: pago.transaction };
+}
+
+/** Fabrica a primeira arma de uma árvore ou evolui a anterior (consumida). Tudo numa transação. */
+export async function fabricarArma(
+  uid: string,
+  pedido: { baseId: unknown; categoria: unknown; armaAnteriorId?: unknown },
+  opcoes: OpcoesForja = {}
+): Promise<RespostaForja> {
+  return repositorio.executarTransacao('forjaFabricar', async (ctx) => {
+    const current = await carregarPersonagem(ctx, uid);
+    const plano = planejarFabricacao(estadoForja(current), pedido, {
+      aleatorio: opcoes.aleatorio ?? aleatorioDoServidor,
+      novoId: randomUUID,
+      agora: new Date().toISOString(),
+    });
+    if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_FORJA[plano.motivo]);
+    const nome = plano.base.nomes[plano.arma.categoria];
+    return gravarForja(ctx, current, plano, `Forja: ${plano.base.consome ? 'evoluir para' : 'fabricar'} ${nome}`);
+  });
+}
+
+/** Reforjar: sorteia de novo os pontos do atributo da arma, pagando parte da receita. */
+export async function reforjarArma(uid: string, armaId: unknown, opcoes: OpcoesForja = {}): Promise<RespostaForja> {
+  return repositorio.executarTransacao('forjaReforjar', async (ctx) => {
+    const current = await carregarPersonagem(ctx, uid);
+    const plano = planejarReforja(estadoForja(current), armaId, { aleatorio: opcoes.aleatorio ?? aleatorioDoServidor });
+    if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_FORJA[plano.motivo]);
+    return gravarForja(ctx, current, plano, `Forja: reforjar (${plano.percentual}% da receita)`);
+  });
+}
+
+/** Customização (só Mítico): +1 ponto na opção, por ouro e Bilhete de melhoria. */
+export async function customizarArma(uid: string, armaId: unknown, opcao: unknown): Promise<RespostaForja> {
+  return repositorio.executarTransacao('forjaCustomizar', async (ctx) => {
+    const current = await carregarPersonagem(ctx, uid);
+    const plano = planejarCustomizacao(estadoForja(current), armaId, opcao);
+    if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_FORJA[plano.motivo]);
+    return gravarForja(ctx, current, plano, `Forja: Customização (${String(opcao)})`);
+  });
+}
+

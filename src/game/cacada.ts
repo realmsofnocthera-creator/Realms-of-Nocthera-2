@@ -8,7 +8,9 @@ import {
   RanqueCacada,
 } from '@/rules/cacada';
 import { MATERIAIS_MAP } from '@/rules/materiais';
-import { RARIDADE_MAP } from '@/rules/raridades';
+import { RARIDADE_MAP, RaridadeMaterial } from '@/rules/raridades';
+import { CUSTOMIZACAO } from '@/rules/armas';
+import { BILHETE_DE_MELHORIA, diversosDaRaridade } from './forja';
 import type { MonsterDefinition } from '@/rules/monsters';
 
 /**
@@ -80,6 +82,37 @@ export function sortearDrops(
       resultado.push({ materialId: id, quantidade: 1 });
     }
   });
+  return resultado;
+}
+
+/** Chance, por vitória, de cair um diverso de mundo (um dos dois) em cada raridade que o monstro dropa. */
+export const CHANCE_DIVERSO_PERCENTUAL = 1;
+/** Os sorteios dos extras começam aqui, depois dos sorteios dos materiais do monstro. */
+const INDICE_SORTEIO_EXTRAS = 50;
+
+/**
+ * Extras de uma vitória na Caçada: para cada raridade que o monstro dropa, 1% de cair um dos dois diversos
+ * de mundo daquela raridade; nos monstros 9★, 1% de cair um Bilhete de melhoria.
+ */
+export function sortearDropsExtras(
+  drops: readonly string[],
+  estrela: number,
+  sorteio: (indice: number) => number
+): DropSorteado[] {
+  const resultado: DropSorteado[] = [];
+  const raridades = [...new Set(drops.map((id) => MATERIAIS_MAP[id]?.raridade).filter((r): r is RaridadeMaterial => !!r))];
+  let i = INDICE_SORTEIO_EXTRAS;
+  for (const raridade of raridades) {
+    const cai = sorteio(i++) < CHANCE_DIVERSO_PERCENTUAL;
+    const escolha = sorteio(i++);
+    const opcoes = diversosDaRaridade(raridade);
+    if (cai && opcoes.length > 0) {
+      resultado.push({ materialId: opcoes[Math.min(opcoes.length - 1, Math.floor((escolha / 100) * opcoes.length))], quantidade: 1 });
+    }
+  }
+  if (estrela === 9 && sorteio(i) < CUSTOMIZACAO.chanceBilhete9EstrelasPercentual) {
+    resultado.push({ materialId: BILHETE_DE_MELHORIA.id, quantidade: 1 });
+  }
   return resultado;
 }
 

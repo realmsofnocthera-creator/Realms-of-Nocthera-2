@@ -107,6 +107,14 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(antigo.cacadaChavesVencidas).toEqual([]);
   });
 
+  it('armas da Forja vão e voltam do Firestore; documento antigo fica sem armas', () => {
+    const arma = { id: 'a1', baseId: 'ferro-de-cacada', categoria: 'katana' as const, atributo: 'sorte' as const, pontos: 4, reforjas: 1, criadaEm: 't' };
+    const volta = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, armas: [arma] }));
+    expect(volta.armas).toEqual([arma]);
+    const antigo = personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), armas: undefined });
+    expect(antigo.armas).toEqual([]);
+  });
+
   it('grava personagem, nome e transação juntos no fim da transação', async () => {
     await repo.executarTransacao('teste', async (ctx) => {
       ctx.gravarPersonagem(PERSONAGEM);
