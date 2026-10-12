@@ -49,13 +49,13 @@ const ICONE_LINHA: Record<TipoLinha, { Icone: typeof Flame; cor: string }> = {
 export function BarraVidaEscudo({ painel }: { painel: PainelLuta }) {
   const { vida, escudo } = larguraDasBarras(painel);
   return (
-    <div className="relative h-5 rounded-sm overflow-hidden border" style={{ borderColor: '#000', backgroundColor: '#2a1214' }} role="group"
+    <div className="relative h-4 rounded-sm overflow-hidden border" style={{ borderColor: '#000', backgroundColor: '#2a1214' }} role="group"
       aria-label={`Vida ${Math.round(painel.hp)} de ${painel.hpMax}${painel.escudo > 0 ? `, escudo ${Math.round(painel.escudo)}` : ''}`}>
       <div className="absolute inset-y-0 left-0 transition-all duration-200" style={{ width: `${vida}%`, background: 'linear-gradient(180deg,#E5484D,#9B1B22)' }} />
       {escudo > 0 && (
         <div className="absolute inset-y-0 left-0 transition-all duration-200" style={{ width: `${escudo}%`, background: 'linear-gradient(180deg,#5AA7F0,#1F5FA8)', opacity: 0.92 }} />
       )}
-      <div className="absolute inset-0 flex items-center justify-end gap-1.5 px-1.5 text-[11px] font-bold font-cinzel text-white" style={{ textShadow: '0 1px 2px #000' }}>
+      <div className="absolute inset-0 flex items-center justify-end gap-1.5 px-1.5 text-[10px] font-bold font-cinzel text-white" style={{ textShadow: '0 1px 2px #000' }}>
         {painel.escudo > 0 && <span style={{ color: '#BFE0FF' }}>+{Math.round(painel.escudo)}</span>}
         <span>{Math.round(painel.hp)} / {painel.hpMax}</span>
       </div>
@@ -65,17 +65,17 @@ export function BarraVidaEscudo({ painel }: { painel: PainelLuta }) {
 
 function Status({ status, enfurecido }: { status: EfeitoStatus[]; enfurecido?: boolean }) {
   return (
-    <div className="flex items-center gap-1 min-h-[20px] flex-wrap">
+    <div className="flex items-center gap-1 flex-wrap">
       {enfurecido && (
-        <span title="Enfurecido" className="w-[22px] h-[22px] rounded-sm flex items-center justify-center border" style={{ backgroundColor: '#3a0d0d', borderColor: '#E5484D' }}>
-          <Flame className="w-3.5 h-3.5" style={{ color: '#FF6B4A' }} aria-label="Enfurecido" />
+        <span title="Enfurecido" className="w-[19px] h-[19px] rounded-sm flex items-center justify-center border" style={{ backgroundColor: '#3a0d0d', borderColor: '#E5484D' }}>
+          <Flame className="w-3 h-3" style={{ color: '#FF6B4A' }} aria-label="Enfurecido" />
         </span>
       )}
       {status.map((s) => {
         const { Icone, cor } = ICONE_STATUS[s];
         return (
-          <span key={s} title={EFEITOS_STATUS[s]?.nome ?? s} className="w-[22px] h-[22px] rounded-sm flex items-center justify-center border" style={{ backgroundColor: '#1a1416', borderColor: `${cor}99` }}>
-            <Icone className="w-3.5 h-3.5" style={{ color: cor }} aria-label={EFEITOS_STATUS[s]?.nome ?? s} />
+          <span key={s} title={EFEITOS_STATUS[s]?.nome ?? s} className="w-[19px] h-[19px] rounded-sm flex items-center justify-center border" style={{ backgroundColor: '#1a1416', borderColor: `${cor}99` }}>
+            <Icone className="w-3 h-3" style={{ color: cor }} aria-label={EFEITOS_STATUS[s]?.nome ?? s} />
           </span>
         );
       })}
@@ -104,24 +104,24 @@ export function destacarLinha(texto: string): React.ReactNode[] {
   return partes;
 }
 
-function Painel({ painel, retrato, statusPara }: { painel: PainelLuta; retrato?: string; statusPara: 'baixo' | 'cima' }) {
+function Painel({ painel, retrato }: { painel: PainelLuta; retrato?: string }) {
   const temStatus = painel.enfurecido || painel.status.length > 0;
   return (
-    <div className="relative flex items-stretch gap-1.5">
+    <div className="relative flex items-stretch gap-1">
       {retrato && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={retrato} alt="" aria-hidden="true" className="w-[52px] h-[52px] shrink-0 rounded-sm object-cover border-2" style={{ borderColor: OURO }} />
+        <img src={retrato} alt="" aria-hidden="true" className="w-[42px] h-[42px] shrink-0 rounded-sm object-cover border-2" style={{ borderColor: OURO }} />
       )}
-      <div className="flex-1 min-w-0 rounded-sm border-2 px-2 py-1 flex flex-col gap-1" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO }}>
-        <div className="flex items-center justify-between gap-2 font-cinzel text-[13px] text-[#F3E6CC]">
+      <div className="flex-1 min-w-0 rounded-sm border-2 px-1.5 py-0.5 flex flex-col gap-0.5" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO }}>
+        <div className="flex items-center justify-between gap-2 font-cinzel text-[12px] leading-tight text-[#F3E6CC]">
           <span className="truncate font-bold min-w-0">{painel.nome}</span>
-          <span className="shrink-0">Nv. {painel.nivel}</span>
+          <span className="shrink-0 text-[11px]">Nv. {painel.nivel}</span>
         </div>
         <BarraVidaEscudo painel={painel} />
       </div>
-      {/* Status logo abaixo (ou acima) da barra, por cima do cenário, sem aumentar o painel */}
+      {/* Status logo abaixo da barra, sem aumentar o painel */}
       {temStatus && (
-        <div className={`absolute z-20 ${statusPara === 'baixo' ? 'top-full mt-1' : 'bottom-full mb-1'} ${retrato ? 'left-[58px]' : 'left-0'}`}>
+        <div className={`absolute top-full mt-1 ${retrato ? 'left-[46px]' : 'left-0'}`}>
           <Status status={painel.status} enfurecido={painel.enfurecido} />
         </div>
       )}
@@ -131,13 +131,13 @@ function Painel({ painel, retrato, statusPara }: { painel: PainelLuta; retrato?:
 
 /**
  * Cenário de 1024×1536 com a plataforma do monstro em cima (x 65%, y 36%) e a do jogador embaixo (x 50%, y 80%).
- * A imagem é escalada para a arena mostrar sempre da cabeça do monstro até os pés do jogador, e as plataformas
- * viram posições em pixels, então nada sai do lugar em telas de tamanhos diferentes.
+ * A imagem cobre toda a área do mapa (sem deformar) e as plataformas viram posições em pixels, então nada sai
+ * do lugar em telas de tamanhos diferentes. Para caber do monstro aos pés do jogador, o mapa precisa de ~0,93 da largura em altura.
  */
 const CENA = { w: 1024, h: 1536, topo: 0.22, base: 0.84, monstroX: 0.65, monstroPes: 0.385, jogadorX: 0.47, jogadorPes: 0.835, alturaMonstro: 0.13, alturaJogador: 0.33 };
 
 export function geometriaDaCena(largura: number, altura: number) {
-  const escala = Math.max(largura / CENA.w, altura / ((CENA.base - CENA.topo) * CENA.h));
+  const escala = Math.max(largura / CENA.w, altura / CENA.h);
   const imgW = CENA.w * escala;
   const imgH = CENA.h * escala;
   const esq = (imgW - largura) / 2;
@@ -205,36 +205,11 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   const alturaMonstro = spriteMonstro ? g.monstro.altura : g.monstro.altura * (ALTURA_MONSTRO_PADRAO / 22);
 
   return (
-    <div className="relative w-full min-h-dvh flex flex-col select-none" style={{ backgroundColor: '#07050a' }}>
+    <div className="relative w-full h-dvh flex flex-col select-none overflow-hidden" style={{ backgroundColor: '#07050a' }}>
       <style>{`@media (prefers-reduced-motion: no-preference){@keyframes cacadaGolpe{0%{transform:translateX(0);filter:brightness(1)}20%{transform:translateX(-5px);filter:brightness(2.2) saturate(.3)}45%{transform:translateX(5px)}70%{transform:translateX(-2px)}100%{transform:translateX(0);filter:brightness(1)}}.cacada-golpe{animation:cacadaGolpe .35s ease-out}}`}</style>
-      <div className="flex flex-col flex-1 w-full max-w-[480px] mx-auto px-2 pt-2 pb-2 gap-1.5 h-dvh">
-        {/* Topo */}
-        <div className="flex items-center gap-1.5">
-          <div className="shrink-0 px-2 py-1 rounded-sm border-2 text-center font-cinzel text-[#F3E6CC] leading-tight" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO }}>
-            <div className="text-[10px]">Turno</div>
-            <div className="text-sm font-bold">{q.turno}</div>
-          </div>
-          <div className="flex-1 min-w-0 px-2 py-1 rounded-sm border-2 text-center font-cinzel text-[#F3E6CC] leading-tight" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO }}>
-            <div className="text-[13px] font-bold truncate">{titulo}</div>
-            <div className="text-[11px]">1 / 1</div>
-          </div>
-          <button type="button" onClick={() => setRapido((r) => !r)} aria-label={rapido ? 'Velocidade normal' : 'Velocidade dobrada'}
-            className="shrink-0 px-2.5 py-2 rounded-sm border-2 font-cinzel font-bold text-sm cursor-pointer active:scale-95" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO, color: rapido ? '#F3C769' : '#BFAF8F' }}>
-            »» ×2
-          </button>
-          <button type="button" onClick={() => setIndice(quadros.length - 1)} aria-label="Pular para o fim"
-            className="shrink-0 p-2 rounded-sm border-2 cursor-pointer active:scale-95" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO, color: '#BFAF8F' }}>
-            <SkipForward className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Monstro */}
-        <div className="flex justify-end">
-          <div className="w-[78%]"><Painel painel={q.monstro} statusPara="baixo" /></div>
-        </div>
-
-        {/* Arena: cenário com as duas plataformas; ninguém fica por cima dos painéis */}
-        <div ref={arenaRef} className="relative flex-1 min-h-[340px] overflow-hidden rounded-sm border-2" style={{ borderColor: `${OURO}88`, backgroundColor: '#0d1412' }}>
+      <div className="flex flex-col flex-1 min-h-0 w-full max-w-[480px] mx-auto">
+        {/* Mapa em tela cheia, com a HUD por cima */}
+        <div ref={arenaRef} className="relative flex-1 min-h-[340px] overflow-hidden" style={{ backgroundColor: '#0d1412' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={cenario ?? '/images/landing-bg.webp'} alt="" aria-hidden="true" draggable={false}
             className="absolute max-w-none" style={{ width: g.imgW, height: g.imgH, left: -g.esq, top: -g.topo, filter: cenario ? 'none' : 'brightness(0.4)', objectFit: 'cover' }} />
@@ -266,43 +241,67 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
               )}
             </div>
           </div>
-        </div>
 
-        {/* Jogador */}
-        <Painel painel={q.jogador} retrato={retrato} statusPara="cima" />
-
-        {/* Log */}
-        <div className="rounded-sm border-2 px-2 py-1.5 flex flex-col gap-1 h-[124px] overflow-hidden" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO }} aria-live="polite">
-          {q.linhas.map((l, i) => {
-            const { Icone, cor } = ICONE_LINHA[l.tipo];
-            return (
-              <div key={`${indice}-${i}`} className="flex items-center gap-2 text-[12.5px] leading-tight text-[#EDE3CF]">
-                <Icone className="w-3.5 h-3.5 shrink-0" style={{ color: cor }} aria-hidden="true" />
-                <span className="truncate">{destacarLinha(l.texto)}</span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Habilidades */}
-        <div className="grid grid-cols-5 gap-1.5 rounded-sm border-2 p-1.5" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO }}>
-          {q.habilidades.map((h) => (
-            <div key={h.espaco} className="flex flex-col items-center gap-1" title={`${h.nome}: ${h.texto}`}>
-              <div className="relative w-full aspect-square rounded-sm overflow-hidden border-2"
-                style={{ borderColor: h.ativandoAgora ? '#F3C769' : '#3a3030', boxShadow: h.ativandoAgora ? '0 0 10px #F3C769' : 'none', opacity: h.bloqueada ? 0.4 : 1 }}>
-                {h.icone ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={h.icone} alt={h.nome} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-[#1a1416]"><Shield className="w-5 h-5 text-[#8a7a5a]" /></div>
-                )}
-              </div>
-              <div className="w-full h-1.5 rounded-full overflow-hidden bg-[#2b2424]" aria-label={`${h.nome}: ${h.texto}`}>
-                <div className="h-full rounded-full transition-all duration-300" style={{ width: `${Math.round(h.progresso * 100)}%`, backgroundColor: h.ativandoAgora ? '#F3C769' : '#C08A3E' }} />
-              </div>
-              <span className="text-[9px] leading-none font-cinzel text-[#BFAF8F] whitespace-nowrap">{h.texto}</span>
+          {/* HUD: topo */}
+          <div className="absolute inset-x-1.5 top-1.5 flex items-center gap-1.5 z-20">
+            <div className="shrink-0 px-2 py-0.5 rounded-sm border-2 text-center font-cinzel text-[#F3E6CC] leading-tight" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO }}>
+              <div className="text-[9px]">Turno</div>
+              <div className="text-[13px] font-bold">{q.turno}</div>
             </div>
-          ))}
+            <div className="flex-1 min-w-0 px-2 py-0.5 rounded-sm border-2 text-center font-cinzel text-[#F3E6CC] leading-tight" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO }}>
+              <div className="text-[12px] font-bold truncate">{titulo}</div>
+              <div className="text-[10px]">1 / 1</div>
+            </div>
+            <button type="button" onClick={() => setRapido((r) => !r)} aria-label={rapido ? 'Velocidade normal' : 'Velocidade dobrada'}
+              className="shrink-0 px-2 py-1.5 rounded-sm border-2 font-cinzel font-bold text-[13px] cursor-pointer active:scale-95" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO, color: rapido ? '#F3C769' : '#BFAF8F' }}>
+              »» ×2
+            </button>
+            <button type="button" onClick={() => setIndice(quadros.length - 1)} aria-label="Pular para o fim"
+              className="shrink-0 p-1.5 rounded-sm border-2 cursor-pointer active:scale-95" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO, color: '#BFAF8F' }}>
+              <SkipForward className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* HUD: monstro, no alto à direita */}
+          <div className="absolute right-1.5 top-[54px] w-[56%] z-20"><Painel painel={q.monstro} /></div>
+
+          {/* HUD: jogador, embaixo à esquerda (deixa uma faixa para os status) */}
+          <div className="absolute left-1.5 bottom-7 w-[68%] z-20"><Painel painel={q.jogador} retrato={retrato} /></div>
+        </div>
+
+        {/* Fora do mapa: só o log e as habilidades */}
+        <div className="flex flex-col gap-1.5 px-1.5 pt-1.5 pb-1.5">
+          <div className="rounded-sm border-2 px-2 py-1 flex flex-col justify-end gap-0.5 h-[112px] max-[720px]:h-[72px] overflow-hidden" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO }} aria-live="polite">
+            {q.linhas.map((l, i) => {
+              const { Icone, cor } = ICONE_LINHA[l.tipo];
+              return (
+                <div key={`${indice}-${i}`} className="flex items-center gap-2 text-[12px] leading-tight text-[#EDE3CF]">
+                  <Icone className="w-3.5 h-3.5 shrink-0" style={{ color: cor }} aria-hidden="true" />
+                  <span className="truncate">{destacarLinha(l.texto)}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-5 gap-1.5 rounded-sm border-2 p-1.5" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO }}>
+            {q.habilidades.map((h) => (
+              <div key={h.espaco} className="flex flex-col items-center gap-1" title={`${h.nome}: ${h.texto}`}>
+                <div className="relative w-full aspect-square rounded-sm overflow-hidden border-2"
+                  style={{ borderColor: h.ativandoAgora ? '#F3C769' : '#3a3030', boxShadow: h.ativandoAgora ? '0 0 10px #F3C769' : 'none', opacity: h.bloqueada ? 0.4 : 1 }}>
+                  {h.icone ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={h.icone} alt={h.nome} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-[#1a1416]"><Shield className="w-5 h-5 text-[#8a7a5a]" /></div>
+                  )}
+                </div>
+                <div className="w-full h-1.5 rounded-full overflow-hidden bg-[#2b2424]" aria-label={`${h.nome}: ${h.texto}`}>
+                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${Math.round(h.progresso * 100)}%`, backgroundColor: h.ativandoAgora ? '#F3C769' : '#C08A3E' }} />
+                </div>
+                <span className="text-[9px] leading-none font-cinzel text-[#BFAF8F] whitespace-nowrap">{h.texto}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

@@ -101,7 +101,7 @@ describe('Caçada (telas)', () => {
   });
 
   it('cena: monstro sempre acima do jogador e dentro da arena, em telas diferentes', () => {
-    for (const [w, h] of [[390, 380], [360, 340], [320, 340], [412, 480], [480, 700]]) {
+    for (const [w, h] of [[390, 600], [390, 380], [360, 340], [320, 340], [412, 680], [480, 700]]) {
       const g = geometriaDaCena(w, h);
       expect(g.monstro.pes - g.monstro.altura, `${w}x${h} topo do monstro`).toBeGreaterThanOrEqual(0);
       expect(g.monstro.pes).toBeLessThan(g.jogador.pes - g.jogador.altura * 0.4);
