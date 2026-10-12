@@ -123,6 +123,7 @@ import {
   racialDeveDisparar,
 } from './combate/racial';
 import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
+import type { AcaoMonstro, HabilidadeMonstro } from '@/rules/monsters';
 import {
   ContextoHabilidade,
   ResultadoHabilidade,
@@ -155,6 +156,54 @@ function bonusDoNivelDaAcionada(
   if (acionada === especial) return bonusNivel.habilidadeEspecial ?? 0;
   if (acionada === basico) return bonusNivel.ataqueBasico ?? 0;
   return 0;
+}
+
+/**
+ * Habilidade de monstro (Caçada): conta os ataques de cada habilidade e devolve a ação que dispara neste
+ * ataque. Se duas ficarem prontas juntas, vai a mais rara (maior N); a outra dispara no próximo ataque.
+ * Com várias ações, elas se alternam a cada disparo.
+ */
+function escolherAcaoMonstro(c: Combatente): AcaoMonstro | undefined {
+  const habilidades = c.habilidadesMonstro;
+  if (!habilidades || habilidades.length === 0) return undefined;
+  const contadores = habilidades.map((_, k) => (c.contadoresHabilidadeMonstro?.[k] ?? 0) + 1);
+  const alternancia = habilidades.map((_, k) => c.alternanciaHabilidadeMonstro?.[k] ?? 0);
+  let escolhida = -1;
+  habilidades.forEach((h, k) => {
+    if (h.acoes.length > 0 && contadores[k] >= Math.max(1, h.aCada) && (escolhida < 0 || h.aCada > habilidades[escolhida].aCada)) {
+      escolhida = k;
+    }
+  });
+  let acao: AcaoMonstro | undefined;
+  if (escolhida >= 0) {
+    const h = habilidades[escolhida];
+    acao = h.acoes[alternancia[escolhida] % h.acoes.length];
+    alternancia[escolhida] += 1;
+    contadores[escolhida] = 0;
+  }
+  c.contadoresHabilidadeMonstro = contadores;
+  c.alternanciaHabilidadeMonstro = alternancia;
+  return acao;
+}
+
+/** Transforma a ação do monstro numa definição de habilidade, para seguir o mesmo caminho das habilidades do jogador. */
+function definicaoDaAcaoMonstro(acao: AcaoMonstro, tipoDano: 'fisico' | 'magico') {
+  return {
+    id: `monstro_${acao.nome}`,
+    espaco: 'basico' as const,
+    tipoDano,
+    executar: (): ResultadoHabilidade => ({
+      nome: acao.nome,
+      tipoDano,
+      percentualDano: 100,
+      ignorarDefesaPercentual: 0,
+      bonusDanoPercentual: 0,
+      bonusContraSobreescudoPercentual: 0,
+      curaPercentualDanoCausado: 0,
+      curaPercentualHpMax: 0,
+      ...acao.efeito,
+    }),
+  };
 }
 
 // Mantém a API pública de combat.ts (a função mora em combate/passivasClasse.ts)
@@ -194,8 +243,14 @@ export interface Combatente {
   ascensaoHabilidade?: number;
   modificadoresElementais?: ModificadoresElementais;
   elementoAtaque?: Elemento;
-  /** Status a que o combatente é imune (chefes: Sono, Paralisia e Congelamento). */
+  /** Status a que o combatente é imune (chefes: Sono, Paralisia e Congelamento; e os que o monstro define). */
   imunidadesStatus?: EfeitoStatus[];
+  /** Habilidades do monstro (a cada N ataques) e os contadores delas na luta. */
+  habilidadesMonstro?: readonly HabilidadeMonstro[];
+  contadoresHabilidadeMonstro?: number[];
+  alternanciaHabilidadeMonstro?: number[];
+  /** Enfurecido: abaixo de 50% de HP ganha +20% de dano. */
+  enfurecido?: boolean;
   /** Status de dano contínuo ativos (copiado do estado da luta antes de cada ação; base dos bônus por status do alvo). */
   statusAtivos?: EfeitoStatus[];
   /** Sangramento e Maldição: duram até o fim da luta. */
@@ -254,6 +309,8 @@ export interface Combatente {
 }
 
 export interface AtaqueLog {
+  /** O monstro estava Enfurecido neste ataque (abaixo de 50% de HP). */
+  enfurecidoAtivo?: boolean;
   atacante: string;
   defensor: string;
   danoBruto: number;
@@ -2474,7 +2531,13 @@ function turnoDeCombateInterno(
     // O tipo de dano do golpe padrão: Feiticeiro e Profeta causam dano mágico; as demais classes, o do atributo maior
     const tipoDanoDaClasse: 'fisico' | 'magico' =
       ehFeiticeiroAtacante || ehProfetaAtacante ? 'magico' : ehDanoFisicoPadrao ? 'fisico' : 'magico';
+    // Monstro Enfurecido (Caçada): abaixo de 50% de HP ganha +20% de dano, na mesma soma dos outros bônus
+    const enfurecidoNesteAtaque =
+      atacante.enfurecido === true &&
+      atacante.hpMax > 0 &&
+      hpAtacanteAtual < (atacante.hpMax * GAME_CONFIG.ENFURECIDO_LIMIAR_HP_PERCENTUAL) / 100;
     const bonusDanoBuffsPorTipo = (tipo: 'fisico' | 'magico'): number =>
+      (enfurecidoNesteAtaque ? GAME_CONFIG.ENFURECIDO_BONUS_DANO_PERCENTUAL : 0) +
       (impetoNesteAtaque?.bonusDanoPercentual ?? 0) +
       bonusDanoDosBuffs(atacante.buffs, tipo) +
       bonusDanoDosDebuffs(atacante.debuffs) +
@@ -2661,17 +2724,23 @@ function turnoDeCombateInterno(
     let resultadoHabilidadeInterceptada: ResultadoHabilidade | undefined;
     let efeitosDefensivosAplicados: TipoEfeitoDefensivo[] | undefined;
     // Habilidade racial de ataque (Vampiro, Draconiano): no lugar do 1º ataque da ação em que disparou
+    // Habilidade de monstro (Caçada): a cada N ataques entra no lugar do ataque básico
+    const acaoMonstro = atacante.classeId ? undefined : escolherAcaoMonstro(atacante);
+    const defHabMonstro = acaoMonstro
+      ? definicaoDaAcaoMonstro(acaoMonstro, ehDanoFisicoPadrao ? 'fisico' : 'magico')
+      : undefined;
     const racialDeAtaque =
       i === 0 && atacante.racialAtaquePendente && atacante.racaId
         ? definicaoRacialDeAtaque(atacante.racaId, atacante.linhagem)
         : undefined;
     let elementoRacial: Elemento | undefined;
-    if (atacante.classeId && (racialDeAtaque || atacante.habilidadesEquipadas)) {
-      const slot = obterSlotAcionado(atacante.classeId, habilidadeAcionada);
+    if ((atacante.classeId && (racialDeAtaque || atacante.habilidadesEquipadas)) || defHabMonstro) {
+      const slot = atacante.classeId ? obterSlotAcionado(atacante.classeId, habilidadeAcionada) : null;
       const habEquipada = slot && atacante.habilidadesEquipadas ? atacante.habilidadesEquipadas[slot] : undefined;
       // Habilidade de subclasse só vale com a subclasse ativa e o tier do espaço comprado (2.1.4); senão age a da classe
       const habId = habEquipada && habilidadeLiberadaPorTier(habEquipada, atacante) ? habEquipada : undefined;
-      const defHab = racialDeAtaque?.definicao ?? (habId ? obterHabilidade(habId) : undefined);
+      const defHab =
+        racialDeAtaque?.definicao ?? (habId ? obterHabilidade(habId) : undefined) ?? defHabMonstro;
       if (racialDeAtaque) {
         elementoRacial = racialDeAtaque.elemento;
       }
@@ -2679,7 +2748,7 @@ function turnoDeCombateInterno(
         const tipoPrevisto = defHab.tipoDano ?? 'fisico';
         const danoBasePlano = tipoPrevisto === 'fisico' ? danoFisico : danoMagico;
         const passivasClasse = separarPassivasDanoDaClasse({
-          classeId: atacante.classeId,
+          classeId: atacante.classeId ?? '',
           danoBasePlano,
           hp: hpAtacanteAtual,
           hpMax: atacante.hpMax,
@@ -3409,6 +3478,7 @@ function turnoDeCombateInterno(
       ...(instintoSobrevivenciaAtivo !== undefined ? { instintoSobrevivenciaAtivo } : {}),
       ...(iraAbaixo30Ativo !== undefined ? { iraAbaixo30Ativo } : {}),
       ...(ultimoBastiaoAtivo !== undefined ? { ultimoBastiaoAtivo } : {}),
+      ...(enfurecidoNesteAtaque ? { enfurecidoAtivo: true } : {}),
       ...(posturaDefensivaAplicada !== undefined ? { posturaDefensivaAplicada } : {}),
       ...(juramentoDefensivoAplicado !== undefined ? { juramentoDefensivoAplicado } : {}),
       ...(cargasAcumuloConsumidas !== undefined ? { cargasAcumuloConsumidas } : {}),
@@ -3605,7 +3675,12 @@ export function resolverCombate(
       ...(monstro.modificadoresElementais ?? {}),
     },
     elementoAtaque: monstro.elementoAtaque,
-    imunidadesStatus: monstro.chefe ? [...imunidadesDeChefe()] : undefined,
+    imunidadesStatus:
+      monstro.chefe || monstro.imunidadesStatus
+        ? [...new Set([...(monstro.chefe ? imunidadesDeChefe() : []), ...(monstro.imunidadesStatus ?? [])])]
+        : undefined,
+    habilidadesMonstro: monstro.habilidades,
+    enfurecido: monstro.enfurecido,
     categoriaCorporal: monstro.categoriaCorporal,
     fraquezasProprias: monstro.fraquezasProprias ? [...monstro.fraquezasProprias] : undefined,
     resistenciasProprias: monstro.resistenciasProprias
@@ -3711,6 +3786,41 @@ export function resolverCombate(
         dano: danoInstantaneo,
         alvo: m.nome,
       });
+    }
+  };
+
+  /** Aplica um status no personagem (habilidade de monstro): forçado (sorteio 0) ou com chance; respeita imunidade e redução racial. */
+  const aplicarStatusNoPersonagem = (
+    efeitoId: EfeitoStatus,
+    sorteio: number,
+    chanceExtraPontos: number,
+    eventosEfeitosDoTurno: EventoEfeito[]
+  ) => {
+    if (estaImuneAoStatus(p, efeitoId)) {
+      eventosEfeitosDoTurno.push({ tipo: 'imune', efeito: efeitoId });
+      return;
+    }
+    const tentativa = tentarAplicarEfeito(
+      efeitosPersonagem,
+      efeitoId,
+      sorteio,
+      reducaoChanceStatusRacial(p.racaId, efeitoId),
+      chanceExtraPontos
+    );
+    efeitosPersonagem = tentativa.efeitos;
+    const definicao = EFEITOS_STATUS[efeitoId];
+    if (tentativa.resultado === 'controle') {
+      const danoImediato = definicao.percentualHpMax > 0 ? calcularDanoEfeito(p.hpMax, definicao.percentualHpMax) : 0;
+      p.hp = Math.max(0, p.hp - danoImediato);
+      aplicarEfeitoControle(p, efeitoId);
+      eventosEfeitosDoTurno.push({ tipo: 'controle', efeito: efeitoId, ...(danoImediato > 0 ? { dano: danoImediato } : {}) });
+    } else if (tentativa.resultado === 'aplicado' || tentativa.resultado === 'renovado') {
+      eventosEfeitosDoTurno.push({ tipo: tentativa.resultado, efeito: efeitoId, rodadasRestantes: definicao.duracaoRodadas });
+    } else if (tentativa.resultado === 'instantaneo') {
+      const danoInstantaneo = calcularDanoEfeito(p.hpMax, definicao.percentualHpMax);
+      p.hp = Math.max(0, p.hp - danoInstantaneo);
+      registrarEstadoDeLuta(p, efeitoId);
+      eventosEfeitosDoTurno.push({ tipo: 'instantaneo', efeito: efeitoId, dano: danoInstantaneo });
     }
   };
 
@@ -3845,6 +3955,16 @@ export function resolverCombate(
 
     ataquesDoTurno.push(...tMonstro.turnoLog.ataques);
     passarRodadaEfeitosDefensivos(p);
+
+    // Habilidades de monstro: status garantidos e com chance no caçador
+    for (const atk of tMonstro.turnoLog.ataques) {
+      for (const efeitoId of atk.statusForcadosNoAlvo ?? []) {
+        aplicarStatusNoPersonagem(efeitoId, 0, 0, eventosEfeitosDoTurno);
+      }
+      (atk.statusComChanceNoAlvo ?? []).forEach((st, i) => {
+        aplicarStatusNoPersonagem(st.status, obterSorteioStatus(rodada, 200 + i), st.chanceExtraPercentual ?? 0, eventosEfeitosDoTurno);
+      });
+    }
   };
 
   while (p.hp > 0 && m.hp > 0 && turno <= MAX_TURNOS) {

@@ -8,6 +8,22 @@ import {
 } from './elements';
 import { EfeitoStatus } from './statusEffects';
 import { CategoriaCorporal, TipoGolpe } from './corposMonstros';
+import type { ResultadoHabilidade } from '@/game/combate/habilidades/tipos';
+
+/** Uma ação de habilidade do monstro: o nome que aparece no log e o efeito (mesmos campos das habilidades, catálogo 1.2). */
+export interface AcaoMonstro {
+  nome: string;
+  efeito: Partial<Omit<ResultadoHabilidade, 'nome' | 'tipoDano'>>;
+}
+
+/**
+ * Habilidade de monstro (Caçada): dispara a cada N ataques no lugar do ataque básico.
+ * Com mais de uma ação, elas se alternam a cada disparo (ex.: Agarrão, depois Esmagamento).
+ */
+export interface HabilidadeMonstro {
+  aCada: number;
+  acoes: readonly AcaoMonstro[];
+}
 
 export interface OuroIntervalo {
   min: number;
@@ -32,6 +48,12 @@ export interface MonsterDefinition {
   modificadoresElementais?: ModificadoresElementais;
   elementoAtaque?: Elemento;
   efeitosAplicados?: EfeitoStatus[];
+  /** Habilidades próprias do monstro, a cada N ataques (Caçada). */
+  habilidades?: readonly HabilidadeMonstro[];
+  /** Enfurecido: abaixo de 50% de HP ganha +20% de dano (representa ferir uma cabeça, quebrar chifres, expor o núcleo). */
+  enfurecido?: boolean;
+  /** Status a que o monstro é imune (além dos de chefe). Ex.: Esqueleto imune a Sangramento e Veneno. */
+  imunidadesStatus?: EfeitoStatus[];
 }
 
 export const MONSTERS: readonly MonsterDefinition[] = [

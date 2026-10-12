@@ -44,4 +44,7 @@ export const GAME_CONFIG = {
   SUBCLASSE_CUSTO_RESET_DIAMANTES: 100,
   SUBCLASSE_BONUS_TOTAL_PONTOS: 40,
   SUBCLASSE_TIER_MAX: 4,
+  // Monstro Enfurecido (Caçada): abaixo deste % de HP, ganha este % de dano (soma no grupo da regra 1.2.2)
+  ENFURECIDO_LIMIAR_HP_PERCENTUAL: 50,
+  ENFURECIDO_BONUS_DANO_PERCENTUAL: 20,
 } as const;
