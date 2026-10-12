@@ -97,6 +97,16 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     });
   });
 
+  it('inventário e progresso da Caçada vão e voltam do Firestore', () => {
+    const comCacada = { ...PERSONAGEM, inventario: { 'pele-de-lobo-cinzento': 3 }, cacadaChavesVencidas: [1, 2] };
+    const volta = personagemDoFirestore('u1', personagemParaFirestore(comCacada));
+    expect(volta.inventario).toEqual({ 'pele-de-lobo-cinzento': 3 });
+    expect(volta.cacadaChavesVencidas).toEqual([1, 2]);
+    const antigo = personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), inventario: undefined, cacadaChavesVencidas: 'x' });
+    expect(antigo.inventario).toEqual({});
+    expect(antigo.cacadaChavesVencidas).toEqual([]);
+  });
+
   it('grava personagem, nome e transação juntos no fim da transação', async () => {
     await repo.executarTransacao('teste', async (ctx) => {
       ctx.gravarPersonagem(PERSONAGEM);

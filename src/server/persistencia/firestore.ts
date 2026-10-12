@@ -101,6 +101,13 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ascensaoHabilidade: Number(data.ascensaoHabilidade || 0),
     essenciaHabilidade: Number(data.essenciaHabilidade || 0),
     fragmentosAscensao: Number(data.fragmentosAscensao || 0),
+    inventario:
+      data.inventario && typeof data.inventario === 'object'
+        ? (data.inventario as Record<string, number>)
+        : {},
+    cacadaChavesVencidas: Array.isArray(data.cacadaChavesVencidas)
+      ? (data.cacadaChavesVencidas as unknown[]).filter((n): n is number => typeof n === 'number')
+      : [],
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
       ? { bonusSubclasseAplicado: lerAtributos(data.bonusSubclasseAplicado, ZEROS_ATRIBUTOS) }
       : {}),
@@ -136,6 +143,8 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ascensaoHabilidade: char.ascensaoHabilidade ?? 0,
     essenciaHabilidade: char.essenciaHabilidade ?? 0,
     fragmentosAscensao: char.fragmentosAscensao ?? 0,
+    inventario: char.inventario ?? {},
+    cacadaChavesVencidas: char.cacadaChavesVencidas ?? [],
     hpMax: char.hpMax,
     sobreescudoMax: char.sobreescudoMax,
     criadoEm: char.criadoEm,
