@@ -14,16 +14,15 @@ import {
 } from '@/rules/armas';
 import { ARMAS_BASE, ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
 import { MATERIAIS, MATERIAIS_MAP } from '@/rules/materiais';
-import { MATERIAIS_MUNDO, MATERIAIS_MUNDO_MAP, MATERIAIS_SUBESPECIE, MATERIAIS_SUBESPECIE_MAP } from '@/rules/materiaisArmas';
-import { MONSTROS_CACADA_DADOS } from '@/rules/cacada';
+import { MATERIAIS_MUNDO, MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
+import { DADOS_CACADA_MAP, MONSTROS_CACADA_DADOS } from '@/rules/cacada';
 import { RaridadeMaterial } from '@/rules/raridades';
 
 /** Armas — catálogo e regras decididos pelo Yuri em 12/10/2026. */
 
 const ORDEM_MATERIAL: RaridadeMaterial[] = ['comum', 'raro', 'muitoRaro', 'epico', 'lendario'];
 const ORDEM_ARMA: RaridadeArma[] = [...ORDEM_MATERIAL, 'mitico'];
-const raridadeMaterial = (id: string): RaridadeMaterial | undefined =>
-  (MATERIAIS_MAP[id] ?? MATERIAIS_SUBESPECIE_MAP[id])?.raridade;
+const raridadeMaterial = (id: string): RaridadeMaterial | undefined => MATERIAIS_MAP[id]?.raridade;
 
 describe('Categorias e raridades', () => {
   it('6 categorias: 4 físicas e 2 mágicas, cada uma com bônus e penalidade', () => {
@@ -104,11 +103,10 @@ describe('Reforjar e Customização', () => {
 });
 
 describe('Materiais novos', () => {
-  it('141 de subespécie e 35 de mundo, sem repetir id nem nome com os 142 da Caçada', () => {
-    expect(MATERIAIS_SUBESPECIE).toHaveLength(141);
+  it('35 de mundo, sem repetir id nem nome com os 283 dos monstros', () => {
     expect(MATERIAIS_MUNDO).toHaveLength(35);
-    const ids = [...MATERIAIS, ...MATERIAIS_SUBESPECIE, ...MATERIAIS_MUNDO].map((m) => m.id);
-    const nomes = [...MATERIAIS, ...MATERIAIS_SUBESPECIE, ...MATERIAIS_MUNDO].map((m) => m.nome.toLowerCase());
+    const ids = [...MATERIAIS, ...MATERIAIS_MUNDO].map((m) => m.id);
+    const nomes = [...MATERIAIS, ...MATERIAIS_MUNDO].map((m) => m.nome.toLowerCase());
     expect(new Set(ids).size).toBe(ids.length);
     expect(new Set(nomes).size).toBe(nomes.length);
   });
@@ -118,16 +116,6 @@ describe('Materiais novos', () => {
       const daRaridade = MATERIAIS_MUNDO.filter((m) => m.raridade === r);
       const conta = (tipo: string) => daRaridade.filter((m) => m.tipo === tipo).length;
       expect([conta('osso'), conta('minerio'), conta('planta'), conta('diverso')], r).toEqual([2, 2, 1, 2]);
-    }
-  });
-
-  it('subespécie: 3 materiais (Raro, Muito raro, Épico), mais Lendário nas que aparecem no 8★', () => {
-    const porSub = new Map<string, typeof MATERIAIS_SUBESPECIE[number][]>();
-    for (const m of MATERIAIS_SUBESPECIE) porSub.set(m.subespecie, [...(porSub.get(m.subespecie) ?? []), m]);
-    expect(porSub.size).toBe(43);
-    for (const [sub, mats] of porSub) {
-      const esperado = mats[0].estrelaOrigem >= 8 ? ['raro', 'muitoRaro', 'epico', 'lendario'] : ['raro', 'muitoRaro', 'epico'];
-      expect(mats.map((m) => m.raridade), sub).toEqual(esperado);
     }
   });
 });
@@ -141,9 +129,9 @@ describe('Catálogo de armas', () => {
     expect(new Set(nomes).size).toBe(984);
   });
 
-  it('cobre os 35 monstros da Caçada, na estrela de cada um', () => {
+  it('cobre os 35 monstros originais da Caçada, na estrela de cada um', () => {
     const porMonstro = new Set(ARMAS_BASE.map((a) => a.monstroId));
-    expect(porMonstro.size).toBe(MONSTROS_CACADA_DADOS.length);
+    expect(porMonstro.size).toBe(MONSTROS_CACADA_DADOS.filter((d) => !d.subespecie).length);
     for (const a of ARMAS_BASE) {
       const m = MONSTROS_CACADA_DADOS.find((d) => d.id === a.monstroId);
       expect(m, a.id).toBeDefined();
@@ -187,16 +175,15 @@ describe('Catálogo de armas', () => {
 });
 
 describe('Receitas', () => {
-  it('todo material existe; o do monstro é do próprio monstro ou da subespécie do ramo', () => {
+  it('todo material existe e cai do próprio monstro ou da subespécie do ramo', () => {
     for (const a of ARMAS_BASE) {
-      const dados = MONSTROS_CACADA_DADOS.find((d) => d.id === a.monstroId)!;
+      const fonte = DADOS_CACADA_MAP[a.parte === 'principal' ? a.monstroId : a.parte];
+      expect(fonte, a.id).toBeDefined();
+      if (a.parte !== 'principal') expect(fonte.varianteDe, a.id).toBe(a.monstroId);
       for (const item of a.receita.materiaisMonstro) {
         expect(item.qtd, a.id).toBeGreaterThan(0);
-        const daCacada = MATERIAIS_MAP[item.id];
-        const daSub = MATERIAIS_SUBESPECIE_MAP[item.id];
-        expect(daCacada ?? daSub, `${a.id}: ${item.id}`).toBeDefined();
-        if (daCacada) expect(dados.drops, `${a.id}: ${item.id}`).toContain(item.id);
-        if (daSub) expect(daSub.subespecie, `${a.id}: ${item.id}`).toBe(a.parte);
+        expect(MATERIAIS_MAP[item.id], `${a.id}: ${item.id}`).toBeDefined();
+        expect(fonte.drops, `${a.id}: ${item.id}`).toContain(item.id);
       }
       for (const item of a.receita.materiaisMundo) {
         expect(item.qtd, a.id).toBeGreaterThan(0);

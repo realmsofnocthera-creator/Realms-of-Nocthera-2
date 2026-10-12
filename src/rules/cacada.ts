@@ -7,6 +7,7 @@ import {
 import { EfeitoStatus } from './statusEffects';
 import { CategoriaCorporal, TipoGolpe } from './corposMonstros';
 import { HabilidadeMonstro, MonsterDefinition } from './monsters';
+import { SUBESPECIES_CACADA, SubespecieCacada } from './cacadaSubespecies';
 import { XP_TABLE } from './xpTable';
 
 /**
@@ -61,6 +62,11 @@ export interface MonstroCacadaDados {
   habilidades?: HabilidadeMonstro[];
   enfurecido?: boolean;
   imunidadesStatus?: EfeitoStatus[];
+  /** Subespécie (das 43 de `cacadaSubespecies.ts`): monstro normal, derivado do original em `varianteDe`. */
+  subespecie?: boolean;
+  /** Ajuste da subespécie sobre a Força e a Vitalidade da estrela (%). */
+  forcaPercentual?: number;
+  vitalidadePercentual?: number;
   /** Materiais que o monstro dropa (ids de MATERIAIS); a raridade de cada um define a chance. */
   drops: string[];
 }
@@ -91,7 +97,8 @@ const PERFIS: Readonly<
 /** Monstro-chave: 20% mais vida e 8% mais força que os comuns da estrela (as habilidades e o Enfurecido fazem o resto). */
 const MULT_CHAVE = { hp: 1.2, forca: 1.08 };
 
-export const MONSTROS_CACADA_DADOS: readonly MonstroCacadaDados[] = [
+/** Os 35 monstros originais do bestiário v2. */
+const MONSTROS_ORIGINAIS: readonly MonstroCacadaDados[] = [
   {
     id: 'rato-da-floresta',
     nome: 'Rato da Floresta',
@@ -1303,6 +1310,68 @@ export const MONSTROS_CACADA_DADOS: readonly MonstroCacadaDados[] = [
   },
 ];
 
+/** Fraqueza que a subespécie ganha ao trocar de elemento (o oposto de cada elemento). */
+const ELEMENTO_OPOSTO: Readonly<Record<Elemento, Elemento>> = {
+  fogo: 'gelo',
+  gelo: 'fogo',
+  relampago: 'terra',
+  terra: 'vento',
+  vento: 'relampago',
+  sagrado: 'sombrio',
+  sombrio: 'sagrado',
+};
+
+/**
+ * Monta os dados de uma subespécie a partir do original: herda tipo, região, perfil, categoria corporal,
+ * habilidades, Enfurecido e imunidades. Com elementos novos, resiste a eles e fica fraca aos opostos;
+ * sem elemento novo, mantém as fraquezas e resistências do original. Nunca é monstro-chave.
+ */
+export function montarSubespecie(original: MonstroCacadaDados, s: SubespecieCacada): MonstroCacadaDados {
+  const efeitos = [...(original.efeitosAplicados ?? [])];
+  if (s.status && !efeitos.includes(s.status)) efeitos.push(s.status);
+  const elementos = s.elementos ?? [];
+  const elementoAtaque = elementos[0] ?? original.elementoAtaque;
+  const fracoA =
+    elementos.length > 0
+      ? [...new Set(elementos.map((e) => ELEMENTO_OPOSTO[e]))].filter((e) => !elementos.includes(e))
+      : original.fracoA;
+  const resisteA = elementos.length > 0 ? [...elementos] : original.resisteA;
+  return {
+    id: s.id,
+    nome: s.nome,
+    estrela: s.estrela,
+    varianteDe: original.id,
+    subespecie: true,
+    tipo: original.tipo,
+    ...(original.regiao ? { regiao: original.regiao } : {}),
+    descricao: s.descricao,
+    categoriaCorporal: original.categoriaCorporal,
+    ...(original.fraquezasProprias ? { fraquezasProprias: original.fraquezasProprias } : {}),
+    ...(original.resistenciasProprias ? { resistenciasProprias: original.resistenciasProprias } : {}),
+    ...(elementoAtaque ? { elementoAtaque } : {}),
+    ...(fracoA && fracoA.length > 0 ? { fracoA } : {}),
+    ...(resisteA && resisteA.length > 0 ? { resisteA } : {}),
+    ...(efeitos.length > 0 ? { efeitosAplicados: efeitos } : {}),
+    ...(original.perfil ? { perfil: original.perfil } : {}),
+    ...(original.habilidades ? { habilidades: original.habilidades } : {}),
+    ...(original.enfurecido ? { enfurecido: true } : {}),
+    ...(original.imunidadesStatus ? { imunidadesStatus: original.imunidadesStatus } : {}),
+    ...(s.forcaPercentual ? { forcaPercentual: s.forcaPercentual } : {}),
+    ...(s.vitalidadePercentual ? { vitalidadePercentual: s.vitalidadePercentual } : {}),
+    drops: [original.drops[0], ...s.drops],
+  };
+}
+
+/** Os 78 monstros da Caçada: os 35 originais e as 43 subespécies. */
+export const MONSTROS_CACADA_DADOS: readonly MonstroCacadaDados[] = [
+  ...MONSTROS_ORIGINAIS,
+  ...SUBESPECIES_CACADA.map((s) => {
+    const original = MONSTROS_ORIGINAIS.find((m) => m.id === s.varianteDe);
+    if (!original) throw new Error(`Subespécie sem original: ${s.id} (${s.varianteDe})`);
+    return montarSubespecie(original, s);
+  }),
+];
+
 /** Monta a definição de combate de um monstro da Caçada (vida, atributos, XP e ouro a partir da estrela e do perfil). */
 export function montarMonstroCacada(d: MonstroCacadaDados): MonsterDefinition {
   const estrela = ESTRELAS_CACADA.find((e) => e.estrela === d.estrela);
@@ -1316,8 +1385,8 @@ export function montarMonstroCacada(d: MonstroCacadaDados): MonsterDefinition {
   const atributos: Attributes = {
     vigor: Math.round(p * 0.2),
     sorte: 0,
-    forca: Math.max(1, Math.round(p * perfil.forca * multForca)),
-    vitalidade: Math.round(p * perfil.vitalidade),
+    forca: Math.max(1, Math.round(p * perfil.forca * multForca * (1 + (d.forcaPercentual ?? 0) / 100))),
+    vitalidade: Math.round(p * perfil.vitalidade * (1 + (d.vitalidadePercentual ?? 0) / 100)),
     arcano: 0,
     inteligencia: 0,
     agilidade: Math.max(1, Math.round(p * perfil.agilidade)),

@@ -222,7 +222,7 @@ export interface ItemReceita {
 }
 
 export interface ReceitaArma {
-  /** Materiais da Caçada (`MATERIAIS`) ou de subespécie (`MATERIAIS_SUBESPECIE`). */
+  /** Materiais da Caçada (`MATERIAIS`): do monstro ou da subespécie do ramo. */
   materiaisMonstro: readonly ItemReceita[];
   /** Ossos, minérios e plantas de `MATERIAIS_MUNDO`. */
   materiaisMundo: readonly ItemReceita[];
