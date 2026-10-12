@@ -7,7 +7,9 @@ import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
 import { dropsTela, estrelaDoMonstro, estrelasDoRanque, itensDoInventario, monstrosDaEstrela, ranquesDaCacada } from '@/lib/cacadaTela';
 import { CICLO_ESPECIAL, espacosDoPersonagem, larguraDasBarras, montarQuadros } from '@/lib/cacadaReplay';
 import { MochilaScreen } from '@/components/mochila/MochilaScreen';
-import { BarraVidaEscudo } from '@/components/cacada/CombateCacada';
+import { BarraVidaEscudo, destacarLinha, geometriaDaCena } from '@/components/cacada/CombateCacada';
+import { CENARIO_ESTRELA, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
+import fs from 'node:fs';
 
 /** Telas da Caçada: ranque, estrelas, catálogo, replay da luta e Mochila. */
 describe('Caçada (telas)', () => {
@@ -89,5 +91,32 @@ describe('Caçada (telas)', () => {
     expect(fim.jogador.hp).toBeGreaterThan(0);
     expect(espacosDoPersonagem(antes)).toHaveLength(5);
     expect(CICLO_ESPECIAL).toBe(3);
+  });
+
+  it('artes: cada caminho aponta para um arquivo que existe', () => {
+    const caminhos = [...Object.values(SPRITE_CLASSE).map((x) => x.src), ...Object.values(SPRITE_MONSTRO).map((x) => x.src), ...Object.values(CENARIO_ESTRELA)];
+    expect(caminhos.length).toBeGreaterThanOrEqual(3);
+    for (const c of caminhos) expect(fs.existsSync('public' + c), c).toBe(true);
+    for (const id of Object.keys(SPRITE_MONSTRO)) expect(MONSTROS_CACADA_MAP[id], id).toBeTruthy();
+  });
+
+  it('cena: monstro sempre acima do jogador e dentro da arena, em telas diferentes', () => {
+    for (const [w, h] of [[390, 380], [360, 340], [320, 340], [412, 480], [480, 700]]) {
+      const g = geometriaDaCena(w, h);
+      expect(g.monstro.pes - g.monstro.altura, `${w}x${h} topo do monstro`).toBeGreaterThanOrEqual(0);
+      expect(g.monstro.pes).toBeLessThan(g.jogador.pes - g.jogador.altura * 0.4);
+      expect(g.jogador.pes).toBeLessThanOrEqual(h);
+      expect(g.monstro.x).toBeGreaterThan(0);
+      expect(g.monstro.x).toBeLessThan(w);
+      expect(g.imgW).toBeGreaterThanOrEqual(w);
+      expect(g.imgH).toBeGreaterThanOrEqual(h);
+    }
+  });
+
+  it('log: dano em destaque e status na cor do status', () => {
+    const html = renderToStaticMarkup(React.createElement('p', null, destacarLinha('Rato recebeu 22 de dano e sofreu Sangramento.')));
+    expect(html).toContain('<b style="color:#F3C769">22</b>');
+    expect(html).toContain('Sangramento</b>');
+    expect(renderToStaticMarkup(React.createElement('p', null, destacarLinha('Yuri usou Golpe.')))).toBe('<p>Yuri usou Golpe.</p>');
   });
 });

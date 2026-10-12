@@ -84,6 +84,7 @@ export function CacadaScreen({ character, onCharacterChange, tokenFresco }: Caca
         personagem={etapa.antes}
         monstro={monstro}
         titulo={`Caçada · ${etapa.estrela}★ ${monstro.nome}`}
+        estrela={etapa.estrela}
         onFim={terminarCombate}
       />
     );
