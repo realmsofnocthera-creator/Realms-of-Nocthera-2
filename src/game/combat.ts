@@ -62,6 +62,12 @@ import {
   bonusDanoQueimaduraDeArmadura,
   bonusDanoVariosGolpesDeArmadura,
   bonusBloqueioDeArmadura,
+  multiplicadorCriticoDeArmadura,
+  curaPorCriticoDeArmadura,
+  regeneracaoPorRodadaDeArmadura,
+  surtoDeVigorDeArmadura,
+  polimentoProtetorDeArmadura,
+  reducaoPrimeiroGolpeDeArmadura,
   bencaoDivinaDeArmadura,
   bonusCuraDeArmadura,
   bonusMitigacaoDeArmadura,
@@ -438,7 +444,7 @@ export interface AtaqueLog {
 }
 
 export interface EventoCuraRodada {
-  tipo: 'curaContinua' | 'ressurreicao';
+  tipo: 'curaContinua' | 'ressurreicao' | 'regeneracao';
   combatente: string;
   /** HP recuperado (Cura Contínua) ou HP com que voltou (Ressurreição). */
   valor: number;
@@ -2375,6 +2381,8 @@ export interface OpcoesTurno {
     sorteioCritico?: (indiceAtaque: number, indiceGolpe: number) => number;
     /** Sorteio em [0, 100) das defesas com chance (Bênção Divina), por golpe recebido. Sem ele, não disparam. */
     sorteioDefesa?: (indiceAtaque: number, indiceGolpe: number) => number;
+    /** Este é o primeiro golpe que o defensor sofre na luta (Pouso Seguro). */
+    primeiroGolpeRecebido?: boolean;
     aoFinalizarAtaque?: (
       indiceAtaque: number,
       estadoDefensor: { hp: number; sobreescudo: number; hpMax: number }
@@ -2573,6 +2581,8 @@ function turnoDeCombateInterno(
         defensor.enfurecido === true &&
         defensor.hpMax > 0 &&
         hpAtual < (defensor.hpMax * GAME_CONFIG.ENFURECIDO_LIMIAR_HP_PERCENTUAL) / 100,
+      rodada: numeroTurno,
+      primeiraAcao: numeroTurno === 1 && i === 0,
     };
     const bonusDanoArmadura = bonusDanoDeArmadura(atacante.equipamento?.habilidadesArmadura, estadoArmadura);
     const bonusDanoBuffsPorTipo = (tipo: 'fisico' | 'magico'): number =>
@@ -3170,7 +3180,7 @@ function turnoDeCombateInterno(
             (100 - focoNesteAtaque) *
             (100 +
               bonusDefesaDosBuffs(defensor.buffs) +
-              bonusMitigacaoDeArmadura(defensor.equipamento?.habilidadesArmadura, hpAtual, defensor.hpMax)) *
+              bonusMitigacaoDeArmadura(defensor.equipamento?.habilidadesArmadura, hpAtual, defensor.hpMax, numeroTurno)) *
             (100 - reducaoDefesaPorPressao(defensor.debuffs, hpAtual, defensor.hpMax)) *
             (100 - reducaoDefesaDosDebuffs(defensor.debuffs))) /
           100_000_000
@@ -3199,6 +3209,7 @@ function turnoDeCombateInterno(
         bonusBloqueioDeArmadura(defensor.equipamento?.habilidadesArmadura, reducaoDosEfeitosAtivos) +
         // Bênção Divina (habilidade de armadura): chance por golpe recebido, na mesma soma com teto de 80%
         bencaoDivinaDeArmadura(defensor.equipamento?.habilidadesArmadura, opcoesTurno?.sorteioDefesa?.(i, 0)) +
+        reducaoPrimeiroGolpeDeArmadura(defensor.equipamento?.habilidadesArmadura, opcoesTurno?.primeiroGolpeRecebido === true) +
         (ehDanoFisico
           ? resistenciaRacialDefensor?.danoFisicoPercentual ?? 0
           : resistenciaRacialDefensor?.danoMagicoPercentual ?? 0)
@@ -3241,7 +3252,8 @@ function turnoDeCombateInterno(
         bonusCriticoDeArmadura(
           atacante.equipamento?.habilidadesArmadura,
           estadoArmadura,
-          reacaoElemental === 'fraqueza' || reacaoTipoDano === 'fraqueza'
+          reacaoElemental === 'fraqueza' || reacaoTipoDano === 'fraqueza',
+          indiceGolpe
         );
       const mult = multiplicadorCritico(
         opcoesTurno.sorteioCritico(i, indiceGolpe),
@@ -3249,6 +3261,8 @@ function turnoDeCombateInterno(
       );
       if (mult > 1) {
         golpesCriticos++;
+        // Reforço Crítico, Brilho Crítico e Fulgor Crítico (habilidades de armadura)
+        return multiplicadorCriticoDeArmadura(mult, atacante.equipamento?.habilidadesArmadura, elementoGolpe !== undefined);
       }
       return mult;
     };
@@ -3415,6 +3429,15 @@ function turnoDeCombateInterno(
       }
     }
 
+    // Polimento Protetor (habilidade de armadura): ao ser acertado, chance de ganhar Sobreescudo; entra depois do golpe
+    if (acaoCausaDano && hpAtual > 0 && danoEfetivo > 0) {
+      const ganhoPolimento = polimentoProtetorDeArmadura(defensor.equipamento?.habilidadesArmadura, opcoesTurno?.sorteioDefesa?.(i, 1));
+      if (ganhoPolimento > 0) {
+        const teto = defensor.equipamento?.sobreescudoMaximo ?? 0;
+        sobreescudoAtual = Math.min(Math.max(teto, sobreescudoAtual), sobreescudoAtual + Math.floor((defensor.hpMax * ganhoPolimento) / 100));
+      }
+    }
+
     // O Sobreescudo gasto sai primeiro do Escudo Temporário; a Absorção Mágica vale para um ataque mágico só
     if (acaoCausaDano && efeitosDefensor.length > 0) {
       let efeitosAtualizados = gastarEscudoTemporario(
@@ -3448,6 +3471,12 @@ function turnoDeCombateInterno(
 
     // Cicatrização: as curas de quem a sofre ficam menos eficazes
     const fatorCura = Math.max(0, fatorCuraPercentual(atacante.debuffs) + bonusEficaciaCuraAtacante) / 100;
+
+    // Chama Restauradora (habilidade de armadura): cada golpe crítico recupera HP
+    const curaPorCritico = acaoCausaDano ? curaPorCriticoDeArmadura(atacante.equipamento?.habilidadesArmadura, golpesCriticos) : 0;
+    if (curaPorCritico > 0 && hpAtacanteAtual > 0) {
+      hpAtacanteAtual = Math.min(atacante.hpMax, hpAtacanteAtual + Math.floor((atacante.hpMax * curaPorCritico * fatorCura) / 100));
+    }
 
     if (ehDanoFisico && temSedeDeSangue && racaAtacante) {
       hpAtacanteAtual = aplicarSedeDeSangue(
@@ -4039,6 +4068,9 @@ export function resolverCombate(
     }
   };
 
+  // Pouso Seguro: o primeiro golpe que o personagem sofre na luta
+  let personagemJaFoiAtingido = false;
+
   const executarAcaoMonstro = (
     rodada: number,
     ataquesDoTurno: AtaqueLog[],
@@ -4049,6 +4081,7 @@ export function resolverCombate(
     const tMonstro = turnoDeCombate(m, p, rodada, {
       sorteioCritico: (idxAtk, idxGolpe) => obterSorteioCritico(rodada, idxAtk, idxGolpe, 'monstro'),
       sorteioDefesa: (idxAtk, idxGolpe) => obterSorteioStatus(rodada, 900 + idxAtk * 16 + idxGolpe),
+      primeiroGolpeRecebido: !personagemJaFoiAtingido,
       aoFinalizarAtaque: (idxAtk, estadoDefensor) => {
         let hpDefensorAtual = estadoDefensor.hp;
 
@@ -4114,6 +4147,7 @@ export function resolverCombate(
     });
 
     ataquesDoTurno.push(...tMonstro.turnoLog.ataques);
+    if (tMonstro.turnoLog.ataques.some((a) => a.danoBruto > 0)) personagemJaFoiAtingido = true;
     passarRodadaEfeitosDefensivos(p);
 
     // Habilidades de monstro: status garantidos e com chance no caçador
@@ -4182,6 +4216,22 @@ export function resolverCombate(
 
     // Cura e restauração no fim da rodada: Ressurreição Parcial (se o dano contínuo derrubou) e Cura Contínua
     const eventosCuraDoTurno: EventoCuraRodada[] = [];
+    // Regeneração e Surto de Vigor (habilidades de armadura) de quem está de pé
+    if (p.hp > 0) {
+      const regeneracao = regeneracaoPorRodadaDeArmadura(armaduraDoPersonagem(), p.hp, p.hpMax);
+      if (regeneracao > 0 && p.hp < p.hpMax) {
+        const cura = Math.min(p.hpMax - p.hp, Math.floor((p.hpMax * regeneracao) / 100));
+        if (cura > 0) {
+          p.hp += cura;
+          eventosCuraDoTurno.push({ tipo: 'regeneracao', combatente: p.nome, valor: cura });
+        }
+      }
+      const surto = surtoDeVigorDeArmadura(armaduraDoPersonagem());
+      const tetoSobreescudo = p.equipamento?.sobreescudoMaximo ?? 0;
+      if (surto > 0 && p.sobreescudo < tetoSobreescudo) {
+        p.sobreescudo = Math.min(tetoSobreescudo, p.sobreescudo + Math.floor((tetoSobreescudo * surto) / 100));
+      }
+    }
     for (const c of [p, m]) {
       if (c.hp <= 0 && c.ressurreicaoParcial) {
         const rev = tentarRessurreicaoParcial(c.ressurreicaoParcial, c.hp, c.hpMax);

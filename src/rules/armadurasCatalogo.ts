@@ -15,7 +15,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'rato-da-floresta-peitoral', conjuntoId: 'rato-da-floresta', monstroId: 'rato-da-floresta', estrela: 1, raridade: 'comum', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Rato da Floresta',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'pelo-de-rato', qtd: 6 }], materiaisMundo: [{ id: 'mundo-osso-bruto', qtd: 2 }, { id: 'mundo-minerio-de-ferro-bruto', qtd: 2 }, { id: 'mundo-fibra-silvestre', qtd: 1 }], diversos: null, ouro: 200 },
   },
   {
@@ -27,7 +27,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'rato-da-floresta-perneiras', conjuntoId: 'rato-da-floresta', monstroId: 'rato-da-floresta', estrela: 1, raridade: 'comum', estilo: 'veloz', espaco: 'perneiras',
     nome: 'Calças de Rato da Floresta',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 1 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 1 }],
     receita: { materiaisMonstro: [{ id: 'pelo-de-rato', qtd: 5 }], materiaisMundo: [{ id: 'mundo-osso-bruto', qtd: 2 }, { id: 'mundo-minerio-de-ferro-bruto', qtd: 2 }, { id: 'mundo-fibra-silvestre', qtd: 1 }], diversos: null, ouro: 160 },
   },
   {
@@ -165,7 +165,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'noctyrr-peitoral', conjuntoId: 'noctyrr', monstroId: 'noctyrr', estrela: 2, raridade: 'comum', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Noctyrr',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'membrana-de-asa', qtd: 6 }], materiaisMundo: [{ id: 'mundo-presa-gasta', qtd: 2 }, { id: 'mundo-minerio-de-ferro-bruto', qtd: 2 }, { id: 'mundo-fibra-silvestre', qtd: 1 }], diversos: null, ouro: 310 },
   },
   {
@@ -285,7 +285,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'rhazkida-peitoral', conjuntoId: 'rhazkida', monstroId: 'rhazkida', estrela: 3, raridade: 'raro', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Rhazkida',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'carapaca-de-rhazkida', qtd: 4 }, { id: 'ferrao-venenoso', qtd: 3 }], materiaisMundo: [{ id: 'mundo-presa-gasta', qtd: 1 }, { id: 'mundo-minerio-de-ferro-bruto', qtd: 1 }, { id: 'mundo-presa-dentada', qtd: 2 }, { id: 'mundo-minerio-de-prata', qtd: 2 }, { id: 'mundo-raiz-medicinal', qtd: 1 }], diversos: null, ouro: 410 },
   },
   {
@@ -375,7 +375,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'zaryth-peitoral', conjuntoId: 'zaryth', monstroId: 'zaryth', estrela: 4, raridade: 'raro', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Zaryth',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'escama-condutora', qtd: 4 }, { id: 'espinho-eletrico', qtd: 3 }], materiaisMundo: [{ id: 'mundo-osso-bruto', qtd: 1 }, { id: 'mundo-minerio-de-ferro-bruto', qtd: 1 }, { id: 'mundo-osso-reforcado', qtd: 2 }, { id: 'mundo-minerio-de-prata', qtd: 2 }, { id: 'mundo-raiz-medicinal', qtd: 1 }], diversos: null, ouro: 550 },
   },
   {
@@ -585,7 +585,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'dravoryx-peitoral', conjuntoId: 'dravoryx', monstroId: 'dravoryx', estrela: 6, raridade: 'muitoRaro', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Dravoryx',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'escama-de-wyvern', qtd: 3 }, { id: 'membrana-aerea', qtd: 3 }, { id: 'cauda-afiada', qtd: 2 }], materiaisMundo: [{ id: 'mundo-presa-dentada', qtd: 1 }, { id: 'mundo-cristal-bruto', qtd: 1 }, { id: 'mundo-presa-draconica', qtd: 2 }, { id: 'mundo-cristal-arcano', qtd: 2 }, { id: 'mundo-raiz-ancestral', qtd: 1 }], diversos: { raridade: 'muitoRaro', qtd: 1 }, ouro: 1310 },
   },
   {
@@ -765,7 +765,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'zyrak-peitoral', conjuntoId: 'zyrak', monstroId: 'zyrak', estrela: 7, raridade: 'epico', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Zyrak',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'garra-venenosa', qtd: 3 }, { id: 'asa-de-canion', qtd: 3 }, { id: 'glandula-ignea', qtd: 2 }], materiaisMundo: [{ id: 'mundo-presa-draconica', qtd: 1 }, { id: 'mundo-minerio-de-sangue', qtd: 1 }, { id: 'mundo-chifre-de-dragao', qtd: 2 }, { id: 'mundo-minerio-de-mithril', qtd: 2 }, { id: 'mundo-flor-celestial', qtd: 1 }], diversos: { raridade: 'epico', qtd: 1 }, ouro: 1410 },
   },
   {
@@ -951,7 +951,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'oryndrak-luvas', conjuntoId: 'oryndrak', monstroId: 'oryndrak', estrela: 9, raridade: 'lendario', estilo: 'veloz', espaco: 'luvas',
     nome: 'Luvas de Oryndrak',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'pedra-levitante', qtd: 2 }, { id: 'olho-do-ceu', qtd: 2 }, { id: 'coracao-celeste', qtd: 1 }], materiaisMundo: [{ id: 'mundo-chifre-de-dragao', qtd: 1 }, { id: 'mundo-geodo-primordial', qtd: 1 }, { id: 'mundo-chifre-do-soberano', qtd: 1 }, { id: 'mundo-cristal-do-vazio', qtd: 1 }, { id: 'mundo-raiz-da-arvore-mundial', qtd: 1 }], diversos: null, ouro: 660 },
   },
   {
@@ -1065,7 +1065,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'rato-das-cinzas-peitoral', conjuntoId: 'rato-das-cinzas', monstroId: 'rato-das-cinzas', estrela: 3, raridade: 'raro', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Rato das Cinzas',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'pelo-de-rato', qtd: 4 }, { id: 'cauda-chamuscada', qtd: 3 }], materiaisMundo: [{ id: 'mundo-presa-gasta', qtd: 1 }, { id: 'mundo-minerio-de-cobre', qtd: 1 }, { id: 'mundo-presa-dentada', qtd: 2 }, { id: 'mundo-cristal-bruto', qtd: 2 }, { id: 'mundo-raiz-medicinal', qtd: 1 }], diversos: null, ouro: 410 },
   },
   {
@@ -1095,7 +1095,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'rato-pestilento-peitoral', conjuntoId: 'rato-pestilento', monstroId: 'rato-pestilento', estrela: 5, raridade: 'raro', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Rato Pestilento',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'pelo-de-rato', qtd: 4 }, { id: 'cauda-pestilenta', qtd: 3 }], materiaisMundo: [{ id: 'mundo-osso-bruto', qtd: 1 }, { id: 'mundo-minerio-de-ferro-bruto', qtd: 1 }, { id: 'mundo-osso-reforcado', qtd: 2 }, { id: 'mundo-minerio-de-prata', qtd: 2 }, { id: 'mundo-raiz-medicinal', qtd: 1 }], diversos: null, ouro: 690 },
   },
   {
@@ -1365,7 +1365,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'noctyrr-tempestuoso-peitoral', conjuntoId: 'noctyrr-tempestuoso', monstroId: 'noctyrr-tempestuoso', estrela: 4, raridade: 'raro', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Noctyrr Tempestuoso',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'membrana-de-asa', qtd: 4 }, { id: 'orelha-eletrizada', qtd: 3 }], materiaisMundo: [{ id: 'mundo-presa-gasta', qtd: 1 }, { id: 'mundo-minerio-de-ferro-bruto', qtd: 1 }, { id: 'mundo-presa-dentada', qtd: 2 }, { id: 'mundo-minerio-de-prata', qtd: 2 }, { id: 'mundo-raiz-medicinal', qtd: 1 }], diversos: null, ouro: 550 },
   },
   {
@@ -1395,7 +1395,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'noctyrr-abissal-peitoral', conjuntoId: 'noctyrr-abissal', monstroId: 'noctyrr-abissal', estrela: 6, raridade: 'raro', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Noctyrr Abissal',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'membrana-de-asa', qtd: 4 }, { id: 'orelha-do-abismo', qtd: 3 }], materiaisMundo: [{ id: 'mundo-osso-bruto', qtd: 1 }, { id: 'mundo-minerio-de-cobre', qtd: 1 }, { id: 'mundo-osso-reforcado', qtd: 2 }, { id: 'mundo-cristal-bruto', qtd: 2 }, { id: 'mundo-raiz-medicinal', qtd: 1 }], diversos: null, ouro: 1310 },
   },
   {
@@ -1605,7 +1605,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'rhazkida-escarlate-peitoral', conjuntoId: 'rhazkida-escarlate', monstroId: 'rhazkida-escarlate', estrela: 5, raridade: 'muitoRaro', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Rhazkida Escarlate',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'carapaca-de-rhazkida', qtd: 3 }, { id: 'ferrao-escarlate', qtd: 3 }, { id: 'bolsa-de-veneno-rubro', qtd: 2 }], materiaisMundo: [{ id: 'mundo-presa-dentada', qtd: 1 }, { id: 'mundo-minerio-de-prata', qtd: 1 }, { id: 'mundo-presa-draconica', qtd: 2 }, { id: 'mundo-minerio-de-sangue', qtd: 2 }, { id: 'mundo-raiz-ancestral', qtd: 1 }], diversos: { raridade: 'muitoRaro', qtd: 1 }, ouro: 690 },
   },
   {
@@ -1635,7 +1635,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'rhazkida-cristalina-peitoral', conjuntoId: 'rhazkida-cristalina', monstroId: 'rhazkida-cristalina', estrela: 7, raridade: 'muitoRaro', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Rhazkida Cristalina',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'carapaca-de-rhazkida', qtd: 3 }, { id: 'ferrao-cristalino', qtd: 3 }, { id: 'bolsa-condutora', qtd: 2 }], materiaisMundo: [{ id: 'mundo-osso-reforcado', qtd: 1 }, { id: 'mundo-cristal-bruto', qtd: 1 }, { id: 'mundo-osso-ancestral', qtd: 2 }, { id: 'mundo-cristal-arcano', qtd: 2 }, { id: 'mundo-raiz-ancestral', qtd: 1 }], diversos: { raridade: 'muitoRaro', qtd: 1 }, ouro: 1410 },
   },
   {
@@ -1785,7 +1785,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'zaryth-vulcanico-peitoral', conjuntoId: 'zaryth-vulcanico', monstroId: 'zaryth-vulcanico', estrela: 6, raridade: 'muitoRaro', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Zaryth Vulcânico',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'escama-condutora', qtd: 3 }, { id: 'espinho-incandescente', qtd: 3 }, { id: 'glandula-de-fogo', qtd: 2 }], materiaisMundo: [{ id: 'mundo-presa-dentada', qtd: 1 }, { id: 'mundo-cristal-bruto', qtd: 1 }, { id: 'mundo-presa-draconica', qtd: 2 }, { id: 'mundo-cristal-arcano', qtd: 2 }, { id: 'mundo-raiz-ancestral', qtd: 1 }], diversos: { raridade: 'muitoRaro', qtd: 1 }, ouro: 1310 },
   },
   {
@@ -1815,7 +1815,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'zaryth-abissal-peitoral', conjuntoId: 'zaryth-abissal', monstroId: 'zaryth-abissal', estrela: 8, raridade: 'muitoRaro', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Zaryth Abissal',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'escama-condutora', qtd: 3 }, { id: 'espinho-fulminante', qtd: 3 }, { id: 'glandula-tempestuosa', qtd: 2 }], materiaisMundo: [{ id: 'mundo-osso-reforcado', qtd: 1 }, { id: 'mundo-minerio-de-prata', qtd: 1 }, { id: 'mundo-osso-ancestral', qtd: 2 }, { id: 'mundo-minerio-de-sangue', qtd: 2 }, { id: 'mundo-raiz-ancestral', qtd: 1 }], diversos: { raridade: 'muitoRaro', qtd: 1 }, ouro: 1520 },
   },
   {
@@ -2115,7 +2115,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'dravoryx-tempestuoso-peitoral', conjuntoId: 'dravoryx-tempestuoso', monstroId: 'dravoryx-tempestuoso', estrela: 8, raridade: 'epico', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Dravoryx Tempestuoso',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'membrana-tempestuosa', qtd: 3 }, { id: 'cauda-eletrificada', qtd: 3 }, { id: 'gema-do-relampago', qtd: 2 }], materiaisMundo: [{ id: 'mundo-osso-ancestral', qtd: 1 }, { id: 'mundo-cristal-arcano', qtd: 1 }, { id: 'mundo-osso-de-colosso', qtd: 2 }, { id: 'mundo-geodo-primordial', qtd: 2 }, { id: 'mundo-flor-celestial', qtd: 1 }], diversos: { raridade: 'epico', qtd: 1 }, ouro: 1520 },
   },
   {
@@ -2295,7 +2295,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'zyrak-carmesim-peitoral', conjuntoId: 'zyrak-carmesim', monstroId: 'zyrak-carmesim', estrela: 8, raridade: 'lendario', estilo: 'veloz', espaco: 'peitoral',
     nome: 'Gibão de Zyrak Carmesim',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'asa-de-canion-escarlate', qtd: 3 }, { id: 'glandula-ignea-toxica', qtd: 3 }, { id: 'sopro-venenoso', qtd: 2 }], materiaisMundo: [{ id: 'mundo-osso-de-colosso', qtd: 1 }, { id: 'mundo-minerio-de-mithril', qtd: 1 }, { id: 'mundo-osso-de-dragao-anciao', qtd: 2 }, { id: 'mundo-minerio-estelar', qtd: 2 }, { id: 'mundo-raiz-da-arvore-mundial', qtd: 1 }], diversos: { raridade: 'lendario', qtd: 1 }, ouro: 1520 },
   },
   {
@@ -2361,7 +2361,7 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   {
     id: 'oryndrak-mitico-luvas', conjuntoId: 'oryndrak-mitico', monstroId: 'oryndrak', estrela: 9, raridade: 'mitico', estilo: 'veloz', espaco: 'luvas',
     nome: 'Luvas Primordiais de Oryndrak',
-    habilidades: [{ id: 'extensor-de-esquiva', nivel: 2 }],
+    habilidades: [{ id: 'extensor-de-agilidade', nivel: 2 }],
     receita: { materiaisMonstro: [{ id: 'olho-do-ceu', qtd: 2 }, { id: 'coracao-celeste', qtd: 2 }], materiaisMundo: [{ id: 'mundo-osso-de-dragao-anciao', qtd: 2 }, { id: 'mundo-cristal-do-vazio', qtd: 2 }, { id: 'mundo-raiz-da-arvore-mundial', qtd: 1 }], diversos: null, ouro: 660 },
   },
   {

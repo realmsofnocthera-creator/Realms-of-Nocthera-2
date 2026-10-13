@@ -35,7 +35,7 @@ describe('Aba Equipamentos da ficha', () => {
     expect(html).toContain('Elemento: Gelo');
     expect(html).toContain('Status: Sangramento');
     expect(html).toContain('Reforço de Ataque'); // já vale no combate
-    expect(html).toContain('Extensor de Esquiva'); // Agilidade em porcentagem, já vale
+    expect(html).toContain('Extensor de Agilidade'); // Agilidade em porcentagem, já vale
     expect(html).not.toContain('ainda não valem no combate'); // todas as habilidades deste equipamento valem
   });
 

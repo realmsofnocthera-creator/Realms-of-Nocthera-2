@@ -45,7 +45,7 @@ describe('Efeitos das habilidades de armadura (parte 1)', () => {
   });
 
   it('Agilidade e dano fixo da arma', () => {
-    expect([1, 2, 3].map((n) => efeitoEstaticoDaHabilidade('extensor-de-esquiva', n)?.agilidadePercentual)).toEqual([3, 6, 10]);
+    expect([1, 2, 3].map((n) => efeitoEstaticoDaHabilidade('extensor-de-agilidade', n)?.agilidadePercentual)).toEqual([3, 6, 10]);
     expect([1, 2, 3].map((n) => efeitoEstaticoDaHabilidade('mobilidade-aquatica-polar', n)?.agilidadePercentual)).toEqual([0, 5, 10]);
     expect([1, 2, 3, 4, 5].map((n) => efeitoEstaticoDaHabilidade('artesanato', n)?.danoFixoArmaPercentual)).toEqual([3, 6, 9, 12, 15]);
     expect(efeitoEstaticoDaHabilidade('reforco-nao-elemental', 1)?.danoFixoArmaSemElementoPercentual).toBe(10);
