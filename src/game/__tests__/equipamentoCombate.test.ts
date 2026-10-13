@@ -181,3 +181,107 @@ describe('Habilidades de armadura que dependem do estado da luta', () => {
     expect(com.danoEfetivo).toBeLessThan(sem.danoEfetivo); // +30% sobre a mitigação de 100: 400 − 100 contra 400 − 130
   });
 });
+
+describe('Dano elemental e status de ataque das habilidades de armadura', () => {
+  const comHabilidades = (extra: Partial<EquipamentoCombate>, habilidadesArmadura: Record<string, number> = {}) =>
+    personagem({ ...SEM_BONUS, ...extra, habilidadesArmadura, sobreescudoMaximo: 1000 });
+  const estado = { hpAtacante: 100, hpMaxAtacante: 100, sobreescudoAtacante: 10, sobreescudoMaxAtacante: 10, hpAlvo: 100, hpMaxAlvo: 100, alvoEnfurecido: false };
+
+  it('dano elemental: +10% da arma no elemento dela e as habilidades de cada elemento (Água é o Vento; Dragão, o Sombrio)', async () => {
+    const m = await import('@/game/combate/habilidadesArmaduraCombate');
+    expect(m.bonusDanoElementalDeArmadura({}, ['fogo'], 'fogo', estado)).toBe(10);
+    expect(m.bonusDanoElementalDeArmadura({}, ['fogo'], 'gelo', estado)).toBe(0);
+    expect(m.bonusDanoElementalDeArmadura({}, undefined, undefined, estado)).toBe(0);
+    expect(m.bonusDanoElementalDeArmadura({ 'ataque-de-fogo': 6 }, ['fogo'], 'fogo', estado)).toBe(10 + 20);
+    expect(m.bonusDanoElementalDeArmadura({ 'ataque-de-fogo': 6 }, [], 'gelo', estado)).toBe(0);
+    expect([1, 3, 4, 6].map((n) => m.bonusDanoElementalDeArmadura({ 'ataque-de-agua': n }, [], 'vento', estado))).toEqual([3, 10, 13, 20]);
+    expect(m.bonusDanoElementalDeArmadura({ 'ataque-de-raio': 2, 'ataque-de-dragao': 2 }, [], 'relampago', estado)).toBe(6);
+    expect(m.bonusDanoElementalDeArmadura({ 'ataque-de-dragao': 2 }, [], 'sombrio', estado)).toBe(6);
+    expect(m.bonusDanoElementalDeArmadura({ 'artilharia-pesada': 2 }, [], 'fogo', estado)).toBe(50);
+    expect(m.bonusDanoElementalDeArmadura({ 'tormenta-de-reydras': 3 }, [], 'relampago', estado)).toBe(15);
+  });
+
+  it('Coalescência: com a vida abaixo de 50%, dano e dano elemental', async () => {
+    const m = await import('@/game/combate/habilidadesArmaduraCombate');
+    const baixo = { ...estado, hpAtacante: 40 };
+    expect(m.bonusDanoDeArmadura({ coalescencia: 3 }, baixo)).toBe(7);
+    expect(m.bonusDanoDeArmadura({ coalescencia: 3 }, estado)).toBe(0);
+    expect(m.bonusDanoElementalDeArmadura({ coalescencia: 3 }, [], 'terra', baixo)).toBe(18);
+    expect(m.bonusDanoElementalDeArmadura({ coalescencia: 3 }, [], 'terra', estado)).toBe(0);
+  });
+
+  it('chance de status: o bônus é relativo à chance base (Veneno 8% com +20% = +1,6 pontos)', async () => {
+    const m = await import('@/game/combate/habilidadesArmaduraCombate');
+    expect([1, 2, 3, 4].map((n) => m.bonusChanceStatusRelativa({ 'ataque-de-veneno': n }, 'veneno', estado))).toEqual([10, 20, 40, 60]);
+    expect(m.bonusChanceStatusRelativa({ 'ataque-de-veneno': 4 }, 'sono', estado)).toBe(0);
+    expect(m.bonusChanceStatusRelativa({ 'ataque-de-explosao': 2 }, 'queimadura', estado)).toBe(20);
+    expect([1, 5].map((n) => m.bonusChanceStatusRelativa({ atordoante: n }, 'loucura', estado))).toEqual([20, 60]);
+    expect(m.bonusChanceStatusRelativa({ 'tormenta-de-reydras': 3 }, 'paralisia', estado)).toBe(30);
+    expect(m.bonusChanceStatusRelativa({ coalescencia: 2 }, 'veneno', { ...estado, hpAtacante: 10 })).toBe(20);
+    expect(m.bonusChanceStatusRelativa({ 'poder-de-diablos': 3 }, 'loucura', { ...estado, sobreescudoAtacante: 0 })).toBe(10);
+    expect(m.bonusChanceStatusRelativa({ 'poder-de-diablos': 3 }, 'loucura', estado)).toBe(0);
+    expect(m.chanceExtraRelativaEmPontos('veneno', 20)).toBeCloseTo(1.6);
+  });
+
+  it('Poder de Diablos (nível 3): dano +8% com o Sobreescudo zerado', async () => {
+    const m = await import('@/game/combate/habilidadesArmaduraCombate');
+    expect(m.bonusDanoDeArmadura({ 'poder-de-diablos': 3 }, { ...estado, sobreescudoAtacante: 0 })).toBe(8);
+    expect(m.bonusDanoDeArmadura({ 'poder-de-diablos': 3 }, estado)).toBe(0);
+  });
+
+  it('Adição de status: só quando a arma não aplica aquele status', async () => {
+    const m = await import('@/game/combate/habilidadesArmaduraCombate');
+    const todas = { 'adicao-de-veneno': 1, 'adicao-de-paralisia': 1, 'adicao-de-sono': 1, 'adicao-de-explosao': 1 };
+    expect(m.adicoesDeStatus(todas, [])).toEqual([
+      { status: 'veneno', chancePercentual: 3 }, { status: 'paralisia', chancePercentual: 2 },
+      { status: 'sono', chancePercentual: 2 }, { status: 'queimadura', chancePercentual: 4 },
+    ]);
+    expect(m.adicoesDeStatus(todas, ['veneno', 'queimadura']).map((a) => a.status)).toEqual(['paralisia', 'sono']);
+    expect(m.adicoesDeStatus(undefined, [])).toEqual([]);
+  });
+
+  it('Queimadura: Bombardeiro (+10% a +50%) e Artilharia Pesada (+25% e +50%) somam', async () => {
+    const m = await import('@/game/combate/habilidadesArmaduraCombate');
+    expect(m.bonusDanoQueimaduraDeArmadura({ bombardeiro: 5 })).toBe(50);
+    expect(m.bonusDanoQueimaduraDeArmadura({ bombardeiro: 2, 'artilharia-pesada': 1 })).toBe(45);
+    expect(m.bonusDanoQueimaduraDeArmadura(undefined)).toBe(0);
+  });
+
+  it('no combate: o elemento da arma dá +10% e o Ataque de Fogo soma por cima', () => {
+    const sem = primeiroAtaque(comHabilidades({ elementosArma: ['fogo'] }));
+    const com = primeiroAtaque(comHabilidades({ elementosArma: ['fogo'] }, { 'ataque-de-fogo': 6 }));
+    const neutro = primeiroAtaque(comHabilidades({}));
+    expect(sem.elemento).toBe('fogo');
+    expect(sem.danoBruto).toBeGreaterThan(neutro.danoBruto);
+    expect(com.danoBruto).toBeGreaterThan(sem.danoBruto);
+    // Os +10% da arma e os +20% da habilidade somam (+30%)
+    expect(com.danoBruto).toBe(Math.floor((neutro.danoBruto * 130) / 100));
+  });
+
+  it('no combate: Ataque de Veneno aumenta a chance do Veneno da arma (8% base, +60% = 12,8%)', () => {
+    const aplicou = (habilidades: Record<string, number>) =>
+      resolverCombate(comHabilidades({ statusArma: ['veneno'] }, habilidades), ALVO, 11, { rngStatus: () => 12 }).logTurnos[0].eventosEfeitos.some(
+        (e) => e.efeito === 'veneno' && e.tipo === 'aplicado'
+      );
+    expect(aplicou({})).toBe(false); // 12 não passa de 8%
+    expect(aplicou({ 'ataque-de-veneno': 4 })).toBe(true); // 12 < 12,8
+    expect(aplicou({ 'ataque-de-veneno': 3 })).toBe(false); // +40% = 11,2%
+  });
+
+  it('no combate: Adição de Veneno dá 3% de chance por golpe mesmo sem status na arma', () => {
+    const aplicou = (sorteio: number) =>
+      resolverCombate(comHabilidades({}, { 'adicao-de-veneno': 1 }), ALVO, 11, { rngStatus: () => sorteio }).logTurnos[0].eventosEfeitos.some(
+        (e) => e.efeito === 'veneno' && e.tipo === 'aplicado'
+      );
+    expect(aplicou(2)).toBe(true);
+    expect(aplicou(3)).toBe(false);
+  });
+
+  it('no combate: Bombardeiro aumenta o dano da Queimadura no monstro', () => {
+    const tick = (habilidades: Record<string, number>) =>
+      resolverCombate(comHabilidades({ statusArma: ['queimadura'] }, habilidades), ALVO, 11, { rngStatus: () => 0 })
+        .logTurnos[0].eventosEfeitos.find((e) => e.efeito === 'queimadura' && e.tipo === 'dano')!.dano!;
+    const base = tick({});
+    expect(tick({ bombardeiro: 5 })).toBe(Math.floor((base * 150) / 100));
+  });
+});

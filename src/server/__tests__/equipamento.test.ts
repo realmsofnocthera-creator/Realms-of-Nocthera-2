@@ -13,7 +13,7 @@ import { resetCharacterStore, setTestPersistenceFailHook } from '@/test/reposito
 import type { ArmaPersonagem } from '@/game/forja';
 import type { ArmaduraPersonagem } from '@/game/armaduraForja';
 import { danoFixoDaArma } from '@/rules/armas';
-import { ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
+import { ARMAS_BASE, ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
 import { fixoDaPeca } from '@/rules/armaduras';
 import { calcularHpMax } from '@/game';
 import { calcularFichaEquipamento } from '@/game/equipamento';
@@ -135,5 +135,18 @@ describe('Equipamento (servidor)', () => {
     await equiparArmaduraDoPersonagem('e9', 'e3');
     const com = golpe(await executarCacada('e9', 'lobo-cinzento', { seed: 7, combateId: 'ataque-armadura-0002' }));
     expect(com.danoBruto).toBeGreaterThan(sem.danoBruto);
+  });
+  it('o dano elemental da arma e o Ataque de Fogo chegam ao combate da Caçada', async () => {
+    const fogo = ARMAS_BASE.find((a) => a.elementos.length === 1 && a.elementos[0] === 'fogo' && a.status.length === 0 && a.estrela === 1)!;
+    const arma: ArmaPersonagem = { id: 'wf', baseId: fogo.id, categoria: 'espadaGrande', atributo: 'sorte', pontos: 1, reforjas: 0, criadaEm: '' };
+    const luvas: ArmaduraPersonagem = { id: 'e4', pecaId: 'rathmorn-luvas', atributo: 'vigor', pontos: 0, reforjas: 0, xp: 0, criadaEm: '' };
+    await setup('e10', { armas: [arma], armaduras: [luvas] });
+    const golpe = (r: Awaited<ReturnType<typeof executarCacada>>) => r.resultado.logTurnos[0].ataques.find((a) => a.atacante.startsWith('Equipado'))!;
+    await equiparArmaDoPersonagem('e10', 'wf');
+    const soArma = golpe(await executarCacada('e10', 'lobo-cinzento', { seed: 7, combateId: 'elemental-0001' }));
+    await equiparArmaduraDoPersonagem('e10', 'e4');
+    const comLuvas = golpe(await executarCacada('e10', 'lobo-cinzento', { seed: 7, combateId: 'elemental-0002' }));
+    expect(soArma.elemento).toBe('fogo');
+    expect(comLuvas.danoBruto).toBeGreaterThan(soArma.danoBruto);
   });
 });
