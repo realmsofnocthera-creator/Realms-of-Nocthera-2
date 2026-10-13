@@ -131,10 +131,11 @@ export function DesenvolvimentoScreen() {
   const podeResetar =
     temPontosAlocados && saldoDiamantes >= custoReset && !isSubmitting && !isResetting;
 
-  // Poder Total com o bônus do Reforço de Habilidade (atributos efetivos)
+  // Poder Total com o bônus do Reforço de Habilidade e o do equipamento (atributos efetivos)
   const poderTotal =
     calcularPoderTotal(character.atributos) +
-    Object.values(character.bonusReforco ?? {}).reduce((soma, v) => soma + Number(v || 0), 0);
+    Object.values(character.bonusReforco ?? {}).reduce((soma, v) => soma + Number(v || 0), 0) +
+    Object.values(character.bonusEquipamento ?? {}).reduce((soma, v) => soma + Number(v || 0), 0);
 
   const handleAdjust = (attr: AttributeName, delta: number) => {
     if (isSubmitting || isResetting) return;

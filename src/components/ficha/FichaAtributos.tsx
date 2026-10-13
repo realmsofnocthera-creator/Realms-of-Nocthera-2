@@ -36,9 +36,9 @@ export function FichaAtributos({
     },
   ];
 
-  // Atributos efetivos: os gravados mais o bônus do Reforço de Habilidade (2.2.2)
+  // Atributos efetivos: os gravados, o bônus do Reforço de Habilidade (2.2.2) e o do equipamento equipado
   const efetivo = (attr: keyof typeof character.atributos) =>
-    character.atributos[attr] + (character.bonusReforco?.[attr] ?? 0);
+    character.atributos[attr] + (character.bonusReforco?.[attr] ?? 0) + (character.bonusEquipamento?.[attr] ?? 0);
 
   // Chance de crítico (2% de base + 0,1% por ponto de Sorte)
   const chanceCritico = `${String(

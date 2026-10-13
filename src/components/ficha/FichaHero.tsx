@@ -6,28 +6,36 @@ import { getRaceById } from '@/rules/races';
 import { getClassById } from '@/rules/classes';
 import { resolveAvatarSrc } from '@/assets/avatars';
 import { calcularPoderTotal, xpParaProximoNivel } from '@/game';
-import { FichaSidebar } from './FichaSidebar';
+import { AbaFicha, FichaSidebar } from './FichaSidebar';
 import { FichaAtributos } from './FichaAtributos';
 
 interface FichaHeroProps {
   character: CharacterDocument;
   onAvatarChange?: (newAvatarId: string) => void;
   onOpenLupa?: () => void;
+  /** Aba aberta: na de Equipamentos, os espaços tomam o lugar da moldura de atributos. */
+  aba?: AbaFicha;
+  onMudarAba?: (aba: AbaFicha) => void;
+  colunaEquipamentos?: React.ReactNode;
   className?: string;
 }
 
 export function FichaHero({
   character,
   onOpenLupa,
+  aba = 'personagem',
+  onMudarAba,
+  colunaEquipamentos,
   className = '',
 }: FichaHeroProps) {
   const raca = getRaceById(character.racaId);
   const classe = getClassById(character.classeId);
   const avatarSrc = resolveAvatarSrc(character.avatarId, character.classeId);
-  // Poder Total com o bônus do Reforço de Habilidade (2.2.2)
+  // Poder Total com o bônus do Reforço de Habilidade (2.2.2) e o do equipamento equipado
   const poderTotal =
     calcularPoderTotal(character.atributos) +
-    Object.values(character.bonusReforco ?? {}).reduce((soma, v) => soma + Number(v || 0), 0);
+    Object.values(character.bonusReforco ?? {}).reduce((soma, v) => soma + Number(v || 0), 0) +
+    Object.values(character.bonusEquipamento ?? {}).reduce((soma, v) => soma + Number(v || 0), 0);
 
   // Cálculo de XP e Nível
   const isMaxLevel = character.nivel >= 30;
@@ -72,7 +80,7 @@ export function FichaHero({
         <div className="flex items-start justify-between gap-1.5 sm:gap-2 w-full">
           {/* BARRA LATERAL (4 botões verticais sem botão de avatar) */}
           <div className="flex flex-col gap-1.5 pt-0.5 shrink-0">
-            <FichaSidebar />
+            <FichaSidebar aba={aba} onMudarAba={onMudarAba} />
           </div>
 
           {/* COLUNA DIREITA: Bloco de Identidade (Nome, Raça, Nível, XP) + Moldura de Atributos */}
@@ -120,7 +128,11 @@ export function FichaHero({
             </div>
 
             {/* Moldura de Atributos alinhada à direita */}
-            <FichaAtributos character={character} onOpenLupa={onOpenLupa} />
+            {aba === 'equipamentos' && colunaEquipamentos ? (
+              colunaEquipamentos
+            ) : (
+              <FichaAtributos character={character} onOpenLupa={onOpenLupa} />
+            )}
           </div>
         </div>
 
