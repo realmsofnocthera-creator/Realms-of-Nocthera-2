@@ -159,7 +159,7 @@ describe('Ficha de combate do equipamento', () => {
     const armaduras = [peca('a', 'rato-da-floresta-elmo'), peca('b', 'rato-da-floresta-peitoral')];
     const f = calcularFichaEquipamento({ armaId: null, armadura: { elmo: 'a', peitoral: 'b' } }, [], armaduras);
     expect(f.habilidades['olho-critico']).toBe(2); // elmo: Olho Crítico 2
-    expect(f.habilidades['extensor-de-esquiva']).toBe(2); // peitoral: Extensor de Esquiva 2
+    expect(f.habilidades['extensor-de-agilidade']).toBe(2); // peitoral: Extensor de Agilidade 2
   });
 });
 
@@ -184,7 +184,7 @@ describe('Habilidades de armadura na ficha (parte 1)', () => {
 
   it('a % de Agilidade das habilidades soma com a da categoria da arma', () => {
     const f = calcularFichaEquipamento({ armaId: 'w1', armadura: { perneiras: 'p' } }, [arma()], [peca('p', 'rato-da-floresta-perneiras')]);
-    expect(f.habilidades['extensor-de-esquiva']).toBeGreaterThan(0);
-    expect(f.percentuais.agilidade).toBeGreaterThan(-10); // −10% da Espada grande + o Extensor de Esquiva
+    expect(f.habilidades['extensor-de-agilidade']).toBeGreaterThan(0);
+    expect(f.percentuais.agilidade).toBeGreaterThan(-10); // −10% da Espada grande + o Extensor de Agilidade
   });
 });

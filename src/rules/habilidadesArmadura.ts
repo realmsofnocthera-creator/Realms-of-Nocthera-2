@@ -163,7 +163,7 @@ export const HABILIDADES_ARMADURA: readonly HabilidadeArmadura[] = [
     niveis: { 1: 'Recupera 2% do Sobreescudo por rodada.', 2: '4%.', 3: '6%.' } },
   { id: 'ressuscitar', nome: 'Ressuscitar', parte: 'Parte 3 — Armas, munições e técnicas', categoria: '11. Combate, energia e mobilidade', nivelMaximo: 1, situacao: 'ajusteNoMotor',
     niveis: { 1: 'Uma vez por luta, ao cair abaixo de 25% do HP: ganha Sobreescudo de 10% do HP máximo e 1 rodada de imunidade a dano de status.' } },
-  { id: 'extensor-de-esquiva', nome: 'Extensor de Esquiva', parte: 'Parte 4 — Esquiva, bloqueio e suporte', categoria: '12. Esquiva e defesa ativa', nivelMaximo: 3, situacao: 'motorAtual', observacao: 'A distância da evasão vira Agilidade.',
+  { id: 'extensor-de-agilidade', nome: 'Extensor de Agilidade', parte: 'Parte 4 — Esquiva, bloqueio e suporte', categoria: '12. Esquiva e defesa ativa', nivelMaximo: 3, situacao: 'motorAtual', observacao: 'A distância da evasão vira Agilidade.',
     niveis: { 1: 'Agilidade +3%.', 2: 'Agilidade +6%.', 3: 'Agilidade +10%.' } },
   { id: 'bloqueio', nome: 'Bloqueio', parte: 'Parte 4 — Esquiva, bloqueio e suporte', categoria: '12. Esquiva e defesa ativa', nivelMaximo: 5, situacao: 'ajusteNoMotor', observacao: 'O impacto e o vigor viram o dano recebido e a recarga.',
     niveis: { 1: 'Dano recebido −2% quando você usa uma habilidade defensiva.', 2: '−4% e recarga das habilidades defensivas −15%.', 3: '−6% e recarga −15%.', 4: '−8% e recarga −30%.', 5: '−10% e recarga −50%.' } },

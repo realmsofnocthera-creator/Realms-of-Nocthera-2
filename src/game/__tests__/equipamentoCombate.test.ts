@@ -387,3 +387,75 @@ describe('Resistências a status, Bênção Divina e cura das habilidades de arm
     expect(m.bonusDiversoDeArmadura(undefined)).toBe(0);
   });
 });
+
+describe('Habilidades de armadura simples: regeneração, crítico, Fortificar e Pouso Seguro', () => {
+  const comH = (habilidadesArmadura: Record<string, number>, extra: Partial<Combatente> = {}) =>
+    personagem({ ...SEM_BONUS, habilidadesArmadura, sobreescudoMaximo: 1000 }, extra);
+  const forte = { ...ALVO, atributos: { ...ALVO.atributos, forca: 400 } };
+  const golpesDoMonstro = (h: Record<string, number>, rng: number, extra: Partial<Combatente> = {}) =>
+    resolverCombate(comH(h, { mitigacao: 0, ...extra }), forte, 11, { rngStatus: () => rng }).logTurnos.map((t) => t.ataques.find((a) => a.atacante === 'Alvo de Teste'));
+
+  it('as tabelas: crítico, cura, regeneração, Surto de Vigor, Polimento e Pouso Seguro', async () => {
+    const m = await import('@/game/combate/habilidadesArmaduraCombate');
+    expect([1, 2, 3].map((n) => m.multiplicadorCriticoDeArmadura(2, { 'reforco-critico': n }, false))).toEqual([2.1, 2.15, 2.2]);
+    expect(m.multiplicadorCriticoDeArmadura(2, { 'brilho-critico': 3 }, true)).toBeCloseTo(2.2); // +10% no golpe com elemento
+    expect(m.multiplicadorCriticoDeArmadura(2, { 'brilho-critico': 3, 'fulgor-critico': 4 }, true)).toBeCloseTo(2.6);
+    expect(m.multiplicadorCriticoDeArmadura(2, { 'brilho-critico': 3 }, false)).toBe(2); // sem elemento não vale
+    expect(m.multiplicadorCriticoDeArmadura(2, { 'brilho-critico': 2, 'fulgor-critico': 3 }, true)).toBe(2); // só no nível pleno
+    expect(m.curaPorCriticoDeArmadura({ 'chama-restauradora': 3 }, 2)).toBe(4);
+    expect(m.curaPorCriticoDeArmadura({ 'chama-restauradora': 2 }, 2)).toBe(0);
+    expect([1, 2, 3].map((n) => m.regeneracaoPorRodadaDeArmadura({ 'velocidade-de-regeneracao': n }, 100, 100))).toEqual([1, 2, 3]);
+    expect(m.regeneracaoPorRodadaDeArmadura({ 'regeneracao-veloz': 1 }, 49, 100)).toBe(3);
+    expect(m.regeneracaoPorRodadaDeArmadura({ 'regeneracao-veloz': 1 }, 50, 100)).toBe(0);
+    expect(m.regeneracaoPorRodadaDeArmadura({ 'velocidade-de-regeneracao': 2, 'regeneracao-veloz': 1 }, 10, 100)).toBe(5);
+    expect([1, 2, 3].map((n) => m.surtoDeVigorDeArmadura({ 'surto-de-vigor': n }))).toEqual([2, 4, 6]);
+    expect(m.polimentoProtetorDeArmadura({ 'polimento-protetor': 1 }, 19)).toBe(5);
+    expect(m.polimentoProtetorDeArmadura({ 'polimento-protetor': 1 }, 20)).toBe(0);
+    expect(m.polimentoProtetorDeArmadura({ 'polimento-protetor': 1 }, undefined)).toBe(0);
+    expect(m.reducaoPrimeiroGolpeDeArmadura({ 'pouso-seguro': 1 }, true)).toBe(30);
+    expect(m.reducaoPrimeiroGolpeDeArmadura({ 'pouso-seguro': 1 }, false)).toBe(0);
+  });
+
+  it('Saque Crítico vale só para o primeiro golpe da luta; Fortificar acumula a cada 3 rodadas', async () => {
+    const m = await import('@/game/combate/habilidadesArmaduraCombate');
+    const estado = { hpAtacante: 100, hpMaxAtacante: 100, sobreescudoAtacante: 0, sobreescudoMaxAtacante: 0, hpAlvo: 100, hpMaxAlvo: 100, alvoEnfurecido: false };
+    expect([1, 2, 3].map((n) => m.bonusCriticoDeArmadura({ 'saque-critico': n }, { ...estado, primeiraAcao: true }, false))).toEqual([18, 36, 60]);
+    expect(m.bonusCriticoDeArmadura({ 'saque-critico': 3 }, { ...estado, primeiraAcao: true }, false, 1)).toBe(0); // segundo golpe
+    expect(m.bonusCriticoDeArmadura({ 'saque-critico': 3 }, { ...estado, primeiraAcao: false }, false)).toBe(0);
+    expect([1, 3, 4, 7, 10, 40].map(m.pilhasDeFortificar)).toEqual([0, 0, 1, 2, 3, 3]);
+    expect(m.bonusDanoDeArmadura({ fortificar: 1 }, { ...estado, rodada: 7 })).toBe(6);
+    expect(m.bonusMitigacaoDeArmadura({ fortificar: 1 }, 100, 100, 10)).toBe(15);
+    expect(m.bonusMitigacaoDeArmadura({ fortificar: 1 }, 100, 100, 3)).toBe(0);
+  });
+
+  it('no combate: o dano da Fortificar cresce a partir da 4ª rodada', () => {
+    const danoDoHeroi = (h: Record<string, number>) =>
+      resolverCombate(comH(h), ALVO, 11, { rngStatus: () => 99.9 }).logTurnos.map((t) => t.ataques.find((a) => a.atacante === 'Herói')?.danoBruto ?? 0);
+    const sem = danoDoHeroi({});
+    const com = danoDoHeroi({ fortificar: 1 });
+    expect(com[0]).toBe(sem[0]);
+    expect(com[2]).toBe(sem[2]);
+    expect(com[3]).toBeGreaterThan(sem[3]); // 4ª rodada: +3%
+  });
+
+  it('no combate: Pouso Seguro reduz só o primeiro golpe que o personagem sofre', () => {
+    const sem = golpesDoMonstro({}, 99.9);
+    const com = golpesDoMonstro({ 'pouso-seguro': 1 }, 99.9);
+    expect(com[0]!.danoBruto).toBe(Math.floor((sem[0]!.danoBruto * 70) / 100));
+    expect(com[1]!.danoBruto).toBe(sem[1]!.danoBruto);
+  });
+
+  it('no combate: Polimento Protetor dá Sobreescudo quando o monstro acerta (e o sorteio passa)', () => {
+    const base = golpesDoMonstro({}, 99.9, { sobreescudo: 0, hp: 5000 });
+    const dispara = golpesDoMonstro({ 'polimento-protetor': 1 }, 0, { sobreescudo: 0, hp: 5000 });
+    const nao = golpesDoMonstro({ 'polimento-protetor': 1 }, 99.9, { sobreescudo: 0, hp: 5000 });
+    expect(nao[0]!.sobreescudoRestante).toBe(base[0]!.sobreescudoRestante);
+    expect(dispara[0]!.sobreescudoRestante).toBe(250); // 5% de 5000 de HP máximo, abaixo do teto de 1000
+  });
+
+  it('no combate: a regeneração por rodada cura o personagem no fim da rodada', () => {
+    const r = resolverCombate(comH({ 'velocidade-de-regeneracao': 3 }, { hp: 1000 }), ALVO, 11, { rngStatus: () => 99.9 });
+    const cura = r.logTurnos[0].eventosCura?.find((e) => e.tipo === 'regeneracao');
+    expect(cura?.valor).toBe(150); // 3% de 5000
+  });
+});

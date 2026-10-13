@@ -20,6 +20,10 @@ export interface EstadoGolpeArmadura {
   hpMaxAlvo: number;
   /** O alvo é um monstro Enfurecido e está abaixo de 50% de HP. */
   alvoEnfurecido: boolean;
+  /** Rodada da luta (começa em 1); sem ela, vale 1. */
+  rodada?: number;
+  /** É a primeira ação de quem ataca na luta (Saque Crítico vale para o primeiro golpe dela). */
+  primeiraAcao?: boolean;
 }
 
 const por = (valores: readonly number[], nivel: number): number => valores[Math.min(nivel, valores.length) - 1] ?? 0;
@@ -41,6 +45,17 @@ export const HABILIDADES_ARMADURA_NO_MOTOR: ReadonlySet<string> = new Set([
   'aumento-de-regeneracao',
   'sobrevivente',
   'no-ar',
+  'reforco-critico',
+  'saque-critico',
+  'fortificar',
+  'velocidade-de-regeneracao',
+  'regeneracao-veloz',
+  'surto-de-vigor',
+  'polimento-protetor',
+  'pouso-seguro',
+  'chama-restauradora',
+  'brilho-critico',
+  'fulgor-critico',
   'aumento-de-bloqueio',
   'entomologista',
   'ataque-de-fogo',
@@ -89,16 +104,20 @@ export function bonusDanoDeArmadura(h: HabilidadesArmaduraAtivas | undefined, e:
   if (nv('heroismo') > 0 && abaixo(e.hpAtacante, e.hpMaxAtacante, 35)) total += por([0, 3, 3, 6, 9, 15, 24], nv('heroismo'));
   if (nv('indignacao') > 0 && abaixo(e.hpAtacante, e.hpMaxAtacante, 60)) total += por([2, 4, 6, 8, 10], nv('indignacao'));
   if (nv('coalescencia') > 0 && abaixo(e.hpAtacante, e.hpMaxAtacante, 50)) total += por([5, 6, 7], nv('coalescencia'));
+  // Fortificar: a cada 3 rodadas de luta, +3% de dano (acumula até 3 vezes)
+  if (nv('fortificar') > 0) total += 3 * pilhasDeFortificar(e.rodada ?? 1);
   // Poder de Diablos (nível 3): com o Sobreescudo zerado
   if (nv('poder-de-diablos') >= 3 && e.sobreescudoAtacante <= 0) total += 8;
   return total;
 }
 
 /** Pontos percentuais somados à chance de crítico do golpe. */
-export function bonusCriticoDeArmadura(h: HabilidadesArmaduraAtivas | undefined, e: EstadoGolpeArmadura, contraFraqueza: boolean): number {
+export function bonusCriticoDeArmadura(h: HabilidadesArmaduraAtivas | undefined, e: EstadoGolpeArmadura, contraFraqueza: boolean, indiceGolpe = 0): number {
   if (!h) return 0;
   let total = 0;
   const nv = (id: string) => h[id] ?? 0;
+  // Saque Crítico: só o primeiro golpe da luta
+  if (nv('saque-critico') > 0 && e.primeiraAcao && indiceGolpe === 0) total += por([18, 36, 60], nv('saque-critico'));
   if (nv('reforco-de-ataque') >= 4) total += 3;
   if (nv('olho-critico') > 0) total += por([3, 6, 9, 12, 15, 18, 24], nv('olho-critico'));
   if (e.alvoEnfurecido && nv('agitador') > 0) total += por([3, 3, 4, 4, 6, 9, 12], nv('agitador'));
@@ -118,9 +137,16 @@ export function bonusCriticoDeArmadura(h: HabilidadesArmaduraAtivas | undefined,
 }
 
 /** % de mitigação somado à de quem se defende (Heroísmo: com o HP abaixo de 35%). */
-export function bonusMitigacaoDeArmadura(h: HabilidadesArmaduraAtivas | undefined, hp: number, hpMax: number): number {
+export function bonusMitigacaoDeArmadura(h: HabilidadesArmaduraAtivas | undefined, hp: number, hpMax: number, rodada = 1): number {
   const nivel = h?.heroismo ?? 0;
-  return nivel > 0 && abaixo(hp, hpMax, 35) ? por([10, 10, 20, 20, 20, 30, 30], nivel) : 0;
+  const heroismo = nivel > 0 && abaixo(hp, hpMax, 35) ? por([10, 10, 20, 20, 20, 30, 30], nivel) : 0;
+  // Fortificar: a cada 3 rodadas de luta, +5% de mitigação (acumula até 3 vezes)
+  return heroismo + ((h?.fortificar ?? 0) > 0 ? 5 * pilhasDeFortificar(rodada) : 0);
+}
+
+/** Fortificar: uma pilha a cada 3 rodadas de luta completas, no máximo 3. */
+export function pilhasDeFortificar(rodada: number): number {
+  return Math.max(0, Math.min(3, Math.floor((rodada - 1) / 3)));
 }
 
 const ELEMENTO_DO_ATAQUE: Readonly<Record<string, Elemento>> = {
@@ -278,4 +304,42 @@ export function bonusBloqueioDeArmadura(h: HabilidadesArmaduraAtivas | undefined
 export function bonusDiversoDeArmadura(h: HabilidadesArmaduraAtivas | undefined): number {
   const nivel = h?.['entomologista'] ?? 0;
   return nivel > 0 ? por([0.5, 1, 2], nivel) : 0;
+}
+
+/**
+ * Multiplicador do golpe crítico: Reforço Crítico soma ao ×2 (×2,1 / ×2,15 / ×2,2) e, num golpe com elemento,
+ * Brilho Crítico (nível 3) e Fulgor Crítico (nível 4) somam +10% e +20% ao dano do crítico.
+ */
+export function multiplicadorCriticoDeArmadura(base: number, h: HabilidadesArmaduraAtivas | undefined, golpeElemental: boolean): number {
+  if (!h) return base;
+  const reforco = (h['reforco-critico'] ?? 0) > 0 ? por([0.1, 0.15, 0.2], h['reforco-critico']) : 0;
+  const elemental = golpeElemental ? ((h['brilho-critico'] ?? 0) >= 3 ? 10 : 0) + ((h['fulgor-critico'] ?? 0) >= 4 ? 20 : 0) : 0;
+  return ((base + reforco) * (100 + elemental)) / 100;
+}
+
+/** Chama Restauradora (nível 3): % do HP máximo recuperado por golpe crítico. */
+export function curaPorCriticoDeArmadura(h: HabilidadesArmaduraAtivas | undefined, criticos: number): number {
+  return (h?.['chama-restauradora'] ?? 0) >= 3 ? 2 * criticos : 0;
+}
+
+/** Velocidade de Regeneração (1% a 3%) e Regeneração Veloz (3% com o HP abaixo de 50%): % do HP máximo por rodada. */
+export function regeneracaoPorRodadaDeArmadura(h: HabilidadesArmaduraAtivas | undefined, hp: number, hpMax: number): number {
+  if (!h) return 0;
+  return ((h['velocidade-de-regeneracao'] ?? 0) > 0 ? por([1, 2, 3], h['velocidade-de-regeneracao']) : 0)
+    + ((h['regeneracao-veloz'] ?? 0) > 0 && abaixo(hp, hpMax, 50) ? 3 : 0);
+}
+
+/** Surto de Vigor: % do Sobreescudo máximo recuperado por rodada. */
+export function surtoDeVigorDeArmadura(h: HabilidadesArmaduraAtivas | undefined): number {
+  return (h?.['surto-de-vigor'] ?? 0) > 0 ? por([2, 4, 6], h!['surto-de-vigor']) : 0;
+}
+
+/** Polimento Protetor: quando o monstro acerta, 20% de chance de ganhar Sobreescudo de 5% do HP máximo (retorna o %). */
+export function polimentoProtetorDeArmadura(h: HabilidadesArmaduraAtivas | undefined, sorteio: number | undefined): number {
+  return (h?.['polimento-protetor'] ?? 0) > 0 && sorteio !== undefined && sorteio < 20 ? 5 : 0;
+}
+
+/** Pouso Seguro: o primeiro golpe que o personagem sofre na luta causa −30% de dano. */
+export function reducaoPrimeiroGolpeDeArmadura(h: HabilidadesArmaduraAtivas | undefined, primeiroGolpeRecebido: boolean): number {
+  return primeiroGolpeRecebido && (h?.['pouso-seguro'] ?? 0) > 0 ? 30 : 0;
 }

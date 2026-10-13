@@ -50,7 +50,7 @@ const EFEITOS: Readonly<Record<string, (nivel: number) => EfeitoEstaticoArmadura
       ...(todos > 0 ? { resistenciaElemental: Object.fromEntries(TODOS_ELEMENTOS.map((e) => [e, todos])) } : {}),
     };
   },
-  'extensor-de-esquiva': (n) => ({ agilidadePercentual: por([3, 6, 10], n) }),
+  'extensor-de-agilidade': (n) => ({ agilidadePercentual: por([3, 6, 10], n) }),
   'mobilidade-aquatica-polar': (n) => ({ agilidadePercentual: por([0, 5, 10], n) }),
   artesanato: (n) => ({ danoFixoArmaPercentual: por([3, 6, 9, 12, 15], n) }),
   'reforco-nao-elemental': () => ({ danoFixoArmaSemElementoPercentual: 10 }),

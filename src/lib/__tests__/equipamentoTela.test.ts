@@ -88,6 +88,6 @@ describe('Aba Equipamentos da ficha (lógica)', () => {
     });
     const porId = Object.fromEntries(resumoDoEquipamento(c).habilidades.map((h) => [h.id, h.aplicada]));
     expect(porId['reforco-de-ataque']).toBe(true); // dano e crítico condicionais já valem no combate
-    expect(porId['extensor-de-esquiva']).toBe(true); // Agilidade em porcentagem já vale na ficha
+    expect(porId['extensor-de-agilidade']).toBe(true); // Agilidade em porcentagem já vale na ficha
   });
 });
