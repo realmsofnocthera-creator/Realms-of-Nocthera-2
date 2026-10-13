@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CATEGORIAS_TELA, arvoresDaForja, detalheDaArma, estadoDoNo, listaDeForja } from '@/lib/forjaTela';
+import { CATEGORIAS_TELA, arvoresDaForja, detalheDaArma, detalheDaMinhaArma, estadoDoNo, listaDeForja, minhasArmasTela } from '@/lib/forjaTela';
 import { ARMAS_BASE } from '@/rules/armasCatalogo';
 import { custoDaReceita, ArmaPersonagem } from '@/game/forja';
 
@@ -96,5 +96,57 @@ describe('Detalhe da arma', () => {
     const d = detalheDaArma(comDiverso.id, 'espadaGrande', vazio);
     expect(d.diversos?.nome).toMatch(/^Diverso .+ \(.+ ou .+\)$/);
     expect(d.diversos?.ok).toBe(false);
+  });
+});
+
+describe('Minhas armas: reforjar e customizar', () => {
+  const comum = arma('ferro-de-cacada', 'espadaGrande', { id: 'c1', atributo: 'forca', pontos: 4, reforjas: 2 });
+  const mitica = ARMAS_BASE.find((b) => b.raridade === 'mitico' && b.status.length > 0)!;
+  const semStatus = ARMAS_BASE.find((b) => b.raridade === 'mitico' && b.status.length === 0);
+  const armaMitica = (extra: Partial<ArmaPersonagem> = {}) => arma(mitica.id, 'espadaGrande', { id: 'm1', atributo: 'forca', pontos: 100, ...extra });
+
+  it('lista da mais rara para a menos rara', () => {
+    const lista = minhasArmasTela({ armas: [comum, armaMitica()] });
+    expect(lista.map((a) => a.id)).toEqual(['m1', 'c1']);
+    expect(lista[0].mitica).toBe(true);
+    expect(lista[1].mitica).toBe(false);
+    expect(minhasArmasTela({ armas: [arma('base-que-nao-existe')] })).toEqual([]);
+  });
+
+  it('o custo da reforja sobe 25% a cada reforja e a tela diz se o personagem paga', () => {
+    const pobre = detalheDaMinhaArma('c1', { armas: [comum], inventario: {}, ouro: 0 })!;
+    expect(pobre.reforja.percentual).toBe(100); // 50% + 2 × 25%
+    expect(pobre.reforja.pode).toBe(false);
+    expect(pobre.reforja.ouro.ok).toBe(false);
+    const custo = custoDaReceita(ARMAS_BASE.find((a) => a.id === 'ferro-de-cacada')!.receita, 100);
+    const rico = detalheDaMinhaArma('c1', { armas: [comum], inventario: { ...custo.itens, ...(custo.diversos ? { [`x`]: 0 } : {}) }, ouro: custo.ouro })!;
+    expect(rico.reforja.materiais.every((m) => m.ok)).toBe(true);
+    expect(detalheDaMinhaArma('nao-existe', { armas: [comum], inventario: {}, ouro: 0 })).toBeNull();
+  });
+
+  it('só a Mítica customiza: pontos, custo por ponto e as três opções', () => {
+    expect(detalheDaMinhaArma('c1', { armas: [comum], inventario: {}, ouro: 0 })!.customizacao).toBeNull();
+    const d = detalheDaMinhaArma('m1', { armas: [armaMitica({ customizacao: { dano: 3, status: 1 } })], inventario: { 'bilhete-de-melhoria': 1 }, ouro: 20000 })!;
+    const c = d.customizacao!;
+    expect(d.pontosCustomizacao).toBe(4);
+    expect(c.maximo).toBe(20);
+    expect(c.pode).toBe(true);
+    expect(c.opcoes.map((o) => [o.id, o.pontos, o.disponivel])).toEqual([['dano', 3, true], ['atributo', 0, true], ['status', 1, true]]);
+    expect(c.opcoes[0].atual).toBe('+6%');
+    expect(d.danoFixo).toBe(Math.floor((d.danoFixoBase * 106) / 100));
+  });
+
+  it('sem Bilhete de melhoria, sem ouro ou com 20 pontos não dá para customizar; arma sem status não tem "Mais status"', () => {
+    const sem = (inventario: Record<string, number>, ouro: number, extra: Partial<ArmaPersonagem> = {}) =>
+      detalheDaMinhaArma('m1', { armas: [armaMitica(extra)], inventario, ouro })!.customizacao!;
+    expect(sem({}, 20000).pode).toBe(false);
+    expect(sem({ 'bilhete-de-melhoria': 1 }, 19999).pode).toBe(false);
+    const cheia = sem({ 'bilhete-de-melhoria': 5 }, 100000, { customizacao: { dano: 20 } });
+    expect(cheia.noMaximo).toBe(true);
+    expect(cheia.pode).toBe(false);
+    if (semStatus) {
+      const d = detalheDaMinhaArma('s1', { armas: [arma(semStatus.id, 'espadaGrande', { id: 's1', atributo: 'forca' })], inventario: {}, ouro: 0 })!;
+      expect(d.customizacao!.opcoes.find((o) => o.id === 'status')!.disponivel).toBe(false);
+    }
   });
 });
