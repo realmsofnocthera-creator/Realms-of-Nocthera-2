@@ -53,7 +53,17 @@ import {
 import { calcularInstintoSobrevivencia } from './combate/passivasClasse';
 import { LadoCombate, multiplicadorCritico, sorteioCritico } from './combate/critico';
 import { elementoDaArmaNaRodada, EquipamentoCombate } from './combate/equipamentoCombate';
-import { bonusCriticoDeArmadura, bonusDanoDeArmadura, bonusMitigacaoDeArmadura, EstadoGolpeArmadura } from './combate/habilidadesArmaduraCombate';
+import {
+  adicoesDeStatus,
+  bonusChanceStatusRelativa,
+  bonusCriticoDeArmadura,
+  bonusDanoDeArmadura,
+  bonusDanoElementalDeArmadura,
+  bonusDanoQueimaduraDeArmadura,
+  bonusMitigacaoDeArmadura,
+  chanceExtraRelativaEmPontos,
+  EstadoGolpeArmadura,
+} from './combate/habilidadesArmaduraCombate';
 import { reacaoDoCorpo } from './combate/corpo';
 import { aplicarBonusElemental } from './combate/bonusElemento';
 import { decidirDesfecho } from './combate/desfecho';
@@ -3052,6 +3062,26 @@ function turnoDeCombateInterno(
         danoPorGolpe = golpes[0];
         danoBruto = golpes.reduce((acc, val) => acc + val, 0);
       }
+
+      // Dano elemental de quem ataca: o +10% da arma elemental e as habilidades de armadura (somam entre si)
+      const bonusElementalAtacante = bonusDanoElementalDeArmadura(
+        atacante.equipamento?.habilidadesArmadura,
+        atacante.equipamento?.elementosArma,
+        elementoGolpe,
+        estadoArmadura
+      );
+      if (bonusElementalAtacante > 0) {
+        const aplicarBonus = (v: number): number => Math.floor((v * (100 + bonusElementalAtacante)) / 100);
+        danoBruto = aplicarBonus(danoBruto);
+        if (golpes && golpes.length > 0) {
+          golpes = golpes.map(aplicarBonus);
+          danoPorGolpe = golpes[0];
+          danoBruto = golpes.reduce((acc, val) => acc + val, 0);
+        }
+        if (danoGolpeExtraSamuraiPotencial > 0) {
+          danoGolpeExtraSamuraiPotencial = aplicarBonus(danoGolpeExtraSamuraiPotencial);
+        }
+      }
     }
 
     // Roadmap 1.3: tipo do golpe (Contusão/Corte/Perfuração da arma, ou mágico) contra o corpo do alvo.
@@ -3872,6 +3902,24 @@ export function resolverCombate(
     }
   };
 
+  /** Estado de quem tem a armadura (o personagem) para as habilidades de status de ataque. */
+  const estadoArmaduraDoPersonagem = (): EstadoGolpeArmadura => ({
+    hpAtacante: p.hp,
+    hpMaxAtacante: p.hpMax,
+    sobreescudoAtacante: p.sobreescudo,
+    sobreescudoMaxAtacante: p.equipamento?.sobreescudoMaximo ?? 0,
+    hpAlvo: m.hp,
+    hpMaxAlvo: m.hpMax,
+    alvoEnfurecido: false,
+  });
+  /** Pontos a somar à chance base do status que o personagem aplica: o do Grimório e o bônus relativo das habilidades. */
+  const chanceExtraDoStatus = (status: EfeitoStatus): number =>
+    (p.equipamento?.bonusChanceEfeitosPontos ?? 0) +
+    chanceExtraRelativaEmPontos(
+      status,
+      bonusChanceStatusRelativa(p.equipamento?.habilidadesArmadura, status, estadoArmaduraDoPersonagem())
+    );
+
   const executarAcaoPersonagem = (
     rodada: number,
     ataquesDoTurno: AtaqueLog[],
@@ -3895,7 +3943,7 @@ export function resolverCombate(
         aplicarStatusNoMonstro(
           s.status,
           obterSorteioStatus(rodada, 100 + i),
-          (s.chanceExtraPercentual ?? 0) + (p.equipamento?.bonusChanceEfeitosPontos ?? 0),
+          (s.chanceExtraPercentual ?? 0) + chanceExtraDoStatus(s.status),
           eventosEfeitosDoTurno
         );
       });
@@ -3905,9 +3953,15 @@ export function resolverCombate(
           aplicarStatusNoMonstro(
             status,
             obterSorteioStatus(rodada, 300 + ataquesDoTurno.indexOf(atk) * 4 + i),
-            p.equipamento?.bonusChanceEfeitosPontos ?? 0,
+            chanceExtraDoStatus(status),
             eventosEfeitosDoTurno
           );
+        });
+        // Adição de Veneno, Paralisia, Sono e Explosão: chance fixa por golpe, só se a arma não aplicar o status
+        adicoesDeStatus(p.equipamento.habilidadesArmadura, p.equipamento.statusArma).forEach((a, i) => {
+          if (obterSorteioStatus(rodada, 600 + ataquesDoTurno.indexOf(atk) * 4 + i) < a.chancePercentual) {
+            aplicarStatusNoMonstro(a.status, 0, 0, eventosEfeitosDoTurno);
+          }
         });
       }
       // Limpeza (catálogo 1.2): remove de 1 a 3 efeitos negativos do personagem
@@ -4063,7 +4117,9 @@ export function resolverCombate(
 
     // Dano contínuo no monstro (Sangramento Forçado do jogador)
     if (m.hp > 0 && efeitosMonstroStatus.size > 0) {
-      const tickMonstro = processarTickEfeitos(efeitosMonstroStatus, m.hpMax);
+      const tickMonstro = processarTickEfeitos(efeitosMonstroStatus, m.hpMax, {
+        queimadura: bonusDanoQueimaduraDeArmadura(p.equipamento?.habilidadesArmadura),
+      });
       efeitosMonstroStatus = tickMonstro.efeitos;
       for (const e of tickMonstro.eventos) {
         eventosEfeitosDoTurno.push({ ...e, alvo: m.nome });

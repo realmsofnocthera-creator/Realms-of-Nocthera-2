@@ -132,7 +132,9 @@ export function calcularDanoEfeito(hpMax: number, percentualHpMax: number): numb
  */
 export function processarTickEfeitos(
   efeitos: Map<EfeitoStatus, EfeitoAtivo>,
-  hpMax: number
+  hpMax: number,
+  /** Bônus (%) no dano contínuo de cada efeito (ex.: Bombardeiro na Queimadura). */
+  bonusDanoPercentual: Partial<Record<EfeitoStatus, number>> = {}
 ): {
   efeitos: Map<EfeitoStatus, EfeitoAtivo>;
   eventos: EventoEfeito[];
@@ -148,7 +150,8 @@ export function processarTickEfeitos(
       continue;
     }
 
-    const dano = calcularDanoEfeito(hpMax, definicao.percentualHpMax);
+    const danoBase = calcularDanoEfeito(hpMax, definicao.percentualHpMax);
+    const dano = Math.floor((danoBase * (100 + (bonusDanoPercentual[id] ?? 0))) / 100);
     const novasRodadas = ativo.rodadasRestantes - DANO_MINIMO_EFEITO;
     danoTotal += dano;
 

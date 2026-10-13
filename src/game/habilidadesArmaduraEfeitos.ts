@@ -63,6 +63,8 @@ const EFEITOS: Readonly<Record<string, (nivel: number) => EfeitoEstaticoArmadura
   antivento: (n) => ({ resistenciaElemental: { vento: por([10, 20, 35, 50, 90], n) } }),
   'resistencia-a-tremor': (n) => ({ resistenciaElemental: { terra: por([0, 20, 40], n) } }),
   antifrio: () => ({ resistenciaElemental: { gelo: 50 } }),
+  // Tormenta de Reydras nível 3: −5% de dano de Relâmpago recebido (o resto vive no motor)
+  'tormenta-de-reydras': (n) => (n >= 3 ? { resistenciaElemental: { relampago: 5 } } : {}),
 };
 
 /** Habilidades que entram na ficha de combate (vida, defesa, Agilidade, dano fixo e resistência elemental). */
