@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { HABILIDADES_ARMADURA_NO_COMBATE, SLOTS_EQUIPAMENTO, armaParaTela, opcoesDoSlot, pecaParaTela, resumoDoEquipamento, slotsDaTela } from '@/lib/equipamentoTela';
+import { SLOTS_EQUIPAMENTO, armaParaTela, opcoesDoSlot, pecaParaTela, resumoDoEquipamento, slotsDaTela } from '@/lib/equipamentoTela';
 import type { ArmaPersonagem } from '@/game/forja';
 import type { ArmaduraPersonagem } from '@/game/armaduraForja';
 import type { CharacterDocument } from '@/server/characterService';
@@ -81,7 +81,10 @@ describe('Aba Equipamentos da ficha (lógica)', () => {
     expect(r.habilidades.every((h) => h.nivel <= h.nivelMaximo)).toBe(true);
   });
 
-  it('as habilidades de armadura ainda não valem no combate (a tela avisa)', () => {
-    expect(HABILIDADES_ARMADURA_NO_COMBATE).toBe(false);
+  it('cada habilidade do resumo diz se o combate já a aplica', () => {
+    const c = personagem({ equipamento: { armaId: null, armadura: { elmo: 'p1', peitoral: 'p3' } } });
+    const r = resumoDoEquipamento(c);
+    const porId = Object.fromEntries(r.habilidades.map((h) => [h.id, h.aplicada]));
+    expect(porId['reforco-de-ataque']).toBe(false); // dano e crítico entram nos próximos PRs
   });
 });

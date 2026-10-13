@@ -162,3 +162,29 @@ describe('Ficha de combate do equipamento', () => {
     expect(f.habilidades['tempo-de-esquiva']).toBe(2); // peitoral: Tempo de Esquiva 2
   });
 });
+
+describe('Habilidades de armadura na ficha (parte 1)', () => {
+  it('Reforço de Vida soma % de HP; Reforço de Defesa soma mitigação e resistência; Resistência elemental vira resistência', () => {
+    const f = calcularFichaEquipamento(
+      { armaId: null, armadura: { peitoral: 'a', elmo: 'b', perneiras: 'c' } },
+      [],
+      [peca('a', 'esqueleto-peitoral'), peca('b', 'esqueleto-elmo'), peca('c', 'esqueleto-perneiras')]
+    );
+    expect(f.hpPercentual).toBeGreaterThan(0);
+    expect(f.mitigacaoExtra).toBeGreaterThan(fixoDaPeca(1, 'peitoral'));
+    expect(f.resistenciaElemental.sombrio).toBeGreaterThan(0);
+  });
+
+  it('Artesanato soma % no dano fixo da arma', () => {
+    const sem = calcularFichaEquipamento({ armaId: 'w1', armadura: {} }, [arma()], []);
+    const com = calcularFichaEquipamento({ armaId: 'w1', armadura: { botas: 'b' } }, [arma()], [peca('b', 'lobo-cinzento-botas')]);
+    expect(com.habilidades['artesanato']).toBeGreaterThan(0);
+    expect(com.arma!.danoFixo).toBeGreaterThanOrEqual(sem.arma!.danoFixo);
+  });
+
+  it('a % de Agilidade das habilidades soma com a da categoria da arma', () => {
+    const f = calcularFichaEquipamento({ armaId: 'w1', armadura: { perneiras: 'p' } }, [arma()], [peca('p', 'rato-da-floresta-perneiras')]);
+    expect(f.habilidades['extensor-de-esquiva']).toBeGreaterThan(0);
+    expect(f.percentuais.agilidade).toBeGreaterThan(-10); // −10% da Espada grande + o Extensor de Esquiva
+  });
+});

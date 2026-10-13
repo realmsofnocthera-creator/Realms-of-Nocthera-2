@@ -358,7 +358,8 @@ function derivadosComReforco(char: CharacterDocument) {
     bonusEquipamento,
     mitigacaoEquipamento: mitigacaoDoEquipamento(ficha),
     ...derivados,
-    hpMax: derivados.hpMax + ficha.hpExtra,
+    // HP: o Vigor e a Vida das peças; o Reforço de Vida (habilidade de armadura) soma % sobre o total
+    hpMax: Math.floor(((derivados.hpMax + ficha.hpExtra) * (100 + ficha.hpPercentual)) / 100),
     chanceCritico: derivados.chanceCritico + ficha.percentuais.chanceCritico,
   };
 }
@@ -1239,6 +1240,14 @@ function combatenteDoPersonagem(current: CharacterDocument): Combatente {
     ascensaoHabilidade: current.ascensaoHabilidade,
     ouro: current.ouro,
     mitigacao: mitigacaoDoEquipamento(ficha),
+    // Resistência elemental das habilidades de armadura: modificador negativo = menos dano recebido do elemento
+    ...(Object.keys(ficha.resistenciaElemental).length > 0
+      ? {
+          modificadoresElementais: Object.fromEntries(
+            Object.entries(ficha.resistenciaElemental).map(([el, v]) => [el, -(v as number)])
+          ),
+        }
+      : {}),
     ...(arma?.subtipoFisico ? { tipoDanoFisico: arma.subtipoFisico } : {}),
     ...(arma
       ? {

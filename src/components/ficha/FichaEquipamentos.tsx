@@ -5,7 +5,6 @@ import { X } from 'lucide-react';
 import type { CharacterDocument } from '@/server/characterService';
 import { IconeEspaco } from '@/components/equipamento/IconeEspaco';
 import {
-  HABILIDADES_ARMADURA_NO_COMBATE,
   ItemEquipamentoTela,
   SlotEquipamento,
   SLOTS_EQUIPAMENTO,
@@ -101,12 +100,17 @@ export function FichaResumoEquipamento({ character, className = '' }: { characte
           {r.habilidades.length > 0 && (
             <div className="flex flex-wrap gap-1" aria-label="Habilidades de armadura">
               {r.habilidades.map((h) => (
-                <span key={h.id} className="rounded px-1.5 py-0.5 text-[9.5px] border" style={{ borderColor: `${OURO}66`, color: '#F5F3E0', backgroundColor: 'rgba(0,0,0,0.4)' }}>
-                  {h.nome} {h.nivel}/{h.nivelMaximo}
+                <span
+                  key={h.id}
+                  title={h.aplicada ? undefined : 'Ainda não vale no combate'}
+                  className="rounded px-1.5 py-0.5 text-[9.5px] border"
+                  style={{ borderColor: h.aplicada ? `${OURO}aa` : `${OURO}44`, color: h.aplicada ? '#F5F3E0' : '#8d8574', backgroundColor: 'rgba(0,0,0,0.4)' }}
+                >
+                  {h.nome} {h.nivel}/{h.nivelMaximo}{h.aplicada ? '' : ' •'}
                 </span>
               ))}
-              {!HABILIDADES_ARMADURA_NO_COMBATE && (
-                <span className="text-[9px] self-center" style={{ color: '#8d8574' }}>(ainda não valem no combate)</span>
+              {r.habilidades.some((h) => !h.aplicada) && (
+                <span className="text-[9px] self-center" style={{ color: '#8d8574' }}>• ainda não valem no combate</span>
               )}
             </div>
           )}
