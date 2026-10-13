@@ -74,7 +74,7 @@ import {
   MENSAGEM_BLOQUEIO_EQUIPAR,
   mitigacaoDoEquipamento,
 } from '@/game/equipamento';
-import { HABILIDADES_ARMADURA_NO_MOTOR } from '@/game/combate/habilidadesArmaduraCombate';
+import { HABILIDADES_ARMADURA_NO_MOTOR, bonusDiversoDeArmadura } from '@/game/combate/habilidadesArmaduraCombate';
 import { randomInt, randomUUID } from 'node:crypto';
 import { registrarLog } from './log';
 import {
@@ -1421,7 +1421,12 @@ export async function executarCacada(
       const sorteio = sorteioDeDrops(opcoes.seed);
       drops = [
         ...sortearDrops(dados.drops, sorteio, current.bonusChanceDrop ?? 0),
-        ...sortearDropsExtras(dados.drops, dados.estrela, sorteio),
+        ...sortearDropsExtras(
+          dados.drops,
+          dados.estrela,
+          sorteio,
+          bonusDiversoDeArmadura(combatentePersonagem.equipamento?.habilidadesArmadura)
+        ),
         ...sortearOrbesDaCacada(dados.drops, sorteio, current.bonusChanceDrop ?? 0),
       ];
       if (dados.chave && !(current.cacadaChavesVencidas ?? []).includes(dados.estrela)) {

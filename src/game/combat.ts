@@ -60,6 +60,8 @@ import {
   bonusDanoDeArmadura,
   bonusDanoElementalDeArmadura,
   bonusDanoQueimaduraDeArmadura,
+  bonusDanoVariosGolpesDeArmadura,
+  bonusBloqueioDeArmadura,
   bencaoDivinaDeArmadura,
   bonusCuraDeArmadura,
   bonusMitigacaoDeArmadura,
@@ -3092,6 +3094,16 @@ function turnoDeCombateInterno(
       }
     }
 
+    // No Ar (habilidade de armadura): +10% nas habilidades de vários golpes
+    const bonusVariosGolpes = acaoCausaDano
+      ? bonusDanoVariosGolpesDeArmadura(atacante.equipamento?.habilidadesArmadura, golpes?.length ?? 0)
+      : 0;
+    if (bonusVariosGolpes > 0 && golpes) {
+      golpes = golpes.map((g) => Math.floor((g * (100 + bonusVariosGolpes)) / 100));
+      danoPorGolpe = golpes[0];
+      danoBruto = golpes.reduce((acc, val) => acc + val, 0);
+    }
+
     // Roadmap 1.3: tipo do golpe (Contusão/Corte/Perfuração da arma, ou mágico) contra o corpo do alvo.
     // Multiplicador à parte do elemental (±25%), aplicado antes de defesa e crítico.
     let tipoGolpe: TipoGolpe | undefined;
@@ -3174,12 +3186,17 @@ function turnoDeCombateInterno(
     const defensorImortal = acaoCausaDano && estaImortal(efeitosDefensor);
     // Resistência racial de dano recebido (1.4.1/1.4.2) entra na mesma soma, junto das reduções dos efeitos
     const resistenciaRacialDefensor = acaoCausaDano ? obterResistenciasRaciais(defensor.racaId) : undefined;
-    const reducaoPorEfeitos = acaoCausaDano
+    const reducaoDosEfeitosAtivos = acaoCausaDano
       ? reducaoDanoRecebidoPorEfeitos(efeitosDefensor, {
           ehDanoFisico,
           hp: hpAtual,
           hpMax: defensor.hpMax,
-        }) +
+        })
+      : 0;
+    const reducaoPorEfeitos = acaoCausaDano
+      ? reducaoDosEfeitosAtivos +
+        // Aumento de Bloqueio (habilidade de armadura): com uma habilidade defensiva ativa, +10% de redução
+        bonusBloqueioDeArmadura(defensor.equipamento?.habilidadesArmadura, reducaoDosEfeitosAtivos) +
         // Bênção Divina (habilidade de armadura): chance por golpe recebido, na mesma soma com teto de 80%
         bencaoDivinaDeArmadura(defensor.equipamento?.habilidadesArmadura, opcoesTurno?.sorteioDefesa?.(i, 0)) +
         (ehDanoFisico

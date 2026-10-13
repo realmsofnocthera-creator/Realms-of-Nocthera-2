@@ -153,6 +153,14 @@ describe('Drops extras da Caçada', () => {
     expect(sortearDropsExtras(oryndrak.drops, 9, (i) => (i < 60 ? 99 : 0.5)).map((d) => d.materialId)).toEqual([BILHETE_DE_MELHORIA.id]);
   });
 
+  it('Entomologista soma pontos percentuais à chance do diverso', () => {
+    const rato = DADOS_CACADA_MAP['rato-da-floresta'];
+    expect(sortearDropsExtras(rato.drops, 1, () => 1.2)).toEqual([]); // 1,2 não passa de 1%
+    expect(sortearDropsExtras(rato.drops, 1, () => 1.2, 0.5)).toHaveLength(3); // 1,2 passa de 1,5%
+    expect(sortearDropsExtras(rato.drops, 1, () => 2.5, 2)).toHaveLength(3); // até 3%
+    expect(sortearDropsExtras(rato.drops, 1, () => 3.1, 2)).toEqual([]);
+  });
+
   it('nome de qualquer item do inventário', () => {
     expect(nomeDoItem('pelo-de-rato')).toBe('Pelo de Rato');
     expect(nomeDoItem('mundo-osso-bruto')).toBe('Osso Bruto');
