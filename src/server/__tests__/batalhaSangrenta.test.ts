@@ -53,7 +53,10 @@ describe('Batalha Sangrenta (servidor)', () => {
     expect(r.fragmentosAlma).toBeLessThanOrEqual(3);
     expect(r.fragmentosAlma).toBe(recompensaDaBatalha(DIFICULDADES_BATALHA_MAP.facil, true, 11).fragmentosAlma);
     expect(r.fragmentosSubclasse).toBeNull();
-    expect(r.ouro).toBe(0);
+    expect(r.ouro).toBe(150);
+    expect(r.diamantes).toBe(10); // primeira vitória nesta dificuldade
+    expect(r.character.diamantes).toBe(10);
+    expect(r.character.ouro).toBe(150);
     expect(r.character.fragmentosAlma).toBe(r.fragmentosAlma);
     expect(r.tentativasRestantes).toBe(2);
     expect(r.character.batalhaSangrenta).toEqual({ dia: '2026-10-13', tentativas: 1 });
@@ -61,6 +64,23 @@ describe('Batalha Sangrenta (servidor)', () => {
     expect(r.ondas[0].resultado?.logTurnos.length).toBeGreaterThan(0);
     const tx = await getTransactionsByUid('b2');
     expect(tx.some((t) => t.moeda === 'fragmentosAlma' && t.quantidade === r.fragmentosAlma && t.motivo.startsWith('Batalha Sangrenta'))).toBe(true);
+    expect(tx.some((t) => t.moeda === 'diamantes' && t.quantidade === 10 && t.tipo === 'ganho')).toBe(true);
+    expect(tx.some((t) => t.moeda === 'ouro' && t.quantidade === 150 && t.tipo === 'ganho')).toBe(true);
+  });
+
+  it('a primeira vitória em cada dificuldade dá 10 Diamantes; repetir a mesma dá só ouro e fragmentos', async () => {
+    await setup('b2b');
+    const a = await executarBatalhaSangrenta('b2b', 'facil', { seed: 31, agora: HOJE });
+    const b = await executarBatalhaSangrenta('b2b', 'facil', { seed: 32, agora: HOJE });
+    expect(a.diamantes).toBe(10);
+    expect(b.diamantes).toBe(0);
+    expect(b.ouro).toBe(150);
+    const c = await executarBatalhaSangrenta('b2b', 'medio', { seed: 33, agora: HOJE });
+    expect(c.diamantes).toBe(10); // outra dificuldade: de novo na primeira vez
+    expect(c.character.diamantes).toBe(20);
+    expect(c.character.ouro).toBe(450); // 3 vitórias × 150
+    expect(c.mensagens.join(' ')).toContain('Primeira vitória: +10 Diamantes');
+    expect(b.mensagens.join(' ')).not.toContain('Primeira vitória');
   });
 
   it('vencer uma dificuldade abre a seguinte', async () => {
@@ -74,11 +94,11 @@ describe('Batalha Sangrenta (servidor)', () => {
     expect(r.character.batalhaSangrentaVencidas).toEqual(['facil', 'medio']);
   });
 
-  it('não dá XP nem drops', async () => {
+  it('não dá XP nem drops (só fragmentos, ouro e Diamantes)', async () => {
     const antes = await setup('b4', { ouro: 500 });
     const r = await executarBatalhaSangrenta('b4', 'facil', { seed: 5, agora: HOJE });
     expect(r.character.xpAtual).toBe(antes.xpAtual);
-    expect(r.character.ouro).toBe(500);
+    expect(r.character.ouro).toBe(650);
     expect(r.character.inventario).toEqual({});
   });
 
@@ -91,6 +111,8 @@ describe('Batalha Sangrenta (servidor)', () => {
     expect(r.chefeVencido).toBe(false);
     expect(r.fragmentosAlma).toBe(0);
     expect(r.ouro).toBe(50);
+    expect(r.diamantes).toBe(0);
+    expect(r.character.diamantes).toBe(0);
     expect(r.character.ouro).toBe(150);
     expect(r.character.fragmentosAlma).toBe(0);
     expect(r.tentativasRestantes).toBe(2);
@@ -116,6 +138,8 @@ describe('Batalha Sangrenta (servidor)', () => {
     const b = await executarBatalhaSangrenta('b7', 'facil', { seed: 99, combateId: 'batalha-teste-0002', agora: HOJE });
     expect(b.repetido).toBe(true);
     expect(b.fragmentosAlma).toBe(a.fragmentosAlma);
+    expect(b.diamantes).toBe(a.diamantes);
+    expect(b.character.diamantes).toBe(10); // paga uma vez só
     expect(b.ondas.map((o) => o.monstroId)).toEqual(a.ondas.map((o) => o.monstroId));
     expect(b.ondas[0].resultado).toBeUndefined(); // o log só vem na resposta original
     expect(b.character.fragmentosAlma).toBe(a.fragmentosAlma);

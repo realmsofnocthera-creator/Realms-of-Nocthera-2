@@ -6,7 +6,8 @@ import { SUBCLASSES } from '@/rules/subclasses';
  * Provação de Batalha Sangrenta — regras puras (sem banco). Decididas pelo Yuri em 13/10/2026:
  * cinco dificuldades (Fácil, Médio, Difícil, Muito difícil e Inferno), cada uma com monstros de uma estrela, chefes
  * Especiais e uma faixa de fragmentos de alma. O HP passa de uma luta para a outra; 3 tentativas por dia (somando
- * todas as dificuldades); cada dificuldade abre ao vencer a anterior.
+ * todas as dificuldades); cada dificuldade abre ao vencer a anterior. Toda vitória dá 150 de ouro e a primeira
+ * vitória em cada dificuldade dá 10 Diamantes.
  */
 
 export type DificuldadeBatalha = 'facil' | 'medio' | 'dificil' | 'muitoDificil' | 'inferno';
@@ -42,6 +43,10 @@ export const BATALHA_SANGRENTA = {
   tentativasPorDia: 3,
   /** Quem cai no meio da batalha ganha só este ouro (sem fragmentos). */
   ouroDaDerrota: 50,
+  /** Toda vitória (batalha inteira) dá este ouro, além dos fragmentos. */
+  ouroDaVitoria: 150,
+  /** A primeira vitória em cada dificuldade dá estes Diamantes. */
+  diamantesDaPrimeiraVitoria: 10,
 } as const;
 
 /**
@@ -169,18 +174,26 @@ export interface RecompensaBatalha {
   fragmentosAlma: number;
   /** Só no Inferno, e só com a sorte dos 20%: de qual subclasse e quantos. */
   fragmentosSubclasse: { subclasseId: string; quantidade: number } | null;
-  /** Só na derrota: o ouro de consolo. */
+  /** Vitória: 150 de ouro; derrota: 50 de ouro de consolo. */
   ouro: number;
+  /** 10 Diamantes na primeira vitória em cada dificuldade. */
+  diamantes: number;
 }
 
 const inteiroEntre = (min: number, max: number, sorteio: () => number) => min + Math.floor(sorteio() * (max - min + 1));
 
 /**
- * Vitória (todos os chefes vencidos): fragmentos de alma sorteados dentro da faixa da dificuldade e, no Inferno,
- * 20% de chance de 1 a 2 fragmentos de uma subclasse sorteada entre as 12. Derrota: só 50 de ouro.
+ * Vitória (todos os chefes vencidos): fragmentos de alma sorteados dentro da faixa da dificuldade, 150 de ouro, 10
+ * Diamantes se for a primeira vitória nesta dificuldade e, no Inferno, 20% de chance de 1 a 2 fragmentos de uma
+ * subclasse sorteada entre as 12. Derrota: só 50 de ouro.
  */
-export function recompensaDaBatalha(dificuldade: DefinicaoDificuldade, venceu: boolean, semente: number): RecompensaBatalha {
-  if (!venceu) return { fragmentosAlma: 0, fragmentosSubclasse: null, ouro: BATALHA_SANGRENTA.ouroDaDerrota };
+export function recompensaDaBatalha(
+  dificuldade: DefinicaoDificuldade,
+  venceu: boolean,
+  semente: number,
+  primeiraVitoria = false
+): RecompensaBatalha {
+  if (!venceu) return { fragmentosAlma: 0, fragmentosSubclasse: null, ouro: BATALHA_SANGRENTA.ouroDaDerrota, diamantes: 0 };
   const sorteio = geradorDaSemente(semente ^ 0x51ed270b);
   const fragmentosAlma = inteiroEntre(dificuldade.fragmentos.min, dificuldade.fragmentos.max, sorteio);
   let fragmentosSubclasse: RecompensaBatalha['fragmentosSubclasse'] = null;
@@ -191,7 +204,12 @@ export function recompensaDaBatalha(dificuldade: DefinicaoDificuldade, venceu: b
     const quantidade = inteiroEntre(extra.min, extra.max, sorteio);
     if (cai && subclasse) fragmentosSubclasse = { subclasseId: subclasse.id, quantidade };
   }
-  return { fragmentosAlma, fragmentosSubclasse, ouro: 0 };
+  return {
+    fragmentosAlma,
+    fragmentosSubclasse,
+    ouro: BATALHA_SANGRENTA.ouroDaVitoria,
+    diamantes: primeiraVitoria ? BATALHA_SANGRENTA.diamantesDaPrimeiraVitoria : 0,
+  };
 }
 
 /** Semente de cada onda, derivada da semente da tentativa. */

@@ -103,7 +103,8 @@ describe('Batalha Sangrenta: regras', () => {
         const r = recompensaDaBatalha(d, true, semente);
         expect(r.fragmentosAlma).toBeGreaterThanOrEqual(d.fragmentos.min);
         expect(r.fragmentosAlma).toBeLessThanOrEqual(d.fragmentos.max);
-        expect(r.ouro).toBe(0);
+        expect(r.ouro).toBe(150);
+        expect(r.diamantes).toBe(0);
         vistos.add(r.fragmentosAlma);
       }
       expect(vistos.size).toBe(d.fragmentos.max - d.fragmentos.min + 1); // o sorteio alcança a faixa toda
@@ -134,9 +135,17 @@ describe('Batalha Sangrenta: regras', () => {
     expect(subclasses.size).toBe(SUBCLASSES.length);
   });
 
-  it('derrota: só 50 de ouro, sem fragmentos', () => {
+  it('toda vitória dá 150 de ouro e a primeira vitória na dificuldade dá mais 10 Diamantes', () => {
     for (const d of DIFICULDADES_BATALHA) {
-      expect(recompensaDaBatalha(d, false, 5)).toEqual({ fragmentosAlma: 0, fragmentosSubclasse: null, ouro: 50 });
+      expect(recompensaDaBatalha(d, true, 5, true)).toMatchObject({ ouro: 150, diamantes: 10 });
+      expect(recompensaDaBatalha(d, true, 5, false)).toMatchObject({ ouro: 150, diamantes: 0 });
+    }
+  });
+
+  it('derrota: só 50 de ouro, sem fragmentos nem Diamantes (mesmo na primeira vez)', () => {
+    for (const d of DIFICULDADES_BATALHA) {
+      expect(recompensaDaBatalha(d, false, 5)).toEqual({ fragmentosAlma: 0, fragmentosSubclasse: null, ouro: 50, diamantes: 0 });
+      expect(recompensaDaBatalha(d, false, 5, true)).toEqual({ fragmentosAlma: 0, fragmentosSubclasse: null, ouro: 50, diamantes: 0 });
     }
   });
 

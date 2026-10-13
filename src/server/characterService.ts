@@ -1534,8 +1534,10 @@ export interface RespostaBatalhaSangrenta {
   chefeVencido: boolean;
   fragmentosAlma: number;
   fragmentosSubclasse: { subclasseId: string; quantidade: number } | null;
-  /** Só na derrota. */
+  /** Vitória: 150; derrota: 50 de consolo. */
   ouro: number;
+  /** 10 na primeira vitória em cada dificuldade. */
+  diamantes: number;
   tentativasRestantes: number;
   mensagens: string[];
 }
@@ -1543,8 +1545,8 @@ export interface RespostaBatalhaSangrenta {
 /**
  * Batalha Sangrenta: 4 lutas comuns e o(s) chefe(s) Especial(is), com o HP passando de uma luta para a outra, em
  * cinco dificuldades (cada uma abre ao vencer a anterior). Vencer tudo dá fragmentos de alma dentro da faixa da
- * dificuldade (e, no Inferno, 20% de chance de fragmentos de uma subclasse sorteada); cair dá só 50 de ouro. Não dá
- * XP nem drops. 3 tentativas por dia no total (o dia vale em Brasília), gastas ao começar. Tudo é conferido no
+ * dificuldade, 150 de ouro, 10 Diamantes na primeira vitória em cada dificuldade e, no Inferno, 20% de chance de
+ * fragmentos de uma subclasse sorteada; cair dá só 50 de ouro. Não dá XP nem drops. 3 tentativas por dia no total (o dia vale em Brasília), gastas ao começar. Tudo é conferido no
  * servidor. Reenvio com o mesmo combateId devolve o resultado gravado.
  */
 export async function executarBatalhaSangrenta(
@@ -1599,7 +1601,8 @@ export async function executarBatalhaSangrenta(
     }
     const venceuTudo = ondasVencidas === plano.length;
 
-    const recompensa = recompensaDaBatalha(dificuldade, venceuTudo, opcoes.seed);
+    const primeiraVitoria = venceuTudo && !(current.batalhaSangrentaVencidas ?? []).includes(dificuldade.id);
+    const recompensa = recompensaDaBatalha(dificuldade, venceuTudo, opcoes.seed, primeiraVitoria);
     const estadoTentativas: EstadoBatalhaSangrenta = gastarTentativa(current.batalhaSangrenta, agora);
     const restantes = tentativasRestantes(estadoTentativas, agora);
     const motivo = `Batalha Sangrenta (${dificuldade.nome})`;
@@ -1609,7 +1612,10 @@ export async function executarBatalhaSangrenta(
       character = alterarSaldoEm(ctx, character, 'fragmentosAlma', recompensa.fragmentosAlma, motivo).character;
     }
     if (recompensa.ouro > 0) {
-      character = alterarSaldoEm(ctx, character, 'ouro', recompensa.ouro, `${motivo}: derrota`).character;
+      character = alterarSaldoEm(ctx, character, 'ouro', recompensa.ouro, `${motivo}: ${venceuTudo ? 'vitória' : 'derrota'}`).character;
+    }
+    if (recompensa.diamantes > 0) {
+      character = alterarSaldoEm(ctx, character, 'diamantes', recompensa.diamantes, `${motivo}: primeira vitória`).character;
     }
     let fragmentosSubclasse = character.fragmentosSubclasse ?? {};
     if (recompensa.fragmentosSubclasse) {
@@ -1625,7 +1631,7 @@ export async function executarBatalhaSangrenta(
         timestamp: new Date().toISOString(),
       });
     }
-    const vencidas = venceuTudo && !(character.batalhaSangrentaVencidas ?? []).includes(dificuldade.id)
+    const vencidas = primeiraVitoria
       ? [...(character.batalhaSangrentaVencidas ?? []), dificuldade.id]
       : character.batalhaSangrentaVencidas ?? [];
     character = salvarPersonagem(ctx, character, { fragmentosSubclasse, batalhaSangrenta: estadoTentativas, batalhaSangrentaVencidas: vencidas });
@@ -1638,7 +1644,7 @@ export async function executarBatalhaSangrenta(
         ? `Batalha Sangrenta (${dificuldade.nome}) vencida!`
         : `Você caiu na onda ${ondasVencidas + 1} de ${plano.length} (${dificuldade.nome}). Venceu ${ondasVencidas}.`,
       venceuTudo
-        ? `Fragmentos de alma: +${recompensa.fragmentosAlma}${recompensa.fragmentosSubclasse ? `; fragmentos de ${nomeSubclasse}: +${recompensa.fragmentosSubclasse.quantidade}` : ''}.`
+        ? `Fragmentos de alma: +${recompensa.fragmentosAlma}${recompensa.fragmentosSubclasse ? `; fragmentos de ${nomeSubclasse}: +${recompensa.fragmentosSubclasse.quantidade}` : ''}. Ouro: +${recompensa.ouro}.${recompensa.diamantes > 0 ? ` Primeira vitória: +${recompensa.diamantes} Diamantes!` : ''}`
         : `Ouro de consolo: +${recompensa.ouro}.`,
       `Tentativas restantes hoje: ${restantes}.`,
     ];
@@ -1652,6 +1658,7 @@ export async function executarBatalhaSangrenta(
       fragmentosAlma: recompensa.fragmentosAlma,
       fragmentosSubclasse: recompensa.fragmentosSubclasse,
       ouro: recompensa.ouro,
+      diamantes: recompensa.diamantes,
       tentativasRestantes: restantes,
     };
     const ultimoChefe = [...plano].reverse().find((o) => o.chefe) ?? plano[plano.length - 1];

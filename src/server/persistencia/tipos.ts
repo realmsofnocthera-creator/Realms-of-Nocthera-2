@@ -36,6 +36,7 @@ export interface ResumoBatalhaSangrentaRegistro {
   fragmentosAlma: number;
   fragmentosSubclasse: { subclasseId: string; quantidade: number } | null;
   ouro: number;
+  diamantes: number;
   tentativasRestantes: number;
 }
 
