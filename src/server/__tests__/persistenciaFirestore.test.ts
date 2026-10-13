@@ -114,6 +114,9 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(personagemParaFirestore(PERSONAGEM)).not.toHaveProperty('batalhaSangrenta');
     expect(personagemDoFirestore('u1', personagemParaFirestore(PERSONAGEM)).batalhaSangrenta).toBeUndefined();
     expect(personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), batalhaSangrenta: { tentativas: 2 } }).batalhaSangrenta).toBeUndefined();
+    const vencidas = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, batalhaSangrentaVencidas: ['facil', 'medio'] }));
+    expect(vencidas.batalhaSangrentaVencidas).toEqual(['facil', 'medio']);
+    expect(personagemDoFirestore('u1', personagemParaFirestore(PERSONAGEM)).batalhaSangrentaVencidas).toBeUndefined();
   });
 
   it('armas da Forja vão e voltam do Firestore; documento antigo fica sem armas', () => {

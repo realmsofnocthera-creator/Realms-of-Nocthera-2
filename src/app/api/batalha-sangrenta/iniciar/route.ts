@@ -12,8 +12,8 @@ const ERROS_REGRA = new Set<string>([
 ]);
 
 /**
- * Provação de Batalha Sangrenta: 5 lutas seguidas, a última contra um chefe. O nível e as tentativas do dia são
- * conferidos no servidor, a semente é do servidor e as lutas, os fragmentos e a tentativa gasta são gravados
+ * Provação de Batalha Sangrenta: lutas seguidas, o(s) chefe(s) por último, em cinco dificuldades. O nível, a
+ * dificuldade liberada e as tentativas do dia são conferidos no servidor, a semente é do servidor e as lutas, os fragmentos e a tentativa gasta são gravados
  * na mesma transação.
  */
 export async function POST(req: NextRequest) {
@@ -31,13 +31,13 @@ export async function POST(req: NextRequest) {
 
     // Qualquer "seed" enviada pelo cliente é ignorada (0.5-B1)
     const body = await req.json().catch(() => ({}));
-    const { combateId } = body ?? {};
+    const { dificuldade, combateId } = body ?? {};
 
     if (combateId !== undefined && !combateIdValido(combateId)) {
       return NextResponse.json({ error: 'Identificador de combate inválido.' }, { status: 400 });
     }
 
-    const resposta = await executarBatalhaSangrenta(user.uid, { seed: gerarSementeCombate(), combateId });
+    const resposta = await executarBatalhaSangrenta(user.uid, dificuldade, { seed: gerarSementeCombate(), combateId });
     return NextResponse.json(resposta, { status: 200 });
   } catch (error) {
     const erroBanco = respostaErroPersistencia(error);

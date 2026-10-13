@@ -27,12 +27,15 @@ export interface RegistroCombate {
 }
 
 export interface ResumoBatalhaSangrentaRegistro {
+  dificuldade: string;
   estrela: number;
   ondas: { monstroId: string; nome: string; chefe: boolean; vencedor: 'personagem' | 'monstro'; hpInicial: number; hpFinal: number; turnos: number }[];
   ondasVencidas: number;
+  /** Todos os chefes foram vencidos (a batalha inteira). */
   chefeVencido: boolean;
   fragmentosAlma: number;
-  fragmentosSubclasse: number;
+  fragmentosSubclasse: { subclasseId: string; quantidade: number } | null;
+  ouro: number;
   tentativasRestantes: number;
 }
 
