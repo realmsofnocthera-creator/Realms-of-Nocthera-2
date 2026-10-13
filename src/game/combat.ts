@@ -157,7 +157,7 @@ import {
   racialDeveDisparar,
 } from './combate/racial';
 import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
-import type { AcaoMonstro, HabilidadeMonstro } from '@/rules/monsters';
+import type { AcaoMonstro, HabilidadeMonstro, PassivasMonstro } from '@/rules/monsters';
 import {
   ContextoHabilidade,
   ResultadoHabilidade,
@@ -218,6 +218,35 @@ function escolherAcaoMonstro(c: Combatente): AcaoMonstro | undefined {
   c.contadoresHabilidadeMonstro = contadores;
   c.alternanciaHabilidadeMonstro = alternancia;
   return acao;
+}
+
+/** Bônus de dano das passivas do monstro atacante (chefes Especiais): HP baixo, Fúria acumulada, bônus por rodadas. */
+export function bonusDanoPassivasMonstro(atacante: Combatente, hpAtual: number, rodada: number): number {
+  const p = atacante.passivasMonstro;
+  if (!p) return 0;
+  let total = 0;
+  if (p.bonusDanoAbaixoMetadePercentual && atacante.hpMax > 0 && hpAtual < atacante.hpMax / 2) {
+    total += p.bonusDanoAbaixoMetadePercentual;
+  }
+  const passadas = Math.max(0, rodada - 1);
+  if (p.furia) total += Math.min(p.furia.maximoAcumulos, passadas) * p.furia.percentualPorAcumulo;
+  if (p.bonusDanoACada) {
+    total += Math.min(p.bonusDanoACada.limitePercentual, Math.floor(passadas / Math.max(1, p.bonusDanoACada.rodadas)) * p.bonusDanoACada.percentual);
+  }
+  return total;
+}
+
+/** Redução de dano recebido das passivas do monstro defensor (soma na regra 1.2.2, com o teto de 80%). */
+export function reducaoDanoPassivasMonstro(defensor: Combatente, hpAtual: number, sobreescudo: number, ehDanoFisico: boolean): number {
+  const p = defensor.passivasMonstro;
+  if (!p) return 0;
+  let total = 0;
+  if (ehDanoFisico) total += p.reducaoDanoFisicoPercentual ?? 0;
+  if (p.reducaoDanoComNucleoPercentual && sobreescudo > 0) total += p.reducaoDanoComNucleoPercentual;
+  if (p.reducaoDanoAbaixoMetadePercentual && defensor.hpMax > 0 && hpAtual < defensor.hpMax / 2) {
+    total += p.reducaoDanoAbaixoMetadePercentual;
+  }
+  return total;
 }
 
 /** Transforma a ação do monstro numa definição de habilidade, para seguir o mesmo caminho das habilidades do jogador. */
@@ -288,6 +317,8 @@ export interface Combatente {
   alternanciaHabilidadeMonstro?: number[];
   /** Enfurecido: abaixo de 50% de HP ganha +20% de dano. */
   enfurecido?: boolean;
+  /** Passivas dos chefes Especiais da Batalha Sangrenta. */
+  passivasMonstro?: PassivasMonstro;
   /** Status de dano contínuo ativos (copiado do estado da luta antes de cada ação; base dos bônus por status do alvo). */
   statusAtivos?: EfeitoStatus[];
   /** Sangramento e Maldição: duram até o fim da luta. */
@@ -2617,6 +2648,7 @@ function turnoDeCombateInterno(
     const bonusDanoBuffsPorTipo = (tipo: 'fisico' | 'magico'): number =>
       bonusDanoArmadura +
       (enfurecidoNesteAtaque ? GAME_CONFIG.ENFURECIDO_BONUS_DANO_PERCENTUAL : 0) +
+      bonusDanoPassivasMonstro(atacante, hpAtacanteAtual, numeroTurno) +
       (tipo === 'fisico'
         ? atacante.equipamento?.bonusDanoFisicoPercentual ?? 0
         : atacante.equipamento?.bonusDanoMagicoPercentual ?? 0) +
@@ -3249,7 +3281,8 @@ function turnoDeCombateInterno(
         reducaoPrimeiroGolpeDeArmadura(defensor.equipamento?.habilidadesArmadura, opcoesTurno?.primeiroGolpeRecebido === true) +
         (ehDanoFisico
           ? resistenciaRacialDefensor?.danoFisicoPercentual ?? 0
-          : resistenciaRacialDefensor?.danoMagicoPercentual ?? 0)
+          : resistenciaRacialDefensor?.danoMagicoPercentual ?? 0) +
+        reducaoDanoPassivasMonstro(defensor, hpAtual, sobreescudoAtual, ehDanoFisico)
       : 0;
 
     // Regra 1.2.2: as reduções de dano recebido somam, com teto de 80%
@@ -3927,6 +3960,7 @@ export function resolverCombate(
         : undefined,
     habilidadesMonstro: monstro.habilidades,
     enfurecido: monstro.enfurecido,
+    ...(monstro.passivas ? { passivasMonstro: monstro.passivas } : {}),
     categoriaCorporal: monstro.categoriaCorporal,
     fraquezasProprias: monstro.fraquezasProprias ? [...monstro.fraquezasProprias] : undefined,
     resistenciasProprias: monstro.resistenciasProprias

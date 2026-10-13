@@ -30,6 +30,24 @@ export interface OuroIntervalo {
   max: number;
 }
 
+/**
+ * Passivas próprias dos chefes Especiais da Batalha Sangrenta (todas em %). Valem só para o monstro que as define.
+ */
+export interface PassivasMonstro {
+  /** +% de dano enquanto o HP está abaixo de 50% (Darius). */
+  bonusDanoAbaixoMetadePercentual?: number;
+  /** −% de dano físico recebido (Nyméria). */
+  reducaoDanoFisicoPercentual?: number;
+  /** Fúria: +% de dano por acúmulo; ganha 1 acúmulo a cada rodada que passa, até o máximo (Grizzham). */
+  furia?: { percentualPorAcumulo: number; maximoAcumulos: number };
+  /** −% de dano recebido enquanto o Sobreescudo (Núcleo Ancestral) estiver de pé (Othrak). */
+  reducaoDanoComNucleoPercentual?: number;
+  /** +% de dano a cada N rodadas, até o limite (Varkhazar). */
+  bonusDanoACada?: { rodadas: number; percentual: number; limitePercentual: number };
+  /** −% de dano recebido enquanto o HP está abaixo de 50% (Noctharion). */
+  reducaoDanoAbaixoMetadePercentual?: number;
+}
+
 export interface MonsterDefinition {
   id: string;
   nome: string;
@@ -52,6 +70,8 @@ export interface MonsterDefinition {
   habilidades?: readonly HabilidadeMonstro[];
   /** Enfurecido: abaixo de 50% de HP ganha +20% de dano (representa ferir uma cabeça, quebrar chifres, expor o núcleo). */
   enfurecido?: boolean;
+  /** Passivas dos chefes Especiais (Batalha Sangrenta). */
+  passivas?: PassivasMonstro;
   /** Status a que o monstro é imune (além dos de chefe). Ex.: Esqueleto imune a Sangramento e Veneno. */
   imunidadesStatus?: EfeitoStatus[];
 }

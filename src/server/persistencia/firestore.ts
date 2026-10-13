@@ -114,6 +114,19 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     cacadaChavesVencidas: Array.isArray(data.cacadaChavesVencidas)
       ? (data.cacadaChavesVencidas as unknown[]).filter((n): n is number => typeof n === 'number')
       : [],
+    ...(data.batalhaSangrenta &&
+    typeof data.batalhaSangrenta === 'object' &&
+    typeof (data.batalhaSangrenta as Record<string, unknown>).dia === 'string'
+      ? {
+          batalhaSangrenta: {
+            dia: (data.batalhaSangrenta as Record<string, unknown>).dia as string,
+            tentativas: Number((data.batalhaSangrenta as Record<string, unknown>).tentativas || 0),
+          },
+        }
+      : {}),
+    ...(Array.isArray(data.batalhaSangrentaVencidas)
+      ? { batalhaSangrentaVencidas: (data.batalhaSangrentaVencidas as unknown[]).filter((v): v is string => typeof v === 'string') }
+      : {}),
     armas,
     armaduras,
     equipamento: lerEquipamentoPersonagem(data.equipamento, armas, armaduras),
@@ -154,6 +167,8 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     fragmentosAscensao: char.fragmentosAscensao ?? 0,
     inventario: char.inventario ?? {},
     cacadaChavesVencidas: char.cacadaChavesVencidas ?? [],
+    ...(char.batalhaSangrenta ? { batalhaSangrenta: char.batalhaSangrenta } : {}),
+    ...(char.batalhaSangrentaVencidas ? { batalhaSangrentaVencidas: char.batalhaSangrentaVencidas } : {}),
     armas: char.armas ?? [],
     armaduras: char.armaduras ?? [],
     equipamento: char.equipamento ?? EQUIPAMENTO_VAZIO,

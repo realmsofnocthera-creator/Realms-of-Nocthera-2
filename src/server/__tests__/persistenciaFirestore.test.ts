@@ -107,6 +107,18 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(antigo.cacadaChavesVencidas).toEqual([]);
   });
 
+  it('guarda e lê as tentativas da Batalha Sangrenta; documento antigo ou inválido fica sem elas', () => {
+    const comBatalha = { ...PERSONAGEM, batalhaSangrenta: { dia: '2026-10-13', tentativas: 2 } };
+    const volta = personagemDoFirestore('u1', personagemParaFirestore(comBatalha));
+    expect(volta.batalhaSangrenta).toEqual({ dia: '2026-10-13', tentativas: 2 });
+    expect(personagemParaFirestore(PERSONAGEM)).not.toHaveProperty('batalhaSangrenta');
+    expect(personagemDoFirestore('u1', personagemParaFirestore(PERSONAGEM)).batalhaSangrenta).toBeUndefined();
+    expect(personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), batalhaSangrenta: { tentativas: 2 } }).batalhaSangrenta).toBeUndefined();
+    const vencidas = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, batalhaSangrentaVencidas: ['facil', 'medio'] }));
+    expect(vencidas.batalhaSangrentaVencidas).toEqual(['facil', 'medio']);
+    expect(personagemDoFirestore('u1', personagemParaFirestore(PERSONAGEM)).batalhaSangrentaVencidas).toBeUndefined();
+  });
+
   it('armas da Forja vão e voltam do Firestore; documento antigo fica sem armas', () => {
     const arma = { id: 'a1', baseId: 'ferro-de-cacada', categoria: 'katana' as const, atributo: 'sorte' as const, pontos: 4, reforjas: 1, criadaEm: 't' };
     const volta = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, armas: [arma] }));
