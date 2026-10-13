@@ -14,6 +14,7 @@ import {
 } from '@/rules/armas';
 import { ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
 import { MATERIAIS_MAP } from '@/rules/materiais';
+import { ORBES_ARMADURA_MAP } from '@/rules/armaduras';
 import { MATERIAIS_MUNDO, MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
 import { RaridadeMaterial } from '@/rules/raridades';
 
@@ -49,10 +50,10 @@ export const MAX_ARMAS_POR_PERSONAGEM = 200;
 /** Item do Bilhete de melhoria (cai em 1% das vitórias contra monstros 9★; paga a Customização). */
 export const BILHETE_DE_MELHORIA = { id: 'bilhete-de-melhoria', nome: 'Bilhete de melhoria' } as const;
 
-/** Nome de qualquer item do inventário: material de monstro, material de mundo ou Bilhete de melhoria. */
+/** Nome de qualquer item do inventário: material de monstro ou de mundo, Bilhete de melhoria ou orbe de armadura. */
 export function nomeDoItem(id: string): string {
   if (id === BILHETE_DE_MELHORIA.id) return BILHETE_DE_MELHORIA.nome;
-  return MATERIAIS_MAP[id]?.nome ?? MATERIAIS_MUNDO_MAP[id]?.nome ?? id;
+  return MATERIAIS_MAP[id]?.nome ?? MATERIAIS_MUNDO_MAP[id]?.nome ?? ORBES_ARMADURA_MAP[id]?.nome ?? id;
 }
 
 export type MotivoBloqueioForja =

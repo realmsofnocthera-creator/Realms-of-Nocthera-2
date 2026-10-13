@@ -52,6 +52,15 @@ import {
   planejarFabricacao,
   planejarReforja,
 } from '@/game/forja';
+import {
+  ArmaduraPersonagem,
+  EstadoArmaduras,
+  MENSAGEM_BLOQUEIO_ARMADURA,
+  planejarFabricacaoArmadura,
+  planejarReforjaArmadura,
+  planejarUsoDeOrbes,
+  sortearOrbesDaCacada,
+} from '@/game/armaduraForja';
 import { randomInt, randomUUID } from 'node:crypto';
 import { registrarLog } from './log';
 import {
@@ -103,6 +112,8 @@ export interface CharacterDocument {
   cacadaChavesVencidas?: number[];
   /** Armas fabricadas na Forja. */
   armas?: ArmaPersonagem[];
+  /** Peças de armadura fabricadas no Ferreiro. */
+  armaduras?: ArmaduraPersonagem[];
   /** Quanto o Reforço soma em cada atributo. Derivado, não é gravado. */
   bonusReforco?: Attributes;
   atributos: Attributes;
@@ -283,6 +294,7 @@ function mesclarPersonagem(
     inventario: updates.inventario ?? current.inventario ?? {},
     cacadaChavesVencidas: updates.cacadaChavesVencidas ?? current.cacadaChavesVencidas ?? [],
     armas: updates.armas ?? current.armas ?? [],
+    armaduras: updates.armaduras ?? current.armaduras ?? [],
     bonusSubclasseAplicado:
       updates.bonusSubclasseAplicado !== undefined
         ? updates.bonusSubclasseAplicado
@@ -1342,6 +1354,7 @@ export async function executarCacada(
       drops = [
         ...sortearDrops(dados.drops, sorteio, current.bonusChanceDrop ?? 0),
         ...sortearDropsExtras(dados.drops, dados.estrela, sorteio),
+        ...sortearOrbesDaCacada(dados.drops, sorteio, current.bonusChanceDrop ?? 0),
       ];
       if (dados.chave && !(current.cacadaChavesVencidas ?? []).includes(dados.estrela)) {
         chaveVencida = dados.estrela;
@@ -1469,6 +1482,63 @@ export async function customizarArma(uid: string, armaId: unknown, opcao: unknow
     const plano = planejarCustomizacao(estadoForja(current), armaId, opcao);
     if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_FORJA[plano.motivo]);
     return gravarForja(ctx, current, plano, `Forja: Customização (${String(opcao)})`);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Armaduras: fabricar peça, reforjar e usar orbes de armadura
+// ---------------------------------------------------------------------------
+
+export interface RespostaArmadura {
+  character: CharacterDocument;
+  armadura: ArmaduraPersonagem;
+  transaction?: TransactionDocument;
+}
+
+function estadoArmaduras(char: CharacterDocument): EstadoArmaduras {
+  return { inventario: char.inventario ?? {}, ouro: char.ouro, armaduras: char.armaduras ?? [] };
+}
+
+/** Fabrica uma peça de armadura: paga a receita e sorteia o atributo. Tudo numa transação. */
+export async function fabricarArmadura(uid: string, pecaId: unknown, opcoes: OpcoesForja = {}): Promise<RespostaArmadura> {
+  return repositorio.executarTransacao('armaduraFabricar', async (ctx) => {
+    const current = await carregarPersonagem(ctx, uid);
+    const plano = planejarFabricacaoArmadura(estadoArmaduras(current), pecaId, {
+      aleatorio: opcoes.aleatorio ?? aleatorioDoServidor,
+      novoId: randomUUID,
+      agora: new Date().toISOString(),
+    });
+    if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_ARMADURA[plano.motivo]);
+    const pago = alterarSaldoEm(ctx, current, 'ouro', -plano.ouroGasto, `Ferreiro: fabricar ${plano.peca.nome}`);
+    const character = salvarPersonagem(ctx, current, { ouro: pago.character.ouro, inventario: plano.inventario, armaduras: plano.armaduras });
+    return { character, armadura: plano.armadura, transaction: pago.transaction };
+  });
+}
+
+/** Reforja uma peça de armadura: sorteia de novo os pontos do atributo, pagando parte da receita. */
+export async function reforjarArmadura(uid: string, armaduraId: unknown, opcoes: OpcoesForja = {}): Promise<RespostaArmadura> {
+  return repositorio.executarTransacao('armaduraReforjar', async (ctx) => {
+    const current = await carregarPersonagem(ctx, uid);
+    const plano = planejarReforjaArmadura(estadoArmaduras(current), armaduraId, { aleatorio: opcoes.aleatorio ?? aleatorioDoServidor });
+    if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_ARMADURA[plano.motivo]);
+    const pago = alterarSaldoEm(ctx, current, 'ouro', -plano.ouroGasto, `Ferreiro: reforjar ${plano.peca.nome} (${plano.percentual}% da receita)`);
+    const character = salvarPersonagem(ctx, current, { ouro: pago.character.ouro, inventario: plano.inventario, armaduras: plano.armaduras });
+    return { character, armadura: plano.armadura, transaction: pago.transaction };
+  });
+}
+
+/** Usa orbes de armadura numa peça (sobe o nível; o XP acima do nível 30 se perde). */
+export async function usarOrbesArmadura(
+  uid: string,
+  armaduraId: unknown,
+  orbes: unknown
+): Promise<RespostaArmadura & { xpGanho: number; nivelAntes: number; nivelDepois: number }> {
+  return repositorio.executarTransacao('armaduraOrbes', async (ctx) => {
+    const current = await carregarPersonagem(ctx, uid);
+    const plano = planejarUsoDeOrbes(estadoArmaduras(current), armaduraId, orbes);
+    if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_ARMADURA[plano.motivo]);
+    const character = salvarPersonagem(ctx, current, { inventario: plano.inventario, armaduras: plano.armaduras });
+    return { character, armadura: plano.armadura, xpGanho: plano.xpGanho, nivelAntes: plano.nivelAntes, nivelDepois: plano.nivelDepois };
   });
 }
 
