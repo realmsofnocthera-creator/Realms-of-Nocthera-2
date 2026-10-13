@@ -40,6 +40,9 @@ export const HABILIDADES_ARMADURA_NO_MOTOR: ReadonlySet<string> = new Set([
   'bencao-divina',
   'aumento-de-regeneracao',
   'sobrevivente',
+  'no-ar',
+  'aumento-de-bloqueio',
+  'entomologista',
   'ataque-de-fogo',
   'ataque-de-agua',
   'ataque-de-gelo',
@@ -259,4 +262,20 @@ export function bencaoDivinaDeArmadura(h: HabilidadesArmaduraAtivas | undefined,
 export function bonusCuraDeArmadura(h: HabilidadesArmaduraAtivas | undefined): number {
   if (!h) return 0;
   return ((h['aumento-de-regeneracao'] ?? 0) > 0 ? por([10, 20, 30], h['aumento-de-regeneracao']) : 0) + ((h['sobrevivente'] ?? 0) > 0 ? por([5, 8, 10], h['sobrevivente']) : 0);
+}
+
+/** No Ar: +10% de dano nas habilidades de vários golpes (a ação com mais de um golpe). */
+export function bonusDanoVariosGolpesDeArmadura(h: HabilidadesArmaduraAtivas | undefined, numeroGolpes: number): number {
+  return (h?.['no-ar'] ?? 0) > 0 && numeroGolpes > 1 ? 10 : 0;
+}
+
+/** Aumento de Bloqueio: com uma habilidade defensiva ativa (reduzindo o dano), ela reduz +10% do dano recebido. */
+export function bonusBloqueioDeArmadura(h: HabilidadesArmaduraAtivas | undefined, reducaoDosEfeitosAtivos: number): number {
+  return (h?.['aumento-de-bloqueio'] ?? 0) > 0 && reducaoDosEfeitosAtivos > 0 ? 10 : 0;
+}
+
+/** Entomologista: pontos percentuais somados à chance de cair um "diverso" de mundo ao vencer (1% de base). */
+export function bonusDiversoDeArmadura(h: HabilidadesArmaduraAtivas | undefined): number {
+  const nivel = h?.['entomologista'] ?? 0;
+  return nivel > 0 ? por([0.5, 1, 2], nivel) : 0;
 }

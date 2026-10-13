@@ -375,4 +375,15 @@ describe('Resistências a status, Bênção Divina e cura das habilidades de arm
     const base = cura({});
     if (base > 0) expect(cura({ 'aumento-de-regeneracao': 3 })).toBeGreaterThan(base);
   });
+
+  it('No Ar, Aumento de Bloqueio e Entomologista', async () => {
+    const m = await import('@/game/combate/habilidadesArmaduraCombate');
+    expect(m.bonusDanoVariosGolpesDeArmadura({ 'no-ar': 1 }, 3)).toBe(10);
+    expect(m.bonusDanoVariosGolpesDeArmadura({ 'no-ar': 1 }, 1)).toBe(0); // um golpe só não conta
+    expect(m.bonusDanoVariosGolpesDeArmadura(undefined, 3)).toBe(0);
+    expect(m.bonusBloqueioDeArmadura({ 'aumento-de-bloqueio': 1 }, 30)).toBe(10);
+    expect(m.bonusBloqueioDeArmadura({ 'aumento-de-bloqueio': 1 }, 0)).toBe(0); // sem habilidade defensiva ativa
+    expect([1, 2, 3].map((n) => m.bonusDiversoDeArmadura({ entomologista: n }))).toEqual([0.5, 1, 2]);
+    expect(m.bonusDiversoDeArmadura(undefined)).toBe(0);
+  });
 });

@@ -93,17 +93,19 @@ const INDICE_SORTEIO_EXTRAS = 50;
 /**
  * Extras de uma vitória na Caçada: para cada raridade que o monstro dropa, 1% de cair um dos dois diversos
  * de mundo daquela raridade; nos monstros 9★, 1% de cair um Bilhete de melhoria.
+ * `bonusDiversoPontos` soma pontos percentuais à chance do diverso (Entomologista, habilidade de armadura).
  */
 export function sortearDropsExtras(
   drops: readonly string[],
   estrela: number,
-  sorteio: (indice: number) => number
+  sorteio: (indice: number) => number,
+  bonusDiversoPontos = 0
 ): DropSorteado[] {
   const resultado: DropSorteado[] = [];
   const raridades = [...new Set(drops.map((id) => MATERIAIS_MAP[id]?.raridade).filter((r): r is RaridadeMaterial => !!r))];
   let i = INDICE_SORTEIO_EXTRAS;
   for (const raridade of raridades) {
-    const cai = sorteio(i++) < CHANCE_DIVERSO_PERCENTUAL;
+    const cai = sorteio(i++) < CHANCE_DIVERSO_PERCENTUAL + bonusDiversoPontos;
     const escolha = sorteio(i++);
     const opcoes = diversosDaRaridade(raridade);
     if (cai && opcoes.length > 0) {
