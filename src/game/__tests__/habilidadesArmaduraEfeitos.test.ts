@@ -1,17 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { HABILIDADES_ARMADURA_APLICADAS, efeitoEstaticoDaHabilidade, somarEfeitosEstaticos } from '@/game/habilidadesArmaduraEfeitos';
+import { HABILIDADES_ARMADURA_ESTATICAS, efeitoEstaticoDaHabilidade, somarEfeitosEstaticos } from '@/game/habilidadesArmaduraEfeitos';
 import { HABILIDADES_ARMADURA_MAP } from '@/rules/habilidadesArmadura';
 
 /** Habilidades de armadura que a ficha de combate já aplica (parte 1). */
 describe('Efeitos das habilidades de armadura (parte 1)', () => {
   it('só entram habilidades que o motor já suporta, e cada nível tem efeito', () => {
-    for (const id of HABILIDADES_ARMADURA_APLICADAS) {
+    for (const id of HABILIDADES_ARMADURA_ESTATICAS) {
       const def = HABILIDADES_ARMADURA_MAP[id];
       expect(def, id).toBeDefined();
       expect(def.situacao, id).toBe('motorAtual');
       for (let n = 1; n <= def.nivelMaximo; n++) expect(efeitoEstaticoDaHabilidade(id, n), `${id} nv ${n}`).toBeDefined();
     }
-    expect(efeitoEstaticoDaHabilidade('olho-critico', 3)).toBeUndefined(); // dano e crítico: próximo PR
+    expect(efeitoEstaticoDaHabilidade('olho-critico', 3)).toBeUndefined(); // crítico depende do estado da luta: vive no motor
     expect(efeitoEstaticoDaHabilidade('reforco-de-vida', 0)).toBeUndefined();
   });
 

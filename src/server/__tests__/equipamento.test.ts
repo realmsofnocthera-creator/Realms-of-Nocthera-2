@@ -127,4 +127,13 @@ describe('Equipamento (servidor)', () => {
     expect(com.multiplicadorElemental).toBeLessThan(1);
     expect(com.reacaoElemental).toBe('resistência');
   });
+  it('Reforço de Ataque (habilidade de armadura) chega ao combate da Caçada: mais dano no mesmo combate', async () => {
+    const elmo: ArmaduraPersonagem = { id: 'e3', pecaId: 'lobo-cinzento-elmo', atributo: 'vigor', pontos: 0, reforjas: 0, xp: 0, criadaEm: '' };
+    await setup('e9', { armaduras: [elmo] });
+    const golpe = (r: Awaited<ReturnType<typeof executarCacada>>) => r.resultado.logTurnos[0].ataques.find((a) => a.atacante.startsWith('Equipado'))!;
+    const sem = golpe(await executarCacada('e9', 'lobo-cinzento', { seed: 7, combateId: 'ataque-armadura-0001' }));
+    await equiparArmaduraDoPersonagem('e9', 'e3');
+    const com = golpe(await executarCacada('e9', 'lobo-cinzento', { seed: 7, combateId: 'ataque-armadura-0002' }));
+    expect(com.danoBruto).toBeGreaterThan(sem.danoBruto);
+  });
 });
