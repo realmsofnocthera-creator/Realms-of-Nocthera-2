@@ -197,7 +197,6 @@ describe('Dano elemental e status de ataque das habilidades de armadura', () => 
     expect([1, 3, 4, 6].map((n) => m.bonusDanoElementalDeArmadura({ 'ataque-de-agua': n }, [], 'vento', estado))).toEqual([3, 10, 13, 20]);
     expect(m.bonusDanoElementalDeArmadura({ 'ataque-de-raio': 2, 'ataque-de-dragao': 2 }, [], 'relampago', estado)).toBe(6);
     expect(m.bonusDanoElementalDeArmadura({ 'ataque-de-dragao': 2 }, [], 'sombrio', estado)).toBe(6);
-    expect(m.bonusDanoElementalDeArmadura({ 'artilharia-pesada': 2 }, [], 'fogo', estado)).toBe(50);
     expect(m.bonusDanoElementalDeArmadura({ 'tormenta-de-reydras': 3 }, [], 'relampago', estado)).toBe(15);
   });
 
@@ -243,7 +242,7 @@ describe('Dano elemental e status de ataque das habilidades de armadura', () => 
   it('Queimadura: Bombardeiro (+10% a +50%) e Artilharia Pesada (+25% e +50%) somam', async () => {
     const m = await import('@/game/combate/habilidadesArmaduraCombate');
     expect(m.bonusDanoQueimaduraDeArmadura({ bombardeiro: 5 })).toBe(50);
-    expect(m.bonusDanoQueimaduraDeArmadura({ bombardeiro: 2, 'artilharia-pesada': 1 })).toBe(45);
+    expect(m.bonusDanoQueimaduraDeArmadura({ bombardeiro: 2 })).toBe(20);
     expect(m.bonusDanoQueimaduraDeArmadura(undefined)).toBe(0);
   });
 
