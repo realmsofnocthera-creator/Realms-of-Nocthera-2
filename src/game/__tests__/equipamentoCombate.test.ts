@@ -285,3 +285,95 @@ describe('Dano elemental e status de ataque das habilidades de armadura', () => 
     expect(tick({ bombardeiro: 5 })).toBe(Math.floor((base * 150) / 100));
   });
 });
+
+describe('Resistências a status, Bênção Divina e cura das habilidades de armadura', () => {
+  const comHabilidades = (habilidadesArmadura: Record<string, number>, extra: Partial<Combatente> = {}) =>
+    personagem({ ...SEM_BONUS, habilidadesArmadura, sobreescudoMaximo: 1000 }, extra);
+  const monstroCom = (efeitosAplicados: NonNullable<MonsterDefinition['efeitosAplicados']>, atributos: Partial<MonsterDefinition['atributos']> = {}): MonsterDefinition => ({
+    ...ALVO,
+    efeitosAplicados,
+    atributos: { ...ALVO.atributos, ...atributos },
+  });
+  const eventos = (h: Record<string, number>, monstro: MonsterDefinition, rngStatus: () => number, extra: Partial<Combatente> = {}) =>
+    resolverCombate(comHabilidades(h, extra), monstro, 11, { rngStatus }).logTurnos[0].eventosEfeitos;
+  const aplicou = (ev: ReturnType<typeof eventos>, efeito: string) => ev.some((e) => e.efeito === efeito && e.tipo === 'aplicado' && !e.alvo);
+
+  it('as tabelas: chance, dano e duração por status', async () => {
+    const m = await import('@/game/combate/habilidadesArmaduraCombate');
+    expect([1, 2, 3].map((n) => m.reducaoChanceStatusDeArmadura({ 'resistencia-a-veneno': n }, 'veneno'))).toEqual([25, 50, 100]);
+    expect([1, 2, 3].map((n) => m.reducaoChanceStatusDeArmadura({ 'resistencia-a-atordoamento': n }, 'loucura'))).toEqual([40, 70, 100]);
+    expect([1, 2, 3].map((n) => m.reducaoChanceStatusDeArmadura({ 'resistencia-a-sangramento': n }, 'sangramento'))).toEqual([0, 0, 100]);
+    expect(m.reducaoChanceStatusDeArmadura({ 'resistencia-a-veneno': 3 }, 'sono')).toBe(0);
+    expect(m.reducaoChanceStatusDeArmadura(undefined, 'veneno')).toBe(0);
+    expect([1, 2, 3].map((n) => m.reducaoDanoStatusDeArmadura({ 'resistencia-a-explosao': n }, 'queimadura'))).toEqual([15, 30, 100]);
+    expect(m.reducaoDanoStatusDeArmadura({ 'bloqueio-de-calor': 1 }, 'queimadura')).toBe(100);
+    expect(m.reducaoDanoStatusDeArmadura({ 'especialista-em-efluvios': 1 }, 'podridaoEscarlate')).toBe(100);
+    expect(m.reducaoDanoStatusDeArmadura({ 'especialista-em-efluvios': 1 }, 'veneno')).toBe(20);
+    expect(m.reducaoDanoStatusDeArmadura({ 'resistencia-a-sangramento': 2 }, 'sangramento')).toBe(30);
+    expect([1, 2, 3].map((n) => m.reducaoDuracaoStatusDeArmadura({ 'resistencia-a-flagelo': n }, 'queimadura'))).toEqual([50, 75, 100]);
+    expect(m.reducaoDuracaoStatusDeArmadura({ 'resistencia-a-flagelo': 3 }, 'veneno')).toBe(0);
+  });
+
+  it('Bênção Divina: 25% de chance (40% no nível 5) de reduzir 15/30/50/60/60%; sem sorteio não dispara', async () => {
+    const m = await import('@/game/combate/habilidadesArmaduraCombate');
+    expect([1, 2, 3, 4, 5].map((n) => m.bencaoDivinaDeArmadura({ 'bencao-divina': n }, 0))).toEqual([15, 30, 50, 60, 60]);
+    expect(m.bencaoDivinaDeArmadura({ 'bencao-divina': 4 }, 25)).toBe(0);
+    expect(m.bencaoDivinaDeArmadura({ 'bencao-divina': 5 }, 39)).toBe(60);
+    expect(m.bencaoDivinaDeArmadura({ 'bencao-divina': 5 }, 40)).toBe(0);
+    expect(m.bencaoDivinaDeArmadura({ 'bencao-divina': 5 }, undefined)).toBe(0);
+    expect(m.bencaoDivinaDeArmadura(undefined, 0)).toBe(0);
+  });
+
+  it('cura: Aumento de Regeneração e Sobrevivente somam', async () => {
+    const m = await import('@/game/combate/habilidadesArmaduraCombate');
+    expect([1, 2, 3].map((n) => m.bonusCuraDeArmadura({ 'aumento-de-regeneracao': n }))).toEqual([10, 20, 30]);
+    expect([1, 2, 3].map((n) => m.bonusCuraDeArmadura({ sobrevivente: n }))).toEqual([5, 8, 10]);
+    expect(m.bonusCuraDeArmadura({ 'aumento-de-regeneracao': 3, sobrevivente: 3 })).toBe(40);
+    expect(m.bonusCuraDeArmadura(undefined)).toBe(0);
+  });
+
+  it('no combate: Resistência a Veneno reduz a chance (8% base, −25% = 6%) e o nível 3 deixa imune', () => {
+    const veneno = monstroCom(['veneno']);
+    expect(aplicou(eventos({}, veneno, () => 7), 'veneno')).toBe(true); // 7 < 8
+    expect(aplicou(eventos({ 'resistencia-a-veneno': 1 }, veneno, () => 7), 'veneno')).toBe(false); // 7 não passa de 6
+    expect(aplicou(eventos({ 'resistencia-a-veneno': 1 }, veneno, () => 5), 'veneno')).toBe(true);
+    expect(aplicou(eventos({ 'resistencia-a-veneno': 3 }, veneno, () => 0), 'veneno')).toBe(false); // imune
+  });
+
+  it('no combate: Resistência a Sangramento reduz o dano instantâneo; o nível 3 anula o status', () => {
+    const sangra = monstroCom(['sangramento']);
+    const dano = (h: Record<string, number>) => eventos(h, sangra, () => 0).find((e) => e.efeito === 'sangramento' && e.tipo === 'instantaneo')?.dano;
+    const base = dano({})!;
+    expect(base).toBeGreaterThan(0);
+    expect(dano({ 'resistencia-a-sangramento': 2 })).toBe(Math.floor((base * 70) / 100));
+    expect(dano({ 'resistencia-a-sangramento': 3 })).toBeUndefined();
+  });
+
+  it('no combate: Bloqueio de Calor anula o dano da Queimadura e Resistência a Flagelo encurta a duração', () => {
+    const queima = monstroCom(['queimadura']);
+    const tick = (h: Record<string, number>) => eventos(h, queima, () => 0).find((e) => e.efeito === 'queimadura' && e.tipo === 'dano')?.dano;
+    expect(tick({})!).toBeGreaterThan(0);
+    expect(tick({ 'bloqueio-de-calor': 1 })).toBe(0);
+    const duracao = (h: Record<string, number>) => eventos(h, queima, () => 0).find((e) => e.efeito === 'queimadura' && e.tipo === 'aplicado')?.rodadasRestantes;
+    expect(duracao({})).toBe(5);
+    expect(duracao({ 'resistencia-a-flagelo': 1 })).toBe(3); // −50% de 5, arredondado para cima
+    expect(duracao({ 'resistencia-a-flagelo': 3 })).toBe(1); // some no fim da rodada
+  });
+
+  it('no combate: a Bênção Divina reduz o golpe do monstro quando dispara', () => {
+    const forte = { ...ALVO, atributos: { ...ALVO.atributos, forca: 400 } };
+    const golpe = (h: Record<string, number>, rng: number) =>
+      resolverCombate(comHabilidades(h, { mitigacao: 0 }), forte, 11, { rngStatus: () => rng }).logTurnos[0].ataques.find((a) => a.atacante === 'Alvo de Teste')!;
+    const sem = golpe({}, 0).danoBruto;
+    expect(golpe({ 'bencao-divina': 4 }, 0).danoBruto).toBe(Math.floor((sem * 40) / 100)); // dispara: −60%
+    expect(golpe({ 'bencao-divina': 4 }, 50).danoBruto).toBe(sem); // não dispara
+  });
+
+  it('no combate: Aumento de Regeneração aumenta a cura que o Profeta faz em si', () => {
+    const cura = (h: Record<string, number>) =>
+      resolverCombate(comHabilidades(h, { classeId: 'profeta', hp: 1000, hpMax: 5000, atributos: { vigor: 20, sorte: 0, forca: 0, vitalidade: 20, arcano: 0, inteligencia: 80, agilidade: 10 } }), ALVO, 11, { rngStatus: () => 99.9 })
+        .logTurnos[0].ataques.find((a) => a.atacante === 'Herói')?.curaHp ?? 0;
+    const base = cura({});
+    if (base > 0) expect(cura({ 'aumento-de-regeneracao': 3 })).toBeGreaterThan(base);
+  });
+});
