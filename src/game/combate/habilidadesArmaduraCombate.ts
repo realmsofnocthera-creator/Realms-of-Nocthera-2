@@ -55,7 +55,6 @@ export const HABILIDADES_ARMADURA_NO_MOTOR: ReadonlySet<string> = new Set([
   'adicao-de-sono',
   'adicao-de-explosao',
   'bombardeiro',
-  'artilharia-pesada',
   'coalescencia',
   'poder-de-diablos',
   'tormenta-de-reydras',
@@ -146,7 +145,6 @@ export function bonusDanoElementalDeArmadura(
   for (const [id, el] of Object.entries(ELEMENTO_DO_ATAQUE)) {
     if (el === elemento && (h[id] ?? 0) > 0) total += por([3, 6, 10, 13, 16, 20], h[id]);
   }
-  if (elemento === 'fogo' && (h['artilharia-pesada'] ?? 0) > 0) total += por([25, 50], h['artilharia-pesada']);
   if (elemento === 'relampago' && (h['tormenta-de-reydras'] ?? 0) > 0) total += por([5, 10, 15], h['tormenta-de-reydras']);
   if ((h['coalescencia'] ?? 0) > 0 && abaixo(e.hpAtacante, e.hpMaxAtacante, 50)) total += por([6, 12, 18], h['coalescencia']);
   return total;
@@ -196,7 +194,7 @@ export function adicoesDeStatus(h: HabilidadesArmaduraAtivas | undefined, status
 /** Dano da Queimadura aplicada por quem tem a armadura: Bombardeiro (+10% a +50%) e Artilharia Pesada (+25% e +50%). */
 export function bonusDanoQueimaduraDeArmadura(h: HabilidadesArmaduraAtivas | undefined): number {
   if (!h) return 0;
-  return ((h['bombardeiro'] ?? 0) > 0 ? por([10, 20, 30, 40, 50], h['bombardeiro']) : 0) + ((h['artilharia-pesada'] ?? 0) > 0 ? por([25, 50], h['artilharia-pesada']) : 0);
+  return ((h['bombardeiro'] ?? 0) > 0 ? por([10, 20, 30, 40, 50], h['bombardeiro']) : 0);
 }
 
 // ---------------------------------------------------------------------------
