@@ -36,6 +36,9 @@ export function resolverDanoHabilidade(
     ctx.bonusDanoExtraPercentual ?? 0,
     bonusContraSobreescudo,
     bonusDanoPorStatus(ctx.alvo.condicoes ?? [], r.bonusPorStatusAlvo),
+    r.bonusContraCondicao && (ctx.alvo.condicoes ?? []).includes(r.bonusContraCondicao.condicao)
+      ? r.bonusContraCondicao.percentual
+      : 0,
     r.bonusPorMarca ? bonusDanoPorMarcas(ctx.alvo.marcas) : 0,
     r.bonusContraElementoAlvo && ctx.alvo.elemento === r.bonusContraElementoAlvo.elemento
       ? r.bonusContraElementoAlvo.percentual

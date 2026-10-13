@@ -86,6 +86,7 @@ import {
   tentativasRestantes,
 } from '@/game/batalhaSangrenta';
 import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
+import { CHEFES_ESPECIAIS_MAP } from '@/rules/chefesEspeciais';
 import { randomInt, randomUUID } from 'node:crypto';
 import { registrarLog } from './log';
 import {
@@ -1579,7 +1580,7 @@ export async function executarBatalhaSangrenta(
     let hpAtual = entradaCombatente.hp;
     let ondasVencidas = 0;
     for (const [indice, onda] of plano.entries()) {
-      const monstro = MONSTROS_CACADA_MAP[onda.monstroId];
+      const monstro = MONSTROS_CACADA_MAP[onda.monstroId] ?? CHEFES_ESPECIAIS_MAP[onda.monstroId];
       const combatente = combatenteDoPersonagem(current);
       combatente.hp = hpAtual;
       const resultado = resolverCombate(combatente, monstro, sementeDaOnda(opcoes.seed, indice));

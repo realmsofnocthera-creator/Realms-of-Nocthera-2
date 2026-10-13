@@ -1,3 +1,4 @@
+import { CHEFES_ESPECIAIS_MAP } from '@/rules/chefesEspeciais';
 import { describe, it, expect } from 'vitest';
 import {
   BATALHA_SANGRENTA,
@@ -73,7 +74,8 @@ describe('Batalha Sangrenta: regras', () => {
       const ondas = montarOndas(d, 12345);
       expect(ondas).toHaveLength(BATALHA_SANGRENTA.ondasComuns + 1);
       expect(ondas.map((o) => o.chefe)).toEqual([false, false, false, false, true]);
-      for (const o of ondas) expect(DADOS_CACADA_MAP[o.monstroId].estrela).toBe(d.estrela);
+      for (const o of ondas.slice(0, 4)) expect(DADOS_CACADA_MAP[o.monstroId].estrela).toBe(d.estrela);
+      expect(CHEFES_ESPECIAIS_MAP[ondas[4].monstroId].chefe).toBe(true);
       expect(ondas[4].monstroId).toBe(CHEFES_ESPECIAIS[d.id][0]);
       expect(ondas.slice(0, 4).every((o) => !DADOS_CACADA_MAP[o.monstroId].chave)).toBe(true);
       expect(new Set(ondas.slice(0, 4).map((o) => o.monstroId)).size).toBe(4); // sem repetir
@@ -84,9 +86,8 @@ describe('Batalha Sangrenta: regras', () => {
     const ondas = montarOndas(DIFICULDADES_BATALHA_MAP.inferno, 7);
     expect(ondas).toHaveLength(6);
     expect(ondas.map((o) => o.chefe)).toEqual([false, false, false, false, true, true]);
-    expect(ondas.every((o) => DADOS_CACADA_MAP[o.monstroId].estrela === 9)).toBe(true);
-    expect(ondas[4].monstroId).not.toBe(ondas[5].monstroId);
-    expect(CHEFES_ESPECIAIS.inferno).toContain(ondas[4].monstroId);
+    expect(ondas.slice(0, 4).every((o) => DADOS_CACADA_MAP[o.monstroId].estrela === 9)).toBe(true);
+    expect(ondas.slice(4).map((o) => o.monstroId)).toEqual(['varkhazar-dragao-da-carnificina', 'noctharion-dragao-do-eclipse-eterno']);
   });
 
   it('é determinística pela semente e muda com ela', () => {

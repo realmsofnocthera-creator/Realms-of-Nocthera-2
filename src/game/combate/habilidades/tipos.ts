@@ -83,6 +83,8 @@ export interface ResultadoHabilidade {
   // ---- Bônus por status no alvo e Marca (catálogo 1.2, 1.9.1) ----
   /** Bônus por status no alvo: soma a % de cada condição listada que estiver ativa no alvo (valores da lista do Yuri). */
   bonusPorStatusAlvo?: CondicaoAlvo[];
+  /** +X% de dano quando o alvo está com a condição indicada (Dilacerar do Grizzham contra Sangramento). */
+  bonusContraCondicao?: { condicao: CondicaoAlvo; percentual: number };
   /** Elemento da habilidade (vale para o cálculo elemental do golpe e para o bônus por elemento). */
   elemento?: Elemento;
   /** Bônus por elemento ativo: o elemento da habilidade concede o seu pacote de bônus por 2 rodadas. */

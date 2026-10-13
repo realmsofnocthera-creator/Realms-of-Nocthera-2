@@ -50,16 +50,14 @@ export const BATALHA_SANGRENTA = {
 } as const;
 
 /**
- * Chefes Especiais de cada dificuldade. PROVISÓRIO: por enquanto são os monstros-chave da Caçada; o Yuri vai dizer
- * quem são os chefes Especiais de verdade e esta tabela é o único lugar a mudar. Na 9★ (que não tem monstro-chave)
- * os 2 chefes são sorteados entre os monstros da estrela.
+ * Chefes Especiais de cada dificuldade (src/rules/chefesEspeciais.ts). O Inferno traz os dois dragões.
  */
 export const CHEFES_ESPECIAIS: Readonly<Record<DificuldadeBatalha, readonly string[]>> = {
-  facil: ['nythrakka-matriarca-do-casulo'],
-  medio: ['raizark'],
-  dificil: ['dromvark'],
-  muitoDificil: ['tharvok'],
-  inferno: ['oryndrak', 'reydras', 'dravakhar', 'urdumor'],
+  facil: ['darius-carrasco-escarlate'],
+  medio: ['nymeria-noiva-do-lamento'],
+  dificil: ['grizzham-devorador-de-ossos'],
+  muitoDificil: ['othrak-relicto-primordial'],
+  inferno: ['varkhazar-dragao-da-carnificina', 'noctharion-dragao-do-eclipse-eterno'],
 };
 
 /** Nível pedido pela vitrine das Provações (src/rules/provacoes.ts). */
@@ -151,11 +149,11 @@ function embaralhar<T>(lista: readonly T[], sorteio: () => number): T[] {
 
 /**
  * Monta as ondas: 4 monstros comuns da estrela da dificuldade (sorteados, sem repetir) e, por último, o(s) chefe(s)
- * Especial(is). Na dificuldade com mais de um chefe, eles são sorteados entre os candidatos da tabela.
+ * Especial(is).
  */
 export function montarOndas(dificuldade: DefinicaoDificuldade, semente: number): OndaBatalha[] {
   const sorteio = geradorDaSemente(semente);
-  const chefes = embaralhar(CHEFES_ESPECIAIS[dificuldade.id], sorteio).slice(0, dificuldade.chefes);
+  const chefes = CHEFES_ESPECIAIS[dificuldade.id].slice(0, dificuldade.chefes);
   const daEstrela = MONSTROS_CACADA_DADOS.filter((d) => d.estrela === dificuldade.estrela);
   // Comuns: da estrela, sem o monstro-chave e sem os chefes desta batalha; se não sobrar ninguém, usa a estrela toda.
   let comuns = daEstrela.filter((d) => !d.chave && !chefes.includes(d.id));
