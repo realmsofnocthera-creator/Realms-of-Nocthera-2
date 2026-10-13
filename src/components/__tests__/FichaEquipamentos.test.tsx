@@ -35,8 +35,8 @@ describe('Aba Equipamentos da ficha', () => {
     expect(html).toContain('Elemento: Gelo');
     expect(html).toContain('Status: Sangramento');
     expect(html).toContain('Reforço de Ataque'); // já vale no combate
-    expect(html).toContain('Tempo de Esquiva'); // ainda não vale: a tela avisa
-    expect(html).toContain('ainda não valem no combate');
+    expect(html).toContain('Extensor de Esquiva'); // Agilidade em porcentagem, já vale
+    expect(html).not.toContain('ainda não valem no combate'); // todas as habilidades deste equipamento valem
   });
 
   it('a escolha lista os itens do espaço, com Equipar e Desequipar', () => {

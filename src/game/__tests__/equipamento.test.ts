@@ -159,7 +159,7 @@ describe('Ficha de combate do equipamento', () => {
     const armaduras = [peca('a', 'rato-da-floresta-elmo'), peca('b', 'rato-da-floresta-peitoral')];
     const f = calcularFichaEquipamento({ armaId: null, armadura: { elmo: 'a', peitoral: 'b' } }, [], armaduras);
     expect(f.habilidades['olho-critico']).toBe(2); // elmo: Olho Crítico 2
-    expect(f.habilidades['tempo-de-esquiva']).toBe(2); // peitoral: Tempo de Esquiva 2
+    expect(f.habilidades['extensor-de-esquiva']).toBe(2); // peitoral: Extensor de Esquiva 2
   });
 });
 
