@@ -10,7 +10,7 @@ const OURO = '#C8A656';
 
 const OPCOES = [
   { id: 'equipamentos', nome: 'Fabricar equipamentos', descricao: 'Forje armas a partir dos materiais dos monstros.', Icone: Swords, href: '/forja' as string | null },
-  { id: 'armadura', nome: 'Melhorar armadura', descricao: 'Em breve.', Icone: Shield, href: null },
+  { id: 'armadura', nome: 'Melhorar armadura', descricao: 'Fabrique peças e suba o nível delas com orbes.', Icone: Shield, href: '/armaduras' },
   { id: 'cosmeticos', nome: 'Fabricar cosméticos', descricao: 'Em breve.', Icone: Sparkles, href: null },
 ];
 
