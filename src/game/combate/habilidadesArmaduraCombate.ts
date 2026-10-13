@@ -27,6 +27,19 @@ const abaixo = (hp: number, hpMax: number, limitePercentual: number) => hpMax > 
 
 /** Habilidades que este módulo aplica no combate. */
 export const HABILIDADES_ARMADURA_NO_MOTOR: ReadonlySet<string> = new Set([
+  'resistencia-a-veneno',
+  'resistencia-a-paralisia',
+  'resistencia-a-sono',
+  'resistencia-a-atordoamento',
+  'resistencia-a-explosao',
+  'resistencia-a-sangramento',
+  'resistencia-a-efluvios',
+  'resistencia-a-flagelo',
+  'especialista-em-efluvios',
+  'bloqueio-de-calor',
+  'bencao-divina',
+  'aumento-de-regeneracao',
+  'sobrevivente',
   'ataque-de-fogo',
   'ataque-de-agua',
   'ataque-de-gelo',
@@ -184,4 +197,68 @@ export function adicoesDeStatus(h: HabilidadesArmaduraAtivas | undefined, status
 export function bonusDanoQueimaduraDeArmadura(h: HabilidadesArmaduraAtivas | undefined): number {
   if (!h) return 0;
   return ((h['bombardeiro'] ?? 0) > 0 ? por([10, 20, 30, 40, 50], h['bombardeiro']) : 0) + ((h['artilharia-pesada'] ?? 0) > 0 ? por([25, 50], h['artilharia-pesada']) : 0);
+}
+
+// ---------------------------------------------------------------------------
+// Parte 4: resistência a status, Bênção Divina e cura
+// ---------------------------------------------------------------------------
+
+const TABELA_RESISTENCIA_CHANCE: readonly { id: string; status: EfeitoStatus; porNivel: readonly number[] }[] = [
+  { id: 'resistencia-a-veneno', status: 'veneno', porNivel: [25, 50, 100] },
+  { id: 'resistencia-a-paralisia', status: 'paralisia', porNivel: [30, 60, 100] },
+  { id: 'resistencia-a-sono', status: 'sono', porNivel: [30, 60, 100] },
+  // O Atordoamento do Monster Hunter virou a Loucura; a Explosão, a Queimadura; os Eflúvios, a Podridão Escarlate
+  { id: 'resistencia-a-atordoamento', status: 'loucura', porNivel: [40, 70, 100] },
+  { id: 'resistencia-a-explosao', status: 'queimadura', porNivel: [25, 50, 100] },
+  { id: 'resistencia-a-efluvios', status: 'podridaoEscarlate', porNivel: [25, 50, 100] },
+  // Sangramento: os níveis 1 e 2 reduzem o dano; só o 3 anula (imunidade)
+  { id: 'resistencia-a-sangramento', status: 'sangramento', porNivel: [0, 0, 100] },
+];
+
+/** % a menos na chance de sofrer o status (100 = imune), somado entre as habilidades. */
+export function reducaoChanceStatusDeArmadura(h: HabilidadesArmaduraAtivas | undefined, status: EfeitoStatus): number {
+  if (!h) return 0;
+  let total = 0;
+  for (const t of TABELA_RESISTENCIA_CHANCE) if (t.status === status && (h[t.id] ?? 0) > 0) total += por(t.porNivel, h[t.id]);
+  return Math.min(100, total);
+}
+
+/** % a menos no dano do status que o personagem sofre (Queimadura, Sangramento, Podridão Escarlate e Veneno); 100 = anula. */
+export function reducaoDanoStatusDeArmadura(h: HabilidadesArmaduraAtivas | undefined, status: EfeitoStatus): number {
+  if (!h) return 0;
+  const nv = (id: string) => h[id] ?? 0;
+  let total = 0;
+  if (status === 'queimadura') {
+    if (nv('resistencia-a-explosao') > 0) total += por([15, 30, 100], nv('resistencia-a-explosao'));
+    if (nv('bloqueio-de-calor') > 0) total += 100;
+  }
+  if (status === 'sangramento' && nv('resistencia-a-sangramento') > 0) total += por([15, 30, 100], nv('resistencia-a-sangramento'));
+  if (status === 'podridaoEscarlate') {
+    if (nv('resistencia-a-efluvios') > 0) total += por([15, 30, 100], nv('resistencia-a-efluvios'));
+    if (nv('especialista-em-efluvios') > 0) total += 100;
+  }
+  if (status === 'veneno' && nv('especialista-em-efluvios') > 0) total += 20;
+  return Math.min(100, total);
+}
+
+/** Resistência a Flagelo: % a menos na duração da Queimadura e da Podridão Escarlate (100 = some no fim da rodada). */
+export function reducaoDuracaoStatusDeArmadura(h: HabilidadesArmaduraAtivas | undefined, status: EfeitoStatus): number {
+  const nivel = h?.['resistencia-a-flagelo'] ?? 0;
+  return nivel > 0 && (status === 'queimadura' || status === 'podridaoEscarlate') ? por([50, 75, 100], nivel) : 0;
+}
+
+/**
+ * Bênção Divina: a cada golpe recebido há 25% de chance (40% no nível 5) de reduzir o dano em 15%, 30%, 50%, 60% e 60%.
+ * Soma com as outras reduções de dano recebido, com o teto de 80% (regra 1.2.2). Sem sorteio, não dispara.
+ */
+export function bencaoDivinaDeArmadura(h: HabilidadesArmaduraAtivas | undefined, sorteio: number | undefined): number {
+  const nivel = h?.['bencao-divina'] ?? 0;
+  if (nivel <= 0 || sorteio === undefined) return 0;
+  return sorteio < (nivel >= 5 ? 40 : 25) ? por([15, 30, 50, 60, 60], nivel) : 0;
+}
+
+/** Eficácia das curas de quem tem a armadura: Aumento de Regeneração (+10% a +30%) e Sobrevivente (+5% a +10%), na mesma soma. */
+export function bonusCuraDeArmadura(h: HabilidadesArmaduraAtivas | undefined): number {
+  if (!h) return 0;
+  return ((h['aumento-de-regeneracao'] ?? 0) > 0 ? por([10, 20, 30], h['aumento-de-regeneracao']) : 0) + ((h['sobrevivente'] ?? 0) > 0 ? por([5, 8, 10], h['sobrevivente']) : 0);
 }
