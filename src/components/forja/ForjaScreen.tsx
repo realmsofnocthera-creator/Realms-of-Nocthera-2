@@ -11,12 +11,16 @@ import {
   CATEGORIAS_TELA,
   COR_RARIDADE_ARMA,
   DetalheArmaTela,
+  DetalheMinhaArmaTela,
   EstadoNoForja,
   NoForja,
   arvoresDaForja,
   detalheDaArma,
+  detalheDaMinhaArma,
   listaDeForja,
+  minhasArmasTela,
 } from '@/lib/forjaTela';
+import type { OpcaoCustomizacao } from '@/rules/armas';
 import { NOCTHERA_THEME } from '@/theme/theme';
 
 const OURO = '#C8A656';
@@ -33,7 +37,7 @@ interface RespostaForjaTela {
   arma: ArmaPersonagem;
 }
 
-type Aba = 'arvore' | 'lista';
+type Aba = 'arvore' | 'lista' | 'minhas';
 
 function Lanca({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
@@ -84,6 +88,9 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco }: Forja
   const arvores = useMemo(() => arvoresDaForja(categoria, character), [categoria, character]);
   const lista = useMemo(() => listaDeForja(categoria, character), [categoria, character]);
   const detalhe = selecionada ? detalheDaArma(selecionada, categoria, character) : null;
+  const minhas = useMemo(() => minhasArmasTela(character), [character]);
+  const [minhaAberta, setMinhaAberta] = useState<string | null>(null);
+  const detalheMinha = minhaAberta ? detalheDaMinhaArma(minhaAberta, character) : null;
   const estrelasComArvore = [...new Set(arvores.map((a) => a.estrela))];
 
   const abrir = (baseId: string) => {
@@ -116,6 +123,34 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco }: Forja
     }
   };
 
+  const executarNaArma = async (rota: string, corpo: unknown, mensagem: (a: ArmaPersonagem, nome: string) => string, nome: string) => {
+    if (ocupado) return;
+    setOcupado(true);
+    setErro(null);
+    try {
+      const token = await tokenFresco();
+      if (!token) throw new Error('Sessão expirada. Faça login de novo.');
+      const res = await fetch(rota, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(corpo),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Não foi possível concluir na Forja.');
+      const r = data as RespostaForjaTela;
+      onCharacterChange(r.character);
+      setAviso(mensagem(r.arma, nome));
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Erro na Forja.');
+    } finally {
+      setOcupado(false);
+    }
+  };
+  const reforjarArma = (d: DetalheMinhaArmaTela) =>
+    executarNaArma('/api/forja/reforjar', { armaId: d.id }, (a, nome) => `${nome} reforjada! ${rotuloAtributo(a)}`, d.nome);
+  const customizarArma = (d: DetalheMinhaArmaTela, opcao: OpcaoCustomizacao) =>
+    executarNaArma('/api/forja/customizar', { armaId: d.id, opcao }, (_a, nome) => `${nome} customizada: +1 ponto em ${NOME_OPCAO[opcao]}.`, d.nome);
+
   return (
     <main className="min-h-dvh w-full flex flex-col items-center px-2.5 py-3 select-none" style={{ backgroundColor: colors.background.primary, backgroundImage: 'radial-gradient(ellipse at top, rgba(48,28,14,0.92) 0%, rgba(13,13,13,1) 75%)', color: colors.text.primary }}>
       <div className="w-full max-w-[480px] flex flex-col gap-2.5 pb-4">
@@ -133,22 +168,22 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco }: Forja
           <h1 className="text-2xl font-cinzel font-extrabold tracking-widest uppercase" style={{ color: '#F5E3B3' }}>Forja</h1>
         </div>
 
-        <nav aria-label="Abas da Forja" className="grid grid-cols-2 rounded-sm border-2 overflow-hidden" style={{ borderColor: OURO }}>
-          {([['arvore', 'Árvore de armas'], ['lista', `Lista de forja (${lista.length})`]] as const).map(([id, nome]) => (
-            <button key={id} type="button" aria-pressed={aba === id} onClick={() => setAba(id)} className="py-1.5 text-xs font-cinzel font-bold uppercase cursor-pointer" style={{ backgroundColor: aba === id ? OURO : colors.background.secondary, color: aba === id ? colors.background.primary : '#E6C775' }}>
+        <nav aria-label="Abas da Forja" className="grid grid-cols-3 rounded-sm border-2 overflow-hidden" style={{ borderColor: OURO }}>
+          {([['arvore', 'Árvore'], ['lista', `Lista (${lista.length})`], ['minhas', `Minhas armas (${minhas.length})`]] as const).map(([id, nome]) => (
+            <button key={id} type="button" aria-pressed={aba === id} onClick={() => { setAba(id); setErro(null); }} className="py-1.5 text-xs font-cinzel font-bold uppercase cursor-pointer" style={{ backgroundColor: aba === id ? OURO : colors.background.secondary, color: aba === id ? colors.background.primary : '#E6C775' }}>
               {nome}
             </button>
           ))}
         </nav>
 
-        <div role="group" aria-label="Categoria da arma" className="flex gap-1.5 overflow-x-auto pb-1 -mx-0.5 px-0.5">
+        {aba !== 'minhas' && <div role="group" aria-label="Categoria da arma" className="flex gap-1.5 overflow-x-auto pb-1 -mx-0.5 px-0.5">
           {CATEGORIAS_TELA.map((c) => (
             <button key={c.id} type="button" aria-pressed={categoria === c.id} onClick={() => { setCategoria(c.id); setSelecionada(null); }} className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-sm border text-[11px] font-semibold cursor-pointer" style={{ backgroundColor: categoria === c.id ? `${OURO}33` : colors.background.secondary, borderColor: categoria === c.id ? DESTAQUE : `${colors.border.default}99`, color: categoria === c.id ? '#F5E3B3' : colors.text.secondary }}>
               <IconeCategoria categoria={c.id} className="w-3.5 h-3.5" />
               {c.nome}
             </button>
           ))}
-        </div>
+        </div>}
 
         {aviso && (
           <div role="status" className="flex items-start justify-between gap-2 rounded px-2 py-1.5 text-xs font-semibold" style={{ backgroundColor: '#1E3A24', color: '#BFEFC6' }}>
@@ -157,7 +192,28 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco }: Forja
           </div>
         )}
 
-        {aba === 'arvore' ? (
+        {aba === 'minhas' ? (
+          <section aria-label="Minhas armas" className="flex flex-col gap-1.5">
+            {minhas.length === 0 ? (
+              <div className="rounded-sm border-2 p-5 text-center text-sm" style={{ backgroundColor: colors.background.secondary, borderColor: `${colors.border.default}99`, color: colors.text.secondary }}>
+                Você ainda não tem armas. Forje a primeira na aba Árvore ou Lista.
+              </div>
+            ) : (
+              minhas.map((m) => (
+                <button key={m.id} type="button" onClick={() => { setErro(null); setMinhaAberta(m.id); }} className="flex items-center gap-2.5 rounded-sm border-2 px-2.5 py-2 text-left cursor-pointer" style={{ backgroundColor: colors.background.secondary, borderColor: `${m.cor}99` }}>
+                  <IconeCategoria categoria={m.categoria} className="w-6 h-6 shrink-0" style={{ color: m.cor }} />
+                  <span className="flex-1 flex flex-col min-w-0">
+                    <span className="text-[13px] font-semibold truncate" style={{ color: m.cor }}>{m.nome}</span>
+                    <span className="text-[10px]" style={{ color: colors.text.secondary }}>{m.raridadeNome} · {m.categoriaNome} · {m.atributo} +{m.pontos}</span>
+                  </span>
+                  <span className="text-right text-[10px]" style={{ color: colors.text.secondary }}>
+                    {m.reforjas} reforja(s){m.mitica ? ` · ${m.pontosCustomizacao}/20 pts` : ''}
+                  </span>
+                </button>
+              ))
+            )}
+          </section>
+        ) : aba === 'arvore' ? (
           <>
             <div role="group" aria-label="Estrela do monstro" className="flex gap-1 overflow-x-auto pb-1">
               {estrelasComArvore.map((e) => (
@@ -193,10 +249,22 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco }: Forja
         )}
       </div>
 
+      {detalheMinha && (
+        <FolhaMinhaArma
+          detalhe={detalheMinha}
+          ocupado={ocupado}
+          erro={erro}
+          onFechar={() => setMinhaAberta(null)}
+          onReforjar={() => reforjarArma(detalheMinha)}
+          onCustomizar={(opcao) => customizarArma(detalheMinha, opcao)}
+        />
+      )}
       {detalhe && <FolhaDetalhe detalhe={detalhe} categoria={categoria} ocupado={ocupado} erro={erro} onFechar={() => setSelecionada(null)} onForjar={() => forjar(detalhe)} />}
     </main>
   );
 }
+
+const NOME_OPCAO: Readonly<Record<OpcaoCustomizacao, string>> = { dano: 'Dano', atributo: 'Atributo secundário', status: 'Mais status' };
 
 function rotuloAtributo(arma: ArmaPersonagem): string {
   const nomes: Record<string, string> = { vigor: 'Vigor', sorte: 'Sorte', forca: 'Força', vitalidade: 'Vitalidade', arcano: 'Arcano', inteligencia: 'Inteligência', agilidade: 'Agilidade' };
@@ -311,6 +379,80 @@ function FolhaDetalhe({ detalhe: d, categoria, ocupado, erro, onFechar, onForjar
             {ocupado ? 'Forjando...' : d.estado === 'bloqueada' ? 'Falta a arma anterior' : d.estado === 'faltaMaterial' ? 'Falta material ou ouro' : d.acao}
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** Sheet de uma arma que o personagem tem: reforjar (sorteia os pontos de novo) e, nas Míticas, customizar. */
+export function FolhaMinhaArma({ detalhe: d, ocupado, erro, onFechar, onReforjar, onCustomizar }: {
+  detalhe: DetalheMinhaArmaTela;
+  ocupado: boolean;
+  erro: string | null;
+  onFechar: () => void;
+  onReforjar: () => void;
+  onCustomizar: (opcao: OpcaoCustomizacao) => void;
+}) {
+  const { colors } = NOCTHERA_THEME;
+  const receita = [...d.reforja.materiais, ...(d.reforja.diversos ? [d.reforja.diversos] : [])];
+  const cust = d.customizacao;
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={`Sua arma: ${d.nome}`}>
+      <button type="button" aria-label="Fechar detalhes" onClick={onFechar} className="absolute inset-0 cursor-default" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} />
+      <div className="relative w-full max-w-[480px] max-h-[88dvh] overflow-y-auto rounded-t-md border-2 border-b-0 px-3.5 pt-3 pb-4 flex flex-col gap-2.5" style={{ backgroundColor: colors.background.secondary, borderColor: d.cor }}>
+        <div className="flex items-start gap-3">
+          <span className="w-14 h-14 shrink-0 rounded-sm border-2 flex items-center justify-center" style={{ borderColor: d.cor, backgroundColor: colors.background.primary }}>
+            <IconeCategoria categoria={d.categoria} className="w-8 h-8" style={{ color: d.cor }} />
+          </span>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[16px] font-cinzel font-extrabold leading-tight" style={{ color: d.cor }}>{d.nome}</h2>
+            <p className="text-[11px]" style={{ color: colors.text.secondary }}>{d.raridadeNome} · {d.categoriaNome} · {estrelas(d.estrela)} {d.monstroNome}</p>
+          </div>
+          <button type="button" aria-label="Fechar" onClick={onFechar} className="cursor-pointer"><X className="w-5 h-5" style={{ color: colors.text.secondary }} /></button>
+        </div>
+
+        <div className="rounded-sm border p-2 flex flex-col gap-1" style={{ borderColor: `${colors.border.default}99` }}>
+          <Linha rotulo={d.tipoDano} valor={d.danoFixo === d.danoFixoBase ? d.danoFixo : `${d.danoFixo} (base ${d.danoFixoBase})`} cor="#F5E3B3" />
+          <Linha rotulo="Atributo sorteado" valor={`${d.atributo} +${d.pontos}`} cor="#BFEFC6" />
+          <Linha rotulo="Reforjas feitas" valor={d.reforjas} />
+          {d.elementos.length > 0 && <Linha rotulo="Elemento" valor={d.elementos.join(' + ')} />}
+          {d.status.length > 0 && <Linha rotulo="Status" valor={d.status.join(', ')} />}
+        </div>
+
+        <div className="rounded-sm border p-2 flex flex-col gap-1.5" style={{ borderColor: `${DESTAQUE}88` }}>
+          <h3 className="text-[11px] font-cinzel font-bold uppercase tracking-wider" style={{ color: OURO }}>Reforjar ({d.reforja.percentual}% da receita)</h3>
+          <p className="text-[11px]" style={{ color: colors.text.secondary }}>Sorteia de novo os pontos do atributo, que podem sair maiores ou menores. O tipo do atributo e a Customização ficam.</p>
+          {receita.map((m) => <Linha key={m.id} rotulo={m.nome} cor={m.ok ? '#BFEFC6' : '#E5736B'} valor={`${m.tem}/${m.precisa}`} />)}
+          <Linha rotulo="Ouro" cor={d.reforja.ouro.ok ? '#BFEFC6' : '#E5736B'} valor={`${d.reforja.ouro.tem.toLocaleString('pt-BR')}/${d.reforja.ouro.precisa.toLocaleString('pt-BR')}`} />
+          <button type="button" disabled={!d.reforja.pode || ocupado} onClick={onReforjar} className="w-full py-2 rounded-sm border-2 font-cinzel font-extrabold uppercase tracking-wider text-sm enabled:cursor-pointer disabled:cursor-not-allowed" style={{ backgroundColor: d.reforja.pode ? OURO : colors.background.primary, borderColor: OURO, color: d.reforja.pode ? colors.background.primary : colors.text.secondary, opacity: d.reforja.pode ? 1 : 0.7 }}>
+            {ocupado ? 'Forjando...' : d.reforja.pode ? 'Reforjar' : 'Falta material ou ouro'}
+          </button>
+        </div>
+
+        {cust ? (
+          <div className="rounded-sm border p-2 flex flex-col gap-1.5" style={{ borderColor: `${d.cor}99` }}>
+            <h3 className="text-[11px] font-cinzel font-bold uppercase tracking-wider" style={{ color: OURO }}>Customização ({d.pontosCustomizacao}/{cust.maximo} pontos)</h3>
+            <p className="text-[11px]" style={{ color: colors.text.secondary }}>Cada ponto custa ouro e 1 Bilhete de melhoria (cai em 1% das vitórias contra monstros 9★).</p>
+            <Linha rotulo="Ouro por ponto" cor={cust.ouroPorPonto.ok ? '#BFEFC6' : '#E5736B'} valor={`${cust.ouroPorPonto.tem.toLocaleString('pt-BR')}/${cust.ouroPorPonto.precisa.toLocaleString('pt-BR')}`} />
+            <Linha rotulo={cust.bilhete.nome} cor={cust.bilhete.ok ? '#BFEFC6' : '#E5736B'} valor={`${cust.bilhete.tem}/${cust.bilhete.precisa}`} />
+            {cust.opcoes.map((o) => (
+              <div key={o.id} className="flex items-center justify-between gap-2 text-[12px]">
+                <span className="flex flex-col">
+                  <span className="font-semibold" style={{ color: '#F5E3B3' }}>{o.nome} <span style={{ color: colors.text.secondary }}>({o.pontos} pt · {o.atual})</span></span>
+                  <span className="text-[10px]" style={{ color: colors.text.secondary }}>{o.disponivel ? `Cada ponto: ${o.porPonto}` : 'Esta arma não tem status'}</span>
+                </span>
+                <button type="button" aria-label={`Adicionar ponto em ${o.nome}`} disabled={!cust.pode || !o.disponivel || ocupado} onClick={() => onCustomizar(o.id)} className="shrink-0 px-2.5 py-1 rounded-sm border-2 font-cinzel font-bold uppercase text-[11px] enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-40" style={{ borderColor: OURO, color: '#E6C775', backgroundColor: colors.background.primary }}>
+                  + 1
+                </button>
+              </div>
+            ))}
+            {cust.noMaximo && <span className="text-[11px] font-semibold" style={{ color: '#BFEFC6' }}>Customização no máximo.</span>}
+          </div>
+        ) : (
+          <p className="text-[11px]" style={{ color: colors.text.secondary }}>Só as armas Míticas podem ser customizadas.</p>
+        )}
+
+        {erro && <div role="alert" className="rounded px-2 py-1.5 text-xs font-semibold" style={{ backgroundColor: colors.status.danger, color: colors.text.primary }}>{erro}</div>}
       </div>
     </div>
   );

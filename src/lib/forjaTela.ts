@@ -8,8 +8,12 @@ import {
   RARIDADES_ARMA_MAP,
   RaridadeArma,
   ReceitaArma,
+  CUSTOMIZACAO,
+  OpcaoCustomizacao,
   atributosSorteaveis,
   danoFixoDaArma,
+  percentualCustoReforja,
+  podeCustomizar,
 } from '@/rules/armas';
 import { ARMAS_BASE, ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
 import { ATTRIBUTE_DISPLAY_NAMES } from '@/rules/attributeInfo';
@@ -18,7 +22,7 @@ import { MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
 import { EFEITOS_STATUS } from '@/rules/statusEffects';
 import { RaridadeMaterial } from '@/rules/raridades';
 import { COR_RARIDADE, NOME_ELEMENTO } from '@/lib/cacadaTela';
-import { ArmaPersonagem, custoDaReceita, diversosDaRaridade, nomeDoItem, pagarCusto } from '@/game/forja';
+import { ArmaPersonagem, BILHETE_DE_MELHORIA, custoDaReceita, diversosDaRaridade, nomeDoItem, pagarCusto, pontosDeCustomizacao } from '@/game/forja';
 
 /** Lógica da tela da Forja (árvore de armas por monstro, lista de forja e detalhe da arma), sem React. */
 
@@ -239,9 +243,10 @@ export function detalheDaArma(baseId: string, categoria: CategoriaArma, c: Perso
 /** Linhas da receita para a tela: o que precisa, o que o personagem tem e o ouro (armas e armaduras). */
 export function linhasDaReceita(
   receita: ReceitaArma,
-  c: Pick<CharacterDocument, 'inventario' | 'ouro'>
+  c: Pick<CharacterDocument, 'inventario' | 'ouro'>,
+  percentual = 100
 ): { materiais: LinhaReceitaTela[]; diversos: LinhaReceitaTela | null; ouro: { precisa: number; tem: number; ok: boolean } } {
-  const custo = custoDaReceita(receita);
+  const custo = custoDaReceita(receita, percentual);
   const inv = c.inventario ?? {};
   const materiais: LinhaReceitaTela[] = Object.entries(custo.itens).map(([id, precisa]) => ({
     id, nome: nomeDoItem(id), cor: COR_ITEM(id), precisa, tem: inv[id] ?? 0, ok: (inv[id] ?? 0) >= precisa,
@@ -267,3 +272,164 @@ function raridadeNomeMaterial(r: RaridadeMaterial): string {
 }
 
 export const CATEGORIAS_TELA = CATEGORIAS_ARMA.map((c) => ({ id: c.id, nome: c.nome }));
+
+// ---------------------------------------------------------------- Minhas armas (reforjar e customizar)
+
+export interface MinhaArmaTela {
+  id: string;
+  baseId: string;
+  nome: string;
+  categoria: CategoriaArma;
+  categoriaNome: string;
+  raridade: RaridadeArma;
+  raridadeNome: string;
+  cor: string;
+  estrela: number;
+  monstroNome: string;
+  atributo: string;
+  pontos: number;
+  reforjas: number;
+  /** Pontos de Customização gastos (só as Míticas customizam). */
+  pontosCustomizacao: number;
+  mitica: boolean;
+}
+
+const ORDEM_RARIDADE_ARMA: readonly RaridadeArma[] = ['comum', 'raro', 'muitoRaro', 'epico', 'lendario', 'mitico'];
+
+function minhaArmaTela(a: ArmaPersonagem): MinhaArmaTela | null {
+  const base = ARMAS_BASE_MAP[a.baseId];
+  if (!base) return null;
+  return {
+    id: a.id,
+    baseId: a.baseId,
+    nome: base.nomes[a.categoria],
+    categoria: a.categoria,
+    categoriaNome: CATEGORIAS_ARMA_MAP[a.categoria].nome,
+    raridade: base.raridade,
+    raridadeNome: RARIDADES_ARMA_MAP[base.raridade].nome,
+    cor: COR_RARIDADE_ARMA[base.raridade],
+    estrela: base.estrela,
+    monstroNome: DADOS_CACADA_MAP[base.monstroId].nome,
+    atributo: ATTRIBUTE_DISPLAY_NAMES[a.atributo],
+    pontos: a.pontos,
+    reforjas: a.reforjas,
+    pontosCustomizacao: pontosDeCustomizacao(a),
+    mitica: podeCustomizar(base.raridade),
+  };
+}
+
+/** Aba "Minhas armas": da mais rara para a menos rara, depois pela estrela do monstro. */
+export function minhasArmasTela(c: Pick<CharacterDocument, 'armas'>): MinhaArmaTela[] {
+  return (c.armas ?? [])
+    .map(minhaArmaTela)
+    .filter((a): a is MinhaArmaTela => a !== null)
+    .sort(
+      (x, y) =>
+        ORDEM_RARIDADE_ARMA.indexOf(y.raridade) - ORDEM_RARIDADE_ARMA.indexOf(x.raridade) ||
+        y.estrela - x.estrela ||
+        x.nome.localeCompare(y.nome)
+    );
+}
+
+export interface OpcaoCustomizacaoTela {
+  id: OpcaoCustomizacao;
+  nome: string;
+  /** O que cada ponto dá. */
+  porPonto: string;
+  /** O que os pontos já gastos dão. */
+  atual: string;
+  pontos: number;
+  /** false quando a opção não existe nesta arma (Mais status em arma sem status). */
+  disponivel: boolean;
+}
+
+export interface DetalheMinhaArmaTela extends MinhaArmaTela {
+  tipoDano: 'Dano físico' | 'Dano mágico';
+  /** Dano fixo da arma já com a Customização em Dano. */
+  danoFixo: number;
+  danoFixoBase: number;
+  elementos: string[];
+  status: string[];
+  reforja: {
+    /** % da receita que esta reforja custa (50% e mais 25% a cada reforja, até 200%). */
+    percentual: number;
+    materiais: LinhaReceitaTela[];
+    diversos: LinhaReceitaTela | null;
+    ouro: { precisa: number; tem: number; ok: boolean };
+    pode: boolean;
+  };
+  /** Só as Míticas: pontos usados, custo de cada ponto e as três opções. */
+  customizacao: null | {
+    maximo: number;
+    ouroPorPonto: { precisa: number; tem: number; ok: boolean };
+    bilhete: { nome: string; precisa: number; tem: number; ok: boolean };
+    opcoes: OpcaoCustomizacaoTela[];
+    noMaximo: boolean;
+    /** Paga o próximo ponto agora (ouro e Bilhete de melhoria) e ainda há pontos a gastar. */
+    pode: boolean;
+  };
+}
+
+const formatarPontosPercentuais = (n: number) => `${n.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}`;
+
+export function detalheDaMinhaArma(armaId: string, c: Pick<CharacterDocument, 'armas' | 'inventario' | 'ouro'>): DetalheMinhaArmaTela | null {
+  const arma = (c.armas ?? []).find((a) => a.id === armaId);
+  const resumo = arma ? minhaArmaTela(arma) : null;
+  if (!arma || !resumo) return null;
+  const base = ARMAS_BASE_MAP[arma.baseId];
+  const def = CATEGORIAS_ARMA_MAP[arma.categoria];
+  const pontosDano = arma.customizacao?.dano ?? 0;
+  const danoFixoBase = danoFixoDaArma(base.estrela, base.posicao, base.semElementoNemStatus === true);
+
+  const percentual = percentualCustoReforja(arma.reforjas);
+  const receita = linhasDaReceita(base.receita, c, percentual);
+  const pagaReforja = receita.materiais.every((m) => m.ok) && (!receita.diversos || receita.diversos.ok) && receita.ouro.ok;
+
+  let customizacao: DetalheMinhaArmaTela['customizacao'] = null;
+  if (podeCustomizar(base.raridade)) {
+    const bilhetes = c.inventario?.[BILHETE_DE_MELHORIA.id] ?? 0;
+    const pontoDeStatus = arma.customizacao?.status ?? 0;
+    const pontoDeAtributo = arma.customizacao?.atributo ?? 0;
+    const opcoes: OpcaoCustomizacaoTela[] = [
+      {
+        id: 'dano',
+        nome: 'Dano',
+        porPonto: `+${CUSTOMIZACAO.danoPercentualPorPonto}% no dano fixo`,
+        atual: `+${pontosDano * CUSTOMIZACAO.danoPercentualPorPonto}%`,
+        pontos: pontosDano,
+        disponivel: true,
+      },
+      {
+        id: 'atributo',
+        nome: 'Atributo secundário',
+        porPonto: `+${CUSTOMIZACAO.atributoPorPonto} em ${resumo.atributo}`,
+        atual: `+${pontoDeAtributo * CUSTOMIZACAO.atributoPorPonto}`,
+        pontos: pontoDeAtributo,
+        disponivel: true,
+      },
+      {
+        id: 'status',
+        nome: 'Mais status',
+        porPonto: `+${formatarPontosPercentuais(CUSTOMIZACAO.statusPontosPercentuaisPorPonto)} ponto percentual na chance do status`,
+        atual: `+${formatarPontosPercentuais(pontoDeStatus * CUSTOMIZACAO.statusPontosPercentuaisPorPonto)} p.p.`,
+        pontos: pontoDeStatus,
+        disponivel: base.status.length > 0,
+      },
+    ];
+    const noMaximo = resumo.pontosCustomizacao >= CUSTOMIZACAO.pontosMaximos;
+    const ouro = { precisa: CUSTOMIZACAO.ouroPorPonto, tem: c.ouro, ok: c.ouro >= CUSTOMIZACAO.ouroPorPonto };
+    const bilhete = { nome: BILHETE_DE_MELHORIA.nome, precisa: CUSTOMIZACAO.bilhetesPorPonto, tem: bilhetes, ok: bilhetes >= CUSTOMIZACAO.bilhetesPorPonto };
+    customizacao = { maximo: CUSTOMIZACAO.pontosMaximos, ouroPorPonto: ouro, bilhete, opcoes, noMaximo, pode: !noMaximo && ouro.ok && bilhete.ok };
+  }
+
+  return {
+    ...resumo,
+    tipoDano: def.tipoDano === 'fisico' ? 'Dano físico' : 'Dano mágico',
+    danoFixoBase,
+    danoFixo: Math.floor((danoFixoBase * (100 + pontosDano * CUSTOMIZACAO.danoPercentualPorPonto)) / 100),
+    elementos: base.elementos.map((e) => NOME_ELEMENTO[e]),
+    status: base.status.map((st) => EFEITOS_STATUS[st].nome),
+    reforja: { percentual, ...receita, pode: pagaReforja },
+    customizacao,
+  };
+}
