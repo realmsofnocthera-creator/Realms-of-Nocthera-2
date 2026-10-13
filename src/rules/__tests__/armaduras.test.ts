@@ -82,9 +82,9 @@ describe('Regras da armadura', () => {
 });
 
 describe('Habilidades de armadura', () => {
-  it('123 habilidades com ids únicos, sem a Parte 6 original, e 4 exclusivas dos 9★', () => {
-    expect(HABILIDADES_ARMADURA).toHaveLength(123);
-    expect(new Set(HABILIDADES_ARMADURA.map((h) => h.id)).size).toBe(123);
+  it('89 habilidades com ids únicos, sem a Parte 6 original, e 4 exclusivas dos 9★', () => {
+    expect(HABILIDADES_ARMADURA).toHaveLength(89);
+    expect(new Set(HABILIDADES_ARMADURA.map((h) => h.id)).size).toBe(89);
     expect(HABILIDADES_ARMADURA.filter((h) => h.exclusivaDe).map((h) => h.exclusivaDe)).toEqual(['oryndrak', 'reydras', 'dravakhar', 'urdumor']);
     for (const h of HABILIDADES_ARMADURA) {
       expect(h.niveis[h.nivelMaximo], h.id).toBeTruthy();
