@@ -52,6 +52,7 @@ import {
 } from './combate/efeitos';
 import { calcularInstintoSobrevivencia } from './combate/passivasClasse';
 import { LadoCombate, multiplicadorCritico, sorteioCritico } from './combate/critico';
+import { sobreescudoInicialDoMonstro } from './combate/sobreescudoMonstro';
 import { elementoDaArmaNaRodada, EquipamentoCombate } from './combate/equipamentoCombate';
 import {
   adicoesDeStatus,
@@ -62,6 +63,7 @@ import {
   bonusDanoQueimaduraDeArmadura,
   bonusDanoVariosGolpesDeArmadura,
   bonusBloqueioDeArmadura,
+  bonusEspancadorDeArmadura,
   multiplicadorCriticoDeArmadura,
   curaPorCriticoDeArmadura,
   regeneracaoPorRodadaDeArmadura,
@@ -3411,6 +3413,16 @@ function turnoDeCombateInterno(
       }
     }
 
+    // Espancador (habilidade de armadura): o golpe que quebra o Sobreescudo do alvo causa dano extra, direto no HP
+    if (acaoCausaDano && !defensorImortal && sobreescudoDefensorAntes > 0 && sobreescudoAtual <= 0 && hpAtual > 0) {
+      const espancador = bonusEspancadorDeArmadura(atacante.equipamento?.habilidadesArmadura);
+      if (espancador > 0) {
+        const extra = Math.floor((danoEfetivo * espancador) / 100);
+        hpAtual = Math.max(0, hpAtual - extra);
+        danoEfetivo += extra;
+      }
+    }
+
     // Inversão de Sorte: se a Agilidade do alvo for menor ou igual à de quem usou, o alvo sofre dano direto
     let inversaoDeSorteDano: number | undefined;
     if (inversaoDeSorte && acaoCausaDano && !defensorImortal && agilDefensor <= agilAtacante && hpAtual > 0) {
@@ -3799,7 +3811,7 @@ export function resolverCombate(
     nome: monstro.nome,
     hp: monstro.hp,
     hpMax: monstro.hp,
-    sobreescudo: 0,
+    sobreescudo: sobreescudoInicialDoMonstro(monstro.hp),
     atributos: { ...monstro.atributos },
     ouro: 0,
     mitigacao: 0,

@@ -1,3 +1,4 @@
+import { sobreescudoInicialDoMonstro } from '@/game/combate/sobreescudoMonstro';
 import type { CharacterDocument } from '@/server/characterService';
 import type { AtaqueLog, ResultadoCombate } from '@/game/combat';
 import type { EventoEfeito } from '@/game/statusEffects';
@@ -168,8 +169,8 @@ export function montarQuadros(
     nivel: monstro.nivel,
     hp: monstro.hp,
     hpMax: monstro.hp,
-    escudo: 0,
-    escudoMax: 0,
+    escudo: sobreescudoInicialDoMonstro(monstro.hp),
+    escudoMax: sobreescudoInicialDoMonstro(monstro.hp),
     status: [],
     enfurecido: false,
   };

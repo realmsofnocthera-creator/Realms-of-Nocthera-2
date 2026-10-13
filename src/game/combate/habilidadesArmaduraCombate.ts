@@ -45,6 +45,7 @@ export const HABILIDADES_ARMADURA_NO_MOTOR: ReadonlySet<string> = new Set([
   'aumento-de-regeneracao',
   'sobrevivente',
   'no-ar',
+  'espancador',
   'reforco-critico',
   'saque-critico',
   'fortificar',
@@ -342,4 +343,9 @@ export function polimentoProtetorDeArmadura(h: HabilidadesArmaduraAtivas | undef
 /** Pouso Seguro: o primeiro golpe que o personagem sofre na luta causa −30% de dano. */
 export function reducaoPrimeiroGolpeDeArmadura(h: HabilidadesArmaduraAtivas | undefined, primeiroGolpeRecebido: boolean): number {
   return primeiroGolpeRecebido && (h?.['pouso-seguro'] ?? 0) > 0 ? 30 : 0;
+}
+
+/** Espancador: o golpe que quebra o Sobreescudo do alvo causa +15% de dano extra. */
+export function bonusEspancadorDeArmadura(h: HabilidadesArmaduraAtivas | undefined): number {
+  return (h?.espancador ?? 0) > 0 ? 15 : 0;
 }

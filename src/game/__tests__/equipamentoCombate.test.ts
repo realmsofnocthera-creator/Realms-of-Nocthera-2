@@ -459,3 +459,35 @@ describe('Habilidades de armadura simples: regeneração, crítico, Fortificar e
     expect(cura?.valor).toBe(150); // 3% de 5000
   });
 });
+
+describe('Sobreescudo dos monstros e Espancador', () => {
+  it('todo monstro começa com Sobreescudo de 10% do HP', async () => {
+    const { sobreescudoInicialDoMonstro } = await import('@/game/combate/sobreescudoMonstro');
+    expect(sobreescudoInicialDoMonstro(5000)).toBe(500);
+    expect(sobreescudoInicialDoMonstro(95)).toBe(9);
+    const a = resolverCombate(personagem(), ALVO, 11, { rngStatus: () => 99.9 }).logTurnos[0].ataques.find((x) => x.atacante === 'Herói')!;
+    expect(a.sobreescudoRestante).toBe(500 - a.danoEfetivo); // o golpe come o Sobreescudo antes do HP
+    expect(a.hpRestante).toBe(5000);
+  });
+
+  it('o golpe que quebra o Sobreescudo causa +15% de dano extra com o Espancador', async () => {
+    const m = await import('@/game/combate/habilidadesArmaduraCombate');
+    expect(m.bonusEspancadorDeArmadura({ espancador: 1 })).toBe(15);
+    expect(m.bonusEspancadorDeArmadura(undefined)).toBe(0);
+    const fraco: MonsterDefinition = { ...ALVO, hp: 100 }; // Sobreescudo de 10: o primeiro golpe o quebra
+    const golpe = (h: Record<string, number>) =>
+      resolverCombate(personagem({ ...SEM_BONUS, habilidadesArmadura: h, sobreescudoMaximo: 1000 }), fraco, 11, { rngStatus: () => 99.9 })
+        .logTurnos[0].ataques.find((x) => x.atacante === 'Herói')!;
+    const sem = golpe({});
+    const com = golpe({ espancador: 1 });
+    expect(com.danoEfetivo).toBe(sem.danoEfetivo + Math.floor((sem.danoEfetivo * 15) / 100));
+    expect(com.hpRestante).toBeLessThanOrEqual(sem.hpRestante);
+  });
+
+  it('sem quebrar o Sobreescudo, o Espancador não faz nada', () => {
+    const golpe = (h: Record<string, number>) =>
+      resolverCombate(personagem({ ...SEM_BONUS, habilidadesArmadura: h, sobreescudoMaximo: 1000 }), ALVO, 11, { rngStatus: () => 99.9 })
+        .logTurnos[0].ataques.find((x) => x.atacante === 'Herói')!;
+    expect(golpe({ espancador: 1 }).danoEfetivo).toBe(golpe({}).danoEfetivo); // 500 de escudo aguentam o primeiro golpe
+  });
+});
