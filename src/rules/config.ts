@@ -47,6 +47,8 @@ export const GAME_CONFIG = {
   // Monstro Enfurecido (Caçada): abaixo deste % de HP, ganha este % de dano (soma no grupo da regra 1.2.2)
   ENFURECIDO_LIMIAR_HP_PERCENTUAL: 50,
   ENFURECIDO_BONUS_DANO_PERCENTUAL: 20,
+  // Todo monstro começa a luta com Sobreescudo igual a este % do HP dele (decidido pelo Yuri em 13/10/2026)
+  SOBREESCUDO_MONSTRO_PERCENTUAL_HP: 10,
   // Caçada: XP cheio até o nível mínimo da estrela + 3; depois cai 25% por nível (zera 4 níveis depois)
   CACADA_XP_NIVEIS_CHEIOS: 3,
   CACADA_XP_QUEDA_POR_NIVEL_PERCENTUAL: 25,
