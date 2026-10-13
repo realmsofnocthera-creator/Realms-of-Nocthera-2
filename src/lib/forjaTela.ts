@@ -7,6 +7,7 @@ import {
   CategoriaArma,
   RARIDADES_ARMA_MAP,
   RaridadeArma,
+  ReceitaArma,
   atributosSorteaveis,
   danoFixoDaArma,
 } from '@/rules/armas';
@@ -198,25 +199,7 @@ export function detalheDaArma(baseId: string, categoria: CategoriaArma, c: Perso
   const minhas = armasDoPersonagem(c).filter((a) => a.categoria === categoria);
   const anterior = base.consome ? minhas.find((a) => a.baseId === base.consome) : undefined;
   const tenhoEsta = minhas.find((a) => a.baseId === baseId);
-  const custo = custoDaReceita(base.receita);
-  const inv = c.inventario ?? {};
-
-  const materiais: LinhaReceitaTela[] = Object.entries(custo.itens).map(([id, precisa]) => ({
-    id, nome: nomeDoItem(id), cor: COR_ITEM(id), precisa, tem: inv[id] ?? 0, ok: (inv[id] ?? 0) >= precisa,
-  }));
-  let diversos: LinhaReceitaTela | null = null;
-  if (custo.diversos) {
-    const ids = diversosDaRaridade(custo.diversos.raridade);
-    const tem = ids.reduce((s, id) => s + (inv[id] ?? 0), 0);
-    diversos = {
-      id: `diverso-${custo.diversos.raridade}`,
-      nome: `Diverso ${raridadeNomeMaterial(custo.diversos.raridade)} (${ids.map(nomeDoItem).join(' ou ')})`,
-      cor: COR_RARIDADE[custo.diversos.raridade],
-      precisa: custo.diversos.qtd,
-      tem,
-      ok: tem >= custo.diversos.qtd,
-    };
-  }
+  const { materiais, diversos, ouro } = linhasDaReceita(base.receita, c);
 
   const atributoDefinido = anterior?.atributo ?? tenhoEsta?.atributo;
   const opcoes = atributosSorteaveis(categoria).map((a) => ATTRIBUTE_DISPLAY_NAMES[a]).join(', ');
@@ -245,12 +228,38 @@ export function detalheDaArma(baseId: string, categoria: CategoriaArma, c: Perso
     consome: base.consome ? { nome: ARMAS_BASE_MAP[base.consome].nomes[categoria], tenho: !!anterior } : null,
     materiais,
     diversos,
-    ouro: { precisa: custo.ouro, tem: c.ouro, ok: c.ouro >= custo.ouro },
+    ouro,
     estado: estadoDoNo(baseId, categoria, c),
     acao: base.consome ? 'Evoluir' : 'Fabricar',
     armaAnteriorId: anterior?.id ?? null,
     minha: tenhoEsta ? { atributo: ATTRIBUTE_DISPLAY_NAMES[tenhoEsta.atributo], pontos: tenhoEsta.pontos, reforjas: tenhoEsta.reforjas } : null,
   };
+}
+
+/** Linhas da receita para a tela: o que precisa, o que o personagem tem e o ouro (armas e armaduras). */
+export function linhasDaReceita(
+  receita: ReceitaArma,
+  c: Pick<CharacterDocument, 'inventario' | 'ouro'>
+): { materiais: LinhaReceitaTela[]; diversos: LinhaReceitaTela | null; ouro: { precisa: number; tem: number; ok: boolean } } {
+  const custo = custoDaReceita(receita);
+  const inv = c.inventario ?? {};
+  const materiais: LinhaReceitaTela[] = Object.entries(custo.itens).map(([id, precisa]) => ({
+    id, nome: nomeDoItem(id), cor: COR_ITEM(id), precisa, tem: inv[id] ?? 0, ok: (inv[id] ?? 0) >= precisa,
+  }));
+  let diversos: LinhaReceitaTela | null = null;
+  if (custo.diversos) {
+    const ids = diversosDaRaridade(custo.diversos.raridade);
+    const tem = ids.reduce((soma, id) => soma + (inv[id] ?? 0), 0);
+    diversos = {
+      id: `diverso-${custo.diversos.raridade}`,
+      nome: `Diverso ${raridadeNomeMaterial(custo.diversos.raridade)} (${ids.map(nomeDoItem).join(' ou ')})`,
+      cor: COR_RARIDADE[custo.diversos.raridade],
+      precisa: custo.diversos.qtd,
+      tem,
+      ok: tem >= custo.diversos.qtd,
+    };
+  }
+  return { materiais, diversos, ouro: { precisa: custo.ouro, tem: c.ouro, ok: c.ouro >= custo.ouro } };
 }
 
 function raridadeNomeMaterial(r: RaridadeMaterial): string {
