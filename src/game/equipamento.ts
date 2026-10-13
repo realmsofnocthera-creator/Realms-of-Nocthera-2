@@ -12,6 +12,7 @@ import { CATEGORIAS_ARMA_MAP, CUSTOMIZACAO, ModificadorArma, atributoDoDanoFixo,
 import type { Elemento } from '@/rules/elements';
 import { HABILIDADES_ARMADURA_MAP } from '@/rules/habilidadesArmadura';
 import type { EfeitoStatus } from '@/rules/statusEffects';
+import { somarEfeitosEstaticos } from './habilidadesArmaduraEfeitos';
 import type { ArmaPersonagem } from './forja';
 import type { ArmaduraPersonagem } from './armaduraForja';
 
@@ -134,6 +135,10 @@ export interface FichaEquipamento {
   arma: ArmaEquipada | null;
   /** Habilidades de armadura somadas entre as peças, limitadas ao nível máximo de cada uma. */
   habilidades: Record<string, number>;
+  /** HP máximo em % do total (Reforço de Vida). */
+  hpPercentual: number;
+  /** Menos dano recebido por elemento, em % (valor positivo = resistência). */
+  resistenciaElemental: Partial<Record<Elemento, number>>;
 }
 
 function zerarAtributos(): Attributes {
@@ -164,8 +169,33 @@ export function calcularFichaEquipamento(
     percentuais: { danoFisico: 0, danoMagico: 0, agilidade: 0, chanceCritico: 0, defesa: 0, chanceEfeitos: 0 },
     arma: null,
     habilidades: {},
+    hpPercentual: 0,
+    resistenciaElemental: {},
   };
   if (!equipamento) return ficha;
+
+  // Peças primeiro: as habilidades delas (somadas) mexem no dano fixo da arma e nos percentuais
+  const pecasEquipadas: { habilidades: { id: string; nivel: number }[] }[] = [];
+  for (const espaco of ESPACOS) {
+    const id = equipamento.armadura[espaco];
+    const peca = id ? armaduras.find((a) => a.id === id) : undefined;
+    const def = peca ? PECAS_ARMADURA_MAP[peca.pecaId] : undefined;
+    if (!peca || !def || def.espaco !== espaco) continue;
+    const fixo = fixoDaPeca(def.estrela, espaco, nivelDoXpArmadura(peca.xp));
+    const tipo = ESPACOS_ARMADURA.find((e) => e.id === espaco)!.fixo;
+    if (tipo === 'vida') ficha.hpExtra += fixo;
+    else if (tipo === 'defesa') ficha.mitigacaoExtra += fixo;
+    else ficha.atributos.agilidade += fixo;
+    ficha.atributos[peca.atributo] += peca.pontos;
+    pecasEquipadas.push({ habilidades: def.habilidades.map((h) => ({ id: h.id, nivel: h.nivel })) });
+  }
+  ficha.habilidades = somarHabilidades(pecasEquipadas, (id) => HABILIDADES_ARMADURA_MAP[id]?.nivelMaximo ?? 0);
+  const efeitos = somarEfeitosEstaticos(ficha.habilidades);
+  ficha.mitigacaoExtra += efeitos.mitigacaoFixa;
+  ficha.percentuais.defesa += efeitos.mitigacaoPercentual;
+  ficha.percentuais.agilidade += efeitos.agilidadePercentual;
+  ficha.hpPercentual = efeitos.hpPercentual;
+  ficha.resistenciaElemental = efeitos.resistenciaElemental;
 
   const arma = equipamento.armaId ? armas.find((a) => a.id === equipamento.armaId) : undefined;
   const base = arma ? ARMAS_BASE_MAP[arma.baseId] : undefined;
@@ -173,7 +203,12 @@ export function calcularFichaEquipamento(
     const def = CATEGORIAS_ARMA_MAP[arma.categoria];
     const custom = arma.customizacao ?? {};
     const danoBase = danoFixoDaArma(base.estrela, base.posicao, base.semElementoNemStatus === true);
-    const danoFixo = Math.round((danoBase * (100 + (custom.dano ?? 0) * CUSTOMIZACAO.danoPercentualPorPonto)) / 100);
+    const semElementoNemStatus = base.elementos.length === 0 && base.status.length === 0;
+    const bonusDanoFixo =
+      (custom.dano ?? 0) * CUSTOMIZACAO.danoPercentualPorPonto +
+      efeitos.danoFixoArmaPercentual +
+      (semElementoNemStatus ? efeitos.danoFixoArmaSemElementoPercentual : 0);
+    const danoFixo = Math.round((danoBase * (100 + bonusDanoFixo)) / 100);
     const pontos = arma.pontos + (custom.atributo ?? 0) * CUSTOMIZACAO.atributoPorPonto;
     ficha.atributos[atributoDoDanoFixo(arma.categoria)] += danoFixo;
     ficha.atributos[arma.atributo] += pontos;
@@ -196,21 +231,6 @@ export function calcularFichaEquipamento(
     };
   }
 
-  const pecasEquipadas: { habilidades: { id: string; nivel: number }[] }[] = [];
-  for (const espaco of ESPACOS) {
-    const id = equipamento.armadura[espaco];
-    const peca = id ? armaduras.find((a) => a.id === id) : undefined;
-    const def = peca ? PECAS_ARMADURA_MAP[peca.pecaId] : undefined;
-    if (!peca || !def || def.espaco !== espaco) continue;
-    const fixo = fixoDaPeca(def.estrela, espaco, nivelDoXpArmadura(peca.xp));
-    const tipo = ESPACOS_ARMADURA.find((e) => e.id === espaco)!.fixo;
-    if (tipo === 'vida') ficha.hpExtra += fixo;
-    else if (tipo === 'defesa') ficha.mitigacaoExtra += fixo;
-    else ficha.atributos.agilidade += fixo;
-    ficha.atributos[peca.atributo] += peca.pontos;
-    pecasEquipadas.push({ habilidades: def.habilidades.map((h) => ({ id: h.id, nivel: h.nivel })) });
-  }
-  ficha.habilidades = somarHabilidades(pecasEquipadas, (id) => HABILIDADES_ARMADURA_MAP[id]?.nivelMaximo ?? 0);
   return ficha;
 }
 

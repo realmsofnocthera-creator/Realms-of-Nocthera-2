@@ -16,6 +16,7 @@ import { EFEITOS_STATUS } from '@/rules/statusEffects';
 import { COR_RARIDADE_ARMA, textoModificador } from '@/lib/forjaTela';
 import { NOME_ELEMENTO } from '@/lib/cacadaTela';
 import { calcularFichaEquipamento } from '@/game/equipamento';
+import { HABILIDADES_ARMADURA_APLICADAS } from '@/game/habilidadesArmaduraEfeitos';
 import type { ArmaPersonagem } from '@/game/forja';
 import type { ArmaduraPersonagem } from '@/game/armaduraForja';
 
@@ -25,9 +26,6 @@ import type { ArmaduraPersonagem } from '@/game/armaduraForja';
  */
 
 type Personagem = Pick<CharacterDocument, 'armas' | 'armaduras' | 'equipamento'>;
-
-/** As habilidades de armadura já valem no combate? Sobe para `true` quando entrarem no motor. */
-export const HABILIDADES_ARMADURA_NO_COMBATE = false;
 
 export type SlotEquipamento = 'arma' | EspacoArmadura;
 
@@ -150,7 +148,8 @@ export interface ResumoEquipamentoTela {
   percentuais: { rotulo: string; valor: string }[];
   elementos: string[];
   status: string[];
-  habilidades: { id: string; nome: string; nivel: number; nivelMaximo: number }[];
+  /** `aplicada`: o combate já usa o efeito desta habilidade; as outras só somam na ficha por enquanto. */
+  habilidades: { id: string; nome: string; nivel: number; nivelMaximo: number; aplicada: boolean }[];
 }
 
 const sinal = (n: number) => (n > 0 ? `+${n}` : `−${Math.abs(n)}`);
@@ -181,7 +180,13 @@ export function resumoDoEquipamento(c: Pick<CharacterDocument, 'armas' | 'armadu
     elementos: (ficha.arma?.elementos ?? []).map((e) => NOME_ELEMENTO[e]),
     status: (ficha.arma?.status ?? []).map(nomeStatus),
     habilidades: Object.entries(ficha.habilidades)
-      .map(([id, nivel]) => ({ id, nome: HABILIDADES_ARMADURA_MAP[id]?.nome ?? id, nivel, nivelMaximo: HABILIDADES_ARMADURA_MAP[id]?.nivelMaximo ?? nivel }))
+      .map(([id, nivel]) => ({
+        id,
+        nome: HABILIDADES_ARMADURA_MAP[id]?.nome ?? id,
+        nivel,
+        nivelMaximo: HABILIDADES_ARMADURA_MAP[id]?.nivelMaximo ?? nivel,
+        aplicada: HABILIDADES_ARMADURA_APLICADAS.has(id),
+      }))
       .sort((x, y) => y.nivel - x.nivel || x.nome.localeCompare(y.nome)),
   };
 }

@@ -16,6 +16,7 @@ import { danoFixoDaArma } from '@/rules/armas';
 import { ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
 import { fixoDaPeca } from '@/rules/armaduras';
 import { calcularHpMax } from '@/game';
+import { calcularFichaEquipamento } from '@/game/equipamento';
 
 /** Equipar e desequipar na ficha: o equipamento entra nos atributos, no HP, na defesa e no combate. */
 describe('Equipamento (servidor)', () => {
@@ -103,5 +104,27 @@ describe('Equipamento (servidor)', () => {
     const comArma = await executarCacada('e6', 'lobo-cinzento', { seed: 7, combateId: 'equipamento-0002' });
     const golpe = (r: typeof semArma) => r.resultado.logTurnos[0].ataques.find((a) => a.atacante.startsWith('Equipado'))!;
     expect(golpe(comArma).danoBruto).toBeGreaterThan(golpe(semArma).danoBruto);
+  });
+  it('Reforço de Vida (habilidade de armadura) soma % no HP máximo do personagem', async () => {
+    const peitoral: ArmaduraPersonagem = { id: 'e1', pecaId: 'esqueleto-peitoral', atributo: 'vigor', pontos: 0, reforjas: 0, xp: 0, criadaEm: '' };
+    const antes = await setup('e7', { armaduras: [peitoral] });
+    const r = await equiparArmaduraDoPersonagem('e7', 'e1');
+    const pct = r.character.equipamento ? calcularFichaEquipamento(r.character.equipamento, r.character.armas, r.character.armaduras).hpPercentual : 0;
+    expect(pct).toBeGreaterThan(0);
+    expect(r.character.hpMax).toBe(Math.floor((antes.hpMax * (100 + pct)) / 100));
+  });
+
+  it('Resistência a Dragão (Sombrio) reduz o dano do Esqueleto no combate da Caçada', async () => {
+    const perneiras: ArmaduraPersonagem = { id: 'e2', pecaId: 'esqueleto-perneiras', atributo: 'vigor', pontos: 0, reforjas: 0, xp: 0, criadaEm: '' };
+    // Personagem que quase não causa dano: a luta dura e o Esqueleto ataca
+    await setup('e8', { armaduras: [perneiras], atributos: { vigor: 4000, sorte: 0, forca: 1, vitalidade: 100, arcano: 0, inteligencia: 0, agilidade: 1 } });
+    const golpeDoEsqueleto = (r: Awaited<ReturnType<typeof executarCacada>>) =>
+      r.resultado.logTurnos.flatMap((t) => t.ataques).find((a) => a.atacante === 'Esqueleto' && a.elemento === 'sombrio')!;
+    const sem = golpeDoEsqueleto(await executarCacada('e8', 'esqueleto', { seed: 5, combateId: 'resistencia-0001' }));
+    await equiparArmaduraDoPersonagem('e8', 'e2');
+    const com = golpeDoEsqueleto(await executarCacada('e8', 'esqueleto', { seed: 5, combateId: 'resistencia-0002' }));
+    expect(sem.multiplicadorElemental ?? 1).toBe(1);
+    expect(com.multiplicadorElemental).toBeLessThan(1);
+    expect(com.reacaoElemental).toBe('resistência');
   });
 });
