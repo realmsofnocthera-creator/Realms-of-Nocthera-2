@@ -18,6 +18,8 @@ interface CombateCacadaProps {
   titulo: string;
   /** estrela do monstro, para escolher o cenário */
   estrela?: number;
+  /** HP com que o personagem entra na luta (Batalha Sangrenta). */
+  hpInicialJogador?: number;
   onFim: () => void;
 }
 
@@ -154,8 +156,8 @@ export function geometriaDaCena(largura: number, altura: number) {
  * Tela de combate da Caçada: reprodução automática da luta resolvida no servidor (×1 / ×2), com barras únicas de
  * vida e escudo, status, log e as 5 habilidades com o quanto falta para cada uma ativar.
  */
-export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, onFim }: CombateCacadaProps) {
-  const quadros: QuadroLuta[] = useMemo(() => montarQuadros(resultado, personagem, monstro, 5), [resultado, personagem, monstro]);
+export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, hpInicialJogador, onFim }: CombateCacadaProps) {
+  const quadros: QuadroLuta[] = useMemo(() => montarQuadros(resultado, personagem, monstro, 5, hpInicialJogador), [resultado, personagem, monstro, hpInicialJogador]);
   const [indice, setIndice] = useState(0);
   const [rapido, setRapido] = useState(false);
   const [tremor, setTremor] = useState<{ monstro: number; jogador: number }>({ monstro: 0, jogador: 0 });

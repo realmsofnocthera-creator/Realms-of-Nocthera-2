@@ -151,13 +151,15 @@ export function montarQuadros(
   resultado: ResultadoCombate,
   personagem: CharacterDocument,
   monstro: MonsterDefinition,
-  maxLinhas = 6
+  maxLinhas = 6,
+  /** HP com que o jogador entra na luta (Batalha Sangrenta: o HP passa de uma luta para a outra). */
+  hpInicialJogador?: number
 ): QuadroLuta[] {
   const espacos = espacosDoPersonagem(personagem);
   const jogador: PainelLuta = {
     nome: personagem.nome,
     nivel: personagem.nivel,
-    hp: personagem.hpMax,
+    hp: hpInicialJogador ?? personagem.hpMax,
     hpMax: personagem.hpMax,
     escudo: personagem.sobreescudoMax,
     escudoMax: personagem.sobreescudoMax,
