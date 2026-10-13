@@ -75,6 +75,18 @@ import {
   mitigacaoDoEquipamento,
 } from '@/game/equipamento';
 import { HABILIDADES_ARMADURA_NO_MOTOR, bonusDiversoDeArmadura } from '@/game/combate/habilidadesArmaduraCombate';
+import {
+  conferirEntradaBatalha,
+  EstadoBatalhaSangrenta,
+  estrelaDaBatalha,
+  gastarTentativa,
+  MENSAGEM_BLOQUEIO_BATALHA,
+  montarOndas,
+  recompensaDaBatalha,
+  sementeDaOnda,
+  tentativasRestantes,
+} from '@/game/batalhaSangrenta';
+import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
 import { randomInt, randomUUID } from 'node:crypto';
 import { registrarLog } from './log';
 import {
@@ -124,6 +136,8 @@ export interface CharacterDocument {
   inventario?: Record<string, number>;
   /** Caçada: estrelas cujo monstro-chave o personagem já venceu (abre a estrela seguinte). */
   cacadaChavesVencidas?: number[];
+  /** Batalha Sangrenta: dia (em Brasília) e quantas tentativas já foram usadas nele. */
+  batalhaSangrenta?: EstadoBatalhaSangrenta;
   /** Armas fabricadas na Forja. */
   armas?: ArmaPersonagem[];
   /** Peças de armadura fabricadas no Ferreiro. */
@@ -315,6 +329,7 @@ function mesclarPersonagem(
     fragmentosAscensao: updates.fragmentosAscensao ?? current.fragmentosAscensao ?? 0,
     inventario: updates.inventario ?? current.inventario ?? {},
     cacadaChavesVencidas: updates.cacadaChavesVencidas ?? current.cacadaChavesVencidas ?? [],
+    ...((updates.batalhaSangrenta ?? current.batalhaSangrenta) ? { batalhaSangrenta: updates.batalhaSangrenta ?? current.batalhaSangrenta } : {}),
     armas: updates.armas ?? current.armas ?? [],
     armaduras: updates.armaduras ?? current.armaduras ?? [],
     equipamento: updates.equipamento ?? current.equipamento ?? EQUIPAMENTO_VAZIO,
@@ -1479,6 +1494,159 @@ export async function executarCacada(
     ctx.gravarCombate(registro);
 
     return { ...pos, character, mensagens, resultado, combateId, repetido: false, cacada };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Provação de Batalha Sangrenta
+// ---------------------------------------------------------------------------
+
+export interface OpcoesBatalhaSangrenta {
+  seed: number;
+  combateId?: string;
+  /** Só os testes passam o seu; o padrão é o relógio do servidor. */
+  agora?: Date;
+}
+
+export interface OndaBatalhaResposta {
+  monstroId: string;
+  nome: string;
+  chefe: boolean;
+  vencedor: 'personagem' | 'monstro';
+  hpInicial: number;
+  hpFinal: number;
+  turnos: number;
+  /** O log da luta; não vem quando a resposta é a repetida (reenvio com o mesmo combateId). */
+  resultado?: ResultadoCombate;
+}
+
+export interface RespostaBatalhaSangrenta {
+  character: CharacterDocument;
+  combateId: string;
+  repetido: boolean;
+  estrela: number;
+  ondas: OndaBatalhaResposta[];
+  ondasVencidas: number;
+  chefeVencido: boolean;
+  fragmentosAlma: number;
+  fragmentosSubclasse: number;
+  tentativasRestantes: number;
+  mensagens: string[];
+}
+
+/**
+ * Batalha Sangrenta: 5 lutas seguidas (a última contra o chefe da estrela), com o HP passando de uma luta para a
+ * outra. Se o personagem cair, a tentativa acaba e vale o que já ganhou. Dá fragmentos de alma (e, no chefe, um da
+ * subclasse atual); não dá XP, ouro nem drops. 3 tentativas por dia (o dia vale em Brasília), conferidas no servidor;
+ * a tentativa é gasta ao começar. Reenvio com o mesmo combateId devolve o resultado gravado.
+ */
+export async function executarBatalhaSangrenta(uid: string, opcoes: OpcoesBatalhaSangrenta): Promise<RespostaBatalhaSangrenta> {
+  const combateId = opcoes.combateId ?? `bs-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const idRegistro = idDoRegistroCombate(uid, combateId);
+  const agora = opcoes.agora ?? new Date();
+
+  return repositorio.executarTransacao('batalhaSangrenta', async (ctx) => {
+    const anterior = await ctx.lerCombate(idRegistro);
+    const current = await carregarPersonagem(ctx, uid, 'Personagem não encontrado. Crie um personagem antes de batalhar.');
+
+    if (anterior) {
+      const resumo = anterior.resposta.batalhaSangrenta;
+      if (!resumo) throw new Error('Identificador de combate já usado fora da Batalha Sangrenta.');
+      return { ...resumo, character: current, combateId, repetido: true, mensagens: anterior.resposta.mensagens };
+    }
+
+    const entrada = conferirEntradaBatalha(current.nivel, current.batalhaSangrenta, agora);
+    if (!entrada.ok) throw new Error(MENSAGEM_BLOQUEIO_BATALHA[entrada.motivo]);
+
+    const estrela = estrelaDaBatalha(current.nivel, current.cacadaChavesVencidas);
+    const plano = montarOndas(estrela, opcoes.seed);
+    const entradaCombatente = structuredClone(combatenteDoPersonagem(current));
+
+    const ondas: OndaBatalhaResposta[] = [];
+    let hpAtual = entradaCombatente.hp;
+    let ondasVencidas = 0;
+    let chefeVencido = false;
+    for (const [indice, onda] of plano.entries()) {
+      const monstro = MONSTROS_CACADA_MAP[onda.monstroId];
+      const combatente = combatenteDoPersonagem(current);
+      combatente.hp = hpAtual;
+      const resultado = resolverCombate(combatente, monstro, sementeDaOnda(opcoes.seed, indice));
+      const venceu = resultado.vencedor === 'personagem';
+      const hpFinal = venceu ? resultado.personagemFinal.hp : 0;
+      ondas.push({
+        monstroId: monstro.id,
+        nome: monstro.nome,
+        chefe: onda.chefe,
+        vencedor: resultado.vencedor,
+        hpInicial: hpAtual,
+        hpFinal,
+        turnos: resultado.logTurnos.length,
+        resultado,
+      });
+      if (!venceu) break;
+      ondasVencidas++;
+      hpAtual = hpFinal;
+      if (onda.chefe) chefeVencido = true;
+    }
+
+    const subclasseId = current.subclasseAtualId ?? null;
+    const recompensa = recompensaDaBatalha(ondasVencidas, chefeVencido, subclasseId !== null);
+    const estadoTentativas: EstadoBatalhaSangrenta = gastarTentativa(current.batalhaSangrenta, agora);
+    const restantes = tentativasRestantes(estadoTentativas, agora);
+    const motivo = 'Batalha Sangrenta';
+
+    let character = current;
+    if (recompensa.fragmentosAlma > 0) {
+      character = alterarSaldoEm(ctx, character, 'fragmentosAlma', recompensa.fragmentosAlma, motivo).character;
+    }
+    let fragmentosSubclasse = character.fragmentosSubclasse ?? {};
+    if (recompensa.fragmentosSubclasse > 0 && subclasseId) {
+      fragmentosSubclasse = { ...fragmentosSubclasse, [subclasseId]: (fragmentosSubclasse[subclasseId] ?? 0) + recompensa.fragmentosSubclasse };
+      ctx.registrarTransacao({
+        id: novoIdTransacao(),
+        uid: character.uid,
+        tipo: 'ganho',
+        quantidade: recompensa.fragmentosSubclasse,
+        moeda: 'fragmentosSubclasse',
+        motivo,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    character = salvarPersonagem(ctx, character, { fragmentosSubclasse, batalhaSangrenta: estadoTentativas });
+
+    const mensagens: string[] = [
+      chefeVencido
+        ? `Batalha Sangrenta vencida! Você derrotou as ${ondasVencidas} ondas.`
+        : `Você caiu na onda ${ondasVencidas + 1} de ${plano.length}. Venceu ${ondasVencidas}.`,
+      `Fragmentos de alma: +${recompensa.fragmentosAlma}${recompensa.fragmentosSubclasse > 0 ? `; fragmento da subclasse: +${recompensa.fragmentosSubclasse}` : ''}.`,
+      `Tentativas restantes hoje: ${restantes}.`,
+    ];
+
+    const resumo = {
+      estrela,
+      ondas: ondas.map(({ resultado: _log, ...resto }) => resto),
+      ondasVencidas,
+      chefeVencido,
+      fragmentosAlma: recompensa.fragmentosAlma,
+      fragmentosSubclasse: recompensa.fragmentosSubclasse,
+      tentativasRestantes: restantes,
+    };
+    const chefe = plano[plano.length - 1];
+    const registro: RegistroCombate = {
+      id: idRegistro,
+      uid,
+      monstroId: chefe?.monstroId ?? '',
+      seed: opcoes.seed,
+      vencedor: chefeVencido ? 'personagem' : 'monstro',
+      xpGanho: 0,
+      ouroGanho: 0,
+      criadoEm: new Date().toISOString(),
+      entrada: { combatente: entradaCombatente, ondas: plano, seed: opcoes.seed, modo: 'batalhaSangrenta' },
+      resposta: { resultado: null, levelUps: 0, mensagens, batalhaSangrenta: resumo },
+    };
+    ctx.gravarCombate(registro);
+
+    return { ...resumo, character, combateId, repetido: false, ondas, mensagens };
   });
 }
 

@@ -21,7 +21,19 @@ export interface RegistroCombate {
     mensagens: string[];
     /** Caçada: drops, XP depois da trava e progresso (estrela do monstro-chave vencido). */
     cacada?: ResultadoCacadaRegistro;
+    /** Batalha Sangrenta: resumo das ondas, recompensa e tentativas restantes (sem o log das lutas). */
+    batalhaSangrenta?: ResumoBatalhaSangrentaRegistro;
   };
+}
+
+export interface ResumoBatalhaSangrentaRegistro {
+  estrela: number;
+  ondas: { monstroId: string; nome: string; chefe: boolean; vencedor: 'personagem' | 'monstro'; hpInicial: number; hpFinal: number; turnos: number }[];
+  ondasVencidas: number;
+  chefeVencido: boolean;
+  fragmentosAlma: number;
+  fragmentosSubclasse: number;
+  tentativasRestantes: number;
 }
 
 export interface ResultadoCacadaRegistro {
