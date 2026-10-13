@@ -68,6 +68,9 @@ import {
   ressuscitarDisparaDeArmadura,
   bateriaDeArmadura,
   auraGelidaProntaDeArmadura,
+  danoRefletidoDeArmadura,
+  chanceSangramentoRefletidoDeArmadura,
+  rouboDeVidaDeArmadura,
   multiplicadorCriticoDeArmadura,
   curaPorCriticoDeArmadura,
   regeneracaoPorRodadaDeArmadura,
@@ -409,6 +412,8 @@ export interface AtaqueLog {
   imortalidadeBreve?: boolean;
   /** Dano devolvido ao atacante pelo Redirecionamento do defensor. */
   danoRedirecionado?: number;
+  /** Espinhos de Dravakhar: dano devolvido ao atacante pela armadura de quem se defendeu. */
+  danoRefletido?: number;
   /** Bônus de Dano Acumulativo (%) usado neste golpe. */
   danoAcumulativoPercentual?: number;
   /** Habilidade racial que disparou nesta ação (HP abaixo de 50%). */
@@ -3537,6 +3542,13 @@ function turnoDeCombateInterno(
       atacante.sobreescudo = resRedirecionado.sobreescudo;
       hpAtacanteAtual = resRedirecionado.hp;
     }
+    // Espinhos de Dravakhar (habilidade de armadura): parte do dano recebido volta para o atacante, sem defesa
+    const danoRefletido = acaoCausaDano ? danoRefletidoDeArmadura(defensor.equipamento?.habilidadesArmadura, danoEfetivo, ehDanoFisico) : 0;
+    if (danoRefletido > 0) {
+      const resRefletido = aplicarDano(danoRefletido, 0, atacante.sobreescudo, hpAtacanteAtual);
+      atacante.sobreescudo = resRefletido.sobreescudo;
+      hpAtacanteAtual = resRefletido.hp;
+    }
     let ressurreicaoAtacante = false;
     if (hpAtacanteAtual <= 0 && atacante.ressurreicaoParcial) {
       const rev = tentarRessurreicaoParcial(atacante.ressurreicaoParcial, hpAtacanteAtual, atacante.hpMax);
@@ -3554,6 +3566,11 @@ function turnoDeCombateInterno(
     const curaPorCritico = acaoCausaDano ? curaPorCriticoDeArmadura(atacante.equipamento?.habilidadesArmadura, golpesCriticos) : 0;
     if (curaPorCritico > 0 && hpAtacanteAtual > 0) {
       hpAtacanteAtual = Math.min(atacante.hpMax, hpAtacanteAtual + Math.floor((atacante.hpMax * curaPorCritico * fatorCura) / 100));
+    }
+    // Manto de Urdumor (habilidade de armadura): parte do dano causado volta como HP
+    const rouboDeVida = acaoCausaDano ? rouboDeVidaDeArmadura(atacante.equipamento?.habilidadesArmadura) : 0;
+    if (rouboDeVida > 0 && hpAtacanteAtual > 0) {
+      hpAtacanteAtual = aplicarSedeDeSangue(hpAtacanteAtual, atacante.hpMax, danoEfetivo, rouboDeVida * fatorCura);
     }
 
     if (ehDanoFisico && temSedeDeSangue && racaAtacante) {
@@ -3647,6 +3664,7 @@ function turnoDeCombateInterno(
       (danoRedirecionado > 0
         ? ` ${defensor.nome} devolve ${danoRedirecionado} de dano (Redirecionamento)!`
         : '') +
+      (danoRefletido > 0 ? ` ${defensor.nome} devolve ${danoRefletido} de dano (Espinhos)!` : '') +
       (ressurreicaoDefensor ? ` ${defensor.nome} volta à luta (Ressurreição Parcial)!` : '') +
       (ressurreicaoAtacante ? ` ${atacante.nome} volta à luta (Ressurreição Parcial)!` : '') +
       (curaHabilidade !== undefined && curaHabilidade > 0
@@ -3715,6 +3733,7 @@ function turnoDeCombateInterno(
       ...(efeitosDefensivosAplicados ? { efeitosDefensivosAplicados } : {}),
       ...(defensorImortal ? { imortalidadeBreve: true } : {}),
       ...(danoRedirecionado > 0 ? { danoRedirecionado } : {}),
+      ...(danoRefletido > 0 ? { danoRefletido } : {}),
       ...(danoAcumulativoUsado !== undefined ? { danoAcumulativoPercentual: danoAcumulativoUsado } : {}),
       ...(impetoNesteAtaque ? { impetoImprudenteAtivo: true } : {}),
       ...(acaoCausaDano && focoNesteAtaque > 0 ? { focoPercentual: focoNesteAtaque } : {}),
@@ -4243,6 +4262,15 @@ export function resolverCombate(
 
     ataquesDoTurno.push(...tMonstro.turnoLog.ataques);
     if (tMonstro.turnoLog.ataques.some((a) => a.danoBruto > 0)) personagemJaFoiAtingido = true;
+    // Espinhos de Dravakhar: o dano devolvido tem chance de causar Sangramento no monstro
+    const chanceSangramentoRefletido = chanceSangramentoRefletidoDeArmadura(p.equipamento?.habilidadesArmadura);
+    if (chanceSangramentoRefletido > 0) {
+      tMonstro.turnoLog.ataques.forEach((atk, idx) => {
+        if ((atk.danoRefletido ?? 0) > 0 && obterSorteioStatus(rodada, 700 + idx) < chanceSangramentoRefletido) {
+          aplicarStatusNoMonstro('sangramento', 0, 0, eventosEfeitosDoTurno);
+        }
+      });
+    }
     passarRodadaEfeitosDefensivos(p);
 
     // Habilidades de monstro: status garantidos e com chance no caçador

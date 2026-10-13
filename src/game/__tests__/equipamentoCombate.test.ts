@@ -561,3 +561,48 @@ describe('Habilidades de armadura de ajuste médio: Frenesi, Aura Gélida, Ladr�
     expect(com[k]!.hpRestante).toBe(sem[k]!.hpRestante); // o Sobreescudo vem depois do golpe
   });
 });
+
+describe('Conjuntos 9★: Domínio dos Céus, Espinhos de Dravakhar e Manto de Urdumor', () => {
+  const comH = (habilidadesArmadura: Record<string, number>, extra: Partial<Combatente> = {}) =>
+    personagem({ ...SEM_BONUS, habilidadesArmadura, sobreescudoMaximo: 1000 }, extra);
+  const forte = { ...ALVO, atributos: { ...ALVO.atributos, forca: 400 } };
+  const luta = (h: Record<string, number>, rng: number, extra: Partial<Combatente> = {}) =>
+    resolverCombate(comH(h, { mitigacao: 0, sobreescudo: 0, ...extra }), forte, 11, { rngStatus: () => rng });
+
+  it('as tabelas', async () => {
+    const m = await import('@/game/combate/habilidadesArmaduraCombate');
+    const estado = { hpAtacante: 100, hpMaxAtacante: 100, sobreescudoAtacante: 0, sobreescudoMaxAtacante: 0, hpAlvo: 100, hpMaxAlvo: 100, alvoEnfurecido: false };
+    expect([1, 2, 3].map((n) => m.bonusDanoElementalDeArmadura({ 'dominio-dos-ceus': n }, [], 'vento', estado))).toEqual([5, 10, 15]);
+    expect(m.bonusDanoElementalDeArmadura({ 'dominio-dos-ceus': 3 }, [], 'fogo', estado)).toBe(0);
+    expect([1, 2, 3].map((n) => m.bonusDanoElementalDeArmadura({ 'manto-de-urdumor': n }, [], 'fogo', estado))).toEqual([5, 10, 15]);
+    expect([1, 2, 3].map((n) => m.rouboDeVidaDeArmadura({ 'manto-de-urdumor': n }))).toEqual([1, 2, 3]);
+    expect([1, 2, 3].map((n) => m.bonusChanceStatusRelativa({ 'manto-de-urdumor': n }, 'queimadura', estado))).toEqual([0, 20, 40]);
+    expect(m.bonusChanceStatusRelativa({ 'manto-de-urdumor': 3 }, 'veneno', estado)).toBe(0);
+    // Espinhos: nível 1 só devolve dano físico; do nível 2 em diante, todo
+    expect(m.danoRefletidoDeArmadura({ 'espinhos-de-dravakhar': 1 }, 200, true)).toBe(10);
+    expect(m.danoRefletidoDeArmadura({ 'espinhos-de-dravakhar': 1 }, 200, false)).toBe(0);
+    expect([2, 3].map((n) => m.danoRefletidoDeArmadura({ 'espinhos-de-dravakhar': n }, 200, false))).toEqual([20, 30]);
+    expect(m.danoRefletidoDeArmadura(undefined, 200, true)).toBe(0);
+    expect([1, 2, 3].map((n) => m.chanceSangramentoRefletidoDeArmadura({ 'espinhos-de-dravakhar': n }))).toEqual([0, 10, 15]);
+  });
+
+  it('no combate: os Espinhos devolvem parte do golpe e podem causar Sangramento no monstro', () => {
+    const sem = luta({}, 99.9);
+    const com = luta({ 'espinhos-de-dravakhar': 3 }, 99.9);
+    const golpe = com.logTurnos[0].ataques.find((a) => a.atacante === 'Alvo de Teste')!;
+    expect(golpe.danoRefletido).toBe(Math.floor((golpe.danoEfetivo * 15) / 100));
+    // o monstro fica com menos vida do que ficaria sem a armadura (o escudo dele absorve primeiro)
+    const escudoSem = sem.logTurnos[0].ataques.find((a) => a.atacante === 'Herói')!;
+    expect(escudoSem).toBeDefined();
+    const sangrou = luta({ 'espinhos-de-dravakhar': 3 }, 0).logTurnos.flatMap((t) => t.eventosEfeitos).some((e) => e.efeito === 'sangramento' && e.alvo === 'Alvo de Teste');
+    expect(sangrou).toBe(true);
+    const semSangue = luta({ 'espinhos-de-dravakhar': 3 }, 99.9).logTurnos.flatMap((t) => t.eventosEfeitos).some((e) => e.efeito === 'sangramento' && e.alvo === 'Alvo de Teste');
+    expect(semSangue).toBe(false);
+  });
+
+  it('no combate: o Manto de Urdumor devolve vida do dano causado', () => {
+    const vidaDoHeroi = (h: Record<string, number>) =>
+      luta(h, 99.9, { hp: 3000 }).logTurnos[0].ataques.find((a) => a.atacante === 'Alvo de Teste')!.hpRestante;
+    expect(vidaDoHeroi({ 'manto-de-urdumor': 3 })).toBeGreaterThan(vidaDoHeroi({}));
+  });
+});
