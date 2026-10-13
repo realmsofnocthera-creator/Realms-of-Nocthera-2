@@ -4,6 +4,7 @@ import { AVATARES_DISPONIVEIS, getAvatarById } from '@/rules/avatars';
 import { normalizarHabilidadesEquipadas, ZEROS_ATRIBUTOS } from '@/game';
 import { lerArmasPersonagem } from '@/game/forja';
 import { lerArmadurasPersonagem } from '@/game/armaduraForja';
+import { EQUIPAMENTO_VAZIO, lerEquipamentoPersonagem } from '@/game/equipamento';
 import type { Attributes } from '@/rules/attributes';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import { descreverErro, registrarLog } from '@/server/log';
@@ -71,6 +72,9 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
       ? data.avatarId
       : (getAvatarById(classeIdResolvido)?.id ?? AVATARES_DISPONIVEIS[0].id);
 
+  const armas = lerArmasPersonagem(data.armas);
+  const armaduras = lerArmadurasPersonagem(data.armaduras);
+
   return {
     uid: data.uid || uid,
     nome: data.nome || '',
@@ -110,8 +114,9 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     cacadaChavesVencidas: Array.isArray(data.cacadaChavesVencidas)
       ? (data.cacadaChavesVencidas as unknown[]).filter((n): n is number => typeof n === 'number')
       : [],
-    armas: lerArmasPersonagem(data.armas),
-    armaduras: lerArmadurasPersonagem(data.armaduras),
+    armas,
+    armaduras,
+    equipamento: lerEquipamentoPersonagem(data.equipamento, armas, armaduras),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
       ? { bonusSubclasseAplicado: lerAtributos(data.bonusSubclasseAplicado, ZEROS_ATRIBUTOS) }
       : {}),
@@ -151,6 +156,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     cacadaChavesVencidas: char.cacadaChavesVencidas ?? [],
     armas: char.armas ?? [],
     armaduras: char.armaduras ?? [],
+    equipamento: char.equipamento ?? EQUIPAMENTO_VAZIO,
     hpMax: char.hpMax,
     sobreescudoMax: char.sobreescudoMax,
     criadoEm: char.criadoEm,
