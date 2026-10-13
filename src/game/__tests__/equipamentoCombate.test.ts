@@ -491,3 +491,73 @@ describe('Sobreescudo dos monstros e Espancador', () => {
     expect(golpe({ espancador: 1 }).danoEfetivo).toBe(golpe({}).danoEfetivo); // 500 de escudo aguentam o primeiro golpe
   });
 });
+
+describe('Habilidades de armadura de ajuste médio: Frenesi, Aura Gélida, Ladrão de Vigor, Bloqueio, Ressuscitar, Bateria', () => {
+  const comH = (habilidadesArmadura: Record<string, number>, extra: Partial<Combatente> = {}) =>
+    personagem({ ...SEM_BONUS, habilidadesArmadura, sobreescudoMaximo: 1000 }, extra);
+  const forte = { ...ALVO, atributos: { ...ALVO.atributos, forca: 400 } };
+  const luta = (h: Record<string, number>, extra: Partial<Combatente> = {}) =>
+    resolverCombate(comH(h, { mitigacao: 0, sobreescudo: 0, ...extra }), forte, 11, { rngStatus: () => 99.9 });
+  const golpesDoMonstro = (h: Record<string, number>, extra: Partial<Combatente> = {}) =>
+    luta(h, extra).logTurnos.map((t) => t.ataques.find((a) => a.atacante === 'Alvo de Teste'));
+
+  const estado = { hpAtacante: 100, hpMaxAtacante: 100, sobreescudoAtacante: 0, sobreescudoMaxAtacante: 0, hpAlvo: 100, hpMaxAlvo: 100, alvoEnfurecido: false };
+
+  it('as tabelas e os gatilhos', async () => {
+    const m = await import('@/game/combate/habilidadesArmaduraCombate');
+    // Frenesi (nível 3), Aura Gélida (nível 4) e Bloqueio Ofensivo
+    expect(m.bonusDanoDeArmadura({ frenesi: 3 }, { ...estado, frenesiAtivo: true })).toBe(6);
+    expect(m.bonusDanoDeArmadura({ frenesi: 2 }, { ...estado, frenesiAtivo: true })).toBe(0);
+    expect(m.bonusDanoDeArmadura({ frenesi: 3 }, estado)).toBe(0);
+    expect(m.bonusDanoDeArmadura({ 'aura-gelida': 4 }, { ...estado, auraGelidaPronta: true })).toBe(8);
+    expect([1, 2, 3].map((n) => m.bonusDanoDeArmadura({ 'bloqueio-ofensivo': n }, { ...estado, bloqueioOfensivoPronto: true }))).toEqual([5, 10, 15]);
+    expect(m.bonusDanoDeArmadura({ 'bloqueio-ofensivo': 3 }, estado)).toBe(0);
+    expect([undefined, 1, 3, 4, 10].map((u, i) => m.auraGelidaProntaDeArmadura(u, [5, 5, 5, 5, 20][i]))).toEqual([true, true, false, false, true]); // sem ataque há 3 rodadas (1 → 5) volta; 3 → 5 e 4 → 5 não
+    // Ladrão de Vigor
+    expect([1, 2, 3, 4, 5].map((n) => m.ladraoDeVigorDeArmadura({ 'ladrao-de-vigor': n }))).toEqual([2, 3, 4, 5, 6]);
+    // Bloqueio soma com Aumento de Bloqueio e só vale com uma habilidade defensiva ativa
+    expect([1, 2, 3, 4, 5].map((n) => m.bonusBloqueioDeArmadura({ bloqueio: n }, 30))).toEqual([2, 4, 6, 8, 10]);
+    expect(m.bonusBloqueioDeArmadura({ bloqueio: 5, 'aumento-de-bloqueio': 1 }, 30)).toBe(20);
+    expect(m.bonusBloqueioDeArmadura({ bloqueio: 5 }, 0)).toBe(0);
+    // Ressuscitar e Bateria
+    expect(m.ressuscitarDisparaDeArmadura({ ressuscitar: 1 }, 24, 100, false)).toBe(true);
+    expect(m.ressuscitarDisparaDeArmadura({ ressuscitar: 1 }, 25, 100, false)).toBe(false);
+    expect(m.ressuscitarDisparaDeArmadura({ ressuscitar: 1 }, 24, 100, true)).toBe(false);
+    expect(m.bateriaDeArmadura({ bateria: 5 })).toBe(true);
+    expect(m.bateriaDeArmadura({ bateria: 4 })).toBe(false);
+  });
+
+  it('no combate: a Aura Gélida dá +8% só no primeiro golpe', () => {
+    const danoDoHeroi = (h: Record<string, number>) =>
+      resolverCombate(comH(h), ALVO, 11, { rngStatus: () => 99.9 }).logTurnos.map((t) => t.ataques.find((a) => a.atacante === 'Herói')?.danoBruto ?? 0);
+    const sem = danoDoHeroi({});
+    const com = danoDoHeroi({ 'aura-gelida': 4 });
+    expect(com[0]).toBeGreaterThan(sem[0]);
+    expect(com[1]).toBe(sem[1]);
+    expect(com[2]).toBe(sem[2]);
+  });
+
+  it('no combate: o Ladrão de Vigor enfraquece o monstro e reduz o dano dele', () => {
+    const sem = golpesDoMonstro({});
+    const com = golpesDoMonstro({ 'ladrao-de-vigor': 5 });
+    expect(com[0]!.danoBruto).toBe(Math.floor((sem[0]!.danoBruto * 94) / 100)); // o herói age primeiro: −6% já no 1º golpe do monstro
+    expect(com[5]!.danoBruto).toBe(Math.floor((sem[5]!.danoBruto * 94) / 100)); // renovado a cada golpe
+  });
+
+  it('no combate: a Bateria dá Sobreescudo depois de 3 golpes recebidos', () => {
+    const sem = golpesDoMonstro({});
+    const com = golpesDoMonstro({ bateria: 5 });
+    expect(sem[2]!.sobreescudoRestante).toBe(0);
+    expect(com[2]!.sobreescudoRestante).toBe(500); // 10% de 5000 de HP máximo, abaixo do teto de 1000
+    expect(com[0]!.sobreescudoRestante).toBe(0);
+  });
+
+  it('no combate: o Ressuscitar dá Sobreescudo uma vez, quando o HP cai abaixo de 25%', () => {
+    const sem = golpesDoMonstro({});
+    const com = golpesDoMonstro({ ressuscitar: 1 });
+    const k = sem.findIndex((a) => a !== undefined && a.hpRestante < 1250);
+    expect(k).toBeGreaterThan(0);
+    expect(com[k]!.sobreescudoRestante).toBeGreaterThan(sem[k]!.sobreescudoRestante);
+    expect(com[k]!.hpRestante).toBe(sem[k]!.hpRestante); // o Sobreescudo vem depois do golpe
+  });
+});

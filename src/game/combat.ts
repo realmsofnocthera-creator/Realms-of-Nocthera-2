@@ -64,6 +64,10 @@ import {
   bonusDanoVariosGolpesDeArmadura,
   bonusBloqueioDeArmadura,
   bonusEspancadorDeArmadura,
+  ladraoDeVigorDeArmadura,
+  ressuscitarDisparaDeArmadura,
+  bateriaDeArmadura,
+  auraGelidaProntaDeArmadura,
   multiplicadorCriticoDeArmadura,
   curaPorCriticoDeArmadura,
   regeneracaoPorRodadaDeArmadura,
@@ -251,6 +255,9 @@ export {
   reduzirDanoPercentual,
 };
 
+/** Ataques básicos das classes: não contam como "usar uma habilidade" (Frenesi). */
+const ATAQUES_BASICOS: ReadonlySet<string> = new Set(['Golpe Bárbaro', 'Golpe do Guardião', 'Faísca Arcana', 'Golpe Rápido', 'Luz Sagrada', 'Corte Preciso']);
+
 export interface Combatente {
   nome: string;
   hp: number;
@@ -315,6 +322,18 @@ export interface Combatente {
   contadorFocoAbsoluto?: number;
   cargasFocoAbsoluto?: number;
   contadorCorteDoVazio?: number;
+  /** Frenesi (habilidade de armadura): golpes que ainda recebem o bônus depois de usar uma habilidade. */
+  frenesiRestante?: number;
+  /** Rodada do último ataque (Aura Gélida volta depois de 3 rodadas sem atacar). */
+  ultimaRodadaDeAtaque?: number;
+  /** Bloqueio Ofensivo: uma habilidade defensiva foi usada e o próximo golpe ganha o bônus. */
+  bloqueioOfensivoPronto?: boolean;
+  /** Ressuscitar: já disparou nesta luta. */
+  ressuscitarUsado?: boolean;
+  /** Ressuscitar: o dano de status não age até o fim desta rodada. */
+  imunidadeDanoStatusAteRodada?: number;
+  /** Bateria: golpes recebidos, se está ativa, quando volta a contar e as imunidades que ela colocou. */
+  bateria?: { golpes: number; ativa: boolean; bloqueadaAteRodada: number; imunidadesColocadas: EfeitoStatus[] };
   /** Efeitos de Mitigação e defesa ativos (só durante a luta; nunca persistidos). */
   efeitosDefensivos?: EfeitoDefensivoAtivo[];
   /** Cura Contínua ativa (só durante a luta). */
@@ -2585,6 +2604,9 @@ function turnoDeCombateInterno(
         hpAtual < (defensor.hpMax * GAME_CONFIG.ENFURECIDO_LIMIAR_HP_PERCENTUAL) / 100,
       rodada: numeroTurno,
       primeiraAcao: numeroTurno === 1 && i === 0,
+      frenesiAtivo: (atacante.frenesiRestante ?? 0) > 0,
+      auraGelidaPronta: auraGelidaProntaDeArmadura(atacante.ultimaRodadaDeAtaque, numeroTurno),
+      bloqueioOfensivoPronto: atacante.bloqueioOfensivoPronto === true,
     };
     const bonusDanoArmadura = bonusDanoDeArmadura(atacante.equipamento?.habilidadesArmadura, estadoArmadura);
     const bonusDanoBuffsPorTipo = (tipo: 'fisico' | 'magico'): number =>
@@ -3005,6 +3027,14 @@ function turnoDeCombateInterno(
           rodadas: GAME_CONFIG.MILAGRE_DIVINO_BONUS_RODADAS,
         },
       ]);
+    }
+    // Ladrão de Vigor (habilidade de armadura): cada golpe que acerta enfraquece o alvo
+    const enfraquecimentoLadrao = acaoCausaDano ? ladraoDeVigorDeArmadura(atacante.equipamento?.habilidadesArmadura) : 0;
+    if (enfraquecimentoLadrao > 0) {
+      const atual = defensor.debuffs?.find((d) => d.tipo === 'enfraquecimento');
+      if (!atual || (atual.percentual ?? 0) <= enfraquecimentoLadrao) {
+        defensor.debuffs = adicionarDebuffs(defensor.debuffs, [{ tipo: 'enfraquecimento', percentual: enfraquecimentoLadrao, rodadas: 2 }]);
+      }
     }
     // Ponto Fraco: o golpe que o aproveitou o consome; um novo Ponto Fraco vale a partir do próximo golpe
     if (acaoCausaDano && pontoFracoNesteAtaque > 0) {
@@ -3450,6 +3480,42 @@ function turnoDeCombateInterno(
       }
     }
 
+    // Ressuscitar e Bateria (habilidades de armadura de quem foi atingido)
+    const armaduraDefensor = defensor.equipamento?.habilidadesArmadura;
+    if (acaoCausaDano && danoEfetivo > 0 && armaduraDefensor) {
+      const tetoEscudo = defensor.equipamento?.sobreescudoMaximo ?? 0;
+      const darSobreescudo = (percentual: number) => {
+        sobreescudoAtual = Math.min(Math.max(tetoEscudo, sobreescudoAtual), sobreescudoAtual + Math.floor((defensor.hpMax * percentual) / 100));
+      };
+      if (ressuscitarDisparaDeArmadura(armaduraDefensor, hpAtual, defensor.hpMax, defensor.ressuscitarUsado === true)) {
+        defensor.ressuscitarUsado = true;
+        darSobreescudo(10);
+        defensor.imunidadeDanoStatusAteRodada = numeroTurno + 1;
+      }
+      if (bateriaDeArmadura(armaduraDefensor) && hpAtual > 0) {
+        const bateria = defensor.bateria ?? { golpes: 0, ativa: false, bloqueadaAteRodada: 0, imunidadesColocadas: [] };
+        if (bateria.ativa && sobreescudoAtual <= 0) {
+          // Sobreescudo quebrado: desativa, tira as imunidades e só volta a contar daqui a 4 rodadas
+          defensor.imunidadesStatus = (defensor.imunidadesStatus ?? []).filter((e) => !bateria.imunidadesColocadas.includes(e));
+          bateria.ativa = false;
+          bateria.golpes = 0;
+          bateria.imunidadesColocadas = [];
+          bateria.bloqueadaAteRodada = numeroTurno + 4;
+        } else if (!bateria.ativa && numeroTurno >= bateria.bloqueadaAteRodada) {
+          bateria.golpes += 1;
+          if (bateria.golpes >= 3) {
+            bateria.ativa = true;
+            bateria.golpes = 0;
+            darSobreescudo(10);
+            const atuais = defensor.imunidadesStatus ?? [];
+            bateria.imunidadesColocadas = (['loucura', 'paralisia'] as EfeitoStatus[]).filter((e) => !atuais.includes(e));
+            defensor.imunidadesStatus = [...atuais, ...bateria.imunidadesColocadas];
+          }
+        }
+        defensor.bateria = bateria;
+      }
+    }
+
     // O Sobreescudo gasto sai primeiro do Escudo Temporário; a Absorção Mágica vale para um ataque mágico só
     if (acaoCausaDano && efeitosDefensor.length > 0) {
       let efeitosAtualizados = gastarEscudoTemporario(
@@ -3595,6 +3661,21 @@ function turnoDeCombateInterno(
     const mensagem = !acaoCausaDano
       ? `${atacante.nome} canaliza${sufixoHabilidade}${sufixoDuplo} restaurando +${curaHp ?? 0} HP! (${atacante.nome} HP: ${hpAtacanteAtual}/${atacante.hpMax})`
       : `${atacante.nome} ataca ${defensor.nome}${sufixoHabilidade}${sufixoDuplo} causando ${danoEfetivo} de dano${sufixoElemental}${sufixoCorpo}!${sufixoCritico}${sufixoDefesa} (${defensor.nome} HP: ${hpAtual}/${defensor.hpMax})`;
+
+    // Frenesi, Aura Gélida e Bloqueio Ofensivo (habilidades de armadura): estado que passa para o próximo ataque
+    const armaduraAtacante = atacante.equipamento?.habilidadesArmadura;
+    if (armaduraAtacante && acaoCausaDano) {
+      const ataqueBasico = !habilidadeAcionada || ATAQUES_BASICOS.has(habilidadeAcionada);
+      if ((armaduraAtacante.frenesi ?? 0) >= 3) {
+        if (!ataqueBasico) atacante.frenesiRestante = 2;
+        else if (estadoArmadura.frenesiAtivo) atacante.frenesiRestante = Math.max(0, (atacante.frenesiRestante ?? 0) - 1);
+      }
+      if (estadoArmadura.bloqueioOfensivoPronto) atacante.bloqueioOfensivoPronto = false;
+      atacante.ultimaRodadaDeAtaque = numeroTurno;
+    }
+    if (armaduraAtacante && (armaduraAtacante['bloqueio-ofensivo'] ?? 0) > 0 && efeitosDefensivosAplicados && efeitosDefensivosAplicados.length > 0) {
+      atacante.bloqueioOfensivoPronto = true;
+    }
 
     ataques.push({
       atacante: atacante.nome,
@@ -3939,8 +4020,10 @@ export function resolverCombate(
   const armaduraDoPersonagem = () => p.equipamento?.habilidadesArmadura;
   const reducaoChancePersonagem = (efeitoId: EfeitoStatus): number =>
     Math.min(100, reducaoChanceStatusRacial(p.racaId, efeitoId) + reducaoChanceStatusDeArmadura(armaduraDoPersonagem(), efeitoId));
+  /** Ressuscitar: o dano de status não age até o fim da rodada que ele marcou. */
+  const semDanoDeStatus = (): boolean => (p.imunidadeDanoStatusAteRodada ?? 0) >= turno;
   const danoDeStatusNoPersonagem = (efeitoId: EfeitoStatus, dano: number): number =>
-    Math.floor((dano * (100 - reducaoDanoStatusDeArmadura(armaduraDoPersonagem(), efeitoId))) / 100);
+    semDanoDeStatus() ? 0 : Math.floor((dano * (100 - reducaoDanoStatusDeArmadura(armaduraDoPersonagem(), efeitoId))) / 100);
   /** Resistência a Flagelo: encurta a duração do dano contínuo que acabou de ser aplicado ou renovado no personagem. */
   const encurtarDuracaoNoPersonagem = (efeitoId: EfeitoStatus): void => {
     const reducao = reducaoDuracaoStatusDeArmadura(armaduraDoPersonagem(), efeitoId);
@@ -4207,7 +4290,7 @@ export function resolverCombate(
       if (tick.eventos.length > 0) {
         eventosEfeitosDoTurno.push(...tick.eventos);
       }
-      if (tick.danoTotal > 0) {
+      if (tick.danoTotal > 0 && !semDanoDeStatus()) {
         p.hp = Math.max(0, p.hp - tick.danoTotal);
       }
     }

@@ -24,6 +24,12 @@ export interface EstadoGolpeArmadura {
   rodada?: number;
   /** É a primeira ação de quem ataca na luta (Saque Crítico vale para o primeiro golpe dela). */
   primeiraAcao?: boolean;
+  /** Frenesi: ainda restam golpes com o bônus (depois de usar uma habilidade). */
+  frenesiAtivo?: boolean;
+  /** Aura Gélida: o bônus está pronto (começo da luta ou 3 rodadas sem atacar). */
+  auraGelidaPronta?: boolean;
+  /** Bloqueio Ofensivo: uma habilidade defensiva foi usada e o próximo golpe ganha o bônus. */
+  bloqueioOfensivoPronto?: boolean;
 }
 
 const por = (valores: readonly number[], nivel: number): number => valores[Math.min(nivel, valores.length) - 1] ?? 0;
@@ -46,6 +52,13 @@ export const HABILIDADES_ARMADURA_NO_MOTOR: ReadonlySet<string> = new Set([
   'sobrevivente',
   'no-ar',
   'espancador',
+  'frenesi',
+  'aura-gelida',
+  'ladrao-de-vigor',
+  'bloqueio',
+  'bloqueio-ofensivo',
+  'ressuscitar',
+  'bateria',
   'reforco-critico',
   'saque-critico',
   'fortificar',
@@ -105,6 +118,9 @@ export function bonusDanoDeArmadura(h: HabilidadesArmaduraAtivas | undefined, e:
   if (nv('heroismo') > 0 && abaixo(e.hpAtacante, e.hpMaxAtacante, 35)) total += por([0, 3, 3, 6, 9, 15, 24], nv('heroismo'));
   if (nv('indignacao') > 0 && abaixo(e.hpAtacante, e.hpMaxAtacante, 60)) total += por([2, 4, 6, 8, 10], nv('indignacao'));
   if (nv('coalescencia') > 0 && abaixo(e.hpAtacante, e.hpMaxAtacante, 50)) total += por([5, 6, 7], nv('coalescencia'));
+  if (nv('frenesi') >= 3 && e.frenesiAtivo) total += 6;
+  if (nv('aura-gelida') >= 4 && e.auraGelidaPronta) total += 8;
+  if (nv('bloqueio-ofensivo') > 0 && e.bloqueioOfensivoPronto) total += por([5, 10, 15], nv('bloqueio-ofensivo'));
   // Fortificar: a cada 3 rodadas de luta, +3% de dano (acumula até 3 vezes)
   if (nv('fortificar') > 0) total += 3 * pilhasDeFortificar(e.rodada ?? 1);
   // Poder de Diablos (nível 3): com o Sobreescudo zerado
@@ -298,7 +314,9 @@ export function bonusDanoVariosGolpesDeArmadura(h: HabilidadesArmaduraAtivas | u
 
 /** Aumento de Bloqueio: com uma habilidade defensiva ativa (reduzindo o dano), ela reduz +10% do dano recebido. */
 export function bonusBloqueioDeArmadura(h: HabilidadesArmaduraAtivas | undefined, reducaoDosEfeitosAtivos: number): number {
-  return (h?.['aumento-de-bloqueio'] ?? 0) > 0 && reducaoDosEfeitosAtivos > 0 ? 10 : 0;
+  if (!h || reducaoDosEfeitosAtivos <= 0) return 0;
+  // Bloqueio: −2% a −10% de dano recebido com uma habilidade defensiva ativa (a parte da recarga saiu do jogo)
+  return ((h['aumento-de-bloqueio'] ?? 0) > 0 ? 10 : 0) + ((h.bloqueio ?? 0) > 0 ? por([2, 4, 6, 8, 10], h.bloqueio) : 0);
 }
 
 /** Entomologista: pontos percentuais somados à chance de cair um "diverso" de mundo ao vencer (1% de base). */
@@ -348,4 +366,24 @@ export function reducaoPrimeiroGolpeDeArmadura(h: HabilidadesArmaduraAtivas | un
 /** Espancador: o golpe que quebra o Sobreescudo do alvo causa +15% de dano extra. */
 export function bonusEspancadorDeArmadura(h: HabilidadesArmaduraAtivas | undefined): number {
   return (h?.espancador ?? 0) > 0 ? 15 : 0;
+}
+
+/** Ladrão de Vigor: Enfraquecimento (−2% a −6% do dano do alvo por 2 rodadas) em cada golpe que acerta. */
+export function ladraoDeVigorDeArmadura(h: HabilidadesArmaduraAtivas | undefined): number {
+  return (h?.['ladrao-de-vigor'] ?? 0) > 0 ? por([2, 3, 4, 5, 6], h!['ladrao-de-vigor']) : 0;
+}
+
+/** Ressuscitar: uma vez por luta, ao cair abaixo de 25% do HP. */
+export function ressuscitarDisparaDeArmadura(h: HabilidadesArmaduraAtivas | undefined, hp: number, hpMax: number, jaUsou: boolean): boolean {
+  return (h?.ressuscitar ?? 0) > 0 && !jaUsou && hp > 0 && abaixo(hp, hpMax, 25);
+}
+
+/** Bateria (nível 5): 3 golpes recebidos dão Sobreescudo de 10% do HP máximo e imunidade a Loucura e Paralisia. */
+export function bateriaDeArmadura(h: HabilidadesArmaduraAtivas | undefined): boolean {
+  return (h?.bateria ?? 0) >= 5;
+}
+
+/** Aura Gélida: o bônus está pronto no começo da luta e volta depois de 3 rodadas sem atacar. */
+export function auraGelidaProntaDeArmadura(ultimaRodadaDeAtaque: number | undefined, rodada: number): boolean {
+  return ultimaRodadaDeAtaque === undefined || rodada - ultimaRodadaDeAtaque >= 4;
 }

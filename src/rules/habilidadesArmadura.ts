@@ -33,8 +33,6 @@ export const HABILIDADES_ARMADURA: readonly HabilidadeArmadura[] = [
     niveis: { 1: 'Reduz em 25% a chance de sofrer Queimadura e em 15% o seu dano.', 2: 'Reduz em 50% a chance de sofrer Queimadura e em 30% o seu dano.', 3: 'Imune a Queimadura.' } },
   { id: 'resistencia-a-sangramento', nome: 'Resistência a Sangramento', parte: 'Parte 1 — Resistências e defesa', categoria: '1. Resistências a estados alterados', nivelMaximo: 3, situacao: 'motorAtual',
     niveis: { 1: 'Reduz em 15% o dano do Sangramento.', 2: 'Reduz em 30% o dano do Sangramento.', 3: 'Imune a Sangramento.' } },
-  { id: 'pele-de-ferro', nome: 'Pele de Ferro', parte: 'Parte 1 — Resistências e defesa', categoria: '1. Resistências a estados alterados', nivelMaximo: 3, situacao: 'ajusteNoMotor', observacao: 'Usa os debuffs de combate que já existem (Ponto Fraco).',
-    niveis: { 1: 'Reduz em 50% a duração dos debuffs de defesa (Ponto Fraco).', 2: 'Reduz em 75% a duração dos debuffs de defesa.', 3: 'Imune a debuffs de defesa.' } },
   { id: 'resistencia-a-efluvios', nome: 'Resistência a Eflúvios', parte: 'Parte 1 — Resistências e defesa', categoria: '1. Resistências a estados alterados', nivelMaximo: 3, situacao: 'motorAtual', observacao: 'Os Eflúvios viram a Podridão Escarlate.',
     niveis: { 1: 'Reduz em 25% a chance de sofrer Podridão Escarlate e em 15% o seu dano.', 2: 'Reduz em 50% a chance de sofrer Podridão Escarlate e em 30% o seu dano.', 3: 'Imune a Podridão Escarlate.' } },
   { id: 'resistencia-a-flagelo', nome: 'Resistência a Flagelo', parte: 'Parte 1 — Resistências e defesa', categoria: '1. Resistências a estados alterados', nivelMaximo: 3, situacao: 'motorAtual', observacao: 'Os flagelos elementais viram os efeitos de elemento do jogo.',
