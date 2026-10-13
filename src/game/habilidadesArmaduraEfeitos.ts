@@ -65,6 +65,12 @@ const EFEITOS: Readonly<Record<string, (nivel: number) => EfeitoEstaticoArmadura
   antifrio: () => ({ resistenciaElemental: { gelo: 50 } }),
   // Tormenta de Reydras nível 3: −5% de dano de Relâmpago recebido (o resto vive no motor)
   'tormenta-de-reydras': (n) => (n >= 3 ? { resistenciaElemental: { relampago: 5 } } : {}),
+  // Domínio dos Céus: Agilidade +4/8/12% e, no nível 3, −5% de dano de Vento recebido (o dano de Vento vive no motor)
+  'dominio-dos-ceus': (n) => ({ agilidadePercentual: por([4, 8, 12], n), ...(n >= 3 ? { resistenciaElemental: { vento: 5 } } : {}) }),
+  // Espinhos de Dravakhar: mitigação +4/8/12% (o dano devolvido e o Sangramento vivem no motor)
+  'espinhos-de-dravakhar': (n) => ({ mitigacaoPercentual: por([4, 8, 12], n) }),
+  // Manto de Urdumor nível 3: −5% de dano de Fogo recebido (o resto vive no motor)
+  'manto-de-urdumor': (n) => (n >= 3 ? { resistenciaElemental: { fogo: 5 } } : {}),
 };
 
 /** Habilidades que entram na ficha de combate (vida, defesa, Agilidade, dano fixo e resistência elemental). */

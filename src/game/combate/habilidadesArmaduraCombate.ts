@@ -59,6 +59,9 @@ export const HABILIDADES_ARMADURA_NO_MOTOR: ReadonlySet<string> = new Set([
   'bloqueio-ofensivo',
   'ressuscitar',
   'bateria',
+  'dominio-dos-ceus',
+  'espinhos-de-dravakhar',
+  'manto-de-urdumor',
   'reforco-critico',
   'saque-critico',
   'fortificar',
@@ -192,6 +195,8 @@ export function bonusDanoElementalDeArmadura(
     if (el === elemento && (h[id] ?? 0) > 0) total += por([3, 6, 10, 13, 16, 20], h[id]);
   }
   if (elemento === 'relampago' && (h['tormenta-de-reydras'] ?? 0) > 0) total += por([5, 10, 15], h['tormenta-de-reydras']);
+  if (elemento === 'vento' && (h['dominio-dos-ceus'] ?? 0) > 0) total += por([5, 10, 15], h['dominio-dos-ceus']);
+  if (elemento === 'fogo' && (h['manto-de-urdumor'] ?? 0) > 0) total += por([5, 10, 15], h['manto-de-urdumor']);
   if ((h['coalescencia'] ?? 0) > 0 && abaixo(e.hpAtacante, e.hpMaxAtacante, 50)) total += por([6, 12, 18], h['coalescencia']);
   return total;
 }
@@ -214,6 +219,7 @@ export function bonusChanceStatusRelativa(h: HabilidadesArmaduraAtivas | undefin
     if ((h['poder-de-diablos'] ?? 0) >= 3 && e.sobreescudoAtacante <= 0) total += 10;
   }
   if (status === 'paralisia' && (h['tormenta-de-reydras'] ?? 0) > 0) total += por([10, 20, 30], h['tormenta-de-reydras']);
+  if (status === 'queimadura' && (h['manto-de-urdumor'] ?? 0) > 0) total += por([0, 20, 40], h['manto-de-urdumor']);
   if ((h['coalescencia'] ?? 0) > 0 && abaixo(e.hpAtacante, e.hpMaxAtacante, 50)) total += por([10, 20, 30], h['coalescencia']);
   return total;
 }
@@ -386,4 +392,23 @@ export function bateriaDeArmadura(h: HabilidadesArmaduraAtivas | undefined): boo
 /** Aura Gélida: o bônus está pronto no começo da luta e volta depois de 3 rodadas sem atacar. */
 export function auraGelidaProntaDeArmadura(ultimaRodadaDeAtaque: number | undefined, rodada: number): boolean {
   return ultimaRodadaDeAtaque === undefined || rodada - ultimaRodadaDeAtaque >= 4;
+}
+
+/** Espinhos de Dravakhar: % do dano recebido devolvido ao atacante (nível 1 só o dano físico; do nível 2 em diante, todo). */
+export function danoRefletidoDeArmadura(h: HabilidadesArmaduraAtivas | undefined, danoRecebido: number, ehDanoFisico: boolean): number {
+  const nivel = h?.['espinhos-de-dravakhar'] ?? 0;
+  if (nivel <= 0 || danoRecebido <= 0 || (nivel < 2 && !ehDanoFisico)) return 0;
+  return Math.floor((danoRecebido * por([5, 10, 15], nivel)) / 100);
+}
+
+/** Espinhos de Dravakhar: chance (%) de o dano devolvido causar Sangramento no atacante. */
+export function chanceSangramentoRefletidoDeArmadura(h: HabilidadesArmaduraAtivas | undefined): number {
+  const nivel = h?.['espinhos-de-dravakhar'] ?? 0;
+  return nivel > 0 ? por([0, 10, 15], nivel) : 0;
+}
+
+/** Manto de Urdumor: % do dano causado que volta como HP. */
+export function rouboDeVidaDeArmadura(h: HabilidadesArmaduraAtivas | undefined): number {
+  const nivel = h?.['manto-de-urdumor'] ?? 0;
+  return nivel > 0 ? por([1, 2, 3], nivel) : 0;
 }

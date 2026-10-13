@@ -44,6 +44,13 @@ describe('Efeitos das habilidades de armadura (parte 1)', () => {
     expect(efeitoEstaticoDaHabilidade('antifrio', 1)?.resistenciaElemental?.gelo).toBe(50);
   });
 
+  it('conjuntos 9★: Domínio dos Céus, Espinhos de Dravakhar e Manto de Urdumor na ficha', () => {
+    expect([1, 2, 3].map((n) => efeitoEstaticoDaHabilidade('dominio-dos-ceus', n)?.agilidadePercentual)).toEqual([4, 8, 12]);
+    expect([1, 2, 3].map((n) => efeitoEstaticoDaHabilidade('dominio-dos-ceus', n)?.resistenciaElemental?.vento)).toEqual([undefined, undefined, 5]);
+    expect([1, 2, 3].map((n) => efeitoEstaticoDaHabilidade('espinhos-de-dravakhar', n)?.mitigacaoPercentual)).toEqual([4, 8, 12]);
+    expect([1, 2, 3].map((n) => efeitoEstaticoDaHabilidade('manto-de-urdumor', n)?.resistenciaElemental?.fogo)).toEqual([undefined, undefined, 5]);
+  });
+
   it('Agilidade e dano fixo da arma', () => {
     expect([1, 2, 3].map((n) => efeitoEstaticoDaHabilidade('extensor-de-agilidade', n)?.agilidadePercentual)).toEqual([3, 6, 10]);
     expect([1, 2, 3].map((n) => efeitoEstaticoDaHabilidade('mobilidade-aquatica-polar', n)?.agilidadePercentual)).toEqual([0, 5, 10]);
