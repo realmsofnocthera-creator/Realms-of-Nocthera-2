@@ -82,9 +82,12 @@ describe('Aba Equipamentos da ficha (lógica)', () => {
   });
 
   it('cada habilidade do resumo diz se o combate já a aplica', () => {
-    const c = personagem({ equipamento: { armaId: null, armadura: { elmo: 'p1', peitoral: 'p3' } } });
-    const r = resumoDoEquipamento(c);
-    const porId = Object.fromEntries(r.habilidades.map((h) => [h.id, h.aplicada]));
-    expect(porId['reforco-de-ataque']).toBe(false); // dano e crítico entram nos próximos PRs
+    const c = personagem({
+      armaduras: [peca('p1', 'lobo-cinzento-elmo'), peca('p4', 'rato-da-floresta-peitoral')],
+      equipamento: { armaId: null, armadura: { elmo: 'p1', peitoral: 'p4' } },
+    });
+    const porId = Object.fromEntries(resumoDoEquipamento(c).habilidades.map((h) => [h.id, h.aplicada]));
+    expect(porId['reforco-de-ataque']).toBe(true); // dano e crítico condicionais já valem no combate
+    expect(porId['tempo-de-esquiva']).toBe(false); // esquiva ainda não
   });
 });

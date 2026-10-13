@@ -53,6 +53,7 @@ import {
 import { calcularInstintoSobrevivencia } from './combate/passivasClasse';
 import { LadoCombate, multiplicadorCritico, sorteioCritico } from './combate/critico';
 import { elementoDaArmaNaRodada, EquipamentoCombate } from './combate/equipamentoCombate';
+import { bonusCriticoDeArmadura, bonusDanoDeArmadura, bonusMitigacaoDeArmadura, EstadoGolpeArmadura } from './combate/habilidadesArmaduraCombate';
 import { reacaoDoCorpo } from './combate/corpo';
 import { aplicarBonusElemental } from './combate/bonusElemento';
 import { decidirDesfecho } from './combate/desfecho';
@@ -2540,7 +2541,22 @@ function turnoDeCombateInterno(
       atacante.enfurecido === true &&
       atacante.hpMax > 0 &&
       hpAtacanteAtual < (atacante.hpMax * GAME_CONFIG.ENFURECIDO_LIMIAR_HP_PERCENTUAL) / 100;
+    // Habilidades de armadura que dependem do estado da luta (HP de quem ataca, HP e Enfurecido do alvo)
+    const estadoArmadura: EstadoGolpeArmadura = {
+      hpAtacante: hpAtacanteAtual,
+      hpMaxAtacante: atacante.hpMax,
+      sobreescudoAtacante: atacante.sobreescudo,
+      sobreescudoMaxAtacante: atacante.equipamento?.sobreescudoMaximo ?? 0,
+      hpAlvo: hpAtual,
+      hpMaxAlvo: defensor.hpMax,
+      alvoEnfurecido:
+        defensor.enfurecido === true &&
+        defensor.hpMax > 0 &&
+        hpAtual < (defensor.hpMax * GAME_CONFIG.ENFURECIDO_LIMIAR_HP_PERCENTUAL) / 100,
+    };
+    const bonusDanoArmadura = bonusDanoDeArmadura(atacante.equipamento?.habilidadesArmadura, estadoArmadura);
     const bonusDanoBuffsPorTipo = (tipo: 'fisico' | 'magico'): number =>
+      bonusDanoArmadura +
       (enfurecidoNesteAtaque ? GAME_CONFIG.ENFURECIDO_BONUS_DANO_PERCENTUAL : 0) +
       (tipo === 'fisico'
         ? atacante.equipamento?.bonusDanoFisicoPercentual ?? 0
@@ -3102,7 +3118,9 @@ function turnoDeCombateInterno(
       acaoCausaDano
         ? ((100 - (impetoDefensor?.reducaoDefesaPercentual ?? 0)) *
             (100 - focoNesteAtaque) *
-            (100 + bonusDefesaDosBuffs(defensor.buffs)) *
+            (100 +
+              bonusDefesaDosBuffs(defensor.buffs) +
+              bonusMitigacaoDeArmadura(defensor.equipamento?.habilidadesArmadura, hpAtual, defensor.hpMax)) *
             (100 - reducaoDefesaPorPressao(defensor.debuffs, hpAtual, defensor.hpMax)) *
             (100 - reducaoDefesaDosDebuffs(defensor.debuffs))) /
           100_000_000
@@ -3160,9 +3178,17 @@ function turnoDeCombateInterno(
       if (!acaoCausaDano || !opcoesTurno?.sorteioCritico) {
         return 1;
       }
+      // Crítico das habilidades de armadura; "contra fraqueza" = o golpe acertou fraqueza de elemento ou de tipo
+      const chanceDoGolpe =
+        chanceCriticoAtacante +
+        bonusCriticoDeArmadura(
+          atacante.equipamento?.habilidadesArmadura,
+          estadoArmadura,
+          reacaoElemental === 'fraqueza' || reacaoTipoDano === 'fraqueza'
+        );
       const mult = multiplicadorCritico(
         opcoesTurno.sorteioCritico(i, indiceGolpe),
-        chanceCriticoAtacante
+        chanceDoGolpe
       );
       if (mult > 1) {
         golpesCriticos++;
@@ -3654,6 +3680,9 @@ export function resolverCombate(
           ...personagem.equipamento,
           statusArma: [...personagem.equipamento.statusArma],
           elementosArma: [...personagem.equipamento.elementosArma],
+          habilidadesArmadura: personagem.equipamento.habilidadesArmadura
+            ? { ...personagem.equipamento.habilidadesArmadura }
+            : undefined,
         }
       : undefined,
     contadorFuriaSelvagem: personagem.contadorFuriaSelvagem ?? 0,

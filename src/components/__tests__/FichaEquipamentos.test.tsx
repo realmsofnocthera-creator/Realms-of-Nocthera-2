@@ -9,8 +9,9 @@ const arma = { id: 'w1', baseId: 'lamina-da-geada', categoria: 'espadaGrande', a
 const elmo = { id: 'p1', pecaId: 'lobo-cinzento-elmo', atributo: 'arcano', pontos: 3, reforjas: 0, xp: 0, criadaEm: '' };
 
 const vazio = { armas: [arma], armaduras: [elmo], equipamento: { armaId: null, armadura: {} } } as unknown as CharacterDocument;
+const peitoral = { id: 'p2', pecaId: 'rato-da-floresta-peitoral', atributo: 'vigor', pontos: 2, reforjas: 0, xp: 0, criadaEm: '' };
 const equipado = {
-  armas: [arma], armaduras: [elmo], equipamento: { armaId: 'w1', armadura: { elmo: 'p1' } },
+  armas: [arma], armaduras: [elmo, peitoral], equipamento: { armaId: 'w1', armadura: { elmo: 'p1', peitoral: 'p2' } },
   bonusEquipamento: { vigor: 0, sorte: 12, forca: 23, vitalidade: 0, arcano: 3, inteligencia: 0, agilidade: -3 }, mitigacaoEquipamento: 0,
 } as unknown as CharacterDocument;
 
@@ -33,7 +34,8 @@ describe('Aba Equipamentos da ficha', () => {
     const html = renderToStaticMarkup(<FichaResumoEquipamento character={equipado} />);
     expect(html).toContain('Elemento: Gelo');
     expect(html).toContain('Status: Sangramento');
-    expect(html).toContain('Reforço de Ataque');
+    expect(html).toContain('Reforço de Ataque'); // já vale no combate
+    expect(html).toContain('Tempo de Esquiva'); // ainda não vale: a tela avisa
     expect(html).toContain('ainda não valem no combate');
   });
 

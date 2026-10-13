@@ -1,8 +1,9 @@
 import type { Elemento } from '@/rules/elements';
+import { HABILIDADES_ARMADURA_NO_MOTOR } from './combate/habilidadesArmaduraCombate';
 
 /**
  * Efeitos das habilidades de armadura que a ficha de combate já aplica (parte 1: vida, defesa, Agilidade, dano fixo da
- * arma e resistência elemental). Os textos de cada nível estão em `src/rules/habilidadesArmadura.ts`; aqui ficam os
+ * arma e resistência elemental; a parte 2, de dano e crítico, vive em combate/habilidadesArmaduraCombate.ts). Os textos de cada nível estão em `src/rules/habilidadesArmadura.ts`; aqui ficam os
  * números, nível a nível (índice 0 = nível 1). As habilidades que mexem em dano, crítico, status e cura entram nos
  * próximos PRs: enquanto não estiverem aqui, a ficha só as soma e avisa que ainda não valem no combate.
  *
@@ -64,8 +65,11 @@ const EFEITOS: Readonly<Record<string, (nivel: number) => EfeitoEstaticoArmadura
   antifrio: () => ({ resistenciaElemental: { gelo: 50 } }),
 };
 
-/** As habilidades de armadura que a ficha de combate já aplica. */
-export const HABILIDADES_ARMADURA_APLICADAS: ReadonlySet<string> = new Set(Object.keys(EFEITOS));
+/** Habilidades que entram na ficha de combate (vida, defesa, Agilidade, dano fixo e resistência elemental). */
+export const HABILIDADES_ARMADURA_ESTATICAS: ReadonlySet<string> = new Set(Object.keys(EFEITOS));
+
+/** As habilidades de armadura que o combate já aplica: as estáticas da ficha e as que dependem do estado da luta. */
+export const HABILIDADES_ARMADURA_APLICADAS: ReadonlySet<string> = new Set([...HABILIDADES_ARMADURA_ESTATICAS, ...HABILIDADES_ARMADURA_NO_MOTOR]);
 
 export function efeitoEstaticoDaHabilidade(id: string, nivel: number): EfeitoEstaticoArmadura | undefined {
   const f = EFEITOS[id] as ((nivel: number) => EfeitoEstaticoArmadura) | undefined;

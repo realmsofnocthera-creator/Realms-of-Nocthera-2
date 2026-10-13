@@ -106,3 +106,78 @@ describe('Equipamento no motor de combate', () => {
     expect(com.logTurnos[0].eventosEfeitos.some((e) => e.efeito === 'veneno' && e.tipo === 'aplicado')).toBe(true);
   });
 });
+
+describe('Habilidades de armadura que dependem do estado da luta', () => {
+  const comHabilidades = (habilidadesArmadura: Record<string, number>, extra: Partial<Combatente> = {}) =>
+    personagem({ ...SEM_BONUS, habilidadesArmadura, sobreescudoMaximo: 1000 }, extra);
+
+  it('Reforço de Ataque: dano +% e, a partir do nível 4, +3 de crítico', async () => {
+    const { bonusDanoDeArmadura, bonusCriticoDeArmadura } = await import('@/game/combate/habilidadesArmaduraCombate');
+    const e = { hpAtacante: 100, hpMaxAtacante: 100, sobreescudoAtacante: 0, sobreescudoMaxAtacante: 0, hpAlvo: 100, hpMaxAlvo: 100, alvoEnfurecido: false };
+    expect([1, 4, 7].map((n) => bonusDanoDeArmadura({ 'reforco-de-ataque': n }, e))).toEqual([1, 4, 7]);
+    expect([3, 4, 7].map((n) => bonusCriticoDeArmadura({ 'reforco-de-ataque': n }, e, false))).toEqual([0, 3, 3]);
+  });
+
+  it('Olho Crítico soma pontos de crítico por nível', async () => {
+    const { bonusCriticoDeArmadura } = await import('@/game/combate/habilidadesArmaduraCombate');
+    const e = { hpAtacante: 100, hpMaxAtacante: 100, sobreescudoAtacante: 0, sobreescudoMaxAtacante: 0, hpAlvo: 100, hpMaxAlvo: 100, alvoEnfurecido: false };
+    expect([1, 3, 6, 7].map((n) => bonusCriticoDeArmadura({ 'olho-critico': n }, e, false))).toEqual([3, 9, 18, 24]);
+  });
+
+  it('as condições de HP: Desempenho Máximo (acima de 90%), Indignação (abaixo de 60%), Heroísmo (abaixo de 35%)', async () => {
+    const { bonusDanoDeArmadura, bonusMitigacaoDeArmadura } = await import('@/game/combate/habilidadesArmaduraCombate');
+    const estado = (hp: number) => ({ hpAtacante: hp, hpMaxAtacante: 100, sobreescudoAtacante: 0, sobreescudoMaxAtacante: 0, hpAlvo: 100, hpMaxAlvo: 100, alvoEnfurecido: false });
+    const h = { 'desempenho-maximo': 3, indignacao: 5, heroismo: 7 };
+    expect(bonusDanoDeArmadura(h, estado(100))).toBe(8); // só Desempenho Máximo
+    expect(bonusDanoDeArmadura(h, estado(90))).toBe(0); // 90% não é "acima de 90%"
+    expect(bonusDanoDeArmadura(h, estado(59))).toBe(10); // Indignação
+    expect(bonusDanoDeArmadura(h, estado(34))).toBe(10 + 24); // Indignação e Heroísmo somam
+    expect(bonusMitigacaoDeArmadura(h, 34, 100)).toBe(30);
+    expect(bonusMitigacaoDeArmadura(h, 35, 100)).toBe(0);
+    expect(bonusMitigacaoDeArmadura(undefined, 1, 100)).toBe(0);
+  });
+
+  it('Agitador e Quebra-parte só valem contra monstro Enfurecido', async () => {
+    const { bonusDanoDeArmadura, bonusCriticoDeArmadura } = await import('@/game/combate/habilidadesArmaduraCombate');
+    const base = { hpAtacante: 100, hpMaxAtacante: 100, sobreescudoAtacante: 0, sobreescudoMaxAtacante: 0, hpAlvo: 40, hpMaxAlvo: 100 };
+    const h = { agitador: 7, 'quebra-parte': 3 };
+    expect(bonusDanoDeArmadura(h, { ...base, alvoEnfurecido: false })).toBe(0);
+    expect(bonusDanoDeArmadura(h, { ...base, alvoEnfurecido: true })).toBe(11 + 15);
+    expect(bonusCriticoDeArmadura(h, { ...base, alvoEnfurecido: true }, false)).toBe(12);
+  });
+
+  it('Exploração de Fraqueza: crítico contra fraqueza, e mais com o alvo abaixo de 50% de HP', async () => {
+    const { bonusCriticoDeArmadura } = await import('@/game/combate/habilidadesArmaduraCombate');
+    const e = (hpAlvo: number) => ({ hpAtacante: 100, hpMaxAtacante: 100, sobreescudoAtacante: 0, sobreescudoMaxAtacante: 0, hpAlvo, hpMaxAlvo: 100, alvoEnfurecido: false });
+    const h = { 'exploracao-de-fraqueza': 3 };
+    expect(bonusCriticoDeArmadura(h, e(100), false)).toBe(0);
+    expect(bonusCriticoDeArmadura(h, e(100), true)).toBe(18);
+    expect(bonusCriticoDeArmadura(h, e(49), true)).toBe(18 + 12);
+  });
+
+  it('Poder Máximo: com HP cheio; no nível 5, até sofrer o primeiro golpe (HP e Sobreescudo cheios)', async () => {
+    const { bonusCriticoDeArmadura } = await import('@/game/combate/habilidadesArmaduraCombate');
+    const e = (hp: number, esc: number) => ({ hpAtacante: hp, hpMaxAtacante: 100, sobreescudoAtacante: esc, sobreescudoMaxAtacante: 50, hpAlvo: 100, hpMaxAlvo: 100, alvoEnfurecido: false });
+    expect(bonusCriticoDeArmadura({ 'poder-maximo': 2 }, e(100, 0), false)).toBe(12); // Sobreescudo não conta nos níveis 1 a 4
+    expect(bonusCriticoDeArmadura({ 'poder-maximo': 2 }, e(99, 50), false)).toBe(0);
+    expect(bonusCriticoDeArmadura({ 'poder-maximo': 5 }, e(100, 50), false)).toBe(24);
+    expect(bonusCriticoDeArmadura({ 'poder-maximo': 5 }, e(100, 49), false)).toBe(0); // o Sobreescudo já levou um golpe
+  });
+
+  it('no combate: Reforço de Ataque aumenta o dano do primeiro golpe e Olho Crítico garante o crítico', () => {
+    const base = primeiroAtaque(comHabilidades({}));
+    expect(primeiroAtaque(comHabilidades({ 'reforco-de-ataque': 7 })).danoBruto).toBeGreaterThan(base.danoBruto);
+    // Olho Crítico 7 = +24 pontos; com a chance base e o sorteio do teste, 24 não garante: usa a arma com +100 para provar a soma
+    const critico = primeiroAtaque(personagem({ ...SEM_BONUS, bonusChanceCriticoPontos: 80, habilidadesArmadura: { 'olho-critico': 7 } }));
+    expect(critico.golpesCriticos).toBe(1); // 80 da arma + 24 da habilidade passam de 100%
+  });
+
+  it('no combate: o Heroísmo reduz o dano recebido com o HP abaixo de 35%', () => {
+    const golpeDoAlvo = (habilidades: Record<string, number>) =>
+      resolverCombate(comHabilidades(habilidades, { hp: 1000, hpMax: 5000, mitigacao: 100 }), { ...ALVO, atributos: { ...ALVO.atributos, forca: 400 } }, 11, { rngStatus: () => 99.9 })
+        .logTurnos[0].ataques.find((a) => a.atacante === 'Alvo de Teste')!;
+    const sem = golpeDoAlvo({});
+    const com = golpeDoAlvo({ heroismo: 7 });
+    expect(com.danoEfetivo).toBeLessThan(sem.danoEfetivo); // +30% sobre a mitigação de 100: 400 − 100 contra 400 − 130
+  });
+});

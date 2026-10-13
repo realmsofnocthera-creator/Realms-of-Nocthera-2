@@ -74,6 +74,7 @@ import {
   MENSAGEM_BLOQUEIO_EQUIPAR,
   mitigacaoDoEquipamento,
 } from '@/game/equipamento';
+import { HABILIDADES_ARMADURA_NO_MOTOR } from '@/game/combate/habilidadesArmaduraCombate';
 import { randomInt, randomUUID } from 'node:crypto';
 import { registrarLog } from './log';
 import {
@@ -1224,6 +1225,10 @@ function combatenteDoPersonagem(current: CharacterDocument): Combatente {
   // A ficha de combate do equipamento: o motor só lê o que está aqui (arma: dano, tipo, elemento e status)
   const ficha = calcularFichaEquipamento(current.equipamento, current.armas, current.armaduras);
   const arma = ficha.arma;
+  // Habilidades de armadura que dependem do estado da luta (dano e crítico condicionais, Heroísmo)
+  const habilidadesNoMotor = Object.fromEntries(
+    Object.entries(ficha.habilidades).filter(([id]) => HABILIDADES_ARMADURA_NO_MOTOR.has(id))
+  );
   return {
     nome: current.nome,
     racaId: current.racaId,
@@ -1249,15 +1254,17 @@ function combatenteDoPersonagem(current: CharacterDocument): Combatente {
         }
       : {}),
     ...(arma?.subtipoFisico ? { tipoDanoFisico: arma.subtipoFisico } : {}),
-    ...(arma
+    ...(arma || Object.keys(habilidadesNoMotor).length > 0
       ? {
           equipamento: {
             bonusDanoFisicoPercentual: ficha.percentuais.danoFisico,
             bonusDanoMagicoPercentual: ficha.percentuais.danoMagico,
             bonusChanceCriticoPontos: ficha.percentuais.chanceCritico,
             bonusChanceEfeitosPontos: ficha.percentuais.chanceEfeitos,
-            statusArma: arma.status,
-            elementosArma: arma.elementos,
+            statusArma: arma?.status ?? [],
+            elementosArma: arma?.elementos ?? [],
+            habilidadesArmadura: habilidadesNoMotor,
+            sobreescudoMaximo: current.sobreescudoMax,
           },
         }
       : {}),

@@ -18,6 +18,10 @@ export interface EquipamentoCombate {
   statusArma: readonly EfeitoStatus[];
   /** Elementos da arma: com dois, alternam por rodada. */
   elementosArma: readonly Elemento[];
+  /** Habilidades de armadura (nível já somado entre as peças) que dependem do estado da luta. */
+  habilidadesArmadura?: Readonly<Record<string, number>>;
+  /** Sobreescudo máximo do personagem (o Poder Máximo nível 5 vale até o primeiro golpe sofrido). */
+  sobreescudoMaximo?: number;
 }
 
 /** Elemento do golpe da arma na rodada: com dois elementos, alternam (1ª rodada no primeiro). */
