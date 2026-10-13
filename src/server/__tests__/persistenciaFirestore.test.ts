@@ -115,6 +115,17 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(antigo.armas).toEqual([]);
   });
 
+  it('equipamento vai e volta do Firestore; descarta o que não existe mais e o documento antigo fica sem nada equipado', () => {
+    const arma = { id: 'a1', baseId: 'ferro-de-cacada', categoria: 'katana' as const, atributo: 'sorte' as const, pontos: 4, reforjas: 0, criadaEm: 't' };
+    const elmo = { id: 'p1', pecaId: 'rato-da-floresta-elmo', atributo: 'vigor' as const, pontos: 2, reforjas: 0, xp: 0, criadaEm: 't' };
+    const equipado = { armaId: 'a1', armadura: { elmo: 'p1' } };
+    const volta = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, armas: [arma], armaduras: [elmo], equipamento: equipado }));
+    expect(volta.equipamento).toEqual(equipado);
+    const orfao = personagemDoFirestore('u1', { ...personagemParaFirestore({ ...PERSONAGEM, armas: [arma], armaduras: [elmo], equipamento: equipado }), armas: [] });
+    expect(orfao.equipamento).toEqual({ armaId: null, armadura: { elmo: 'p1' } });
+    expect(personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), equipamento: undefined }).equipamento).toEqual({ armaId: null, armadura: {} });
+  });
+
   it('armaduras vão e voltam do Firestore; documento antigo fica sem armaduras', () => {
     const peca = { id: 'p1', pecaId: 'rato-da-floresta-elmo', atributo: 'vigor' as const, pontos: 2, reforjas: 0, xp: 120, criadaEm: 't' };
     const volta = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, armaduras: [peca] }));

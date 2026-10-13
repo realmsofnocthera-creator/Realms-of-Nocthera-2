@@ -61,6 +61,19 @@ import {
   planejarUsoDeOrbes,
   sortearOrbesDaCacada,
 } from '@/game/armaduraForja';
+import {
+  aplicarEquipamentoAosAtributos,
+  calcularFichaEquipamento,
+  desequiparArma,
+  desequiparEspaco,
+  EQUIPAMENTO_VAZIO,
+  EquipamentoPersonagem,
+  equiparArma,
+  equiparPeca,
+  lerEquipamentoPersonagem,
+  MENSAGEM_BLOQUEIO_EQUIPAR,
+  mitigacaoDoEquipamento,
+} from '@/game/equipamento';
 import { randomInt, randomUUID } from 'node:crypto';
 import { registrarLog } from './log';
 import {
@@ -114,6 +127,12 @@ export interface CharacterDocument {
   armas?: ArmaPersonagem[];
   /** Peças de armadura fabricadas no Ferreiro. */
   armaduras?: ArmaduraPersonagem[];
+  /** Equipamento: a arma e as peças de armadura equipadas na ficha. */
+  equipamento?: EquipamentoPersonagem;
+  /** Quanto o equipamento soma em cada atributo (pontos e % de Agilidade). Derivado, não é gravado. */
+  bonusEquipamento?: Attributes;
+  /** Mitigação física e mágica das peças de Defesa, com a % de Defesa da arma. Derivado, não é gravado. */
+  mitigacaoEquipamento?: number;
   /** Quanto o Reforço soma em cada atributo. Derivado, não é gravado. */
   bonusReforco?: Attributes;
   atributos: Attributes;
@@ -253,6 +272,7 @@ export function calcularAtributosDerivados(
  * (Resistência Bárbara, Muralha de Ferro, Fluxo Arcano, Passos Rápidos etc.).
  */
 function normalizarPersonagem(char: CharacterDocument): CharacterDocument {
+  const equipamento = lerEquipamentoPersonagem(char.equipamento, char.armas ?? [], char.armaduras ?? []);
   return {
     ...char,
     diamantes: char.diamantes ?? 0,
@@ -268,7 +288,8 @@ function normalizarPersonagem(char: CharacterDocument): CharacterDocument {
     cacadaChavesVencidas: char.cacadaChavesVencidas ?? [],
     pontosAlocadosPorNivel: char.pontosAlocadosPorNivel ?? { ...ZEROS_ATRIBUTOS },
     habilidadesEquipadas: normalizarHabilidadesEquipadas(char.classeId, char.habilidadesEquipadas),
-    ...derivadosComReforco(char),
+    equipamento,
+    ...derivadosComReforco({ ...char, equipamento }),
   };
 }
 
@@ -295,6 +316,7 @@ function mesclarPersonagem(
     cacadaChavesVencidas: updates.cacadaChavesVencidas ?? current.cacadaChavesVencidas ?? [],
     armas: updates.armas ?? current.armas ?? [],
     armaduras: updates.armaduras ?? current.armaduras ?? [],
+    equipamento: updates.equipamento ?? current.equipamento ?? EQUIPAMENTO_VAZIO,
     bonusSubclasseAplicado:
       updates.bonusSubclasseAplicado !== undefined
         ? updates.bonusSubclasseAplicado
@@ -314,16 +336,30 @@ function mesclarPersonagem(
   };
 }
 
-/** Atributos que valem em combate e nos derivados: os gravados mais o bônus do Reforço de Habilidade. */
-export function atributosEfetivos(char: Pick<CharacterDocument, 'atributos' | 'reforcoHabilidade'>): Attributes {
-  return aplicarReforcoAtributos(char.atributos, char.reforcoHabilidade);
+/** Atributos que valem em combate e nos derivados: os gravados, o Reforço de Habilidade e o equipamento equipado. */
+export function atributosEfetivos(
+  char: Pick<CharacterDocument, 'atributos' | 'reforcoHabilidade'> & Partial<Pick<CharacterDocument, 'equipamento' | 'armas' | 'armaduras'>>
+): Attributes {
+  const comReforco = aplicarReforcoAtributos(char.atributos, char.reforcoHabilidade);
+  if (!char.equipamento) return comReforco;
+  return aplicarEquipamentoAosAtributos(comReforco, calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras));
 }
 
-/** Derivados calculados com o Reforço (atributos) e a Ascensão (nível das passivas). */
+/** Derivados calculados com o Reforço e o equipamento (atributos, HP e defesa) e a Ascensão (nível das passivas). */
 function derivadosComReforco(char: CharacterDocument) {
+  const ficha = calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras);
+  const comReforco = aplicarReforcoAtributos(char.atributos, char.reforcoHabilidade);
+  const efetivos = aplicarEquipamentoAosAtributos(comReforco, ficha);
+  const derivados = calcularAtributosDerivados(efetivos, char.classeId, char.nivel, char);
+  const bonusEquipamento = { ...efetivos };
+  for (const a of ATTRIBUTES) bonusEquipamento[a] = efetivos[a] - comReforco[a];
   return {
     bonusReforco: bonusReforcoEmAtributos(char.atributos, char.reforcoHabilidade),
-    ...calcularAtributosDerivados(atributosEfetivos(char), char.classeId, char.nivel, char),
+    bonusEquipamento,
+    mitigacaoEquipamento: mitigacaoDoEquipamento(ficha),
+    ...derivados,
+    hpMax: derivados.hpMax + ficha.hpExtra,
+    chanceCritico: derivados.chanceCritico + ficha.percentuais.chanceCritico,
   };
 }
 
@@ -1182,8 +1218,11 @@ function idDoRegistroCombate(uid: string, combateId: string): string {
   return `${uid}__${combateId}`;
 }
 
-/** Monta o personagem para o combate: HP cheio, Sobreescudo e atributos com o Reforço de Habilidade. */
+/** Monta o personagem para o combate: HP cheio, Sobreescudo e atributos com o Reforço de Habilidade e o equipamento. */
 function combatenteDoPersonagem(current: CharacterDocument): Combatente {
+  // A ficha de combate do equipamento: o motor só lê o que está aqui (arma: dano, tipo, elemento e status)
+  const ficha = calcularFichaEquipamento(current.equipamento, current.armas, current.armaduras);
+  const arma = ficha.arma;
   return {
     nome: current.nome,
     racaId: current.racaId,
@@ -1199,7 +1238,20 @@ function combatenteDoPersonagem(current: CharacterDocument): Combatente {
     subclasseTiers: current.subclasseTiers,
     ascensaoHabilidade: current.ascensaoHabilidade,
     ouro: current.ouro,
-    mitigacao: 0,
+    mitigacao: mitigacaoDoEquipamento(ficha),
+    ...(arma?.subtipoFisico ? { tipoDanoFisico: arma.subtipoFisico } : {}),
+    ...(arma
+      ? {
+          equipamento: {
+            bonusDanoFisicoPercentual: ficha.percentuais.danoFisico,
+            bonusDanoMagicoPercentual: ficha.percentuais.danoMagico,
+            bonusChanceCriticoPontos: ficha.percentuais.chanceCritico,
+            bonusChanceEfeitosPontos: ficha.percentuais.chanceEfeitos,
+            statusArma: arma.status,
+            elementosArma: arma.elementos,
+          },
+        }
+      : {}),
   };
 }
 
@@ -1542,3 +1594,44 @@ export async function usarOrbesArmadura(
   });
 }
 
+
+// ---------------------------------------------------------------------------
+// Equipamento: equipar e desequipar na ficha do personagem
+// ---------------------------------------------------------------------------
+
+export interface RespostaEquipamento {
+  character: CharacterDocument;
+}
+
+async function gravarEquipamento(
+  nome: string,
+  uid: string,
+  decidir: (current: CharacterDocument) => { ok: true; equipamento: EquipamentoPersonagem } | { ok: false; motivo: keyof typeof MENSAGEM_BLOQUEIO_EQUIPAR }
+): Promise<RespostaEquipamento> {
+  return repositorio.executarTransacao(nome, async (ctx) => {
+    const current = await carregarPersonagem(ctx, uid);
+    const r = decidir(current);
+    if (!r.ok) throw new Error(MENSAGEM_BLOQUEIO_EQUIPAR[r.motivo]);
+    return { character: salvarPersonagem(ctx, current, { equipamento: r.equipamento }) };
+  });
+}
+
+const equipamentoDe = (c: CharacterDocument): EquipamentoPersonagem => c.equipamento ?? EQUIPAMENTO_VAZIO;
+
+/** Equipa uma arma (uma só por vez; a que estava equipada volta para a lista). */
+export function equiparArmaDoPersonagem(uid: string, armaId: unknown): Promise<RespostaEquipamento> {
+  return gravarEquipamento('equiparArma', uid, (c) => equiparArma(equipamentoDe(c), c.armas ?? [], armaId));
+}
+
+export function desequiparArmaDoPersonagem(uid: string): Promise<RespostaEquipamento> {
+  return gravarEquipamento('desequiparArma', uid, (c) => ({ ok: true, equipamento: desequiparArma(equipamentoDe(c)) }));
+}
+
+/** Equipa uma peça de armadura no espaço dela. */
+export function equiparArmaduraDoPersonagem(uid: string, armaduraId: unknown): Promise<RespostaEquipamento> {
+  return gravarEquipamento('equiparArmadura', uid, (c) => equiparPeca(equipamentoDe(c), c.armaduras ?? [], armaduraId));
+}
+
+export function desequiparEspacoDoPersonagem(uid: string, espaco: unknown): Promise<RespostaEquipamento> {
+  return gravarEquipamento('desequiparEspaco', uid, (c) => desequiparEspaco(equipamentoDe(c), espaco));
+}

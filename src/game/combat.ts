@@ -52,6 +52,7 @@ import {
 } from './combate/efeitos';
 import { calcularInstintoSobrevivencia } from './combate/passivasClasse';
 import { LadoCombate, multiplicadorCritico, sorteioCritico } from './combate/critico';
+import { elementoDaArmaNaRodada, EquipamentoCombate } from './combate/equipamentoCombate';
 import { reacaoDoCorpo } from './combate/corpo';
 import { aplicarBonusElemental } from './combate/bonusElemento';
 import { decidirDesfecho } from './combate/desfecho';
@@ -262,8 +263,10 @@ export interface Combatente {
   /** Só Aberrante: fraquezas e resistências próprias da criatura. */
   fraquezasProprias?: TipoGolpe[];
   resistenciasProprias?: TipoGolpe[];
-  /** Subtipo do dano físico do atacante (vem da arma; vazio até as armas existirem). */
+  /** Subtipo do dano físico do atacante (vem da arma equipada). */
   tipoDanoFisico?: SubtipoFisico;
+  /** Equipamento (ficha de combate): bônus em % da arma, elementos e status da arma. Só entra pela ficha. */
+  equipamento?: EquipamentoCombate;
   contadorFuriaSelvagem?: number;
   contadorIraBarbaro?: number;
   contadorPosturaGuardiao?: number;
@@ -2466,7 +2469,8 @@ function turnoDeCombateInterno(
   const juramentoDefensorAtivo = defensor.juramentoGuardiaoAtivo ?? false;
 
   // Acerto crítico (Sorte): 2% + 0,1% por ponto, sorteado em cada golpe
-  const chanceCriticoAtacante = calcularChanceCritico(atacante.atributos.sorte);
+  const chanceCriticoAtacante =
+    calcularChanceCritico(atacante.atributos.sorte) + (atacante.equipamento?.bonusChanceCriticoPontos ?? 0);
 
   for (let i = 0; i < maxAtaques; i++) {
     if (hpAtual <= 0 || hpAtacanteAtual <= 0) break;
@@ -2538,6 +2542,9 @@ function turnoDeCombateInterno(
       hpAtacanteAtual < (atacante.hpMax * GAME_CONFIG.ENFURECIDO_LIMIAR_HP_PERCENTUAL) / 100;
     const bonusDanoBuffsPorTipo = (tipo: 'fisico' | 'magico'): number =>
       (enfurecidoNesteAtaque ? GAME_CONFIG.ENFURECIDO_BONUS_DANO_PERCENTUAL : 0) +
+      (tipo === 'fisico'
+        ? atacante.equipamento?.bonusDanoFisicoPercentual ?? 0
+        : atacante.equipamento?.bonusDanoMagicoPercentual ?? 0) +
       (impetoNesteAtaque?.bonusDanoPercentual ?? 0) +
       bonusDanoDosBuffs(atacante.buffs, tipo) +
       bonusDanoDosDebuffs(atacante.debuffs) +
@@ -2986,6 +2993,10 @@ function turnoDeCombateInterno(
       }
       if (elementoGolpe === undefined && atacante.elementoAtaque !== undefined) {
         elementoGolpe = atacante.elementoAtaque;
+      }
+      // Elemento da arma equipada (com dois elementos, alternam por rodada)
+      if (elementoGolpe === undefined && atacante.equipamento) {
+        elementoGolpe = elementoDaArmaNaRodada(atacante.equipamento.elementosArma, numeroTurno);
       }
     }
 
@@ -3637,6 +3648,14 @@ export function resolverCombate(
       ? { ...personagem.modificadoresElementais }
       : undefined,
     elementoAtaque: personagem.elementoAtaque,
+    tipoDanoFisico: personagem.tipoDanoFisico,
+    equipamento: personagem.equipamento
+      ? {
+          ...personagem.equipamento,
+          statusArma: [...personagem.equipamento.statusArma],
+          elementosArma: [...personagem.equipamento.elementosArma],
+        }
+      : undefined,
     contadorFuriaSelvagem: personagem.contadorFuriaSelvagem ?? 0,
     contadorIraBarbaro: personagem.contadorIraBarbaro ?? 0,
     contadorPosturaGuardiao: personagem.contadorPosturaGuardiao ?? 0,
@@ -3847,10 +3866,21 @@ export function resolverCombate(
         aplicarStatusNoMonstro(
           s.status,
           obterSorteioStatus(rodada, 100 + i),
-          s.chanceExtraPercentual ?? 0,
+          (s.chanceExtraPercentual ?? 0) + (p.equipamento?.bonusChanceEfeitosPontos ?? 0),
           eventosEfeitosDoTurno
         );
       });
+      // Status da arma: cada golpe que causa dano tenta aplicar cada status com a chance base dele
+      if (p.equipamento && atk.danoBruto > 0 && !atk.incapacitado) {
+        p.equipamento.statusArma.forEach((status, i) => {
+          aplicarStatusNoMonstro(
+            status,
+            obterSorteioStatus(rodada, 300 + ataquesDoTurno.indexOf(atk) * 4 + i),
+            p.equipamento?.bonusChanceEfeitosPontos ?? 0,
+            eventosEfeitosDoTurno
+          );
+        });
+      }
       // Limpeza (catálogo 1.2): remove de 1 a 3 efeitos negativos do personagem
       if (atk.efeitosNegativosRemovidos) {
         const rem = removerEfeitos(efeitosPersonagem, atk.efeitosNegativosRemovidos);
