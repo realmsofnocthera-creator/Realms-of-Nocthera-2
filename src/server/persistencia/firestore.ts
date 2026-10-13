@@ -3,6 +3,7 @@ import type { DocumentData, Firestore, Transaction } from 'firebase-admin/firest
 import { AVATARES_DISPONIVEIS, getAvatarById } from '@/rules/avatars';
 import { normalizarHabilidadesEquipadas, ZEROS_ATRIBUTOS } from '@/game';
 import { lerArmasPersonagem } from '@/game/forja';
+import { lerArmadurasPersonagem } from '@/game/armaduraForja';
 import type { Attributes } from '@/rules/attributes';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import { descreverErro, registrarLog } from '@/server/log';
@@ -110,6 +111,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
       ? (data.cacadaChavesVencidas as unknown[]).filter((n): n is number => typeof n === 'number')
       : [],
     armas: lerArmasPersonagem(data.armas),
+    armaduras: lerArmadurasPersonagem(data.armaduras),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
       ? { bonusSubclasseAplicado: lerAtributos(data.bonusSubclasseAplicado, ZEROS_ATRIBUTOS) }
       : {}),
@@ -148,6 +150,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     inventario: char.inventario ?? {},
     cacadaChavesVencidas: char.cacadaChavesVencidas ?? [],
     armas: char.armas ?? [],
+    armaduras: char.armaduras ?? [],
     hpMax: char.hpMax,
     sobreescudoMax: char.sobreescudoMax,
     criadoEm: char.criadoEm,

@@ -115,6 +115,13 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(antigo.armas).toEqual([]);
   });
 
+  it('armaduras vão e voltam do Firestore; documento antigo fica sem armaduras', () => {
+    const peca = { id: 'p1', pecaId: 'rato-da-floresta-elmo', atributo: 'vigor' as const, pontos: 2, reforjas: 0, xp: 120, criadaEm: 't' };
+    const volta = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, armaduras: [peca] }));
+    expect(volta.armaduras).toEqual([peca]);
+    expect(personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), armaduras: undefined }).armaduras).toEqual([]);
+  });
+
   it('grava personagem, nome e transação juntos no fim da transação', async () => {
     await repo.executarTransacao('teste', async (ctx) => {
       ctx.gravarPersonagem(PERSONAGEM);
