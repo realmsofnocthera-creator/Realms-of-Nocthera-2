@@ -7,6 +7,7 @@ import { auth, logoutUser } from '@/lib/firebase';
 import { CharacterSheet } from '@/components/CharacterSheet';
 import { CharacterDocument } from '@/server/characterService';
 import type { SlotHabilidade } from '@/rules/habilidadesEquipadas';
+import type { SlotEquipamento } from '@/lib/equipamentoTela';
 
 interface SessionUser {
   uid: string;
@@ -95,6 +96,31 @@ export default function PersonagemPage() {
     }
   };
 
+  /** Chama a rota de equipamento e atualiza o personagem. Devolve a mensagem de erro, se houver. */
+  const chamarEquipamento = async (rota: 'equipar' | 'desequipar', corpo: Record<string, unknown>): Promise<string | null> => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return 'Sessão expirada. Entre de novo.';
+      const res = await fetch(`/api/equipamento/${rota}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(corpo),
+      });
+      const data = await res.json();
+      if (!res.ok) return data.error || 'Não foi possível alterar o equipamento.';
+      if (data.character) setCharacter(data.character);
+      return null;
+    } catch {
+      return 'Erro ao alterar o equipamento.';
+    }
+  };
+
+  const handleEquiparItem = (slot: SlotEquipamento, itemId: string) =>
+    chamarEquipamento('equipar', { tipo: slot === 'arma' ? 'arma' : 'armadura', id: itemId });
+
+  const handleDesequiparItem = (slot: SlotEquipamento) =>
+    chamarEquipamento('desequipar', slot === 'arma' ? { tipo: 'arma' } : { tipo: 'armadura', espaco: slot });
+
   const handleLogout = async () => {
     await logoutUser();
     router.replace('/login');
@@ -119,6 +145,8 @@ export default function PersonagemPage() {
         character={character}
         onLogout={handleLogout}
         onEquiparHabilidade={handleEquiparHabilidade}
+        onEquiparItem={handleEquiparItem}
+        onDesequiparItem={handleDesequiparItem}
         userEmail={user.email || 'Aventureiro'}
       />
     </main>

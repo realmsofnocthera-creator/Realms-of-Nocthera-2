@@ -155,7 +155,7 @@ const ROTULO_MODIFICADOR: Readonly<Record<AlvoModificadorArma, string>> = {
   chanceEfeitos: 'chance de efeitos',
 };
 
-const textoModificador = (alvo: AlvoModificadorArma, percentual: number) =>
+export const textoModificador = (alvo: AlvoModificadorArma, percentual: number) =>
   `${percentual > 0 ? '+' : '−'}${Math.abs(percentual)}% ${ROTULO_MODIFICADOR[alvo]}`;
 
 export interface DetalheArmaTela {

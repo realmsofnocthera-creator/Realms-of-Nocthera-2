@@ -7,11 +7,16 @@ import { CharacterDocument } from '@/server/characterService';
 import type { SlotHabilidade } from '@/rules/habilidadesEquipadas';
 import { FICHA_ASSETS } from '@/rules/fichaAssets';
 import {
+  AbaFicha,
   FichaHero,
   FichaHabilidades,
   FichaBannerDesenvolvimento,
+  FichaEquipamentoModal,
   FichaLupaModal,
+  FichaResumoEquipamento,
+  FichaSlotsEquipamento,
 } from '@/components/ficha';
+import type { SlotEquipamento } from '@/lib/equipamentoTela';
 
 interface CharacterSheetProps {
   character: CharacterDocument;
@@ -19,16 +24,23 @@ interface CharacterSheetProps {
   userEmail: string;
   onAvatarChange?: (newAvatarId: string) => void;
   onEquiparHabilidade?: (slot: SlotHabilidade, habilidadeId: string) => Promise<string | null>;
+  /** Equipa o item no espaço (arma ou peça). Devolve a mensagem de erro, se houver. */
+  onEquiparItem?: (slot: SlotEquipamento, itemId: string) => Promise<string | null>;
+  onDesequiparItem?: (slot: SlotEquipamento) => Promise<string | null>;
 }
 
 export function CharacterSheet({
   character,
   onLogout,
   onEquiparHabilidade,
+  onEquiparItem,
+  onDesequiparItem,
 }: CharacterSheetProps) {
   const router = useRouter();
   const [activeSkillPopoverId, setActiveSkillPopoverId] = useState<string | null>(null);
   const [lupaOpen, setLupaOpen] = useState(false);
+  const [aba, setAba] = useState<AbaFicha>('personagem');
+  const [slotAberto, setSlotAberto] = useState<SlotEquipamento | null>(null);
 
   const handleTogglePopover = (skillId: string) => {
     setActiveSkillPopoverId((prev) => (prev === skillId ? null : skillId));
@@ -79,23 +91,41 @@ export function CharacterSheet({
         <FichaHero
           character={character}
           onOpenLupa={() => setLupaOpen(true)}
+          aba={aba}
+          onMudarAba={onEquiparItem ? setAba : undefined}
+          colunaEquipamentos={<FichaSlotsEquipamento character={character} onAbrirSlot={setSlotAberto} />}
           className="flex-1 min-h-0"
         />
 
-        {/* 4) FICHA HABILIDADES: Moldura de Habilidades com os 7 ícones */}
-        <FichaHabilidades
-          character={character}
-          activePopoverId={activeSkillPopoverId}
-          onTogglePopover={handleTogglePopover}
-          onEquiparHabilidade={onEquiparHabilidade}
-          className="shrink-0"
-        />
+        {/* 4) FICHA HABILIDADES: Moldura de Habilidades com os 7 ícones (na aba Equipamentos, o resumo dos bônus) */}
+        {aba === 'equipamentos' ? (
+          <FichaResumoEquipamento character={character} className="shrink-0" />
+        ) : (
+          <FichaHabilidades
+            character={character}
+            activePopoverId={activeSkillPopoverId}
+            onTogglePopover={handleTogglePopover}
+            onEquiparHabilidade={onEquiparHabilidade}
+            className="shrink-0"
+          />
+        )}
 
         {/* 5) BANNER DE DESENVOLVIMENTO (ampliado, limpo e direto da arte oficial) */}
         <FichaBannerDesenvolvimento character={character} className="shrink-0" />
       </div>
 
-      {/* 6) MODAL DE EXPLICAÇÃO DOS ATRIBUTOS (LUPA) */}
+      {/* 6) ESCOLHA DO ITEM DE UM ESPAÇO (aba Equipamentos) */}
+      {aba === 'equipamentos' && slotAberto && (
+        <FichaEquipamentoModal
+          character={character}
+          slot={slotAberto}
+          onClose={() => setSlotAberto(null)}
+          onEquipar={onEquiparItem}
+          onDesequipar={onDesequiparItem}
+        />
+      )}
+
+      {/* 7) MODAL DE EXPLICAÇÃO DOS ATRIBUTOS (LUPA) */}
       <FichaLupaModal
         isOpen={lupaOpen}
         onClose={() => setLupaOpen(false)}

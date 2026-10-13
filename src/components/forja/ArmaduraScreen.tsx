@@ -2,7 +2,8 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, Coins, Footprints, Hand, HardHat, Minus, Plus, Shirt, X } from 'lucide-react';
+import { ArrowLeft, Check, Coins, Minus, Plus, X } from 'lucide-react';
+import { IconeEspaco } from '@/components/equipamento/IconeEspaco';
 import type { CharacterDocument } from '@/server/characterService';
 import type { ArmaduraPersonagem } from '@/game/armaduraForja';
 import type { EspacoArmadura } from '@/rules/armaduras';
@@ -31,26 +32,6 @@ interface ArmaduraScreenProps {
 }
 
 type Aba = 'conjuntos' | 'minhas';
-
-function Perneiras({ className, style }: { className?: string; style?: React.CSSProperties }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style} aria-hidden="true">
-      <path d="M7 3h10l1 18h-4l-2-11-2 11H6z" />
-    </svg>
-  );
-}
-
-/** Ícone do espaço (a arte das peças entra depois). */
-function IconeEspaco({ espaco, className, style }: { espaco: EspacoArmadura; className?: string; style?: React.CSSProperties }) {
-  const props = { className, style, 'aria-hidden': true as const };
-  switch (espaco) {
-    case 'elmo': return <HardHat {...props} />;
-    case 'peitoral': return <Shirt {...props} />;
-    case 'luvas': return <Hand {...props} />;
-    case 'perneiras': return <Perneiras className={className} style={style} />;
-    case 'botas': return <Footprints {...props} />;
-  }
-}
 
 const estrelas = (n: number) => '★'.repeat(n);
 

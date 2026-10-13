@@ -3,24 +3,29 @@
 import React from 'react';
 import { FICHA_ASSETS } from '@/rules/fichaAssets';
 
+export type AbaFicha = 'personagem' | 'equipamentos';
+
 interface FichaSidebarProps {
   className?: string;
+  /** Aba aberta. Sem `onMudarAba`, só a aba Personagem funciona. */
+  aba?: AbaFicha;
+  onMudarAba?: (aba: AbaFicha) => void;
 }
 
-export function FichaSidebar({ className = '' }: FichaSidebarProps) {
+export function FichaSidebar({ className = '', aba = 'personagem', onMudarAba }: FichaSidebarProps) {
   const buttons = [
     {
       id: 'personagem',
       label: 'Personagem',
       src: FICHA_ASSETS.btnPersonagem,
-      active: true,
+      active: aba === 'personagem',
       invert: true,
     },
     {
       id: 'equipamentos',
       label: 'Equipamentos',
       src: FICHA_ASSETS.btnEquipamentos,
-      active: false,
+      active: aba === 'equipamentos',
       invert: false,
     },
     {
@@ -45,6 +50,27 @@ export function FichaSidebar({ className = '' }: FichaSidebarProps) {
       className={`flex flex-col gap-2 sm:gap-2.5 shrink-0 z-20 ${className}`}
     >
       {buttons.map((btn) => {
+        const aberta = btn.id === 'personagem' || btn.id === 'equipamentos' ? (btn.id as AbaFicha) : null;
+        if (!btn.active && aberta && onMudarAba) {
+          return (
+            <button
+              key={btn.id}
+              type="button"
+              aria-label={btn.label}
+              onClick={() => onMudarAba(aberta)}
+              className="relative w-10 h-10 sm:w-11 sm:h-11 min-w-[40px] min-h-[40px] rounded-lg p-1.5 flex items-center justify-center border border-[#B2A66C]/60 cursor-pointer active:scale-95 transition-all"
+              style={{ backgroundColor: 'rgba(13,13,13,0.85)', isolation: 'isolate' }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={btn.src}
+                alt={btn.label}
+                className="w-full h-full object-contain pointer-events-none select-none"
+                style={{ filter: btn.invert ? 'invert(1)' : undefined, mixBlendMode: 'screen' }}
+              />
+            </button>
+          );
+        }
         if (btn.active) {
           return (
             <button
