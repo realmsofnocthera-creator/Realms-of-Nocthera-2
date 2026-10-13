@@ -108,8 +108,8 @@ function ProvacaoCard({
     );
   }
 
-  // Provações com tela própria (por enquanto, a Caçada) viram link
-  const destino = provacao.id === 'cacada' ? '/cacada' : null;
+  // Provações com tela própria (a Caçada e a Batalha Sangrenta) viram link
+  const destino = provacao.id === 'cacada' ? '/cacada' : provacao.id === 'batalha-sangrenta' ? '/batalha-sangrenta' : null;
   const card = (
     <article
       aria-label={`${provacao.nome} - Nível ${provacao.nivelRequerido}`}
