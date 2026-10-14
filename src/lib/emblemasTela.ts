@@ -1,5 +1,6 @@
 import type { CharacterDocument } from '@/server/characterService';
-import { atributosDoEmblema, atributosDosEmblemas, CUSTO_DA_FUSAO, EmblemaItem, nivelDasHabilidades, SLOTS_EMBLEMA } from '@/game/emblemas';
+import { atributosDoEmblema, atributosDosEmblemas, CUSTO_DA_FUSAO, EmblemaItem, multiplicadorDoNivel, nivelDasHabilidades, SLOTS_EMBLEMA } from '@/game/emblemas';
+import { habilidadeDoEmblemaVale } from '@/rules/emblemasEfeitos';
 import { ATTRIBUTES } from '@/rules/attributes';
 import { ATTRIBUTE_DISPLAY_NAMES } from '@/rules/attributeInfo';
 import { EMBLEMA_RARIDADE_MAP, EMBLEMA_RARIDADES } from '@/rules/emblemas';
@@ -96,6 +97,10 @@ export interface HabilidadeEmAcaoTela {
   nome: string;
   descricao: string;
   nivel: number;
+  /** A habilidade já vale no combate (as outras entram nos próximos PRs). */
+  vale: boolean;
+  /** Quanto o nível multiplica o valor do catálogo (1×, 1,5×, 2× ou 2,5×). */
+  multiplicador: number;
   cor: string;
 }
 
@@ -106,7 +111,15 @@ export function habilidadesEmAcao(c: Personagem): HabilidadeEmAcaoTela[] {
     .filter((i): i is EmblemaItem => !!i && !!TIPO_EMBLEMA_MAP[i.tipo]);
   return nivelDasHabilidades(equipados).map((n) => {
     const tipo = TIPO_EMBLEMA_MAP[n.tipo];
-    return { tipoNome: tipo.nome, nome: n.habilidade.nome, descricao: n.habilidade.descricao, nivel: n.nivel, cor: EMBLEMA_RARIDADE_MAP[tipo.raridade].cor };
+    return {
+      tipoNome: tipo.nome,
+      nome: n.habilidade.nome,
+      descricao: n.habilidade.descricao,
+      nivel: n.nivel,
+      vale: habilidadeDoEmblemaVale(n.tipo, n.indice),
+      multiplicador: multiplicadorDoNivel(n.nivel),
+      cor: EMBLEMA_RARIDADE_MAP[tipo.raridade].cor,
+    };
   });
 }
 

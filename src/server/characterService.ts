@@ -92,6 +92,7 @@ import {
   sortearEmblemas,
 } from '@/game/guerreiro';
 import { diaDeBrasilia } from '@/game/batalhaSangrenta';
+import { emblemasNoCombate } from '@/game/emblemasEfeitos';
 import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
 import { TIPO_EMBLEMA_MAP } from '@/rules/emblemasCatalogo';
 import {
@@ -1282,11 +1283,18 @@ function idDoRegistroCombate(uid: string, combateId: string): string {
   return `${uid}__${combateId}`;
 }
 
+/** Algum bônus percentual do equipamento ou dos emblemas (dano, crítico, efeitos) que o motor precisa ler. */
+function temPercentuais(ficha: ReturnType<typeof calcularFichaEquipamento>): boolean {
+  const p = ficha.percentuais;
+  return p.danoFisico !== 0 || p.danoMagico !== 0 || p.chanceCritico !== 0 || p.chanceEfeitos !== 0;
+}
+
 /** Monta o personagem para o combate: HP cheio, Sobreescudo e atributos com o Reforço de Habilidade e o equipamento. */
 function combatenteDoPersonagem(current: CharacterDocument): Combatente {
   // A ficha de combate do equipamento: o motor só lê o que está aqui (arma: dano, tipo, elemento e status)
   const ficha = calcularFichaEquipamento(current.equipamento, current.armas, current.armaduras, emblemasEquipadosDe(current));
   const arma = ficha.arma;
+  const emblemasCombate = emblemasNoCombate(ficha.emblemas);
   // Habilidades de armadura que dependem do estado da luta (dano e crítico condicionais, Heroísmo)
   const habilidadesNoMotor = Object.fromEntries(
     Object.entries(ficha.habilidades).filter(([id]) => HABILIDADES_ARMADURA_NO_MOTOR.has(id))
@@ -1316,7 +1324,7 @@ function combatenteDoPersonagem(current: CharacterDocument): Combatente {
         }
       : {}),
     ...(arma?.subtipoFisico ? { tipoDanoFisico: arma.subtipoFisico } : {}),
-    ...(arma || Object.keys(habilidadesNoMotor).length > 0
+    ...(arma || Object.keys(habilidadesNoMotor).length > 0 || emblemasCombate || temPercentuais(ficha)
       ? {
           equipamento: {
             bonusDanoFisicoPercentual: ficha.percentuais.danoFisico,
@@ -1326,6 +1334,7 @@ function combatenteDoPersonagem(current: CharacterDocument): Combatente {
             statusArma: arma?.status ?? [],
             elementosArma: arma?.elementos ?? [],
             habilidadesArmadura: habilidadesNoMotor,
+            ...(emblemasCombate ? { emblemas: emblemasCombate } : {}),
             sobreescudoMaximo: current.sobreescudoMax,
           },
         }

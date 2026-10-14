@@ -229,6 +229,12 @@ function escolherAcaoMonstro(c: Combatente): AcaoMonstro | undefined {
   return acao;
 }
 
+/** Redução do dano recebido (%) dos emblemas do defensor: física ou mágica, geral e, contra chefes, a do Rugido Dominante. */
+export function reducaoDanoDeEmblemas(e: { reducaoDano: { fisico: number; magico: number; todos: number; chefes: number } } | undefined, ehDanoFisico: boolean, atacanteEhChefe: boolean): number {
+  if (!e) return 0;
+  return e.reducaoDano.todos + (ehDanoFisico ? e.reducaoDano.fisico : e.reducaoDano.magico) + (atacanteEhChefe ? e.reducaoDano.chefes : 0);
+}
+
 /** Bônus de dano das passivas do monstro atacante (chefes Especiais): HP baixo, Fúria acumulada, bônus por rodadas. */
 export function bonusDanoPassivasMonstro(atacante: Combatente, hpAtual: number, rodada: number): number {
   const p = atacante.passivasMonstro;
@@ -330,6 +336,8 @@ export interface Combatente {
   passivasMonstro?: PassivasMonstro;
   /** Mecânica única de um chefe da Provação do Guerreiro (estado da luta). */
   mecanicaChefe?: EstadoMecanicaChefe;
+  /** Monstro chefe (alguns efeitos, como o Rugido Dominante do Grizzham, reduzem o dano que ele causa). */
+  chefe?: boolean;
   /** Status de dano contínuo ativos (copiado do estado da luta antes de cada ação; base dos bônus por status do alvo). */
   statusAtivos?: EfeitoStatus[];
   /** Sangramento e Maldição: duram até o fim da luta. */
@@ -3178,12 +3186,13 @@ function turnoDeCombateInterno(
       }
 
       // Dano elemental de quem ataca: o +10% da arma elemental e as habilidades de armadura (somam entre si)
-      const bonusElementalAtacante = bonusDanoElementalDeArmadura(
-        atacante.equipamento?.habilidadesArmadura,
-        atacante.equipamento?.elementosArma,
-        elementoGolpe,
-        estadoArmadura
-      );
+      const bonusElementalAtacante =
+        bonusDanoElementalDeArmadura(
+          atacante.equipamento?.habilidadesArmadura,
+          atacante.equipamento?.elementosArma,
+          elementoGolpe,
+          estadoArmadura
+        ) + (atacante.equipamento?.emblemas?.danoElemental[elementoGolpe] ?? 0);
       if (bonusElementalAtacante > 0) {
         const aplicarBonus = (v: number): number => Math.floor((v * (100 + bonusElementalAtacante)) / 100);
         danoBruto = aplicarBonus(danoBruto);
@@ -3274,7 +3283,8 @@ function turnoDeCombateInterno(
             (100 - focoNesteAtaque) *
             (100 +
               bonusDefesaDosBuffs(defensor.buffs) +
-              bonusMitigacaoDeArmadura(defensor.equipamento?.habilidadesArmadura, hpAtual, defensor.hpMax, numeroTurno)) *
+              bonusMitigacaoDeArmadura(defensor.equipamento?.habilidadesArmadura, hpAtual, defensor.hpMax, numeroTurno) +
+              (defensor.equipamento?.emblemas?.defPercentual ?? 0)) *
             (100 - reducaoDefesaPorPressao(defensor.debuffs, hpAtual, defensor.hpMax)) *
             (100 - reducaoDefesaDosDebuffs(defensor.debuffs))) /
           100_000_000
@@ -3307,7 +3317,8 @@ function turnoDeCombateInterno(
         (ehDanoFisico
           ? resistenciaRacialDefensor?.danoFisicoPercentual ?? 0
           : resistenciaRacialDefensor?.danoMagicoPercentual ?? 0) +
-        reducaoDanoPassivasMonstro(defensor, hpAtual, sobreescudoAtual, ehDanoFisico)
+        reducaoDanoPassivasMonstro(defensor, hpAtual, sobreescudoAtual, ehDanoFisico) +
+        reducaoDanoDeEmblemas(defensor.equipamento?.emblemas, ehDanoFisico, atacante.chefe === true)
       : 0;
 
     // Regra 1.2.2: as reduções de dano recebido somam, com teto de 80%
@@ -3987,6 +3998,7 @@ export function resolverCombate(
     enfurecido: monstro.enfurecido,
     ...(monstro.passivas ? { passivasMonstro: monstro.passivas } : {}),
     ...(monstro.mecanica ? { mecanicaChefe: criarEstadoMecanica(monstro.mecanica) } : {}),
+    ...(monstro.chefe ? { chefe: true } : {}),
     categoriaCorporal: monstro.categoriaCorporal,
     fraquezasProprias: monstro.fraquezasProprias ? [...monstro.fraquezasProprias] : undefined,
     resistenciasProprias: monstro.resistenciasProprias
