@@ -44,24 +44,17 @@ export type MotivoBloqueioGuerreiro =
   | 'dificuldadeInvalida'
   | 'nivelInsuficiente'
   | 'dificuldadeBloqueada'
-  | 'semTentativa'
-  | 'chefeIndisponivel';
+  | 'semTentativa';
 
 export const MENSAGEM_BLOQUEIO_GUERREIRO: Readonly<Record<MotivoBloqueioGuerreiro, string>> = {
   dificuldadeInvalida: 'Dificuldade da Provação do Guerreiro inválida',
   nivelInsuficiente: 'Nível insuficiente para a Provação do Guerreiro',
   dificuldadeBloqueada: 'Vença o chefe da dificuldade anterior da Provação do Guerreiro para liberar este',
   semTentativa: 'Você já enfrentou este chefe hoje',
-  chefeIndisponivel: 'Este chefe da Provação do Guerreiro ainda não está disponível',
 };
 
 export function ehDificuldadeGuerreiro(v: unknown): v is number {
   return typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= GUERREIRO.dificuldades;
-}
-
-/** Chefe pronto para lutar (a mecânica dele já existe no motor). */
-export function chefeDisponivel(dificuldade: number): boolean {
-  return CHEFE_GUERREIRO_POR_DIFICULDADE[dificuldade]?.mecanica !== undefined;
 }
 
 /** A 1 abre com o nível; as outras abrem ao vencer o chefe da anterior. */
@@ -84,7 +77,6 @@ export function conferirEntradaGuerreiro(
   if (!ehDificuldadeGuerreiro(dificuldade)) return { ok: false, motivo: 'dificuldadeInvalida' };
   if (nivel < NIVEL_GUERREIRO) return { ok: false, motivo: 'nivelInsuficiente' };
   if (!dificuldadeLiberadaGuerreiro(dificuldade, vencidas)) return { ok: false, motivo: 'dificuldadeBloqueada' };
-  if (!chefeDisponivel(dificuldade)) return { ok: false, motivo: 'chefeIndisponivel' };
   if (!tentativaDisponivel(tentativas, dificuldade, agora)) return { ok: false, motivo: 'semTentativa' };
   return { ok: true, dificuldade, chefe: CHEFE_GUERREIRO_POR_DIFICULDADE[dificuldade] };
 }
@@ -146,7 +138,7 @@ export function montarChefeGuerreiro(dificuldade: number): MonsterDefinition {
     ouroConcedido: { min: 0, max: 0 },
     modificadoresElementais: {},
     ...(c.elementoAtaque ? { elementoAtaque: c.elementoAtaque } : {}),
-    ...(c.mecanica ? { mecanica: c.mecanica } : {}),
+    mecanica: c.mecanica,
     enfurecido: true,
   };
 }

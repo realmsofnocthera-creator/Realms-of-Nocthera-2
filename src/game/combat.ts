@@ -160,6 +160,7 @@ import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import type { AcaoMonstro, HabilidadeMonstro, PassivasMonstro } from '@/rules/monsters';
 import {
   atualizarMecanicaNoFimDaRodada,
+  iniciarMecanica,
   bonusDanoContraAMecanica,
   bonusDanoDaMecanica,
   criarEstadoMecanica,
@@ -4167,7 +4168,7 @@ export function resolverCombate(
       bonusChanceStatusRelativa(p.equipamento?.habilidadesArmadura, status, estadoArmaduraDoPersonagem())
     );
 
-  const executarAcaoPersonagem = (
+  const executarAcaoPersonagemBase = (
     rodada: number,
     ataquesDoTurno: AtaqueLog[],
     eventosEfeitosDoTurno: EventoEfeito[]
@@ -4243,6 +4244,14 @@ export function resolverCombate(
 
   // Pouso Seguro: o primeiro golpe que o personagem sofre na luta
   let personagemJaFoiAtingido = false;
+
+  /** Cura que o personagem recebeu na rodada atual (base da Reversão da Selvara). */
+  let curaDoPersonagemNaRodada = 0;
+  const executarAcaoPersonagem = (rodada: number, ataquesDoTurno: AtaqueLog[], eventosEfeitosDoTurno: EventoEfeito[]) => {
+    const hpAntes = p.hp;
+    executarAcaoPersonagemBase(rodada, ataquesDoTurno, eventosEfeitosDoTurno);
+    curaDoPersonagemNaRodada += Math.max(0, p.hp - hpAntes);
+  };
 
   const executarAcaoMonstro = (
     rodada: number,
@@ -4344,8 +4353,18 @@ export function resolverCombate(
     }
   };
 
+  // Mecânica única do chefe (Provação do Guerreiro): o que ela faz antes da primeira rodada (ex.: o pacto de Belzareth)
+  let mensagensDaMecanicaPendentes: string[] = [];
+  if (m.mecanicaChefe) {
+    const inicio = iniciarMecanica(m.mecanicaChefe, { nomeDoChefe: m.nome, sorteio: (indice) => obterSorteioStatus(0, 2000 + indice) });
+    mensagensDaMecanicaPendentes = inicio.mensagens;
+    if (inicio.debuffsNoPersonagem) p.debuffs = adicionarDebuffs(p.debuffs, inicio.debuffsNoPersonagem);
+  }
+
   while (p.hp > 0 && m.hp > 0 && turno <= MAX_TURNOS) {
     const vidaDoChefeAntes = m.hp + m.sobreescudo;
+    const vidaDoPersonagemAntes = p.hp;
+    curaDoPersonagemNaRodada = 0;
     const ataquesDoTurno: AtaqueLog[] = [];
     const eventosEfeitosDoTurno: EventoEfeito[] = [];
 
@@ -4447,13 +4466,31 @@ export function resolverCombate(
       }
     }
 
-    const eventosMecanica = m.mecanicaChefe
-      ? atualizarMecanicaNoFimDaRodada(m.mecanicaChefe, {
-          nomeDoChefe: m.nome,
-          danoSofridoDoChefe: Math.max(0, vidaDoChefeAntes - (m.hp + m.sobreescudo)),
-          hpMaxDoChefe: m.hpMax,
-        })
-      : [];
+    let eventosMecanica: string[] = mensagensDaMecanicaPendentes;
+    mensagensDaMecanicaPendentes = [];
+    if (m.mecanicaChefe && m.hp > 0 && p.hp > 0) {
+      const curaDoPersonagemEmEventos = eventosCuraDoTurno
+        .filter((e) => e.combatente === p.nome && e.tipo !== 'ressurreicao')
+        .reduce((soma, e) => soma + (e.valor ?? 0), 0);
+      const curaRecebida = curaDoPersonagemNaRodada + curaDoPersonagemEmEventos;
+      const criticos = ataquesDoTurno.filter((a) => a.atacante === p.nome && (a.golpesCriticos ?? 0) > 0);
+      const efeitosMecanica = atualizarMecanicaNoFimDaRodada(m.mecanicaChefe, {
+        rodada: turno,
+        chefe: { nome: m.nome, hpMax: m.hpMax },
+        personagem: { nome: p.nome, hpMax: p.hpMax },
+        danoSofridoDoChefe: Math.max(0, vidaDoChefeAntes - (m.hp + m.sobreescudo)),
+        perdaDeVidaDoPersonagem: Math.max(0, vidaDoPersonagemAntes - p.hp + curaRecebida),
+        curaRecebidaPeloPersonagem: curaRecebida,
+        criticosDoPersonagem: { golpes: criticos.length, dano: criticos.reduce((soma, a) => soma + a.danoEfetivo, 0) },
+        sorteio: (indice) => obterSorteioStatus(turno, 2100 + indice),
+      });
+      if (efeitosMecanica.danoAoPersonagem) p.hp = Math.max(0, p.hp - efeitosMecanica.danoAoPersonagem);
+      if (efeitosMecanica.curaDoChefe) m.hp = Math.min(m.hpMax, m.hp + efeitosMecanica.curaDoChefe);
+      if (efeitosMecanica.escudoDoChefe) m.sobreescudo += efeitosMecanica.escudoDoChefe;
+      if (efeitosMecanica.debuffsNoPersonagem) p.debuffs = adicionarDebuffs(p.debuffs, efeitosMecanica.debuffsNoPersonagem);
+      if (efeitosMecanica.debuffsNoChefe) m.debuffs = adicionarDebuffs(m.debuffs, efeitosMecanica.debuffsNoChefe);
+      eventosMecanica = [...eventosMecanica, ...efeitosMecanica.mensagens];
+    }
 
     logTurnos.push({
       numeroTurno: turno,
