@@ -114,12 +114,3 @@ export function monstrosDaEstrela(estrela: number): MonstroTela[] {
 export function estrelaDoMonstro(id: string): number | null {
   return DADOS_CACADA_MAP[id]?.estrela ?? null;
 }
-
-/** Inventário para a Mochila: materiais com quantidade, do mais raro para o mais comum. */
-export function itensDoInventario(inventario: Record<string, number> | undefined) {
-  const ordem: RaridadeMaterial[] = ['lendario', 'epico', 'muitoRaro', 'raro', 'comum'];
-  return Object.entries(inventario ?? {})
-    .filter(([id, q]) => q > 0 && MATERIAIS_MAP[id])
-    .map(([id, quantidade]) => ({ ...dropsTela([id])[0], quantidade, estrelaOrigem: MATERIAIS_MAP[id].estrelaOrigem }))
-    .sort((a, b) => ordem.indexOf(a.raridade) - ordem.indexOf(b.raridade) || a.nome.localeCompare(b.nome));
-}
