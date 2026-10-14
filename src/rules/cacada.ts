@@ -82,7 +82,7 @@ export function pontosDeReferencia(nivel: number): number {
   return 14 + 3 * (nivel - 1) + (nivel >= 20 ? 40 : 0);
 }
 
-const PERFIS: Readonly<
+export const PERFIS: Readonly<
   Record<
     PerfilMonstro,
     { hp: number; forca: number; vitalidade: number; agilidade: number }
@@ -95,7 +95,7 @@ const PERFIS: Readonly<
 };
 
 /** Monstro-chave: 20% mais vida e 8% mais força que os comuns da estrela (as habilidades e o Enfurecido fazem o resto). */
-const MULT_CHAVE = { hp: 1.2, forca: 1.08 };
+export const MULT_CHAVE = { hp: 1.2, forca: 1.08 };
 
 /** Os 35 monstros originais do bestiário v2. */
 const MONSTROS_ORIGINAIS: readonly MonstroCacadaDados[] = [

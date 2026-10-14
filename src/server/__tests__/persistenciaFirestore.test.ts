@@ -119,6 +119,14 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(personagemDoFirestore('u1', personagemParaFirestore(PERSONAGEM)).batalhaSangrentaVencidas).toBeUndefined();
   });
 
+  it('guarda e lê o andar da Torre Celestial; documento antigo ou inválido fica sem ele', () => {
+    expect(personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, torreAndar: 42 })).torreAndar).toBe(42);
+    expect(personagemParaFirestore(PERSONAGEM)).not.toHaveProperty('torreAndar');
+    expect(personagemDoFirestore('u1', personagemParaFirestore(PERSONAGEM)).torreAndar).toBeUndefined();
+    expect(personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), torreAndar: 'x' }).torreAndar).toBeUndefined();
+    expect(personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), torreAndar: -3 }).torreAndar).toBeUndefined();
+  });
+
   it('armas da Forja vão e voltam do Firestore; documento antigo fica sem armas', () => {
     const arma = { id: 'a1', baseId: 'ferro-de-cacada', categoria: 'katana' as const, atributo: 'sorte' as const, pontos: 4, reforjas: 1, criadaEm: 't' };
     const volta = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, armas: [arma] }));
