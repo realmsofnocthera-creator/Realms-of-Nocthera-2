@@ -36,6 +36,12 @@ interface CharacterSheetProps {
   onFundirEmblemas?: (tipo: string, estrelas: number) => Promise<string | null>;
 }
 
+function abaInicialDaUrl(): AbaFicha {
+  if (typeof window === 'undefined') return 'personagem';
+  const aba = new URLSearchParams(window.location.search).get('aba');
+  return aba === 'emblemas' || aba === 'equipamentos' ? aba : 'personagem';
+}
+
 export function CharacterSheet({
   character,
   onLogout,
@@ -48,7 +54,8 @@ export function CharacterSheet({
   const router = useRouter();
   const [activeSkillPopoverId, setActiveSkillPopoverId] = useState<string | null>(null);
   const [lupaOpen, setLupaOpen] = useState(false);
-  const [aba, setAba] = useState<AbaFicha>('personagem');
+  // A Mochila abre a ficha direto na aba Emblemas (?aba=emblemas); a ficha só aparece depois de carregar o personagem
+  const [aba, setAba] = useState<AbaFicha>(abaInicialDaUrl);
   const [slotAberto, setSlotAberto] = useState<SlotEquipamento | null>(null);
   const [emblemasAberto, setEmblemasAberto] = useState(false);
 

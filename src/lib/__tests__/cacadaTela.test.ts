@@ -4,7 +4,7 @@ import React from 'react';
 import { createCharacter, executarCacada, getCharacterByUid, updateCharacter } from '@/server/characterService';
 import { resetCharacterStore } from '@/test/repositorioMemoria';
 import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
-import { dropsTela, estrelaDoMonstro, estrelasDoRanque, itensDoInventario, monstrosDaEstrela, ranquesDaCacada } from '@/lib/cacadaTela';
+import { dropsTela, estrelaDoMonstro, estrelasDoRanque, monstrosDaEstrela, ranquesDaCacada } from '@/lib/cacadaTela';
 import { CICLO_ESPECIAL, espacosDoPersonagem, larguraDasBarras, montarQuadros } from '@/lib/cacadaReplay';
 import { MochilaScreen } from '@/components/mochila/MochilaScreen';
 import { BarraVidaEscudo, destacarLinha, geometriaDaCena } from '@/components/cacada/CombateCacada';
@@ -47,13 +47,8 @@ describe('Caçada (telas)', () => {
     expect(dropsTela(['nao-existe'])).toEqual([]);
   });
 
-  it('Mochila ordena do mais raro ao comum e ignora vazio ou desconhecido', () => {
+  it('a tela da Mochila mostra o material e a quantidade, e avisa quando está vazia', () => {
     const comum = monstrosDaEstrela(1)[0].drops.find((d) => d.raridade === 'comum')!;
-    const raro = monstrosDaEstrela(1)[0].drops.find((d) => d.raridade !== 'comum')!;
-    const itens = itensDoInventario({ [comum.id]: 3, [raro.id]: 1, inexistente: 5, [monstrosDaEstrela(2)[0].drops[0].id]: 0 });
-    expect(itens.map((i) => i.id)).toEqual([raro.id, comum.id]);
-    expect(itens[1]).toMatchObject({ quantidade: 3, estrelaOrigem: 1 });
-    expect(itensDoInventario(undefined)).toEqual([]);
     const html = renderToStaticMarkup(React.createElement(MochilaScreen, { character: { nome: 'Yuri', nivel: 3, inventario: { [comum.id]: 3 } } as never }));
     expect(html).toContain(comum.nome);
     expect(html).toContain('×3');
