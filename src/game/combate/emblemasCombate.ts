@@ -56,6 +56,11 @@ export function fatorDanoCriticoDeEmblemas(e: EmblemasNoCombate | undefined, ctx
   return e ? 1 + somaCondicionada(e.danoCritico, ctx) / 100 : 1;
 }
 
+/** % da DEF do alvo que o golpe ignora (limitado a 100). */
+export function ignorarDefesaDeEmblemas(e: EmblemasNoCombate | undefined, ctx: ContextoEmblema): number {
+  return e ? Math.min(100, somaCondicionada(e.ignorarDefesa, ctx)) : 0;
+}
+
 /** Duração com o bônus (%) dos emblemas: arredonda para o inteiro mais próximo, sem nunca encurtar. */
 export function duracaoComBonus(base: number, bonusPercentual: number): number {
   if (bonusPercentual <= 0) return base;

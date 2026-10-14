@@ -56,6 +56,7 @@ export interface DisparoDeEmblema {
   removerNegativos: boolean;
   sangramentoNoInimigo: boolean;
   danoExtra: number;
+  debuffDefesaNoInimigo?: { percentual: number; rodadas: number };
 }
 
 function corresponde(g: GatilhoNoCombate, a: AcontecimentoDaLuta): boolean {
@@ -122,6 +123,7 @@ export function dispararGatilhos(
       sangramentoNoInimigo: r.sangramentoNoInimigo === true,
       danoExtra: 0,
     };
+    if (r.debuffDefesaNoInimigo) disparo.debuffDefesaNoInimigo = r.debuffDefesaNoInimigo;
     if (r.escudo) {
       disparo.escudoPercentual = r.escudo.percentual;
       disparo.escudoRodadas = r.escudo.rodadas;

@@ -19,6 +19,9 @@ export interface EfeitosEstaticosDosEmblemas {
   danoCritico: ComCondicao[];
   /** Pontos extras de chance de crítico enquanto a condição valer (o `percentual` aqui são pontos). */
   criticoSe: ComCondicao[];
+  ignorarDefesa: ComCondicao[];
+  danoGolpesSeguidosPercentual: number;
+  chanceAtaqueAdicional: number;
   /** Habilidades que disparam com um acontecimento da luta. */
   gatilhos: GatilhoNoCombate[];
   danoStatus: { veneno: number; sangramento: number; queimadura: number };
@@ -62,6 +65,9 @@ export function efeitosVazios(): EfeitosEstaticosDosEmblemas {
     danoElementalSe: [],
     danoCritico: [],
     criticoSe: [],
+    ignorarDefesa: [],
+    danoGolpesSeguidosPercentual: 0,
+    chanceAtaqueAdicional: 0,
     gatilhos: [],
     danoStatus: { veneno: 0, sangramento: 0, queimadura: 0 },
     duracaoStatus: { veneno: 0, controle: 0 },
@@ -87,6 +93,7 @@ function escalarResultado(r: ResultadoGatilho, m: number): ResultadoGatilho {
           },
         }
       : {}),
+    ...(r.debuffDefesaNoInimigo ? { debuffDefesaNoInimigo: { ...r.debuffDefesaNoInimigo, percentual: r.debuffDefesaNoInimigo.percentual * m } } : {}),
     ...(r.danoExtra ? { danoExtra: { ...r.danoExtra, percentual: r.danoExtra.percentual * m } } : {}),
   };
 }
@@ -115,6 +122,9 @@ export function efeitosEstaticosDosEmblemas(equipados: readonly EmblemaItem[]): 
         case 'danoSe': r.danoSe.push({ percentual: e.percentual * m, condicao: e.condicao }); break;
         case 'danoElementalSe': r.danoElementalSe.push({ elemento: e.elemento, percentual: e.percentual * m, condicao: e.condicao }); break;
         case 'danoCritico': r.danoCritico.push({ percentual: e.percentual * m, condicao: e.condicao ?? {} }); break;
+        case 'ignorarDefesa': r.ignorarDefesa.push({ percentual: e.percentual * m, condicao: e.condicao }); break;
+        case 'danoGolpesSeguidos': r.danoGolpesSeguidosPercentual += e.percentual * m; break;
+        case 'ataqueAdicional': r.chanceAtaqueAdicional += e.chance * m; break;
         case 'criticoSe': r.criticoSe.push({ percentual: e.pontos * m, condicao: e.condicao }); break;
         case 'gatilho':
           r.gatilhos.push({
@@ -148,6 +158,9 @@ export type EmblemasNoCombate = Pick<
   | 'danoElementalSe'
   | 'danoCritico'
   | 'criticoSe'
+  | 'ignorarDefesa'
+  | 'danoGolpesSeguidosPercentual'
+  | 'chanceAtaqueAdicional'
   | 'gatilhos'
   | 'danoStatus'
   | 'duracaoStatus'
@@ -164,7 +177,9 @@ export function emblemasNoCombate(e: EfeitosEstaticosDosEmblemas): EmblemasNoCom
     Object.values(e.chanceStatus).some((v) => v > 0) ||
     Object.values(e.reducaoDanoDeAfetados).some((v) => v > 0) ||
     e.resistenciaStatusPercentual > 0;
-  const temCondicional = e.danoSe.length + e.danoElementalSe.length + e.danoCritico.length + e.criticoSe.length + e.gatilhos.length > 0;
+  const temCondicional = e.danoSe.length + e.danoElementalSe.length + e.danoCritico.length + e.criticoSe.length + e.gatilhos.length + e.ignorarDefesa.length > 0 ||
+    e.danoGolpesSeguidosPercentual > 0 ||
+    e.chanceAtaqueAdicional > 0;
   if (e.defPercentual === 0 && Object.keys(e.danoElemental).length === 0 && !temReducao && !temStatus && !temCondicional) {
     return undefined;
   }
@@ -176,6 +191,9 @@ export function emblemasNoCombate(e: EfeitosEstaticosDosEmblemas): EmblemasNoCom
     danoElementalSe: e.danoElementalSe,
     danoCritico: e.danoCritico,
     criticoSe: e.criticoSe,
+    ignorarDefesa: e.ignorarDefesa,
+    danoGolpesSeguidosPercentual: e.danoGolpesSeguidosPercentual,
+    chanceAtaqueAdicional: e.chanceAtaqueAdicional,
     gatilhos: e.gatilhos,
     danoStatus: e.danoStatus,
     duracaoStatus: e.duracaoStatus,

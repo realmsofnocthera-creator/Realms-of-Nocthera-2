@@ -105,6 +105,7 @@ import {
   ContextoEmblema,
   duracaoComBonus,
   fatorDanoCriticoDeEmblemas,
+  ignorarDefesaDeEmblemas,
 } from './combate/emblemasCombate';
 import {
   EstadoDeLuta,
@@ -2513,6 +2514,8 @@ export interface OpcoesTurno {
     sorteioDefesa?: (indiceAtaque: number, indiceGolpe: number) => number;
     /** Sorteio em [0, 100) das mecânicas dos chefes do Guerreiro (determinístico pela semente). */
     sorteioMecanica?: (indice: number) => number;
+    /** Sorteio em [0, 100) do ataque adicional dos emblemas (Ritmo da Tempestade). */
+    sorteioAtaqueExtra?: () => number;
     /** Este é o primeiro golpe que o defensor sofre na luta (Pouso Seguro). */
     primeiroGolpeRecebido?: boolean;
     aoFinalizarAtaque?: (
@@ -2551,6 +2554,13 @@ function turnoDeCombateInterno(
     agilAtacante > 0 &&
     agilAtacante >= agilDefensor * multiplicadorAgilidadeParaDuplo(atacante.buffs);
   let maxAtaques = temDobroAgilidade ? GAME_CONFIG.MAXIMO_ATAQUES_POR_TURNO : 1;
+  // Ritmo da Tempestade (emblema): chance de um ataque adicional para quem ainda não ataca duas vezes
+  const chanceAtaqueAdicional = atacante.equipamento?.emblemas?.chanceAtaqueAdicional ?? 0;
+  let ataqueAdicionalDeEmblema = false;
+  if (maxAtaques === 1 && chanceAtaqueAdicional > 0 && opcoesTurno?.sorteioAtaqueExtra && opcoesTurno.sorteioAtaqueExtra() < chanceAtaqueAdicional) {
+    maxAtaques = GAME_CONFIG.MAXIMO_ATAQUES_POR_TURNO;
+    ataqueAdicionalDeEmblema = true;
+  }
   let acaoExtraConcedida = false;
 
   const classeAtacante = atacante.classeId?.trim().toLowerCase();
@@ -2735,6 +2745,7 @@ function turnoDeCombateInterno(
       bonusDanoDosDebuffs(atacante.debuffs) +
       bonusDanoCondicionalDeEmblemas(atacante.equipamento?.emblemas, contextoEmblema) +
       bonusDosGatilhos(atacante.gatilhosEmblema, numeroTurno).dano +
+      (i > 0 ? atacante.equipamento?.emblemas?.danoGolpesSeguidosPercentual ?? 0 : 0) +
       pontoFracoNesteAtaque;
     const bonusDanoBuffs = bonusDanoBuffsPorTipo(
       ehBarbaroAtacante || ehCavaleiroAtacante || ehBandidoAtacante || ehSamuraiAtacante
@@ -3274,6 +3285,14 @@ function turnoDeCombateInterno(
       danoBruto = golpes.reduce((acc, val) => acc + val, 0);
     }
 
+    // Investida Voraz (emblema): do segundo golpe em diante da mesma ação, +% de dano
+    const bonusGolpesSeguidos = atacante.equipamento?.emblemas?.danoGolpesSeguidosPercentual ?? 0;
+    if (acaoCausaDano && bonusGolpesSeguidos > 0 && golpes && golpes.length > 1) {
+      golpes = golpes.map((g, indice) => (indice === 0 ? g : Math.floor((g * (100 + bonusGolpesSeguidos)) / 100)));
+      danoPorGolpe = golpes[0];
+      danoBruto = golpes.reduce((acc, val) => acc + val, 0);
+    }
+
     // Roadmap 1.3: tipo do golpe (Contusão/Corte/Perfuração da arma, ou mágico) contra o corpo do alvo.
     // Multiplicador à parte do elemental (±25%), aplicado antes de defesa e crítico.
     let tipoGolpe: TipoGolpe | undefined;
@@ -3338,6 +3357,7 @@ function turnoDeCombateInterno(
       acaoCausaDano
         ? ((100 - (impetoDefensor?.reducaoDefesaPercentual ?? 0)) *
             (100 - focoNesteAtaque) *
+            (100 - ignorarDefesaDeEmblemas(atacante.equipamento?.emblemas, contextoEmblema)) *
             (100 +
               bonusDefesaDosBuffs(defensor.buffs) +
               bonusMitigacaoDeArmadura(defensor.equipamento?.habilidadesArmadura, hpAtual, defensor.hpMax, numeroTurno) +
@@ -3345,7 +3365,7 @@ function turnoDeCombateInterno(
               bonusDosGatilhos(defensor.gatilhosEmblema, numeroTurno).def) *
             (100 - reducaoDefesaPorPressao(defensor.debuffs, hpAtual, defensor.hpMax)) *
             (100 - reducaoDefesaDosDebuffs(defensor.debuffs))) /
-          100_000_000
+          10_000_000_000
         : 100;
     if (fatorDefesaPercentual !== 100 && !ehCavaleiroDefensor) {
       mitigacaoParaAtaque = Math.floor(
@@ -3766,7 +3786,8 @@ function turnoDeCombateInterno(
       }
     }
 
-    const sufixoDuplo = maxAtaques > 1 ? ` (Ataque ${i + 1}/${maxAtaques} - Agilidade Superior)` : '';
+    const sufixoDuplo =
+      maxAtaques > 1 ? ` (Ataque ${i + 1}/${maxAtaques} - ${ataqueAdicionalDeEmblema ? 'Ritmo da Tempestade' : 'Agilidade Superior'})` : '';
     const sufixoHabilidade =
       habilidadeAcionada &&
       habilidadeAcionada !== 'Golpe Bárbaro' &&
@@ -4049,7 +4070,8 @@ export function resolverCombate(
     sobreescudo: sobreescudoInicialDoMonstro(monstro.hp),
     atributos: { ...monstro.atributos },
     ouro: 0,
-    mitigacao: 0,
+    // DEF do monstro (como a mitigação de um personagem): 0 até a fórmula ser definida
+    mitigacao: monstro.mitigacao ?? 0,
     // Categoria corporal dá fraquezas elementais (Sombrio → Sagrado); o que o monstro define explicitamente vale mais
     modificadoresElementais: {
       ...modificadoresElementaisDaCategoria(monstro.categoriaCorporal),
@@ -4227,6 +4249,10 @@ export function resolverCombate(
         efeitosPersonagem = removerEfeitos(efeitosPersonagem, 'todos').efeitos;
         partes.push('remove os efeitos negativos');
       }
+      if (d.debuffDefesaNoInimigo && m.hp > 0) {
+        m.debuffs = adicionarDebuffs(m.debuffs, [{ tipo: 'reducaoDefesa', ...d.debuffDefesaNoInimigo }]);
+        partes.push(`${m.nome} perde ${d.debuffDefesaNoInimigo.percentual}% de DEF`);
+      }
       if (d.sangramentoNoInimigo && m.hp > 0) {
         aplicarStatusNoMonstro('sangramento', 0, 0, eventosEfeitosDoTurno);
         partes.push(`${m.nome} sangra`);
@@ -4337,6 +4363,7 @@ export function resolverCombate(
     const tPersonagem = turnoDeCombate(p, m, rodada, {
       sorteioCritico: (idxAtk, idxGolpe) =>
         obterSorteioCritico(rodada, idxAtk, idxGolpe, 'personagem'),
+      sorteioAtaqueExtra: () => obterSorteioStatus(rodada, 3900),
     });
     passarRodadaEfeitosDefensivos(m);
     ataquesDoTurno.push(...tPersonagem.turnoLog.ataques);
