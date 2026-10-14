@@ -1,6 +1,7 @@
 import { MULT_CHAVE, PERFIS, pontosDeReferencia } from '@/rules/cacada';
 import type { Attributes } from '@/rules/attributes';
 import { EMBLEMA_RARIDADES, EmblemaRaridade } from '@/rules/emblemas';
+import { escolherTipoDaRaridade } from './emblemas';
 import { CHEFE_GUERREIRO_POR_DIFICULDADE, ChefeGuerreiro } from '@/rules/guerreiroChefes';
 import type { MonsterDefinition } from '@/rules/monsters';
 import { PROVACOES } from '@/rules/provacoes';
@@ -81,15 +82,23 @@ export function conferirEntradaGuerreiro(
   return { ok: true, dificuldade, chefe: CHEFE_GUERREIRO_POR_DIFICULDADE[dificuldade] };
 }
 
-/** Sorteia as raridades dos 4 emblemas de uma vitória. `sorteio(i)` devolve um número em [0, 100) para o emblema i. */
-export function sortearEmblemas(dificuldade: number, sorteio: (indice: number) => number): Record<EmblemaRaridade, number> {
+export interface EmblemaSorteado {
+  tipoId: string;
+  raridade: EmblemaRaridade;
+}
+
+/**
+ * Sorteia os 4 emblemas de uma vitória: primeiro a raridade (pelas chances da dificuldade) e depois o tipo dentro
+ * da raridade. `sorteio(i)` devolve um número em [0, 100): os índices 0 a 3 sorteiam as raridades e os 10 a 13, os tipos.
+ */
+export function sortearEmblemas(dificuldade: number, sorteio: (indice: number) => number): EmblemaSorteado[] {
   const tabela = CHANCE_EMBLEMA_POR_DIFICULDADE[dificuldade] ?? { comum: 100 };
   const faixas = EMBLEMA_RARIDADES.filter((r) => (tabela[r.id] ?? 0) > 0);
-  const resultado = Object.fromEntries(EMBLEMA_RARIDADES.map((r) => [r.id, 0])) as Record<EmblemaRaridade, number>;
+  const resultado: EmblemaSorteado[] = [];
   for (let i = 0; i < GUERREIRO.emblemasPorVitoria; i++) {
     const valor = sorteio(i);
     let acumulado = 0;
-    let escolhida = faixas[faixas.length - 1]?.id ?? 'comum';
+    let escolhida: EmblemaRaridade = faixas[faixas.length - 1]?.id ?? 'comum';
     for (const r of faixas) {
       acumulado += tabela[r.id] ?? 0;
       if (valor < acumulado) {
@@ -97,7 +106,7 @@ export function sortearEmblemas(dificuldade: number, sorteio: (indice: number) =
         break;
       }
     }
-    resultado[escolhida] += 1;
+    resultado.push({ tipoId: escolherTipoDaRaridade(escolhida, sorteio(10 + i)).id, raridade: escolhida });
   }
   return resultado;
 }

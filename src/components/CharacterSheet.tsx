@@ -15,6 +15,9 @@ import {
   FichaLupaModal,
   FichaResumoEquipamento,
   FichaSlotsEquipamento,
+  FichaEmblemaModal,
+  FichaResumoEmblemas,
+  FichaSlotsEmblema,
 } from '@/components/ficha';
 import type { SlotEquipamento } from '@/lib/equipamentoTela';
 
@@ -27,6 +30,10 @@ interface CharacterSheetProps {
   /** Equipa o item no espaço (arma ou peça). Devolve a mensagem de erro, se houver. */
   onEquiparItem?: (slot: SlotEquipamento, itemId: string) => Promise<string | null>;
   onDesequiparItem?: (slot: SlotEquipamento) => Promise<string | null>;
+  /** Equipa ou desequipa um emblema pelo id. Devolve a mensagem de erro, se houver. */
+  onEmblemaAcao?: (id: string, acao: 'equipar' | 'desequipar') => Promise<string | null>;
+  /** Funde emblemas iguais (mesmo tipo e estrela). */
+  onFundirEmblemas?: (tipo: string, estrelas: number) => Promise<string | null>;
 }
 
 export function CharacterSheet({
@@ -35,12 +42,15 @@ export function CharacterSheet({
   onEquiparHabilidade,
   onEquiparItem,
   onDesequiparItem,
+  onEmblemaAcao,
+  onFundirEmblemas,
 }: CharacterSheetProps) {
   const router = useRouter();
   const [activeSkillPopoverId, setActiveSkillPopoverId] = useState<string | null>(null);
   const [lupaOpen, setLupaOpen] = useState(false);
   const [aba, setAba] = useState<AbaFicha>('personagem');
   const [slotAberto, setSlotAberto] = useState<SlotEquipamento | null>(null);
+  const [emblemasAberto, setEmblemasAberto] = useState(false);
 
   const handleTogglePopover = (skillId: string) => {
     setActiveSkillPopoverId((prev) => (prev === skillId ? null : skillId));
@@ -94,12 +104,15 @@ export function CharacterSheet({
           aba={aba}
           onMudarAba={onEquiparItem ? setAba : undefined}
           colunaEquipamentos={<FichaSlotsEquipamento character={character} onAbrirSlot={setSlotAberto} />}
+          colunaEmblemas={<FichaSlotsEmblema character={character} onAbrir={() => setEmblemasAberto(true)} />}
           className="flex-1 min-h-0"
         />
 
         {/* 4) FICHA HABILIDADES: Moldura de Habilidades com os 7 ícones (na aba Equipamentos, o resumo dos bônus) */}
         {aba === 'equipamentos' ? (
           <FichaResumoEquipamento character={character} className="shrink-0" />
+        ) : aba === 'emblemas' ? (
+          <FichaResumoEmblemas character={character} className="shrink-0" />
         ) : (
           <FichaHabilidades
             character={character}
@@ -123,6 +136,11 @@ export function CharacterSheet({
           onEquipar={onEquiparItem}
           onDesequipar={onDesequiparItem}
         />
+      )}
+
+      {/* 6b) INVENTÁRIO DE EMBLEMAS (aba Emblemas) */}
+      {aba === 'emblemas' && emblemasAberto && (
+        <FichaEmblemaModal character={character} onClose={() => setEmblemasAberto(false)} onAcao={onEmblemaAcao} onFundir={onFundirEmblemas} />
       )}
 
       {/* 7) MODAL DE EXPLICAÇÃO DOS ATRIBUTOS (LUPA) */}

@@ -3,7 +3,7 @@
 import React from 'react';
 import { FICHA_ASSETS } from '@/rules/fichaAssets';
 
-export type AbaFicha = 'personagem' | 'equipamentos';
+export type AbaFicha = 'personagem' | 'equipamentos' | 'emblemas';
 
 interface FichaSidebarProps {
   className?: string;
@@ -32,7 +32,7 @@ export function FichaSidebar({ className = '', aba = 'personagem', onMudarAba }:
       id: 'emblemas',
       label: 'Emblemas',
       src: FICHA_ASSETS.btnEmblemas,
-      active: false,
+      active: aba === 'emblemas',
       invert: true,
     },
     {
@@ -50,7 +50,7 @@ export function FichaSidebar({ className = '', aba = 'personagem', onMudarAba }:
       className={`flex flex-col gap-2 sm:gap-2.5 shrink-0 z-20 ${className}`}
     >
       {buttons.map((btn) => {
-        const aberta = btn.id === 'personagem' || btn.id === 'equipamentos' ? (btn.id as AbaFicha) : null;
+        const aberta = btn.id === 'personagem' || btn.id === 'equipamentos' || btn.id === 'emblemas' ? (btn.id as AbaFicha) : null;
         if (!btn.active && aberta && onMudarAba) {
           return (
             <button

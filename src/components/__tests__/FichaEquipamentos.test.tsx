@@ -55,7 +55,7 @@ describe('Aba Equipamentos da ficha', () => {
     const fechada = renderToStaticMarkup(<FichaSidebar />);
     expect(fechada.match(/aria-disabled="true"/g)).toHaveLength(3);
     const aberta = renderToStaticMarkup(<FichaSidebar aba="personagem" onMudarAba={() => {}} />);
-    expect(aberta.match(/aria-disabled="true"/g)).toHaveLength(2);
+    expect(aberta.match(/aria-disabled="true"/g)).toHaveLength(1);
     const naAba = renderToStaticMarkup(<FichaSidebar aba="equipamentos" onMudarAba={() => {}} />);
     expect(naAba).toContain('aria-current="page"');
   });

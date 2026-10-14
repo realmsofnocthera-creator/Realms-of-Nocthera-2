@@ -47,7 +47,11 @@ describe('Provação do Guerreiro (tela)', () => {
 
   it('lista os emblemas do personagem do mais raro para o mais comum', () => {
     expect(emblemasDoPersonagem(undefined)).toEqual([]);
-    expect(emblemasDoPersonagem({ comum: 4, epico: 1, raro: 0 }).map((e) => [e.nome, e.quantidade])).toEqual([['Épico', 1], ['Comum', 4]]);
+    const itens = [
+      { id: 'a', tipo: 'dargan', estrelas: 1 }, { id: 'b', tipo: 'vesper', estrelas: 2 }, { id: 'c', tipo: 'dargan', estrelas: 1 },
+      { id: 'd', tipo: 'vharok', estrelas: 1 },
+    ];
+    expect(emblemasDoPersonagem(itens).map((e) => [e.nome, e.quantidade])).toEqual([['Épico', 1], ['Comum', 3]]);
   });
 
   it('a tela renderiza os 10 chefes, as mecânicas, as chances e os emblemas', async () => {
@@ -57,7 +61,7 @@ describe('Provação do Guerreiro (tela)', () => {
       classeId: 'cavaleiro',
       pontos: { vigor: 5, sorte: 0, forca: 5, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 0 },
     });
-    await updateCharacter('u-gue', { nivel: 12, emblemas: { comum: 4 } });
+    await updateCharacter('u-gue', { nivel: 12, emblemasItens: [{ id: 'a', tipo: 'dargan', estrelas: 1 }, { id: 'b', tipo: 'dargan', estrelas: 1 }, { id: 'c', tipo: 'vesper', estrelas: 1 }, { id: 'd', tipo: 'vesper', estrelas: 1 }] });
     const c = (await getCharacterByUid('u-gue'))!;
     const html = renderToStaticMarkup(React.createElement(GuerreiroScreen, { character: c, onCharacterChange: () => {}, tokenFresco: async () => 't' }));
     expect(html).toContain('Provação do Guerreiro');

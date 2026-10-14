@@ -5,6 +5,7 @@ import { normalizarHabilidadesEquipadas, ZEROS_ATRIBUTOS } from '@/game';
 import { lerArmasPersonagem } from '@/game/forja';
 import { lerArmadurasPersonagem } from '@/game/armaduraForja';
 import { EQUIPAMENTO_VAZIO, lerEquipamentoPersonagem } from '@/game/equipamento';
+import { EmblemaItem, lerEmblemasPersonagem } from '@/game/emblemas';
 import type { Attributes } from '@/rules/attributes';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import { descreverErro, registrarLog } from '@/server/log';
@@ -64,6 +65,15 @@ const ATRIBUTOS_PADRAO_LEGADO: Attributes = {
 };
 
 /** Converte o documento characters/{uid} do Firestore no formato usado pelo servidor. */
+/** Os emblemas do documento (descarta o que é inválido); sem emblemas, não devolve os campos. */
+function emblemasDoDocumento(data: Record<string, unknown>): { emblemasItens?: EmblemaItem[]; emblemasEquipados?: string[] } {
+  const { itens, equipados } = lerEmblemasPersonagem(data.emblemasItens, data.emblemasEquipados);
+  return {
+    ...(itens.length > 0 ? { emblemasItens: itens } : {}),
+    ...(equipados.length > 0 ? { emblemasEquipados: equipados } : {}),
+  };
+}
+
 export function personagemDoFirestore(uid: string, data: DocumentData): CharacterDocument {
   const classeIdResolvido =
     typeof data.classeId === 'string' && data.classeId ? data.classeId : 'barbaro';
@@ -134,13 +144,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(Array.isArray(data.guerreiroVencidas)
       ? { guerreiroVencidas: (data.guerreiroVencidas as unknown[]).filter((n): n is number => typeof n === 'number') }
       : {}),
-    ...(data.emblemas && typeof data.emblemas === 'object'
-      ? {
-          emblemas: Object.fromEntries(
-            Object.entries(data.emblemas as Record<string, unknown>).filter(([, v]) => typeof v === 'number' && v > 0)
-          ) as Record<string, number>,
-        }
-      : {}),
+    ...emblemasDoDocumento(data),
     ...(typeof data.torreAndar === 'number' && data.torreAndar > 0 ? { torreAndar: Math.floor(data.torreAndar) } : {}),
     ...(Array.isArray(data.batalhaSangrentaVencidas)
       ? { batalhaSangrentaVencidas: (data.batalhaSangrentaVencidas as unknown[]).filter((v): v is string => typeof v === 'string') }
@@ -190,7 +194,8 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.torreAndar ? { torreAndar: char.torreAndar } : {}),
     ...(char.guerreiroTentativas ? { guerreiroTentativas: char.guerreiroTentativas } : {}),
     ...(char.guerreiroVencidas ? { guerreiroVencidas: char.guerreiroVencidas } : {}),
-    ...(char.emblemas ? { emblemas: char.emblemas } : {}),
+    ...(char.emblemasItens && char.emblemasItens.length > 0 ? { emblemasItens: char.emblemasItens } : {}),
+    ...(char.emblemasEquipados && char.emblemasEquipados.length > 0 ? { emblemasEquipados: char.emblemasEquipados } : {}),
     armas: char.armas ?? [],
     armaduras: char.armaduras ?? [],
     equipamento: char.equipamento ?? EQUIPAMENTO_VAZIO,

@@ -11,7 +11,7 @@ import {
   tentativaDisponivel,
 } from '../guerreiro';
 import { CHEFES_GUERREIRO } from '@/rules/guerreiroChefes';
-import { EMBLEMA_RARIDADES } from '@/rules/emblemas';
+import { TIPO_EMBLEMA_MAP } from '@/rules/emblemasCatalogo';
 import { diaDeBrasilia } from '../batalhaSangrenta';
 
 const HOJE = new Date('2026-10-14T15:00:00Z');
@@ -70,36 +70,40 @@ describe('Provação do Guerreiro (regras)', () => {
     }
   });
 
-  it('cada vitória dá 4 emblemas, dentro das raridades da dificuldade', () => {
+  it('cada vitória dá 4 emblemas, dentro das raridades da dificuldade, e o tipo sai da raridade sorteada', () => {
     for (let d = 1; d <= 10; d++) {
       for (const valor of [0, 25, 50, 75, 99.9]) {
         const r = sortearEmblemas(d, () => valor);
-        expect(Object.values(r).reduce((s, v) => s + v, 0)).toBe(GUERREIRO.emblemasPorVitoria);
-        for (const rar of EMBLEMA_RARIDADES) {
-          if ((CHANCE_EMBLEMA_POR_DIFICULDADE[d][rar.id] ?? 0) === 0) expect(r[rar.id]).toBe(0);
+        expect(r).toHaveLength(GUERREIRO.emblemasPorVitoria);
+        for (const e of r) {
+          expect((CHANCE_EMBLEMA_POR_DIFICULDADE[d][e.raridade] ?? 0)).toBeGreaterThan(0);
+          expect(TIPO_EMBLEMA_MAP[e.tipoId].raridade).toBe(e.raridade);
         }
       }
     }
-    expect(sortearEmblemas(1, () => 99)).toMatchObject({ comum: 4 });
-    // o último emblema do Mítico só cai com 95 ou mais
-    expect(sortearEmblemas(10, (i) => (i === 0 ? 99 : 0)).mitico).toBe(1);
-    expect(sortearEmblemas(10, () => 94).mitico).toBe(0);
+    expect(sortearEmblemas(1, () => 99).every((e) => e.raridade === 'comum')).toBe(true);
+    // só o primeiro dos 4 sorteia 99: Mítico (5% no fim da faixa) e o tipo vem do índice 10
+    const mitico = sortearEmblemas(10, (i) => (i === 0 ? 99 : 0));
+    expect(mitico.map((e) => e.raridade)).toEqual(['mitico', 'muitoRaro', 'muitoRaro', 'muitoRaro']);
+    expect(sortearEmblemas(10, () => 94).some((e) => e.raridade === 'mitico')).toBe(false);
+    // o tipo varia pelo sorteio dentro da raridade: 0 = primeiro, 99 = último
+    expect(sortearEmblemas(1, (i) => (i >= 10 ? 0 : 0))[0].tipoId).toBe('dargan');
+    expect(sortearEmblemas(1, (i) => (i >= 10 ? 99 : 0))[0].tipoId).toBe('vesper');
   });
 
   it('com muitas rodadas as raridades aparecem perto das chances (dificuldade 7)', () => {
     let seed = 12345;
     const rng = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return (seed / 4294967296) * 100; };
-    const total = Object.fromEntries(EMBLEMA_RARIDADES.map((r) => [r.id, 0])) as Record<string, number>;
+    const total: Record<string, number> = {};
     const N = 5000;
     for (let i = 0; i < N; i++) {
-      const r = sortearEmblemas(7, () => rng());
-      for (const k of Object.keys(r)) total[k] += r[k as keyof typeof r];
+      for (const e of sortearEmblemas(7, () => rng())) total[e.raridade] = (total[e.raridade] ?? 0) + 1;
     }
     const amostras = N * GUERREIRO.emblemasPorVitoria;
-    expect(Math.abs((total.lendario / amostras) * 100 - 5)).toBeLessThan(1);
-    expect(Math.abs((total.epico / amostras) * 100 - 20)).toBeLessThan(1.5);
-    expect(total.comum).toBe(0);
-    expect(total.mitico).toBe(0);
+    expect(Math.abs(((total.lendario ?? 0) / amostras) * 100 - 5)).toBeLessThan(1);
+    expect(Math.abs(((total.epico ?? 0) / amostras) * 100 - 20)).toBeLessThan(1.5);
+    expect(total.comum).toBeUndefined();
+    expect(total.mitico).toBeUndefined();
   });
 
   it('o chefe sobe de nível de referência (12 a 30) e fica mais forte a cada dificuldade', () => {

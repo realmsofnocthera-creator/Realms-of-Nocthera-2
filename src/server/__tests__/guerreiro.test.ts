@@ -42,7 +42,7 @@ describe('Provação do Guerreiro (servidor)', () => {
     await expect(executarGuerreiro('g1', 3, { seed: 1, agora: HOJE })).rejects.toThrow('Vença o chefe da dificuldade anterior');
     const c = (await getCharacterByUid('g1'))!;
     expect(c.guerreiroTentativas).toBeUndefined();
-    expect(c.emblemas).toBeUndefined();
+    expect(c.emblemasItens).toBeUndefined();
   });
 
   it('vitória na dificuldade 1: 4 emblemas Comuns, abre a 2 e gasta a tentativa do dia', async () => {
@@ -50,9 +50,14 @@ describe('Provação do Guerreiro (servidor)', () => {
     const r = await executarGuerreiro('g2', 1, { seed: 7, combateId: 'guerreiro-0001', agora: HOJE });
     expect(r.resultado.vencedor).toBe('personagem');
     expect(r.guerreiro).toMatchObject({ dificuldade: 1, nome: 'Astaroth, o Louco', venceu: true, primeiraVitoria: true });
-    expect(r.guerreiro.emblemas).toMatchObject({ comum: 4, raro: 0, muitoRaro: 0, epico: 0, lendario: 0, mitico: 0 });
+    expect(r.guerreiro.emblemas).toHaveLength(4);
+    expect(r.guerreiro.emblemas.every((e) => e.raridade === 'comum' && ['dargan', 'vesper'].includes(e.tipoId))).toBe(true);
     const c = (await getCharacterByUid('g2'))!;
-    expect(c.emblemas).toEqual({ comum: 4 });
+    // cada emblema é um item de 1 estrela, e nenhum entra equipado sozinho
+    expect(c.emblemasItens).toHaveLength(4);
+    expect(c.emblemasItens!.every((i) => i.estrelas === 1 && ['dargan', 'vesper'].includes(i.tipo))).toBe(true);
+    expect(new Set(c.emblemasItens!.map((i) => i.id)).size).toBe(4);
+    expect(c.emblemasEquipados).toBeUndefined();
     expect(c.guerreiroVencidas).toEqual([1]);
     expect(c.guerreiroTentativas).toEqual({ '1': '2026-10-14' });
     // não dá XP nem ouro
@@ -70,7 +75,7 @@ describe('Provação do Guerreiro (servidor)', () => {
     expect(volta.guerreiro.primeiraVitoria).toBe(false);
     const c = (await getCharacterByUid('g3'))!;
     expect(c.guerreiroVencidas).toEqual([1, 2]);
-    expect(Object.values(c.emblemas ?? {}).reduce((s, v) => s + v, 0)).toBe(12); // 3 vitórias x 4 emblemas
+    expect(c.emblemasItens).toHaveLength(12); // 3 vitórias x 4 emblemas
   });
 
   it('derrota: gasta a tentativa, não dá emblema nem abre a próxima e não custa ouro', async () => {
@@ -78,9 +83,9 @@ describe('Provação do Guerreiro (servidor)', () => {
     const r = await executarGuerreiro('g4', 1, { seed: 1, combateId: 'guerreiro-0020', agora: HOJE });
     expect(r.resultado.vencedor).toBe('monstro');
     expect(r.guerreiro).toMatchObject({ venceu: false, primeiraVitoria: false });
-    expect(Object.values(r.guerreiro.emblemas).every((v) => v === 0)).toBe(true);
+    expect(r.guerreiro.emblemas).toEqual([]);
     const c = (await getCharacterByUid('g4'))!;
-    expect(c.emblemas).toEqual({});
+    expect(c.emblemasItens ?? []).toEqual([]);
     expect(c.guerreiroVencidas ?? []).toEqual([]);
     expect(c.guerreiroTentativas).toEqual({ '1': '2026-10-14' });
     expect(c.ouro).toBe(1000);
@@ -91,8 +96,8 @@ describe('Provação do Guerreiro (servidor)', () => {
     await setup('g5', { guerreiroVencidas: [1, 2, 3, 4] });
     const r = await executarGuerreiro('g5', 5, { seed: 11, combateId: 'guerreiro-0030', agora: HOJE });
     expect(r.guerreiro.venceu).toBe(true);
-    expect(r.guerreiro.emblemas.comum).toBe(0);
-    expect(r.guerreiro.emblemas.raro + r.guerreiro.emblemas.muitoRaro).toBe(4);
+    expect(r.guerreiro.emblemas).toHaveLength(4);
+    expect(r.guerreiro.emblemas.every((e) => e.raridade === 'raro' || e.raridade === 'muitoRaro')).toBe(true);
   });
 
   it('idempotente: reenviar o mesmo combateId devolve o resultado gravado, sem dar emblemas duas vezes', async () => {
@@ -101,7 +106,7 @@ describe('Provação do Guerreiro (servidor)', () => {
     const b = await executarGuerreiro('g6', 1, { seed: 99, combateId: 'guerreiro-0040', agora: HOJE });
     expect(b.repetido).toBe(true);
     expect(b.guerreiro).toEqual(a.guerreiro);
-    expect((await getCharacterByUid('g6'))!.emblemas).toEqual({ comum: 4 });
+    expect((await getCharacterByUid('g6'))!.emblemasItens).toHaveLength(4);
   });
 
   it('as mecânicas aparecem na luta: Astaroth sorteia, Zephyron converge, Thundrak investe e Veredar julga', async () => {
