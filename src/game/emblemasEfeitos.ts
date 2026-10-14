@@ -1,5 +1,6 @@
 import { ELEMENTOS, Elemento } from '@/rules/elements';
-import { CondicaoDoEfeito, EFEITOS_DOS_EMBLEMAS } from '@/rules/emblemasEfeitos';
+import { CondicaoDoEfeito, EFEITOS_DOS_EMBLEMAS, EventoGatilho, ResultadoGatilho } from '@/rules/emblemasEfeitos';
+import { TIPO_EMBLEMA_MAP } from '@/rules/emblemasCatalogo';
 import { EmblemaItem, multiplicadorDoNivel, nivelDasHabilidades } from './emblemas';
 
 /** Os efeitos fixos dos emblemas equipados, já com o multiplicador do nível de cada habilidade. */
@@ -16,11 +17,30 @@ export interface EfeitosEstaticosDosEmblemas {
   danoSe: ComCondicao[];
   danoElementalSe: (ComCondicao & { elemento: Elemento })[];
   danoCritico: ComCondicao[];
+  /** Pontos extras de chance de crítico enquanto a condição valer (o `percentual` aqui são pontos). */
+  criticoSe: ComCondicao[];
+  /** Habilidades que disparam com um acontecimento da luta. */
+  gatilhos: GatilhoNoCombate[];
   danoStatus: { veneno: number; sangramento: number; queimadura: number };
   duracaoStatus: { veneno: number; controle: number };
   chanceStatus: { congelamento: number; sono: number };
   resistenciaStatusPercentual: number;
   reducaoDanoDeAfetados: { veneno: number; negativo: number };
+}
+
+/**
+ * Gatilho com os valores já no nível da habilidade. O multiplicador do nível vale para cura, escudo, dano extra e
+ * bônus de dano, DEF e redução; chance, limites, duração e usos ficam como estão na tabela.
+ */
+export interface GatilhoNoCombate {
+  /** Identifica a habilidade (`tipo:índice`): é a chave dos usos e das pilhas. */
+  id: string;
+  nome: string;
+  quando: EventoGatilho;
+  chance?: number;
+  usosPorCombate?: number;
+  umaVezPorRodada?: boolean;
+  resultado: ResultadoGatilho;
 }
 
 export interface ComCondicao {
@@ -41,11 +61,33 @@ export function efeitosVazios(): EfeitosEstaticosDosEmblemas {
     danoSe: [],
     danoElementalSe: [],
     danoCritico: [],
+    criticoSe: [],
+    gatilhos: [],
     danoStatus: { veneno: 0, sangramento: 0, queimadura: 0 },
     duracaoStatus: { veneno: 0, controle: 0 },
     chanceStatus: { congelamento: 0, sono: 0 },
     resistenciaStatusPercentual: 0,
     reducaoDanoDeAfetados: { veneno: 0, negativo: 0 },
+  };
+}
+
+function escalarResultado(r: ResultadoGatilho, m: number): ResultadoGatilho {
+  return {
+    ...r,
+    ...(r.cura !== undefined ? { cura: r.cura * m } : {}),
+    ...(r.curaDoDano ? { curaDoDano: { ...r.curaDoDano, percentual: r.curaDoDano.percentual * m } } : {}),
+    ...(r.escudo ? { escudo: { ...r.escudo, percentual: r.escudo.percentual * m } } : {}),
+    ...(r.bonus
+      ? {
+          bonus: {
+            ...r.bonus,
+            ...(r.bonus.dano !== undefined ? { dano: r.bonus.dano * m } : {}),
+            ...(r.bonus.def !== undefined ? { def: r.bonus.def * m } : {}),
+            ...(r.bonus.reducao !== undefined ? { reducao: r.bonus.reducao * m } : {}),
+          },
+        }
+      : {}),
+    ...(r.danoExtra ? { danoExtra: { ...r.danoExtra, percentual: r.danoExtra.percentual * m } } : {}),
   };
 }
 
@@ -73,6 +115,18 @@ export function efeitosEstaticosDosEmblemas(equipados: readonly EmblemaItem[]): 
         case 'danoSe': r.danoSe.push({ percentual: e.percentual * m, condicao: e.condicao }); break;
         case 'danoElementalSe': r.danoElementalSe.push({ elemento: e.elemento, percentual: e.percentual * m, condicao: e.condicao }); break;
         case 'danoCritico': r.danoCritico.push({ percentual: e.percentual * m, condicao: e.condicao ?? {} }); break;
+        case 'criticoSe': r.criticoSe.push({ percentual: e.pontos * m, condicao: e.condicao }); break;
+        case 'gatilho':
+          r.gatilhos.push({
+            id: `${n.tipo}:${n.indice}`,
+            nome: TIPO_EMBLEMA_MAP[n.tipo]?.habilidades[n.indice]?.nome ?? n.tipo,
+            quando: e.quando,
+            chance: e.chance,
+            usosPorCombate: e.usosPorCombate,
+            umaVezPorRodada: e.umaVezPorRodada,
+            resultado: escalarResultado(e.resultado, m),
+          });
+          break;
         case 'danoStatus': r.danoStatus[e.status] += e.percentual * m; break;
         case 'duracaoStatus': r.duracaoStatus[e.alvo] += e.percentual * m; break;
         case 'chanceStatus': r.chanceStatus[e.status] += e.percentual * m; break;
@@ -93,6 +147,8 @@ export type EmblemasNoCombate = Pick<
   | 'danoSe'
   | 'danoElementalSe'
   | 'danoCritico'
+  | 'criticoSe'
+  | 'gatilhos'
   | 'danoStatus'
   | 'duracaoStatus'
   | 'chanceStatus'
@@ -108,7 +164,7 @@ export function emblemasNoCombate(e: EfeitosEstaticosDosEmblemas): EmblemasNoCom
     Object.values(e.chanceStatus).some((v) => v > 0) ||
     Object.values(e.reducaoDanoDeAfetados).some((v) => v > 0) ||
     e.resistenciaStatusPercentual > 0;
-  const temCondicional = e.danoSe.length + e.danoElementalSe.length + e.danoCritico.length > 0;
+  const temCondicional = e.danoSe.length + e.danoElementalSe.length + e.danoCritico.length + e.criticoSe.length + e.gatilhos.length > 0;
   if (e.defPercentual === 0 && Object.keys(e.danoElemental).length === 0 && !temReducao && !temStatus && !temCondicional) {
     return undefined;
   }
@@ -119,6 +175,8 @@ export function emblemasNoCombate(e: EfeitosEstaticosDosEmblemas): EmblemasNoCom
     danoSe: e.danoSe,
     danoElementalSe: e.danoElementalSe,
     danoCritico: e.danoCritico,
+    criticoSe: e.criticoSe,
+    gatilhos: e.gatilhos,
     danoStatus: e.danoStatus,
     duracaoStatus: e.duracaoStatus,
     chanceStatus: e.chanceStatus,

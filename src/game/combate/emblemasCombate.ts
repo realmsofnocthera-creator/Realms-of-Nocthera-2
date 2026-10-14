@@ -46,6 +46,11 @@ export function bonusElementalCondicionalDeEmblemas(e: EmblemasNoCombate | undef
   return e ? somaCondicionada(e.danoElementalSe.filter((x) => x.elemento === elemento), ctx) : 0;
 }
 
+/** Pontos extras de chance de crítico dos emblemas, enquanto a condição valer. */
+export function bonusCriticoCondicionalDeEmblemas(e: EmblemasNoCombate | undefined, ctx: ContextoEmblema): number {
+  return e ? somaCondicionada(e.criticoSe, ctx) : 0;
+}
+
 /** Multiplicador extra do acerto crítico: 1 + soma dos bônus de dano crítico que valem. */
 export function fatorDanoCriticoDeEmblemas(e: EmblemasNoCombate | undefined, ctx: ContextoEmblema): number {
   return e ? 1 + somaCondicionada(e.danoCritico, ctx) / 100 : 1;

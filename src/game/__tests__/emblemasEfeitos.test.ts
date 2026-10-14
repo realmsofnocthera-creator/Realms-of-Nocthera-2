@@ -23,14 +23,19 @@ describe('Efeitos dos emblemas (tabela)', () => {
     expect(Object.keys(EFEITOS_DOS_EMBLEMAS)).toHaveLength(25);
   });
 
-  it('54 habilidades já valem (fixas e condicionais); as 26 com gatilho ou que dependem da DEF dos monstros entram depois', () => {
+  it('75 habilidades já valem; 5 esperam um sistema que o motor ainda não tem', () => {
     let vale = 0;
     for (const t of TIPOS_EMBLEMA) t.habilidades.forEach((_, i) => { if (habilidadeDoEmblemaVale(t.id, i)) vale++; });
-    expect(vale).toBe(54);
+    expect(vale).toBe(75);
     expect(habilidadeDoEmblemaVale('dargan', 0)).toBe(true); // condicional
-    expect(habilidadeDoEmblemaVale('dargan', 2)).toBe(false); // gatilho: vem depois
+    expect(habilidadeDoEmblemaVale('dargan', 2)).toBe(true); // gatilho
+    // esperam DEF nos monstros (Ferida Irreversível, Sentença Irrevogável, Gravidade do Abismo), ataques consecutivos
+    // (Investida Voraz) e o ataque adicional por iniciativa (Ritmo da Tempestade)
+    for (const [tipo, i] of [['rhazkida', 2], ['malachar', 1], ['nymeris', 2], ['vargheist', 1], ['nimb', 2]] as const) {
+      expect(habilidadeDoEmblemaVale(tipo, i), `${tipo} ${i}`).toBe(false);
+    }
     expect(habilidadeDoEmblemaVale('lutero', 0)).toBe(true);
-    expect(habilidadeDoEmblemaVale('lutero', 1)).toBe(false);
+    expect(habilidadeDoEmblemaVale('lutero', 1)).toBe(true); // gatilho (Frenesi Insano)
   });
 });
 
@@ -86,7 +91,7 @@ describe('Soma dos efeitos fixos', () => {
 
   it('sem emblemas, ou só com habilidades que ainda não valem, nada muda', () => {
     expect(efeitosEstaticosDosEmblemas([]).atqPercentual).toBe(0);
-    expect(emblemasNoCombate(efeitosEstaticosDosEmblemas([item('a', 'lutero', 3)]))).toBeUndefined();
+    expect(emblemasNoCombate(efeitosEstaticosDosEmblemas([item('a', 'akumetsu', 1)]))).toBeUndefined();
   });
 });
 
@@ -224,8 +229,8 @@ describe('Condições dos emblemas', () => {
   });
 
   it('dano crítico só vale com a condição', () => {
-    const lautrec = emblemasNoCombate(efeitosEstaticosDosEmblemas([item('a', 'lautrec', 2)]))!;
-    expect(fatorDanoCriticoDeEmblemas(lautrec, CTX)).toBeCloseTo(1.12);
+    const akumetsu = emblemasNoCombate(efeitosEstaticosDosEmblemas([item('a', 'akumetsu', 2)]))!;
+    expect(fatorDanoCriticoDeEmblemas(akumetsu, CTX)).toBeCloseTo(1.12);
     const grimhall = emblemasNoCombate(efeitosEstaticosDosEmblemas([item('a', 'grimhall', 3)]))!;
     expect(fatorDanoCriticoDeEmblemas(grimhall, CTX)).toBe(1);
     expect(fatorDanoCriticoDeEmblemas(grimhall, { ...CTX, alvoStatus: new Set(['sangramento']) })).toBeCloseTo(1.08);
