@@ -16,6 +16,7 @@ import { somarEfeitosEstaticos } from './habilidadesArmaduraEfeitos';
 import type { ArmaPersonagem } from './forja';
 import type { ArmaduraPersonagem } from './armaduraForja';
 import { atributosDosEmblemas, EmblemaItem } from './emblemas';
+import { efeitosEstaticosDosEmblemas, efeitosVazios, EfeitosEstaticosDosEmblemas } from './emblemasEfeitos';
 
 /**
  * Equipamento do personagem (decidido pelo Yuri em 13/10/2026): uma arma e uma peça em cada um dos 5 espaços de
@@ -140,6 +141,8 @@ export interface FichaEquipamento {
   hpPercentual: number;
   /** Menos dano recebido por elemento, em % (valor positivo = resistência). */
   resistenciaElemental: Partial<Record<Elemento, number>>;
+  /** Efeitos fixos das habilidades dos emblemas equipados (o motor lê DEF, dano por elemento e redução de dano). */
+  emblemas: EfeitosEstaticosDosEmblemas;
 }
 
 function zerarAtributos(): Attributes {
@@ -174,9 +177,19 @@ export function calcularFichaEquipamento(
     habilidades: {},
     hpPercentual: 0,
     resistenciaElemental: {},
+    emblemas: efeitosVazios(),
   };
+  // Emblemas equipados: os atributos e os efeitos fixos das habilidades (ATQ, iniciativa, crítico, HP e resistência elemental)
   const doEmblema = atributosDosEmblemas(emblemasEquipados);
   for (const a of ATTRIBUTES) ficha.atributos[a] += doEmblema[a];
+  const fxEmblema = efeitosEstaticosDosEmblemas(emblemasEquipados);
+  ficha.percentuais.danoFisico += fxEmblema.atqPercentual;
+  ficha.percentuais.danoMagico += fxEmblema.atqPercentual;
+  ficha.percentuais.agilidade += fxEmblema.iniciativaPercentual;
+  ficha.percentuais.chanceCritico += fxEmblema.criticoPontos;
+  ficha.hpPercentual += fxEmblema.hpPercentual;
+  ficha.resistenciaElemental = { ...fxEmblema.resistenciaElemental };
+  ficha.emblemas = fxEmblema;
   if (!equipamento) return ficha;
 
   // Peças primeiro: as habilidades delas (somadas) mexem no dano fixo da arma e nos percentuais
@@ -199,8 +212,10 @@ export function calcularFichaEquipamento(
   ficha.mitigacaoExtra += efeitos.mitigacaoFixa;
   ficha.percentuais.defesa += efeitos.mitigacaoPercentual;
   ficha.percentuais.agilidade += efeitos.agilidadePercentual;
-  ficha.hpPercentual = efeitos.hpPercentual;
-  ficha.resistenciaElemental = efeitos.resistenciaElemental;
+  ficha.hpPercentual += efeitos.hpPercentual;
+  for (const [el, v] of Object.entries(efeitos.resistenciaElemental) as [Elemento, number][]) {
+    ficha.resistenciaElemental[el] = (ficha.resistenciaElemental[el] ?? 0) + v;
+  }
 
   const arma = equipamento.armaId ? armas.find((a) => a.id === equipamento.armaId) : undefined;
   const base = arma ? ARMAS_BASE_MAP[arma.baseId] : undefined;

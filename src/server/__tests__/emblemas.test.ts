@@ -3,6 +3,7 @@ import {
   createCharacter,
   desequiparEmblemaDoPersonagem,
   equiparEmblemaDoPersonagem,
+  executarCacada,
   fundirEmblemasDoPersonagem,
   getCharacterByUid,
   updateCharacter,
@@ -92,5 +93,20 @@ describe('Emblemas (servidor)', () => {
     const depois = (await getCharacterByUid('e7'))!;
     expect(depois.hpMax).toBe(antes.hpMax);
     expect(depois.bonusEquipamento?.vigor ?? 0).toBe(0);
+  });
+
+  it('com emblemas de efeito fixo equipados o combate roda e o HP máximo sobe com o +12% do Odrak', async () => {
+    await setup('e8', [{ id: 'o1', tipo: 'odrak', estrelas: 2 }, { id: 'l1', tipo: 'lautrec', estrelas: 1 }]);
+    await updateCharacter('e8', { nivel: 2, atributos: { vigor: 400, sorte: 0, forca: 300, vitalidade: 100, arcano: 0, inteligencia: 0, agilidade: 50 } });
+    const antes = (await getCharacterByUid('e8'))!;
+    await equiparEmblemaDoPersonagem('e8', 'o1');
+    await equiparEmblemaDoPersonagem('e8', 'l1');
+    const com = (await getCharacterByUid('e8'))!;
+    // Odrak 2★ (Lendário): +4 Vigor, Vitalidade e Força; Lautrec 1★ (Mítico): +3 Força, Vigor e Vitalidade; e o HP ainda sobe 12%
+    const hpSoDosAtributos = Math.floor(antes.hpMax + (7 * antes.hpMax) / Math.max(1, antes.atributos.vigor));
+    expect(com.hpMax).toBeGreaterThan(hpSoDosAtributos);
+    const r = await executarCacada('e8', 'lobo-cinzento', { seed: 7, combateId: 'cacada-emblema-0001' });
+    expect(['personagem', 'monstro']).toContain(r.resultado.vencedor);
+    expect(r.resultado.logTurnos.length).toBeGreaterThan(0);
   });
 });

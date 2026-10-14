@@ -1,5 +1,6 @@
 import type { Elemento } from '@/rules/elements';
 import type { EfeitoStatus } from '@/rules/statusEffects';
+import type { EmblemasNoCombate } from '../emblemasEfeitos';
 
 /**
  * O que o equipamento muda no combate, já calculado pela ficha (`calcularFichaEquipamento`). O motor só lê estes
@@ -20,6 +21,8 @@ export interface EquipamentoCombate {
   elementosArma: readonly Elemento[];
   /** Habilidades de armadura (nível já somado entre as peças) que dependem do estado da luta. */
   habilidadesArmadura?: Readonly<Record<string, number>>;
+  /** Efeitos das habilidades dos emblemas que o motor lê: DEF, dano por elemento e redução do dano recebido. */
+  emblemas?: EmblemasNoCombate;
   /** Sobreescudo máximo do personagem (o Poder Máximo nível 5 vale até o primeiro golpe sofrido). */
   sobreescudoMaximo?: number;
 }

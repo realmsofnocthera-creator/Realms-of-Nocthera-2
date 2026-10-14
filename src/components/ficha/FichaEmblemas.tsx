@@ -79,7 +79,8 @@ export function FichaResumoEmblemas({ character, className = '' }: { character: 
         habilidades.map((h) => (
           <div key={`${h.tipoNome}-${h.nome}`} className="text-[10.5px] leading-snug">
             <span className="font-semibold" style={{ color: h.cor }}>{h.nome}</span>
-            <span className="font-cinzel font-bold" style={{ color: '#F3C769' }}> · Nv. {h.nivel}</span>
+            <span className="font-cinzel font-bold" style={{ color: '#F3C769' }}> · Nv. {h.nivel}{h.multiplicador !== 1 ? ` (×${String(h.multiplicador).replace('.', ',')})` : ''}</span>
+            {!h.vale && <span className="font-semibold" style={{ color: '#8d8574' }}> · ainda não vale no combate</span>}
             <span className="block" style={{ color: '#E2D6B6' }}>{h.descricao}</span>
           </div>
         ))
