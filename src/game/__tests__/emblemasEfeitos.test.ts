@@ -23,18 +23,13 @@ describe('Efeitos dos emblemas (tabela)', () => {
     expect(Object.keys(EFEITOS_DOS_EMBLEMAS)).toHaveLength(25);
   });
 
-  it('75 habilidades já valem; 5 esperam um sistema que o motor ainda não tem', () => {
+  it('as 80 habilidades valem no combate', () => {
     let vale = 0;
     for (const t of TIPOS_EMBLEMA) t.habilidades.forEach((_, i) => { if (habilidadeDoEmblemaVale(t.id, i)) vale++; });
-    expect(vale).toBe(75);
+    expect(vale).toBe(80);
     expect(habilidadeDoEmblemaVale('dargan', 0)).toBe(true); // condicional
     expect(habilidadeDoEmblemaVale('dargan', 2)).toBe(true); // gatilho
-    // esperam DEF nos monstros (Ferida Irreversível, Sentença Irrevogável, Gravidade do Abismo), ataques consecutivos
-    // (Investida Voraz) e o ataque adicional por iniciativa (Ritmo da Tempestade)
-    for (const [tipo, i] of [['rhazkida', 2], ['malachar', 1], ['nymeris', 2], ['vargheist', 1], ['nimb', 2]] as const) {
-      expect(habilidadeDoEmblemaVale(tipo, i), `${tipo} ${i}`).toBe(false);
-    }
-    expect(habilidadeDoEmblemaVale('lutero', 0)).toBe(true);
+    expect(habilidadeDoEmblemaVale('rhazkida', 2)).toBe(true); // ignora DEF do monstro
     expect(habilidadeDoEmblemaVale('lutero', 1)).toBe(true); // gatilho (Frenesi Insano)
   });
 });

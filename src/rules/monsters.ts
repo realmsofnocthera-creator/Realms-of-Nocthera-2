@@ -54,6 +54,8 @@ export interface MonsterDefinition {
   nome: string;
   nivel: number;
   hp: number;
+  /** DEF do monstro (pontos de mitigação por golpe, como a armadura de um personagem). Sem ela, vale 0. */
+  mitigacao?: number;
   /** Chefe: imune a Sono, Paralisia e Congelamento (recebe dano contínuo e debuffs). */
   chefe?: boolean;
   /** Todo monstro pertence a uma categoria corporal (define fraquezas e resistências a tipos de dano). */

@@ -60,6 +60,8 @@ export interface ResultadoGatilho {
   escudo?: { percentual: number; rodadas: number };
   bonus?: BonusTemporario;
   removerNegativos?: true;
+  /** Reduz a DEF do inimigo atingido por N rodadas (não acumula: renova). */
+  debuffDefesaNoInimigo?: { percentual: number; rodadas: number };
   /** Aplica sangramento no inimigo (o sangramento do motor dura até o fim da luta). */
   sangramentoNoInimigo?: true;
   /** Dano extra no inimigo: % do golpe que ativou, ou % do HP atual dele com teto (% do HP máximo do personagem). */
@@ -96,6 +98,12 @@ export type EfeitoEmblema =
   | { tipo: 'danoElementalSe'; elemento: Elemento; percentual: number; condicao: CondicaoDoEfeito }
   /** +% no dano dos acertos críticos (sobre o multiplicador do crítico). */
   | { tipo: 'danoCritico'; percentual: number; condicao?: CondicaoDoEfeito }
+  /** O golpe ignora N% da DEF do alvo enquanto a condição valer. */
+  | { tipo: 'ignorarDefesa'; percentual: number; condicao: CondicaoDoEfeito }
+  /** +% de dano nos golpes seguidos da mesma ação (do segundo golpe em diante). */
+  | { tipo: 'danoGolpesSeguidos'; percentual: number }
+  /** Chance (%) de dar um ataque adicional na ação, quando o personagem ainda não ataca duas vezes. */
+  | { tipo: 'ataqueAdicional'; chance: number }
   /** +% no dano do status que o personagem causa (o sangramento é um golpe só; os outros, a cada rodada). */
   | { tipo: 'danoStatus'; status: 'veneno' | 'sangramento' | 'queimadura'; percentual: number }
   /** +% na duração do veneno ou dos efeitos de controle (sono e lentidão) que o personagem aplica. */
@@ -145,7 +153,11 @@ export const EFEITOS_DOS_EMBLEMAS: Readonly<Record<string, readonly (readonly Ef
     [{ tipo: 'gatilho', quando: { evento: 'inimigoMorto' }, usosPorCombate: 2, resultado: { cura: 3, bonus: { def: 5, rodadas: 2 } } }],
   ],
   grizzham: [[{ tipo: 'def', percentual: 10 }], [{ tipo: 'danoSe', percentual: 8, condicao: { atacanteHpAcima: 70 } }], [{ tipo: 'reducaoDano', alvo: 'chefes', percentual: 10 }]],
-  rhazkida: [[{ tipo: 'danoStatus', status: 'sangramento', percentual: 10 }], [{ tipo: 'iniciativa', percentual: 8 }], null],
+  rhazkida: [
+    [{ tipo: 'danoStatus', status: 'sangramento', percentual: 10 }],
+    [{ tipo: 'iniciativa', percentual: 8 }],
+    [{ tipo: 'ignorarDefesa', percentual: 8, condicao: { alvoStatus: ['sangramento'] } }],
+  ],
   vharok: [
     [{ tipo: 'danoElemental', elemento: 'sombrio', percentual: 10 }],
     [{ tipo: 'gatilho', quando: { evento: 'golpeElemental', elemento: 'sombrio' }, resultado: { curaDoDano: { percentual: 3, limiteHpMax: 5 } } }],
@@ -153,7 +165,7 @@ export const EFEITOS_DOS_EMBLEMAS: Readonly<Record<string, readonly (readonly Ef
   ],
   vargheist: [
     [{ tipo: 'atq', percentual: 7 }, { tipo: 'iniciativa', percentual: 5 }],
-    null,
+    [{ tipo: 'danoGolpesSeguidos', percentual: 10 }],
     [{ tipo: 'gatilho', quando: { evento: 'criticoDado' }, umaVezPorRodada: true, resultado: { bonus: { dano: 12, golpes: 1 } } }],
   ],
   floragoth: [
@@ -186,7 +198,7 @@ export const EFEITOS_DOS_EMBLEMAS: Readonly<Record<string, readonly (readonly Ef
   vaelgrim: [[{ tipo: 'danoElemental', elemento: 'gelo', percentual: 12 }], [{ tipo: 'chanceStatus', status: 'congelamento', percentual: 10 }], [{ tipo: 'danoElementalSe', elemento: 'gelo', percentual: 12, condicao: { alvoStatus: ['congelado'] } }]],
   malachar: [
     [{ tipo: 'danoSe', percentual: 10, condicao: { alvoStatus: ['maldicao'] } }],
-    null,
+    [{ tipo: 'ignorarDefesa', percentual: 10, condicao: { alvoStatus: ['maldicao'] } }],
     [{ tipo: 'danoSe', percentual: 15, condicao: { alvoStatus: ['maldicao'], alvoHpAbaixo: 25 } }],
   ],
   lautrec: [
@@ -198,7 +210,7 @@ export const EFEITOS_DOS_EMBLEMAS: Readonly<Record<string, readonly (readonly Ef
   nimb: [
     [{ tipo: 'iniciativa', percentual: 10 }],
     [{ tipo: 'danoElemental', elemento: 'relampago', percentual: 12 }],
-    null,
+    [{ tipo: 'ataqueAdicional', chance: 10 }],
     [{ tipo: 'gatilho', quando: { evento: 'criticoDado' }, chance: 30, usosPorCombate: 1, resultado: { danoExtra: { base: 'golpe', percentual: 100 } } }],
   ],
   lana: [
@@ -216,7 +228,7 @@ export const EFEITOS_DOS_EMBLEMAS: Readonly<Record<string, readonly (readonly Ef
   nymeris: [
     [{ tipo: 'danoElemental', elemento: 'sombrio', percentual: 12 }],
     [{ tipo: 'gatilho', quando: { evento: 'golpeElemental', elemento: 'sombrio' }, resultado: { curaDoDano: { percentual: 4, limiteHpMax: 6 } } }],
-    null,
+    [{ tipo: 'gatilho', quando: { evento: 'golpeElemental', elemento: 'sombrio' }, resultado: { debuffDefesaNoInimigo: { percentual: 10, rodadas: 2 } } }],
     [{ tipo: 'gatilho', quando: { evento: 'golpeElemental', elemento: 'sombrio', alvoHpAbaixo: 25 }, usosPorCombate: 1, resultado: { danoExtra: { base: 'hpAtualDoAlvo', percentual: 15, limiteHpMaxProprio: 10 } } }],
   ],
 };

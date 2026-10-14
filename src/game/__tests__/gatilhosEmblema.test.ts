@@ -244,3 +244,73 @@ describe('Gatilhos no motor de combate', () => {
     expect(recebido(com, 3)).toBeLessThan(recebido(base, 3));
   });
 });
+
+describe('Monstro com DEF e as habilidades que mexem nela', () => {
+  const blindado = (mitigacao: number): MonsterDefinition => ({ ...ALVO, mitigacao });
+  const golpeDoHeroi = (c: Combatente, alvo: MonsterDefinition, rodada = 0) =>
+    resolverCombate(c, alvo, 11, SEM_STATUS).logTurnos[rodada].ataques.find((a) => a.atacante === 'Herói')!;
+
+  it('o monstro com DEF recebe menos dano: cada ponto tira 1 de dano de cada golpe', () => {
+    const sem = golpeDoHeroi(heroi(SEM_BONUS), blindado(0)).danoEfetivo;
+    const com = golpeDoHeroi(heroi(SEM_BONUS), blindado(30)).danoEfetivo;
+    expect(sem - com).toBe(30);
+  });
+
+  it('ignorar DEF devolve parte do dano perdido', () => {
+    const base = golpeDoHeroi(heroi(SEM_BONUS), blindado(30)).danoEfetivo;
+    const ignora = golpeDoHeroi(heroi({ ...SEM_BONUS, emblemas: { ...efeitosVazios(), ignorarDefesa: [{ percentual: 50, condicao: {} }] } }), blindado(30)).danoEfetivo;
+    expect(ignora - base).toBe(15); // metade dos 30 pontos de DEF
+  });
+
+  it('só ignora a DEF quando a condição vale (Sentença Irrevogável: alvo amaldiçoado)', () => {
+    const equip: EquipamentoCombate = {
+      ...SEM_BONUS,
+      emblemas: { ...efeitosVazios(), ignorarDefesa: [{ percentual: 100, condicao: { alvoStatus: ['maldicao'] } }] },
+    };
+    expect(golpeDoHeroi(heroi(equip), blindado(30)).danoEfetivo).toBe(golpeDoHeroi(heroi(SEM_BONUS), blindado(30)).danoEfetivo);
+  });
+
+  it('Gravidade do Abismo: o golpe sombrio reduz a DEF do inimigo nas rodadas seguintes', () => {
+    const equip = comGatilhos(
+      gat({ quando: { evento: 'golpeElemental', elemento: 'sombrio' }, resultado: { debuffDefesaNoInimigo: { percentual: 50, rodadas: 3 } } })
+    );
+    const sombrio = { elementoAtaque: 'sombrio' as const };
+    const alvo = blindado(40);
+    const primeira = golpeDoHeroi(heroi(equip, sombrio), alvo, 0).danoEfetivo;
+    const segunda = golpeDoHeroi(heroi(equip, sombrio), alvo, 1).danoEfetivo;
+    const semEmblema = golpeDoHeroi(heroi(SEM_BONUS, sombrio), alvo, 1).danoEfetivo;
+    expect(primeira).toBeLessThanOrEqual(segunda);
+    expect(segunda).toBeGreaterThan(semEmblema);
+    expect(mensagens(resolverCombate(heroi(equip, sombrio), alvo, 11, SEM_STATUS)).some((m) => m.includes('perde 50% de DEF'))).toBe(true);
+  });
+
+  it('Investida Voraz: do segundo golpe da ação em diante, mais dano', () => {
+    const veloz = { atributos: { ...heroi().atributos, agilidade: 500 } };
+    const equip: EquipamentoCombate = { ...SEM_BONUS, emblemas: { ...efeitosVazios(), danoGolpesSeguidosPercentual: 100 } };
+    const ataques = (c: Combatente) => resolverCombate(c, ALVO, 11, SEM_STATUS).logTurnos[0].ataques.filter((a) => a.atacante === 'Herói');
+    const [a1, a2] = ataques(heroi(equip, veloz));
+    expect(a2.danoBruto).toBeGreaterThan(a1.danoBruto);
+    const [b1, b2] = ataques(heroi(SEM_BONUS, veloz));
+    expect(b2.danoBruto).toBeLessThanOrEqual(b1.danoBruto + 5); // sem o emblema, os dois golpes são parecidos
+    expect(a1.danoBruto).toBe(b1.danoBruto);
+  });
+
+  it('Ritmo da Tempestade: com chance, o personagem ataca duas vezes sem ter Agilidade para isso', () => {
+    // contra um alvo mais ágil que o herói, ele não ataca duas vezes por Agilidade
+    const agil: MonsterDefinition = { ...ALVO, atributos: { ...ALVO.atributos, agilidade: 1000 } };
+    const acoes = (chance: number) =>
+      resolverCombate(heroi({ ...SEM_BONUS, emblemas: { ...efeitosVazios(), chanceAtaqueAdicional: chance } }), agil, 11, SEM_STATUS).logTurnos[0].ataques.filter(
+        (a) => a.atacante === 'Herói'
+      ).length;
+    expect(acoes(0)).toBe(1);
+    expect(acoes(100)).toBe(2);
+  });
+
+  it('as habilidades chegam do catálogo com os valores certos', () => {
+    expect(efeitosEstaticosDosEmblemas([item('a', 'vargheist', 2)]).danoGolpesSeguidosPercentual).toBe(10);
+    expect(efeitosEstaticosDosEmblemas([item('a', 'nimb', 3)]).chanceAtaqueAdicional).toBe(10);
+    expect(efeitosEstaticosDosEmblemas([item('a', 'rhazkida', 3)]).ignorarDefesa).toEqual([{ percentual: 8, condicao: { alvoStatus: ['sangramento'] } }]);
+    const gravidade = efeitosEstaticosDosEmblemas([item('a', 'nymeris', 3)]).gatilhos.find((g) => g.id === 'nymeris:2')!;
+    expect(gravidade.resultado.debuffDefesaNoInimigo).toEqual({ percentual: 10, rodadas: 2 });
+  });
+});
