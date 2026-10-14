@@ -86,6 +86,14 @@ import {
   tentativasRestantes,
 } from '@/game/batalhaSangrenta';
 import {
+  conferirEntradaGuerreiro,
+  MENSAGEM_BLOQUEIO_GUERREIRO,
+  montarChefeGuerreiro,
+  sortearEmblemas,
+} from '@/game/guerreiro';
+import { diaDeBrasilia } from '@/game/batalhaSangrenta';
+import { EMBLEMA_RARIDADES, EmblemaRaridade } from '@/rules/emblemas';
+import {
   conferirEntradaTorre,
   identidadeDoAndar,
   MENSAGEM_BLOQUEIO_TORRE,
@@ -101,6 +109,7 @@ import {
   chaveDoNome,
   ContextoTransacao,
   RegistroCombate,
+  ResumoGuerreiroRegistro,
   ResumoTorreRegistro,
   repositorio,
 } from './persistencia';
@@ -151,6 +160,12 @@ export interface CharacterDocument {
   batalhaSangrentaVencidas?: string[];
   /** Torre Celestial: o andar mais alto já vencido (o personagem enfrenta o seguinte). */
   torreAndar?: number;
+  /** Provação do Guerreiro: o dia (em Brasília) da última tentativa em cada dificuldade (1 tentativa por dia por chefe). */
+  guerreiroTentativas?: Record<string, string>;
+  /** Provação do Guerreiro: dificuldades cujo chefe já foi vencido (cada uma abre ao vencer a anterior). */
+  guerreiroVencidas?: number[];
+  /** Emblemas do Guerreiro por raridade (primeira versão: só a raridade; nome e efeito vêm depois). */
+  emblemas?: Record<string, number>;
   /** Armas fabricadas na Forja. */
   armas?: ArmaPersonagem[];
   /** Peças de armadura fabricadas no Ferreiro. */
@@ -345,6 +360,9 @@ function mesclarPersonagem(
     ...((updates.batalhaSangrenta ?? current.batalhaSangrenta) ? { batalhaSangrenta: updates.batalhaSangrenta ?? current.batalhaSangrenta } : {}),
     ...((updates.batalhaSangrentaVencidas ?? current.batalhaSangrentaVencidas) ? { batalhaSangrentaVencidas: updates.batalhaSangrentaVencidas ?? current.batalhaSangrentaVencidas } : {}),
     ...((updates.torreAndar ?? current.torreAndar) !== undefined ? { torreAndar: updates.torreAndar ?? current.torreAndar } : {}),
+    ...((updates.guerreiroTentativas ?? current.guerreiroTentativas) ? { guerreiroTentativas: updates.guerreiroTentativas ?? current.guerreiroTentativas } : {}),
+    ...((updates.guerreiroVencidas ?? current.guerreiroVencidas) ? { guerreiroVencidas: updates.guerreiroVencidas ?? current.guerreiroVencidas } : {}),
+    ...((updates.emblemas ?? current.emblemas) ? { emblemas: updates.emblemas ?? current.emblemas } : {}),
     armas: updates.armas ?? current.armas ?? [],
     armaduras: updates.armaduras ?? current.armaduras ?? [],
     equipamento: updates.equipamento ?? current.equipamento ?? EQUIPAMENTO_VAZIO,
@@ -1820,6 +1838,115 @@ export async function executarTorre(uid: string, opcoes: OpcoesCombate): Promise
     ctx.gravarCombate(registro);
 
     return { character, combateId, repetido: false, resultado, levelUps, ...(transaction ? { transaction } : {}), mensagens, torre };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Provação do Guerreiro
+// ---------------------------------------------------------------------------
+
+export interface OpcoesGuerreiro extends OpcoesCombate {
+  /** Só os testes passam o seu; o padrão é o relógio do servidor. */
+  agora?: Date;
+}
+
+export interface RespostaGuerreiro {
+  character: CharacterDocument;
+  combateId: string;
+  repetido: boolean;
+  resultado: ResultadoCombate;
+  mensagens: string[];
+  guerreiro: ResumoGuerreiroRegistro;
+}
+
+/**
+ * Provação do Guerreiro: 10 dificuldades, um chefe com mecânica própria em cada, luta única e 1 tentativa por dia
+ * por chefe (a tentativa é gasta ao começar, também na derrota). A 1 abre no nível 12 e cada outra abre ao vencer
+ * o chefe da anterior. Vencer dá 4 emblemas (a raridade depende da dificuldade); perder não dá nada. Tudo é
+ * conferido no servidor; reenvio com o mesmo combateId devolve o resultado gravado.
+ */
+export async function executarGuerreiro(uid: string, dificuldadeId: unknown, opcoes: OpcoesGuerreiro): Promise<RespostaGuerreiro> {
+  const combateId = opcoes.combateId ?? `gue-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const idRegistro = idDoRegistroCombate(uid, combateId);
+  const agora = opcoes.agora ?? new Date();
+
+  return repositorio.executarTransacao('guerreiro', async (ctx) => {
+    const anterior = await ctx.lerCombate(idRegistro);
+    const current = await carregarPersonagem(ctx, uid, 'Personagem não encontrado. Crie um personagem antes de enfrentar o Guerreiro.');
+
+    if (anterior) {
+      const resumo = anterior.resposta.guerreiro;
+      if (!resumo) throw new Error('Identificador de combate já usado fora da Provação do Guerreiro.');
+      return {
+        character: current,
+        combateId,
+        repetido: true,
+        resultado: anterior.resposta.resultado as ResultadoCombate,
+        mensagens: anterior.resposta.mensagens,
+        guerreiro: resumo,
+      };
+    }
+
+    const entrada = conferirEntradaGuerreiro(dificuldadeId, current.nivel, current.guerreiroTentativas, current.guerreiroVencidas, agora);
+    if (!entrada.ok) throw new Error(MENSAGEM_BLOQUEIO_GUERREIRO[entrada.motivo]);
+    const { dificuldade, chefe } = entrada;
+    const monstro = montarChefeGuerreiro(dificuldade);
+
+    const combatentePersonagem = combatenteDoPersonagem(current);
+    const entradaCombatente = structuredClone(combatentePersonagem);
+    const resultado = resolverCombate(combatentePersonagem, monstro, opcoes.seed);
+    const venceu = resultado.vencedor === 'personagem';
+    // A Provação do Guerreiro só dá emblemas: sem XP, sem ouro e sem penalidade de morte
+    resultado.xpGanho = 0;
+    resultado.ouroGanho = 0;
+
+    const emblemasGanhos = venceu
+      ? sortearEmblemas(dificuldade, sorteioDeDrops(opcoes.seed))
+      : (Object.fromEntries(EMBLEMA_RARIDADES.map((r) => [r.id, 0])) as Record<EmblemaRaridade, number>);
+    const primeiraVitoria = venceu && !(current.guerreiroVencidas ?? []).includes(dificuldade);
+
+    const emblemas = { ...(current.emblemas ?? {}) };
+    for (const r of EMBLEMA_RARIDADES) {
+      if (emblemasGanhos[r.id] > 0) emblemas[r.id] = (emblemas[r.id] ?? 0) + emblemasGanhos[r.id];
+    }
+    const character = salvarPersonagem(ctx, current, {
+      guerreiroTentativas: { ...(current.guerreiroTentativas ?? {}), [String(dificuldade)]: diaDeBrasilia(agora) },
+      guerreiroVencidas: primeiraVitoria ? [...(current.guerreiroVencidas ?? []), dificuldade].sort((a, b) => a - b) : current.guerreiroVencidas ?? [],
+      emblemas,
+    });
+
+    const mensagens: string[] = [
+      ...resultado.mensagens,
+      venceu
+        ? `Provação do Guerreiro: ${chefe.nome} foi derrotado! Emblemas: ${EMBLEMA_RARIDADES.filter((r) => emblemasGanhos[r.id] > 0)
+            .map((r) => `${r.nome} x${emblemasGanhos[r.id]}`)
+            .join(', ')}.`
+        : `Você caiu diante de ${chefe.nome}. Pode tentar de novo amanhã.`,
+    ];
+    const guerreiro: ResumoGuerreiroRegistro = {
+      dificuldade,
+      chefeId: chefe.id,
+      nome: chefe.nome,
+      mecanicaNome: chefe.mecanicaNome,
+      venceu,
+      primeiraVitoria,
+      emblemas: emblemasGanhos,
+    };
+    const registro: RegistroCombate = {
+      id: idRegistro,
+      uid,
+      monstroId: chefe.id,
+      seed: opcoes.seed,
+      vencedor: resultado.vencedor,
+      xpGanho: 0,
+      ouroGanho: 0,
+      criadoEm: new Date().toISOString(),
+      entrada: { combatente: entradaCombatente, monstroId: chefe.id, dificuldade, seed: opcoes.seed, modo: 'guerreiro' },
+      resposta: { resultado, levelUps: 0, mensagens, guerreiro },
+    };
+    ctx.gravarCombate(registro);
+
+    return { character, combateId, repetido: false, resultado, mensagens, guerreiro };
   });
 }
 

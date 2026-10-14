@@ -9,6 +9,7 @@ import {
 import { EfeitoStatus } from './statusEffects';
 import { CategoriaCorporal, TipoGolpe } from './corposMonstros';
 import type { ResultadoHabilidade } from '@/game/combate/habilidades/tipos';
+import type { MecanicaChefeId } from '@/game/combate/mecanicasChefe';
 
 /** Uma ação de habilidade do monstro: o nome que aparece no log e o efeito (mesmos campos das habilidades, catálogo 1.2). */
 export interface AcaoMonstro {
@@ -72,6 +73,8 @@ export interface MonsterDefinition {
   enfurecido?: boolean;
   /** Passivas dos chefes Especiais (Batalha Sangrenta). */
   passivas?: PassivasMonstro;
+  /** Mecânica única de um chefe da Provação do Guerreiro. */
+  mecanica?: MecanicaChefeId;
   /** Status a que o monstro é imune (além dos de chefe). Ex.: Esqueleto imune a Sangramento e Veneno. */
   imunidadesStatus?: EfeitoStatus[];
 }

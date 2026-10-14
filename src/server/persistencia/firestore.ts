@@ -124,6 +124,23 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
           },
         }
       : {}),
+    ...(data.guerreiroTentativas && typeof data.guerreiroTentativas === 'object'
+      ? {
+          guerreiroTentativas: Object.fromEntries(
+            Object.entries(data.guerreiroTentativas as Record<string, unknown>).filter(([, v]) => typeof v === 'string')
+          ) as Record<string, string>,
+        }
+      : {}),
+    ...(Array.isArray(data.guerreiroVencidas)
+      ? { guerreiroVencidas: (data.guerreiroVencidas as unknown[]).filter((n): n is number => typeof n === 'number') }
+      : {}),
+    ...(data.emblemas && typeof data.emblemas === 'object'
+      ? {
+          emblemas: Object.fromEntries(
+            Object.entries(data.emblemas as Record<string, unknown>).filter(([, v]) => typeof v === 'number' && v > 0)
+          ) as Record<string, number>,
+        }
+      : {}),
     ...(typeof data.torreAndar === 'number' && data.torreAndar > 0 ? { torreAndar: Math.floor(data.torreAndar) } : {}),
     ...(Array.isArray(data.batalhaSangrentaVencidas)
       ? { batalhaSangrentaVencidas: (data.batalhaSangrentaVencidas as unknown[]).filter((v): v is string => typeof v === 'string') }
@@ -171,6 +188,9 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.batalhaSangrenta ? { batalhaSangrenta: char.batalhaSangrenta } : {}),
     ...(char.batalhaSangrentaVencidas ? { batalhaSangrentaVencidas: char.batalhaSangrentaVencidas } : {}),
     ...(char.torreAndar ? { torreAndar: char.torreAndar } : {}),
+    ...(char.guerreiroTentativas ? { guerreiroTentativas: char.guerreiroTentativas } : {}),
+    ...(char.guerreiroVencidas ? { guerreiroVencidas: char.guerreiroVencidas } : {}),
+    ...(char.emblemas ? { emblemas: char.emblemas } : {}),
     armas: char.armas ?? [],
     armaduras: char.armaduras ?? [],
     equipamento: char.equipamento ?? EQUIPAMENTO_VAZIO,

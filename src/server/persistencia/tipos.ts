@@ -25,7 +25,20 @@ export interface RegistroCombate {
     batalhaSangrenta?: ResumoBatalhaSangrentaRegistro;
     /** Torre Celestial: o andar, o monstro e o que a vitória deu. */
     torre?: ResumoTorreRegistro;
+    /** Provação do Guerreiro: o chefe, o resultado e os emblemas. */
+    guerreiro?: ResumoGuerreiroRegistro;
   };
+}
+
+export interface ResumoGuerreiroRegistro {
+  dificuldade: number;
+  chefeId: string;
+  nome: string;
+  mecanicaNome: string;
+  venceu: boolean;
+  primeiraVitoria: boolean;
+  /** Emblemas ganhos por raridade (tudo zero na derrota). */
+  emblemas: Record<string, number>;
 }
 
 export interface ResumoTorreRegistro {

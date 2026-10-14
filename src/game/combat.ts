@@ -159,6 +159,14 @@ import {
 import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import type { AcaoMonstro, HabilidadeMonstro, PassivasMonstro } from '@/rules/monsters';
 import {
+  atualizarMecanicaNoFimDaRodada,
+  bonusDanoContraAMecanica,
+  bonusDanoDaMecanica,
+  criarEstadoMecanica,
+  EstadoMecanicaChefe,
+  escolherAcaoMecanica,
+} from './combate/mecanicasChefe';
+import {
   ContextoHabilidade,
   ResultadoHabilidade,
   separarPassivasDanoDaClasse,
@@ -319,6 +327,8 @@ export interface Combatente {
   enfurecido?: boolean;
   /** Passivas dos chefes Especiais da Batalha Sangrenta. */
   passivasMonstro?: PassivasMonstro;
+  /** Mecânica única de um chefe da Provação do Guerreiro (estado da luta). */
+  mecanicaChefe?: EstadoMecanicaChefe;
   /** Status de dano contínuo ativos (copiado do estado da luta antes de cada ação; base dos bônus por status do alvo). */
   statusAtivos?: EfeitoStatus[];
   /** Sangramento e Maldição: duram até o fim da luta. */
@@ -513,6 +523,8 @@ export interface TurnoLog {
   eventosEfeitos: EventoEfeito[];
   /** Cura Contínua e Ressurreição Parcial no fim da rodada. */
   eventosCura?: EventoCuraRodada[];
+  /** Mecânica única do chefe (Provação do Guerreiro): o que mudou nesta rodada. */
+  eventosMecanica?: string[];
 }
 
 export interface OpcoesResolverCombate {
@@ -2438,6 +2450,8 @@ export interface OpcoesTurno {
     sorteioCritico?: (indiceAtaque: number, indiceGolpe: number) => number;
     /** Sorteio em [0, 100) das defesas com chance (Bênção Divina), por golpe recebido. Sem ele, não disparam. */
     sorteioDefesa?: (indiceAtaque: number, indiceGolpe: number) => number;
+    /** Sorteio em [0, 100) das mecânicas dos chefes do Guerreiro (determinístico pela semente). */
+    sorteioMecanica?: (indice: number) => number;
     /** Este é o primeiro golpe que o defensor sofre na luta (Pouso Seguro). */
     primeiroGolpeRecebido?: boolean;
     aoFinalizarAtaque?: (
@@ -2649,6 +2663,8 @@ function turnoDeCombateInterno(
       bonusDanoArmadura +
       (enfurecidoNesteAtaque ? GAME_CONFIG.ENFURECIDO_BONUS_DANO_PERCENTUAL : 0) +
       bonusDanoPassivasMonstro(atacante, hpAtacanteAtual, numeroTurno) +
+      bonusDanoDaMecanica(atacante.mecanicaChefe) +
+      bonusDanoContraAMecanica(defensor.mecanicaChefe) +
       (tipo === 'fisico'
         ? atacante.equipamento?.bonusDanoFisicoPercentual ?? 0
         : atacante.equipamento?.bonusDanoMagicoPercentual ?? 0) +
@@ -2839,7 +2855,15 @@ function turnoDeCombateInterno(
     let efeitosDefensivosAplicados: TipoEfeitoDefensivo[] | undefined;
     // Habilidade racial de ataque (Vampiro, Draconiano): no lugar do 1º ataque da ação em que disparou
     // Habilidade de monstro (Caçada): a cada N ataques entra no lugar do ataque básico
-    const acaoMonstro = atacante.classeId ? undefined : escolherAcaoMonstro(atacante);
+    const acaoMonstro = atacante.classeId
+      ? undefined
+      : atacante.mecanicaChefe
+        ? escolherAcaoMecanica(atacante.mecanicaChefe, {
+            sorteio: (indice) => opcoesTurno?.sorteioMecanica?.(indice) ?? 50,
+            alvo: { atributos: defensor.atributos },
+            debuffsDoChefe: atacante.debuffs,
+          })
+        : escolherAcaoMonstro(atacante);
     const defHabMonstro = acaoMonstro
       ? definicaoDaAcaoMonstro(acaoMonstro, ehDanoFisicoPadrao ? 'fisico' : 'magico')
       : undefined;
@@ -3961,6 +3985,7 @@ export function resolverCombate(
     habilidadesMonstro: monstro.habilidades,
     enfurecido: monstro.enfurecido,
     ...(monstro.passivas ? { passivasMonstro: monstro.passivas } : {}),
+    ...(monstro.mecanica ? { mecanicaChefe: criarEstadoMecanica(monstro.mecanica) } : {}),
     categoriaCorporal: monstro.categoriaCorporal,
     fraquezasProprias: monstro.fraquezasProprias ? [...monstro.fraquezasProprias] : undefined,
     resistenciasProprias: monstro.resistenciasProprias
@@ -4229,6 +4254,7 @@ export function resolverCombate(
     const tMonstro = turnoDeCombate(m, p, rodada, {
       sorteioCritico: (idxAtk, idxGolpe) => obterSorteioCritico(rodada, idxAtk, idxGolpe, 'monstro'),
       sorteioDefesa: (idxAtk, idxGolpe) => obterSorteioStatus(rodada, 900 + idxAtk * 16 + idxGolpe),
+      sorteioMecanica: (indice) => obterSorteioStatus(rodada, 1200 + indice),
       primeiroGolpeRecebido: !personagemJaFoiAtingido,
       aoFinalizarAtaque: (idxAtk, estadoDefensor) => {
         let hpDefensorAtual = estadoDefensor.hp;
@@ -4319,6 +4345,7 @@ export function resolverCombate(
   };
 
   while (p.hp > 0 && m.hp > 0 && turno <= MAX_TURNOS) {
+    const vidaDoChefeAntes = m.hp + m.sobreescudo;
     const ataquesDoTurno: AtaqueLog[] = [];
     const eventosEfeitosDoTurno: EventoEfeito[] = [];
 
@@ -4420,11 +4447,20 @@ export function resolverCombate(
       }
     }
 
+    const eventosMecanica = m.mecanicaChefe
+      ? atualizarMecanicaNoFimDaRodada(m.mecanicaChefe, {
+          nomeDoChefe: m.nome,
+          danoSofridoDoChefe: Math.max(0, vidaDoChefeAntes - (m.hp + m.sobreescudo)),
+          hpMaxDoChefe: m.hpMax,
+        })
+      : [];
+
     logTurnos.push({
       numeroTurno: turno,
       ataques: ataquesDoTurno,
       eventosEfeitos: eventosEfeitosDoTurno,
       ...(eventosCuraDoTurno.length > 0 ? { eventosCura: eventosCuraDoTurno } : {}),
+      ...(eventosMecanica.length > 0 ? { eventosMecanica } : {}),
     });
 
     turno++;
