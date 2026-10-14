@@ -243,6 +243,7 @@ export function montarQuadros(
       linhas.push(...textoDoAtaque(a));
       empurrar(turno.numeroTurno, a.atacante === personagem.nome ? a.habilidadeAcionada : undefined);
     }
+    for (const texto of turno.eventosMecanica ?? []) linhas.push({ texto, tipo: 'info' });
     const eventos = turno.eventosEfeitos ?? [];
     if (eventos.length > 0 || (turno.eventosCura?.length ?? 0) > 0) {
       for (const e of eventos) {

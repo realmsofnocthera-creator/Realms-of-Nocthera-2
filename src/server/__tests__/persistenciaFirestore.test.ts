@@ -127,6 +127,22 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), torreAndar: -3 }).torreAndar).toBeUndefined();
   });
 
+  it('guarda e lê a Provação do Guerreiro (tentativas, chefes vencidos e emblemas); documento antigo fica sem eles', () => {
+    const comGuerreiro = { ...PERSONAGEM, guerreiroTentativas: { '1': '2026-10-14' }, guerreiroVencidas: [1, 2], emblemas: { comum: 4, raro: 2 } };
+    const volta = personagemDoFirestore('u1', personagemParaFirestore(comGuerreiro));
+    expect(volta.guerreiroTentativas).toEqual({ '1': '2026-10-14' });
+    expect(volta.guerreiroVencidas).toEqual([1, 2]);
+    expect(volta.emblemas).toEqual({ comum: 4, raro: 2 });
+    const antigo = personagemDoFirestore('u1', personagemParaFirestore(PERSONAGEM));
+    expect(antigo.guerreiroTentativas).toBeUndefined();
+    expect(antigo.guerreiroVencidas).toBeUndefined();
+    expect(antigo.emblemas).toBeUndefined();
+    const sujo = personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), guerreiroTentativas: { '1': 5, '2': 'ok' }, guerreiroVencidas: [1, 'x'], emblemas: { comum: 'a', raro: 3, epico: 0 } });
+    expect(sujo.guerreiroTentativas).toEqual({ '2': 'ok' });
+    expect(sujo.guerreiroVencidas).toEqual([1]);
+    expect(sujo.emblemas).toEqual({ raro: 3 });
+  });
+
   it('armas da Forja vão e voltam do Firestore; documento antigo fica sem armas', () => {
     const arma = { id: 'a1', baseId: 'ferro-de-cacada', categoria: 'katana' as const, atributo: 'sorte' as const, pontos: 4, reforjas: 1, criadaEm: 't' };
     const volta = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, armas: [arma] }));
