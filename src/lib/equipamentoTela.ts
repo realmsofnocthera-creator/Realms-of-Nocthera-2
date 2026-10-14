@@ -44,6 +44,8 @@ export interface ItemEquipamentoTela {
   raridadeNome: string;
   /** Linha curta para a lista: o que o item dá. */
   resumo: string;
+  /** Detalhe de uma linha só para cartões pequenos (o dano da arma ou o nível da peça). */
+  curto: string;
   /** Detalhes do item, uma linha cada. */
   linhas: string[];
   equipado: boolean;
@@ -82,6 +84,7 @@ export function armaParaTela(a: ArmaPersonagem, equipada: boolean): ItemEquipame
     raridade: base.raridade,
     raridadeNome: RARIDADES_ARMA_MAP[base.raridade].nome,
     resumo: `${def.nome} · Dano ${ficha.danoFixo} · ${ATTRIBUTE_DISPLAY_NAMES[a.atributo]} +${ficha.pontos}`,
+    curto: `Dano ${ficha.danoFixo}`,
     linhas,
     equipado: equipada,
   };
@@ -109,6 +112,7 @@ export function pecaParaTela(a: ArmaduraPersonagem, equipada: boolean): ItemEqui
     raridade: p.raridade,
     raridadeNome: RARIDADES_ARMA_MAP[p.raridade].nome,
     resumo: `${fixo} · ${ATTRIBUTE_DISPLAY_NAMES[a.atributo]} +${a.pontos} · Nv. ${nivel}`,
+    curto: `Nível ${nivel}/30`,
     linhas,
     equipado: equipada,
   };

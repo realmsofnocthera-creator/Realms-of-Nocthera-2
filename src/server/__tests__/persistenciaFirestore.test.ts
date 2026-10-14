@@ -127,6 +127,20 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), torreAndar: -3 }).torreAndar).toBeUndefined();
   });
 
+  it('a escolha dos equipamentos do perfil vai e volta, inclusive a lista vazia, e valores ruins são ignorados', () => {
+    const volta = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, perfilEquipamentos: ['w1', 'p2'] }));
+    expect(volta.perfilEquipamentos).toEqual(['w1', 'p2']);
+    // lista vazia é uma escolha (todos os espaços vazios), diferente de nunca ter escolhido
+    const vazia = personagemParaFirestore({ ...PERSONAGEM, perfilEquipamentos: [] });
+    expect(vazia).toHaveProperty('perfilEquipamentos', []);
+    expect(personagemDoFirestore('u1', vazia).perfilEquipamentos).toEqual([]);
+    expect(personagemParaFirestore(PERSONAGEM)).not.toHaveProperty('perfilEquipamentos');
+    expect(personagemDoFirestore('u1', personagemParaFirestore(PERSONAGEM)).perfilEquipamentos).toBeUndefined();
+    const sujo = personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), perfilEquipamentos: ['a', 3, null, 'b', 'c', 'd', 'e'] });
+    expect(sujo.perfilEquipamentos).toEqual(['a', 'b', 'c', 'd']);
+    expect(personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), perfilEquipamentos: 'w1' }).perfilEquipamentos).toBeUndefined();
+  });
+
   it('guarda e lê a Provação do Guerreiro (tentativas e chefes vencidos); documento antigo fica sem eles', () => {
     const comGuerreiro = { ...PERSONAGEM, guerreiroTentativas: { '1': '2026-10-14' }, guerreiroVencidas: [1, 2] };
     const volta = personagemDoFirestore('u1', personagemParaFirestore(comGuerreiro));

@@ -152,6 +152,9 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     armas,
     armaduras,
     equipamento: lerEquipamentoPersonagem(data.equipamento, armas, armaduras),
+    ...(Array.isArray(data.perfilEquipamentos)
+      ? { perfilEquipamentos: (data.perfilEquipamentos as unknown[]).filter((v): v is string => typeof v === 'string').slice(0, 4) }
+      : {}),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
       ? { bonusSubclasseAplicado: lerAtributos(data.bonusSubclasseAplicado, ZEROS_ATRIBUTOS) }
       : {}),
@@ -199,6 +202,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     armas: char.armas ?? [],
     armaduras: char.armaduras ?? [],
     equipamento: char.equipamento ?? EQUIPAMENTO_VAZIO,
+    ...(char.perfilEquipamentos ? { perfilEquipamentos: char.perfilEquipamentos } : {}),
     hpMax: char.hpMax,
     sobreescudoMax: char.sobreescudoMax,
     criadoEm: char.criadoEm,
