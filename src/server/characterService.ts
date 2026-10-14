@@ -85,6 +85,14 @@ import {
   sementeDaOnda,
   tentativasRestantes,
 } from '@/game/batalhaSangrenta';
+import {
+  conferirEntradaTorre,
+  identidadeDoAndar,
+  MENSAGEM_BLOQUEIO_TORRE,
+  montarMonstroDaTorre,
+  recompensaDoAndar,
+  TORRE,
+} from '@/game/torreCelestial';
 import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
 import { CHEFES_ESPECIAIS_MAP } from '@/rules/chefesEspeciais';
 import { randomInt, randomUUID } from 'node:crypto';
@@ -93,6 +101,7 @@ import {
   chaveDoNome,
   ContextoTransacao,
   RegistroCombate,
+  ResumoTorreRegistro,
   repositorio,
 } from './persistencia';
 
@@ -140,6 +149,8 @@ export interface CharacterDocument {
   batalhaSangrenta?: EstadoBatalhaSangrenta;
   /** Batalha Sangrenta: dificuldades já vencidas (cada uma abre ao vencer a anterior). */
   batalhaSangrentaVencidas?: string[];
+  /** Torre Celestial: o andar mais alto já vencido (o personagem enfrenta o seguinte). */
+  torreAndar?: number;
   /** Armas fabricadas na Forja. */
   armas?: ArmaPersonagem[];
   /** Peças de armadura fabricadas no Ferreiro. */
@@ -333,6 +344,7 @@ function mesclarPersonagem(
     cacadaChavesVencidas: updates.cacadaChavesVencidas ?? current.cacadaChavesVencidas ?? [],
     ...((updates.batalhaSangrenta ?? current.batalhaSangrenta) ? { batalhaSangrenta: updates.batalhaSangrenta ?? current.batalhaSangrenta } : {}),
     ...((updates.batalhaSangrentaVencidas ?? current.batalhaSangrentaVencidas) ? { batalhaSangrentaVencidas: updates.batalhaSangrentaVencidas ?? current.batalhaSangrentaVencidas } : {}),
+    ...((updates.torreAndar ?? current.torreAndar) !== undefined ? { torreAndar: updates.torreAndar ?? current.torreAndar } : {}),
     armas: updates.armas ?? current.armas ?? [],
     armaduras: updates.armaduras ?? current.armaduras ?? [],
     equipamento: updates.equipamento ?? current.equipamento ?? EQUIPAMENTO_VAZIO,
@@ -1678,6 +1690,136 @@ export async function executarBatalhaSangrenta(
     ctx.gravarCombate(registro);
 
     return { ...resumo, character, combateId, repetido: false, ondas, mensagens };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Provação da Torre Celestial
+// ---------------------------------------------------------------------------
+
+export interface RespostaTorre {
+  character: CharacterDocument;
+  combateId: string;
+  repetido: boolean;
+  resultado: ResultadoCombate;
+  levelUps: number;
+  transaction?: TransactionDocument;
+  mensagens: string[];
+  torre: ResumoTorreRegistro;
+}
+
+/**
+ * Torre Celestial: o personagem enfrenta o andar seguinte ao mais alto que já venceu (sem voltar, sem limite
+ * diário). Vida e Sobreescudo voltam ao máximo a cada andar. Vitória: avança o andar e dá o XP fixo (só até o
+ * nível 15), a essência de habilidade (andares 1 a 199), 5 Diamantes (a partir do 200) e 1 fragmento de ascensão nos
+ * andares de chefe 200 a 300. Derrota: só perde a luta. Tudo é conferido no servidor; reenvio com o mesmo
+ * combateId devolve o resultado gravado.
+ */
+export async function executarTorre(uid: string, opcoes: OpcoesCombate): Promise<RespostaTorre> {
+  const combateId = opcoes.combateId ?? `tor-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const idRegistro = idDoRegistroCombate(uid, combateId);
+
+  return repositorio.executarTransacao('torre', async (ctx) => {
+    const anterior = await ctx.lerCombate(idRegistro);
+    const current = await carregarPersonagem(ctx, uid, 'Personagem não encontrado. Crie um personagem antes de subir a Torre.');
+
+    if (anterior) {
+      const resumo = anterior.resposta.torre;
+      if (!resumo) throw new Error('Identificador de combate já usado fora da Torre Celestial.');
+      return {
+        character: current,
+        combateId,
+        repetido: true,
+        resultado: anterior.resposta.resultado as ResultadoCombate,
+        levelUps: anterior.resposta.levelUps,
+        ...(anterior.resposta.transaction ? { transaction: anterior.resposta.transaction } : {}),
+        mensagens: anterior.resposta.mensagens,
+        torre: resumo,
+      };
+    }
+
+    const entrada = conferirEntradaTorre(current.nivel, current.torreAndar);
+    if (!entrada.ok) throw new Error(MENSAGEM_BLOQUEIO_TORRE[entrada.motivo]);
+    const andar = entrada.andar;
+    const identidade = identidadeDoAndar(andar);
+    const monstro = montarMonstroDaTorre(andar);
+
+    const combatentePersonagem = combatenteDoPersonagem(current);
+    const entradaCombatente = structuredClone(combatentePersonagem);
+    const resultado = resolverCombate(combatentePersonagem, monstro, opcoes.seed);
+    const venceu = resultado.vencedor === 'personagem';
+
+    const recompensa = recompensaDoAndar(andar, current.nivel);
+    // A Torre não dá ouro; o XP é o fixo do andar (com a passiva racial de XP por cima) e a derrota não tem penalidade
+    resultado.ouroGanho = 0;
+    resultado.xpGanho = venceu && recompensa.xp > 0 ? calcularXpComBonusRacial(recompensa.xp, current.racaId) : 0;
+
+    let character = current;
+    let levelUps = 0;
+    let transaction: TransactionDocument | undefined;
+    const mensagens: string[] = [...resultado.mensagens];
+    const motivo = `Torre Celestial (andar ${andar})`;
+
+    if (venceu) {
+      const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome);
+      character = pos.character;
+      levelUps = pos.levelUps;
+      transaction = pos.transaction;
+      mensagens.splice(0, mensagens.length, ...pos.mensagens);
+
+      if (recompensa.essenciaHabilidade > 0) {
+        character = alterarSaldoEm(ctx, character, 'essenciaHabilidade', recompensa.essenciaHabilidade, motivo).character;
+      }
+      if (recompensa.diamantes > 0) {
+        character = alterarSaldoEm(ctx, character, 'diamantes', recompensa.diamantes, motivo).character;
+      }
+      if (recompensa.fragmentosAscensao > 0) {
+        character = alterarSaldoEm(ctx, character, 'fragmentosAscensao', recompensa.fragmentosAscensao, motivo).character;
+      }
+      character = salvarPersonagem(ctx, character, { torreAndar: andar });
+
+      mensagens.push(
+        `Torre Celestial: andar ${andar} vencido${identidade.chefe ? ` (chefe ${identidade.nome})` : ''}.`
+      );
+      const ganhos = [
+        resultado.xpGanho > 0 ? `XP +${resultado.xpGanho}` : null,
+        recompensa.essenciaHabilidade > 0 ? `essência de habilidade +${recompensa.essenciaHabilidade}` : null,
+        recompensa.diamantes > 0 ? `Diamantes +${recompensa.diamantes}` : null,
+        recompensa.fragmentosAscensao > 0 ? `fragmento de ascensão +${recompensa.fragmentosAscensao}` : null,
+      ].filter((g): g is string => g !== null);
+      if (ganhos.length > 0) mensagens.push(`Recompensas: ${ganhos.join(', ')}.`);
+      if (andar >= TORRE.andares) mensagens.push('Você chegou ao topo da Torre Celestial!');
+    } else {
+      mensagens.push(`Você caiu no andar ${andar} da Torre Celestial. Pode tentar de novo.`);
+    }
+
+    const torre: ResumoTorreRegistro = {
+      andar,
+      chefe: identidade.chefe,
+      monstroId: identidade.monstroId,
+      nome: identidade.nome,
+      venceu,
+      xpGanho: venceu ? resultado.xpGanho : 0,
+      essenciaHabilidade: venceu ? recompensa.essenciaHabilidade : 0,
+      diamantes: venceu ? recompensa.diamantes : 0,
+      fragmentosAscensao: venceu ? recompensa.fragmentosAscensao : 0,
+      proximoAndar: venceu ? (andar < TORRE.andares ? andar + 1 : null) : andar,
+    };
+    const registro: RegistroCombate = {
+      id: idRegistro,
+      uid,
+      monstroId: identidade.monstroId,
+      seed: opcoes.seed,
+      vencedor: resultado.vencedor,
+      xpGanho: torre.xpGanho,
+      ouroGanho: 0,
+      criadoEm: new Date().toISOString(),
+      entrada: { combatente: entradaCombatente, monstroId: identidade.monstroId, andar, seed: opcoes.seed, modo: 'torre' },
+      resposta: { resultado, levelUps, ...(transaction ? { transaction } : {}), mensagens, torre },
+    };
+    ctx.gravarCombate(registro);
+
+    return { character, combateId, repetido: false, resultado, levelUps, ...(transaction ? { transaction } : {}), mensagens, torre };
   });
 }
 

@@ -23,7 +23,23 @@ export interface RegistroCombate {
     cacada?: ResultadoCacadaRegistro;
     /** Batalha Sangrenta: resumo das ondas, recompensa e tentativas restantes (sem o log das lutas). */
     batalhaSangrenta?: ResumoBatalhaSangrentaRegistro;
+    /** Torre Celestial: o andar, o monstro e o que a vitória deu. */
+    torre?: ResumoTorreRegistro;
   };
+}
+
+export interface ResumoTorreRegistro {
+  andar: number;
+  chefe: boolean;
+  monstroId: string;
+  nome: string;
+  venceu: boolean;
+  xpGanho: number;
+  essenciaHabilidade: number;
+  diamantes: number;
+  fragmentosAscensao: number;
+  /** O andar que o personagem enfrenta depois (null depois do 300). */
+  proximoAndar: number | null;
 }
 
 export interface ResumoBatalhaSangrentaRegistro {
