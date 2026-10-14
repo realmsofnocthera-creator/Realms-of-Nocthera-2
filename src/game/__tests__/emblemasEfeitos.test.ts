@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { Combatente, resolverCombate } from '@/game/combat';
 import { EquipamentoCombate } from '@/game/combate/equipamentoCombate';
 import { EmblemaItem } from '@/game/emblemas';
-import { efeitosEstaticosDosEmblemas, emblemasNoCombate, EmblemasNoCombate } from '@/game/emblemasEfeitos';
+import { efeitosEstaticosDosEmblemas, efeitosVazios, emblemasNoCombate, EmblemasNoCombate } from '@/game/emblemasEfeitos';
+import { bonusDanoCondicionalDeEmblemas, condicaoDoEmblemaVale, ContextoEmblema, duracaoComBonus, fatorDanoCriticoDeEmblemas } from '@/game/combate/emblemasCombate';
+import { reducaoDanoDeEmblemas } from '@/game/combat';
 import { calcularFichaEquipamento } from '@/game/equipamento';
 import { TIPOS_EMBLEMA } from '@/rules/emblemasCatalogo';
 import { EFEITOS_DOS_EMBLEMAS, habilidadeDoEmblemaVale } from '@/rules/emblemasEfeitos';
@@ -21,11 +23,12 @@ describe('Efeitos dos emblemas (tabela)', () => {
     expect(Object.keys(EFEITOS_DOS_EMBLEMAS)).toHaveLength(25);
   });
 
-  it('27 habilidades já valem nesta parte (efeitos fixos); as outras entram depois', () => {
+  it('54 habilidades já valem (fixas e condicionais); as 26 com gatilho ou que dependem da DEF dos monstros entram depois', () => {
     let vale = 0;
     for (const t of TIPOS_EMBLEMA) t.habilidades.forEach((_, i) => { if (habilidadeDoEmblemaVale(t.id, i)) vale++; });
-    expect(vale).toBe(27);
-    expect(habilidadeDoEmblemaVale('dargan', 0)).toBe(false); // condicional: vem depois
+    expect(vale).toBe(54);
+    expect(habilidadeDoEmblemaVale('dargan', 0)).toBe(true); // condicional
+    expect(habilidadeDoEmblemaVale('dargan', 2)).toBe(false); // gatilho: vem depois
     expect(habilidadeDoEmblemaVale('lutero', 0)).toBe(true);
     expect(habilidadeDoEmblemaVale('lutero', 1)).toBe(false);
   });
@@ -83,7 +86,7 @@ describe('Soma dos efeitos fixos', () => {
 
   it('sem emblemas, ou só com habilidades que ainda não valem, nada muda', () => {
     expect(efeitosEstaticosDosEmblemas([]).atqPercentual).toBe(0);
-    expect(emblemasNoCombate(efeitosEstaticosDosEmblemas([item('a', 'dargan', 3)]))).toBeUndefined();
+    expect(emblemasNoCombate(efeitosEstaticosDosEmblemas([item('a', 'lutero', 3)]))).toBeUndefined();
   });
 });
 
@@ -106,7 +109,7 @@ const SEM_BONUS: EquipamentoCombate = {
   statusArma: [],
   elementosArma: [],
 };
-const EMBLEMAS_ZERO: EmblemasNoCombate = { defPercentual: 0, danoElemental: {}, reducaoDano: { fisico: 0, magico: 0, todos: 0, chefes: 0 } };
+const EMBLEMAS_ZERO: EmblemasNoCombate = efeitosVazios();
 const comEmblemas = (e: Partial<EmblemasNoCombate>): EquipamentoCombate => ({ ...SEM_BONUS, emblemas: { ...EMBLEMAS_ZERO, ...e } });
 
 const ALVO: MonsterDefinition = {
@@ -170,5 +173,108 @@ describe('Efeitos dos emblemas no motor de combate', () => {
     expect(golpe(heroi(e), ALVO, 'monstro').danoEfetivo).toBe(normalBase);
     const chefeBase = golpe(heroi(SEM_BONUS), chefe, 'monstro').danoEfetivo;
     expect(golpe(heroi(e), chefe, 'monstro').danoEfetivo).toBeLessThan(chefeBase);
+  });
+});
+
+// ---- efeitos condicionais ----
+const CTX: ContextoEmblema = {
+  hpAlvo: 100,
+  hpMaxAlvo: 100,
+  hpAtacante: 100,
+  hpMaxAtacante: 100,
+  alvoChefe: false,
+  alvoComEscudo: false,
+  alvoComBonus: false,
+  alvoComNegativo: false,
+  alvoStatus: new Set(),
+};
+
+describe('Condições dos emblemas', () => {
+  it('HP do alvo e de quem ataca', () => {
+    expect(condicaoDoEmblemaVale({ alvoHpAbaixo: 40 }, { ...CTX, hpAlvo: 39 })).toBe(true);
+    expect(condicaoDoEmblemaVale({ alvoHpAbaixo: 40 }, { ...CTX, hpAlvo: 40 })).toBe(false);
+    expect(condicaoDoEmblemaVale({ atacanteHpAcima: 70 }, { ...CTX, hpAtacante: 71 })).toBe(true);
+    expect(condicaoDoEmblemaVale({ atacanteHpAcima: 70 }, { ...CTX, hpAtacante: 70 })).toBe(false);
+    expect(condicaoDoEmblemaVale({ atacanteHpAbaixo: 50 }, { ...CTX, hpAtacante: 10 })).toBe(true);
+  });
+
+  it('status do alvo: basta um da lista; escudo, bônus, negativo e chefe', () => {
+    const c = { alvoStatus: ['veneno', 'sangramento'] } as const;
+    expect(condicaoDoEmblemaVale(c, { ...CTX, alvoStatus: new Set(['sangramento']) })).toBe(true);
+    expect(condicaoDoEmblemaVale(c, { ...CTX, alvoStatus: new Set(['queimadura']) })).toBe(false);
+    expect(condicaoDoEmblemaVale({ alvoComEscudo: true }, { ...CTX, alvoComEscudo: true })).toBe(true);
+    expect(condicaoDoEmblemaVale({ alvoComBonus: true }, CTX)).toBe(false);
+    expect(condicaoDoEmblemaVale({ alvoComNegativo: true }, { ...CTX, alvoComNegativo: true })).toBe(true);
+    expect(condicaoDoEmblemaVale({ alvoChefe: true }, { ...CTX, alvoChefe: true })).toBe(true);
+  });
+
+  it('com várias condições, todas precisam valer (Execução dos Juramentos: maldito e com menos de 25% de HP)', () => {
+    const c = { alvoStatus: ['maldicao'], alvoHpAbaixo: 25 } as const;
+    expect(condicaoDoEmblemaVale(c, { ...CTX, alvoStatus: new Set(['maldicao']), hpAlvo: 10 })).toBe(true);
+    expect(condicaoDoEmblemaVale(c, { ...CTX, alvoStatus: new Set(['maldicao']) })).toBe(false);
+    expect(condicaoDoEmblemaVale(c, { ...CTX, hpAlvo: 10 })).toBe(false);
+  });
+
+  it('a soma vem dos emblemas equipados, com o multiplicador do nível', () => {
+    const um = emblemasNoCombate(efeitosEstaticosDosEmblemas([item('a', 'dargan')]))!;
+    expect(bonusDanoCondicionalDeEmblemas(um, { ...CTX, hpAlvo: 10 })).toBe(8);
+    expect(bonusDanoCondicionalDeEmblemas(um, CTX)).toBe(0);
+    const quatro = emblemasNoCombate(efeitosEstaticosDosEmblemas(varios('dargan', 4)))!;
+    expect(bonusDanoCondicionalDeEmblemas(quatro, { ...CTX, hpAlvo: 10 })).toBe(20);
+  });
+
+  it('dano crítico só vale com a condição', () => {
+    const lautrec = emblemasNoCombate(efeitosEstaticosDosEmblemas([item('a', 'lautrec', 2)]))!;
+    expect(fatorDanoCriticoDeEmblemas(lautrec, CTX)).toBeCloseTo(1.12);
+    const grimhall = emblemasNoCombate(efeitosEstaticosDosEmblemas([item('a', 'grimhall', 3)]))!;
+    expect(fatorDanoCriticoDeEmblemas(grimhall, CTX)).toBe(1);
+    expect(fatorDanoCriticoDeEmblemas(grimhall, { ...CTX, alvoStatus: new Set(['sangramento']) })).toBeCloseTo(1.08);
+  });
+
+  it('status: dano, duração, chance e resistência', () => {
+    const e = efeitosEstaticosDosEmblemas([item('a', 'vesper', 3), item('b', 'floragoth'), item('c', 'rhazkida'), item('d', 'elyss', 2), item("e", "lana", 3), item("f", "nyxara")]);
+    expect(e.danoStatus).toEqual({ veneno: 18, sangramento: 10, queimadura: 0 });
+    expect(e.duracaoStatus).toEqual({ veneno: 10, controle: 10 });
+    expect(e.chanceStatus).toEqual({ congelamento: 0, sono: 15 });
+    expect(e.resistenciaStatusPercentual).toBe(8 + 10 + 10);
+    expect(e.reducaoDanoDeAfetados).toEqual({ veneno: 5, negativo: 10 });
+  });
+
+  it('duração: arredonda para o inteiro mais próximo e nunca encurta', () => {
+    expect(duracaoComBonus(10, 10)).toBe(11);
+    expect(duracaoComBonus(10, 25)).toBe(13);
+    expect(duracaoComBonus(2, 10)).toBe(2);
+    expect(duracaoComBonus(2, 25)).toBe(3);
+    expect(duracaoComBonus(5, 0)).toBe(5);
+  });
+
+  it('o dano recebido de inimigos afetados cai (Febre Devoradora e Reflexo da Lua)', () => {
+    const e = emblemasNoCombate(efeitosEstaticosDosEmblemas([item('a', 'vesper', 3), item('b', 'lana', 3)]))!;
+    expect(reducaoDanoDeEmblemas(e, true, false)).toBe(0);
+    expect(reducaoDanoDeEmblemas(e, true, false, { veneno: true, negativo: false })).toBe(5);
+    expect(reducaoDanoDeEmblemas(e, true, false, { veneno: true, negativo: true })).toBe(15);
+  });
+});
+
+describe('Efeitos condicionais no motor de combate', () => {
+  const dano = (e: Partial<EmblemasNoCombate>, extra: Partial<Combatente> = {}, alvo: MonsterDefinition = ALVO) =>
+    golpe(heroi(comEmblemas(e), extra), alvo).danoEfetivo;
+
+  it('Último Duelo: +% contra chefe só com o HP do personagem abaixo de 50%', () => {
+    const chefe: MonsterDefinition = { ...ALVO, chefe: true };
+    const e = { danoSe: [{ percentual: 50, condicao: { alvoChefe: true as const, atacanteHpAbaixo: 50 } }] };
+    const base = dano({}, { hp: 1000 }, chefe);
+    expect(dano(e, { hp: 1000 }, chefe)).toBeGreaterThan(base); // chefe e 20% de HP
+    expect(dano(e, { hp: 5000 }, chefe)).toBe(dano({}, { hp: 5000 }, chefe)); // HP cheio
+    expect(dano(e, { hp: 1000 })).toBe(dano({}, { hp: 1000 })); // não é chefe
+  });
+
+  it('Corte Perfeito: o crítico causa mais dano', () => {
+    const critico = (e: Partial<EmblemasNoCombate>) =>
+      resolverCombate(heroi(comEmblemas(e), { atributos: { vigor: 20, sorte: 500, forca: 60, vitalidade: 20, arcano: 0, inteligencia: 0, agilidade: 10 } }), ALVO, 11, {
+        rngStatus: () => 99.9,
+        rngCritico: () => 0,
+      }).logTurnos[0].ataques.find((a) => a.atacante === 'Herói')!.danoEfetivo;
+    expect(critico({ danoCritico: [{ percentual: 50, condicao: {} }] })).toBeGreaterThan(critico({}));
   });
 });

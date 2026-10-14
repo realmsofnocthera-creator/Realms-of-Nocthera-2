@@ -1,4 +1,5 @@
 import { EFEITOS_STATUS, EfeitoStatus, STATUS_QUE_CHEFES_RESISTEM } from '@/rules/statusEffects';
+import { duracaoComBonus } from './emblemasCombate';
 import { adicionarDebuffs, AplicacaoDebuff, DebuffAtivo } from './efeitosDebuffs';
 
 /**
@@ -21,12 +22,12 @@ export function estaImuneAoStatus(alvo: AlvoDeStatus, efeito: EfeitoStatus): boo
 }
 
 /** Coloca no alvo os debuffs do status de controle. Não calcula o dano imediato (percentualHpMax). */
-export function aplicarEfeitoControle(alvo: AlvoDeStatus, efeito: EfeitoStatus): void {
+export function aplicarEfeitoControle(alvo: AlvoDeStatus, efeito: EfeitoStatus, bonusDuracaoPercentual = 0): void {
   const def = EFEITOS_STATUS[efeito];
   const aplicacoes: AplicacaoDebuff[] = [];
   if (def.incapacitaAcoes) {
     // Sono e Loucura são debuffs de mesmo nome do status
-    aplicacoes.push({ tipo: efeito === 'sono' ? 'sono' : 'loucura', acoes: def.incapacitaAcoes });
+    aplicacoes.push({ tipo: efeito === 'sono' ? 'sono' : 'loucura', acoes: efeito === 'sono' ? duracaoComBonus(def.incapacitaAcoes, bonusDuracaoPercentual) : def.incapacitaAcoes });
   }
   if (def.incapacitaAteSerAtingido) {
     aplicacoes.push({ tipo: 'paralisia' });
@@ -35,7 +36,7 @@ export function aplicarEfeitoControle(alvo: AlvoDeStatus, efeito: EfeitoStatus):
     aplicacoes.push({
       tipo: 'lentidao',
       percentual: def.lentidao.percentual,
-      rodadas: def.lentidao.rodadas,
+      rodadas: duracaoComBonus(def.lentidao.rodadas, bonusDuracaoPercentual),
       origem: 'congelamento',
     });
   }

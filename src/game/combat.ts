@@ -91,6 +91,13 @@ import { aplicarBonusElemental } from './combate/bonusElemento';
 import { decidirDesfecho } from './combate/desfecho';
 import { aplicarEfeitoControle, estaImuneAoStatus, imunidadesDeChefe } from './combate/efeitosControle';
 import {
+  bonusDanoCondicionalDeEmblemas,
+  bonusElementalCondicionalDeEmblemas,
+  ContextoEmblema,
+  duracaoComBonus,
+  fatorDanoCriticoDeEmblemas,
+} from './combate/emblemasCombate';
+import {
   EstadoDeLuta,
   adicionarMarcas,
   condicoesDoAlvo,
@@ -230,9 +237,43 @@ function escolherAcaoMonstro(c: Combatente): AcaoMonstro | undefined {
 }
 
 /** Redução do dano recebido (%) dos emblemas do defensor: física ou mágica, geral e, contra chefes, a do Rugido Dominante. */
-export function reducaoDanoDeEmblemas(e: { reducaoDano: { fisico: number; magico: number; todos: number; chefes: number } } | undefined, ehDanoFisico: boolean, atacanteEhChefe: boolean): number {
+export function reducaoDanoDeEmblemas(
+  e: { reducaoDano: { fisico: number; magico: number; todos: number; chefes: number }; reducaoDanoDeAfetados?: { veneno: number; negativo: number } } | undefined,
+  ehDanoFisico: boolean,
+  atacanteEhChefe: boolean,
+  /** O atacante está envenenado / com algum efeito negativo (Febre Devoradora e Reflexo da Lua). */
+  atacanteAfetado: { veneno: boolean; negativo: boolean } = { veneno: false, negativo: false }
+): number {
   if (!e) return 0;
-  return e.reducaoDano.todos + (ehDanoFisico ? e.reducaoDano.fisico : e.reducaoDano.magico) + (atacanteEhChefe ? e.reducaoDano.chefes : 0);
+  return (
+    e.reducaoDano.todos +
+    (ehDanoFisico ? e.reducaoDano.fisico : e.reducaoDano.magico) +
+    (atacanteEhChefe ? e.reducaoDano.chefes : 0) +
+    (atacanteAfetado.veneno ? e.reducaoDanoDeAfetados?.veneno ?? 0 : 0) +
+    (atacanteAfetado.negativo ? e.reducaoDanoDeAfetados?.negativo ?? 0 : 0)
+  );
+}
+
+/** Estado do golpe para as condições dos emblemas de quem ataca. */
+function contextoDeEmblema(atacante: Combatente, defensor: Combatente, hpAlvo: number, hpAtacante: number, sobreescudoAlvo: number): ContextoEmblema {
+  const alvoStatus = new Set<ContextoEmblema['alvoStatus'] extends ReadonlySet<infer T> ? T : never>();
+  for (const s of defensor.statusAtivos ?? []) {
+    if (s === 'veneno' || s === 'queimadura') alvoStatus.add(s);
+  }
+  for (const e of defensor.estadosDeLuta ?? []) alvoStatus.add(e);
+  const condicoes = condicoesDoAlvo(defensor);
+  if (condicoes.includes('congelado')) alvoStatus.add('congelado');
+  return {
+    hpAlvo,
+    hpMaxAlvo: defensor.hpMax,
+    hpAtacante,
+    hpMaxAtacante: atacante.hpMax,
+    alvoChefe: defensor.chefe === true,
+    alvoComEscudo: sobreescudoAlvo > 0,
+    alvoComBonus: (defensor.buffs ?? []).length > 0,
+    alvoComNegativo: (defensor.statusAtivos?.length ?? 0) > 0 || condicoes.length > 0,
+    alvoStatus,
+  };
 }
 
 /** Bônus de dano das passivas do monstro atacante (chefes Especiais): HP baixo, Fúria acumulada, bônus por rodadas. */
@@ -2667,6 +2708,7 @@ function turnoDeCombateInterno(
       auraGelidaPronta: auraGelidaProntaDeArmadura(atacante.ultimaRodadaDeAtaque, numeroTurno),
       bloqueioOfensivoPronto: atacante.bloqueioOfensivoPronto === true,
     };
+    const contextoEmblema = contextoDeEmblema(atacante, defensor, hpAtual, hpAtacanteAtual, sobreescudoAtual);
     const bonusDanoArmadura = bonusDanoDeArmadura(atacante.equipamento?.habilidadesArmadura, estadoArmadura);
     const bonusDanoBuffsPorTipo = (tipo: 'fisico' | 'magico'): number =>
       bonusDanoArmadura +
@@ -2680,6 +2722,7 @@ function turnoDeCombateInterno(
       (impetoNesteAtaque?.bonusDanoPercentual ?? 0) +
       bonusDanoDosBuffs(atacante.buffs, tipo) +
       bonusDanoDosDebuffs(atacante.debuffs) +
+      bonusDanoCondicionalDeEmblemas(atacante.equipamento?.emblemas, contextoEmblema) +
       pontoFracoNesteAtaque;
     const bonusDanoBuffs = bonusDanoBuffsPorTipo(
       ehBarbaroAtacante || ehCavaleiroAtacante || ehBandidoAtacante || ehSamuraiAtacante
@@ -3192,7 +3235,9 @@ function turnoDeCombateInterno(
           atacante.equipamento?.elementosArma,
           elementoGolpe,
           estadoArmadura
-        ) + (atacante.equipamento?.emblemas?.danoElemental[elementoGolpe] ?? 0);
+        ) +
+        (atacante.equipamento?.emblemas?.danoElemental[elementoGolpe] ?? 0) +
+        bonusElementalCondicionalDeEmblemas(atacante.equipamento?.emblemas, elementoGolpe, contextoEmblema);
       if (bonusElementalAtacante > 0) {
         const aplicarBonus = (v: number): number => Math.floor((v * (100 + bonusElementalAtacante)) / 100);
         danoBruto = aplicarBonus(danoBruto);
@@ -3318,7 +3363,10 @@ function turnoDeCombateInterno(
           ? resistenciaRacialDefensor?.danoFisicoPercentual ?? 0
           : resistenciaRacialDefensor?.danoMagicoPercentual ?? 0) +
         reducaoDanoPassivasMonstro(defensor, hpAtual, sobreescudoAtual, ehDanoFisico) +
-        reducaoDanoDeEmblemas(defensor.equipamento?.emblemas, ehDanoFisico, atacante.chefe === true)
+        reducaoDanoDeEmblemas(defensor.equipamento?.emblemas, ehDanoFisico, atacante.chefe === true, {
+          veneno: atacante.statusAtivos?.includes('veneno') === true,
+          negativo: (atacante.statusAtivos?.length ?? 0) > 0 || condicoesDoAlvo(atacante).length > 0,
+        })
       : 0;
 
     // Regra 1.2.2: as reduções de dano recebido somam, com teto de 80%
@@ -3368,7 +3416,10 @@ function turnoDeCombateInterno(
       if (mult > 1) {
         golpesCriticos++;
         // Reforço Crítico, Brilho Crítico e Fulgor Crítico (habilidades de armadura)
-        return multiplicadorCriticoDeArmadura(mult, atacante.equipamento?.habilidadesArmadura, elementoGolpe !== undefined);
+        return (
+          multiplicadorCriticoDeArmadura(mult, atacante.equipamento?.habilidadesArmadura, elementoGolpe !== undefined) *
+          fatorDanoCriticoDeEmblemas(atacante.equipamento?.emblemas, contextoEmblema)
+        );
       }
       return mult;
     };
@@ -4074,12 +4125,26 @@ export function resolverCombate(
     }
     const tentativa = tentarAplicarEfeito(efeitosMonstroStatus, efeitoId, sorteio, 0, chanceExtraPontos);
     efeitosMonstroStatus = tentativa.efeitos;
+    // Contaminação Persistente: o veneno que o personagem aplica dura mais
+    const bonusDuracaoVeneno = p.equipamento?.emblemas?.duracaoStatus.veneno ?? 0;
+    const venenoAtivo = efeitosMonstroStatus.get('veneno');
+    if (
+      efeitoId === 'veneno' &&
+      bonusDuracaoVeneno > 0 &&
+      venenoAtivo &&
+      (tentativa.resultado === 'aplicado' || tentativa.resultado === 'renovado')
+    ) {
+      efeitosMonstroStatus = new Map(efeitosMonstroStatus).set('veneno', {
+        ...venenoAtivo,
+        rodadasRestantes: duracaoComBonus(venenoAtivo.rodadasRestantes, bonusDuracaoVeneno),
+      });
+    }
     if (tentativa.resultado === 'controle') {
       // Bloco C: dano imediato (se houver) e debuffs de controle no monstro
       const def = EFEITOS_STATUS[efeitoId];
       const danoImediato = def.percentualHpMax > 0 ? calcularDanoEfeito(m.hpMax, def.percentualHpMax) : 0;
       m.hp = Math.max(0, m.hp - danoImediato);
-      aplicarEfeitoControle(m, efeitoId);
+      aplicarEfeitoControle(m, efeitoId, p.equipamento?.emblemas?.duracaoStatus.controle ?? 0);
       eventosEfeitosDoTurno.push({
         tipo: 'controle',
         efeito: efeitoId,
@@ -4095,7 +4160,10 @@ export function resolverCombate(
       });
     } else if (tentativa.resultado === 'instantaneo') {
       // Sangramento e Maldição: dano de uma vez, em % do HP máximo do monstro
-      const danoInstantaneo = calcularDanoEfeito(m.hpMax, EFEITOS_STATUS[efeitoId].percentualHpMax);
+      const bonusDanoInstantaneo = efeitoId === 'sangramento' ? p.equipamento?.emblemas?.danoStatus.sangramento ?? 0 : 0;
+      const danoInstantaneo = Math.floor(
+        (calcularDanoEfeito(m.hpMax, EFEITOS_STATUS[efeitoId].percentualHpMax) * (100 + bonusDanoInstantaneo)) / 100
+      );
       m.hp = Math.max(0, m.hp - danoInstantaneo);
       registrarEstadoDeLuta(m, efeitoId);
       eventosEfeitosDoTurno.push({
@@ -4110,7 +4178,12 @@ export function resolverCombate(
   // Resistências a status da armadura (nível somado das habilidades): chance, dano e duração do que o personagem sofre
   const armaduraDoPersonagem = () => p.equipamento?.habilidadesArmadura;
   const reducaoChancePersonagem = (efeitoId: EfeitoStatus): number =>
-    Math.min(100, reducaoChanceStatusRacial(p.racaId, efeitoId) + reducaoChanceStatusDeArmadura(armaduraDoPersonagem(), efeitoId));
+    Math.min(
+      100,
+      reducaoChanceStatusRacial(p.racaId, efeitoId) +
+        reducaoChanceStatusDeArmadura(armaduraDoPersonagem(), efeitoId) +
+        (p.equipamento?.emblemas?.resistenciaStatusPercentual ?? 0)
+    );
   /** Ressuscitar: o dano de status não age até o fim da rodada que ele marcou. */
   const semDanoDeStatus = (): boolean => (p.imunidadeDanoStatusAteRodada ?? 0) >= turno;
   const danoDeStatusNoPersonagem = (efeitoId: EfeitoStatus, dano: number): number =>
@@ -4177,7 +4250,8 @@ export function resolverCombate(
     (p.equipamento?.bonusChanceEfeitosPontos ?? 0) +
     chanceExtraRelativaEmPontos(
       status,
-      bonusChanceStatusRelativa(p.equipamento?.habilidadesArmadura, status, estadoArmaduraDoPersonagem())
+      bonusChanceStatusRelativa(p.equipamento?.habilidadesArmadura, status, estadoArmaduraDoPersonagem()) +
+        (status === 'congelamento' || status === 'sono' ? p.equipamento?.emblemas?.chanceStatus[status] ?? 0 : 0)
     );
 
   const executarAcaoPersonagemBase = (
@@ -4271,6 +4345,7 @@ export function resolverCombate(
     eventosEfeitosDoTurno: EventoEfeito[]
   ) => {
     p.statusAtivos = [...efeitosPersonagem.keys()];
+    m.statusAtivos = [...efeitosMonstroStatus.keys()];
     const efeitosMonstro = monstro.efeitosAplicados ?? [];
     const tMonstro = turnoDeCombate(m, p, rodada, {
       sorteioCritico: (idxAtk, idxGolpe) => obterSorteioCritico(rodada, idxAtk, idxGolpe, 'monstro'),
@@ -4418,7 +4493,9 @@ export function resolverCombate(
     // Dano contínuo no monstro (Sangramento Forçado do jogador)
     if (m.hp > 0 && efeitosMonstroStatus.size > 0) {
       const tickMonstro = processarTickEfeitos(efeitosMonstroStatus, m.hpMax, {
-        queimadura: bonusDanoQueimaduraDeArmadura(p.equipamento?.habilidadesArmadura),
+        queimadura:
+          bonusDanoQueimaduraDeArmadura(p.equipamento?.habilidadesArmadura) + (p.equipamento?.emblemas?.danoStatus.queimadura ?? 0),
+        veneno: p.equipamento?.emblemas?.danoStatus.veneno ?? 0,
       });
       efeitosMonstroStatus = tickMonstro.efeitos;
       for (const e of tickMonstro.eventos) {
