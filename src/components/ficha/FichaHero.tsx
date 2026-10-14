@@ -17,6 +17,8 @@ interface FichaHeroProps {
   aba?: AbaFicha;
   onMudarAba?: (aba: AbaFicha) => void;
   colunaEquipamentos?: React.ReactNode;
+  /** Na aba Emblemas, os 4 espaços de emblema tomam o lugar da moldura de atributos. */
+  colunaEmblemas?: React.ReactNode;
   className?: string;
 }
 
@@ -26,6 +28,7 @@ export function FichaHero({
   aba = 'personagem',
   onMudarAba,
   colunaEquipamentos,
+  colunaEmblemas,
   className = '',
 }: FichaHeroProps) {
   const raca = getRaceById(character.racaId);
@@ -130,6 +133,8 @@ export function FichaHero({
             {/* Moldura de Atributos alinhada à direita */}
             {aba === 'equipamentos' && colunaEquipamentos ? (
               colunaEquipamentos
+            ) : aba === 'emblemas' && colunaEmblemas ? (
+              colunaEmblemas
             ) : (
               <FichaAtributos character={character} onOpenLupa={onOpenLupa} />
             )}

@@ -37,8 +37,8 @@ export interface ResumoGuerreiroRegistro {
   mecanicaNome: string;
   venceu: boolean;
   primeiraVitoria: boolean;
-  /** Emblemas ganhos por raridade (tudo zero na derrota). */
-  emblemas: Record<string, number>;
+  /** Os 4 emblemas ganhos (vazio na derrota). */
+  emblemas: { tipoId: string; nome: string; raridade: string }[];
 }
 
 export interface ResumoTorreRegistro {

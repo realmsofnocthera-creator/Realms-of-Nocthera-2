@@ -6,7 +6,7 @@ import { ArrowLeft, Check, Lock } from 'lucide-react';
 import type { CharacterDocument, RespostaGuerreiro } from '@/server/characterService';
 import { montarChefeGuerreiro } from '@/game/guerreiro';
 import { dificuldadesDoGuerreiro, EMBLEMAS_POR_VITORIA, emblemasDoPersonagem } from '@/lib/guerreiroTela';
-import { EMBLEMA_RARIDADES } from '@/rules/emblemas';
+import { EMBLEMA_RARIDADE_MAP, EmblemaRaridade } from '@/rules/emblemas';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { CombateCacada } from '@/components/cacada/CombateCacada';
 
@@ -81,7 +81,7 @@ export function GuerreiroScreen({ character, onCharacterChange, tokenFresco }: G
   }
 
   const dificuldades = dificuldadesDoGuerreiro(character);
-  const emblemas = emblemasDoPersonagem(character.emblemas);
+  const emblemas = emblemasDoPersonagem(character.emblemasItens);
 
   return (
     <main className="min-h-dvh w-full flex flex-col items-center px-2.5 py-3 select-none" style={{ backgroundColor: colors.background.primary, backgroundImage: 'radial-gradient(ellipse at top, rgba(40,28,16,0.92) 0%, rgba(13,13,13,1) 75%)', color: colors.text.primary }}>
@@ -153,7 +153,7 @@ export function GuerreiroScreen({ character, onCharacterChange, tokenFresco }: G
 
         {etapa.tipo === 'resultado' && (() => {
           const g = etapa.resposta.guerreiro;
-          const ganhos = EMBLEMA_RARIDADES.filter((r) => (g.emblemas[r.id] ?? 0) > 0);
+          const ganhos = g.emblemas;
           return (
             <section aria-label="Resultado da Provação do Guerreiro" className="flex flex-col gap-2.5">
               <div className="rounded-sm border-2 p-3 text-center flex flex-col gap-1" style={{ backgroundColor: colors.background.secondary, borderColor: g.venceu ? '#F3C769' : colors.status.danger }}>
@@ -161,7 +161,7 @@ export function GuerreiroScreen({ character, onCharacterChange, tokenFresco }: G
                 <div className="text-sm" style={{ color: colors.text.secondary }}>{g.nome} · {g.mecanicaNome}</div>
                 {g.venceu ? (
                   <div className="flex flex-wrap justify-center gap-x-4 gap-y-0.5 text-sm font-cinzel font-bold mt-1" aria-label="Emblemas ganhos">
-                    {ganhos.map((r) => <span key={r.id} style={{ color: r.cor }}>{r.nome} x{g.emblemas[r.id]}</span>)}
+                    {ganhos.map((e, i) => <span key={`${e.tipoId}-${i}`} style={{ color: EMBLEMA_RARIDADE_MAP[e.raridade as EmblemaRaridade]?.cor }}>Emblema {e.nome} ({EMBLEMA_RARIDADE_MAP[e.raridade as EmblemaRaridade]?.nome})</span>)}
                   </div>
                 ) : (
                   <div className="text-sm mt-1" style={{ color: '#FF8A80' }}>Sem emblemas desta vez. Tente de novo amanhã.</div>

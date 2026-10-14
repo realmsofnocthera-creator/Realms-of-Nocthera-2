@@ -7,10 +7,12 @@ import {
 } from '@/game/guerreiro';
 import { CHEFES_GUERREIRO } from '@/rules/guerreiroChefes';
 import { EMBLEMA_RARIDADES, EMBLEMA_RARIDADE_MAP, EmblemaRaridade } from '@/rules/emblemas';
+import { TIPO_EMBLEMA_MAP } from '@/rules/emblemasCatalogo';
+import type { EmblemaItem } from '@/game/emblemas';
 
 /** Lógica da tela da Provação do Guerreiro (dificuldades, estado de cada chefe e emblemas), sem React. */
 
-type Personagem = Pick<CharacterDocument, 'nivel' | 'guerreiroTentativas' | 'guerreiroVencidas' | 'emblemas'>;
+type Personagem = Pick<CharacterDocument, 'nivel' | 'guerreiroTentativas' | 'guerreiroVencidas'>;
 
 export type EstadoChefeGuerreiro = 'disponivel' | 'bloqueado' | 'tentativaUsada';
 
@@ -79,12 +81,17 @@ export interface EmblemaTela {
   quantidade: number;
 }
 
-/** Os emblemas do personagem, do mais raro para o mais comum (só os que ele tem). */
-export function emblemasDoPersonagem(emblemas: Record<string, number> | undefined): EmblemaTela[] {
+/** Quantos emblemas o personagem tem de cada raridade, do mais raro para o mais comum (só as que ele tem). */
+export function emblemasDoPersonagem(itens: readonly EmblemaItem[] | undefined): EmblemaTela[] {
   return [...EMBLEMA_RARIDADES]
     .reverse()
-    .filter((r) => (emblemas?.[r.id] ?? 0) > 0)
-    .map((r) => ({ raridade: r.id, nome: EMBLEMA_RARIDADE_MAP[r.id].nome, cor: r.cor, quantidade: emblemas?.[r.id] ?? 0 }));
+    .map((r) => ({
+      raridade: r.id,
+      nome: EMBLEMA_RARIDADE_MAP[r.id].nome,
+      cor: r.cor,
+      quantidade: (itens ?? []).filter((i) => TIPO_EMBLEMA_MAP[i.tipo]?.raridade === r.id).length,
+    }))
+    .filter((e) => e.quantidade > 0);
 }
 
 export const EMBLEMAS_POR_VITORIA = GUERREIRO.emblemasPorVitoria;

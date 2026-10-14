@@ -92,7 +92,16 @@ import {
   sortearEmblemas,
 } from '@/game/guerreiro';
 import { diaDeBrasilia } from '@/game/batalhaSangrenta';
-import { EMBLEMA_RARIDADES, EmblemaRaridade } from '@/rules/emblemas';
+import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
+import { TIPO_EMBLEMA_MAP } from '@/rules/emblemasCatalogo';
+import {
+  desequiparEmblema,
+  EmblemaItem,
+  emblemasEquipadosDe,
+  equiparEmblema,
+  fundirEmblemas,
+  MENSAGEM_BLOQUEIO_EMBLEMA,
+} from '@/game/emblemas';
 import {
   conferirEntradaTorre,
   identidadeDoAndar,
@@ -164,8 +173,10 @@ export interface CharacterDocument {
   guerreiroTentativas?: Record<string, string>;
   /** Provação do Guerreiro: dificuldades cujo chefe já foi vencido (cada uma abre ao vencer a anterior). */
   guerreiroVencidas?: number[];
-  /** Emblemas do Guerreiro por raridade (primeira versão: só a raridade; nome e efeito vêm depois). */
-  emblemas?: Record<string, number>;
+  /** Emblemas do personagem (itens com tipo e estrelas), vindos da Provação do Guerreiro. */
+  emblemasItens?: EmblemaItem[];
+  /** Ids dos emblemas equipados (até 4 espaços). */
+  emblemasEquipados?: string[];
   /** Armas fabricadas na Forja. */
   armas?: ArmaPersonagem[];
   /** Peças de armadura fabricadas no Ferreiro. */
@@ -362,7 +373,8 @@ function mesclarPersonagem(
     ...((updates.torreAndar ?? current.torreAndar) !== undefined ? { torreAndar: updates.torreAndar ?? current.torreAndar } : {}),
     ...((updates.guerreiroTentativas ?? current.guerreiroTentativas) ? { guerreiroTentativas: updates.guerreiroTentativas ?? current.guerreiroTentativas } : {}),
     ...((updates.guerreiroVencidas ?? current.guerreiroVencidas) ? { guerreiroVencidas: updates.guerreiroVencidas ?? current.guerreiroVencidas } : {}),
-    ...((updates.emblemas ?? current.emblemas) ? { emblemas: updates.emblemas ?? current.emblemas } : {}),
+    ...((updates.emblemasItens ?? current.emblemasItens) ? { emblemasItens: updates.emblemasItens ?? current.emblemasItens } : {}),
+    ...((updates.emblemasEquipados ?? current.emblemasEquipados) ? { emblemasEquipados: updates.emblemasEquipados ?? current.emblemasEquipados } : {}),
     armas: updates.armas ?? current.armas ?? [],
     armaduras: updates.armaduras ?? current.armaduras ?? [],
     equipamento: updates.equipamento ?? current.equipamento ?? EQUIPAMENTO_VAZIO,
@@ -387,16 +399,18 @@ function mesclarPersonagem(
 
 /** Atributos que valem em combate e nos derivados: os gravados, o Reforço de Habilidade e o equipamento equipado. */
 export function atributosEfetivos(
-  char: Pick<CharacterDocument, 'atributos' | 'reforcoHabilidade'> & Partial<Pick<CharacterDocument, 'equipamento' | 'armas' | 'armaduras'>>
+  char: Pick<CharacterDocument, 'atributos' | 'reforcoHabilidade'> &
+    Partial<Pick<CharacterDocument, 'equipamento' | 'armas' | 'armaduras' | 'emblemasItens' | 'emblemasEquipados'>>
 ): Attributes {
   const comReforco = aplicarReforcoAtributos(char.atributos, char.reforcoHabilidade);
-  if (!char.equipamento) return comReforco;
-  return aplicarEquipamentoAosAtributos(comReforco, calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras));
+  const emblemas = emblemasEquipadosDe(char);
+  if (!char.equipamento && emblemas.length === 0) return comReforco;
+  return aplicarEquipamentoAosAtributos(comReforco, calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras, emblemas));
 }
 
 /** Derivados calculados com o Reforço e o equipamento (atributos, HP e defesa) e a Ascensão (nível das passivas). */
 function derivadosComReforco(char: CharacterDocument) {
-  const ficha = calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras);
+  const ficha = calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras, emblemasEquipadosDe(char));
   const comReforco = aplicarReforcoAtributos(char.atributos, char.reforcoHabilidade);
   const efetivos = aplicarEquipamentoAosAtributos(comReforco, ficha);
   const derivados = calcularAtributosDerivados(efetivos, char.classeId, char.nivel, char);
@@ -1271,7 +1285,7 @@ function idDoRegistroCombate(uid: string, combateId: string): string {
 /** Monta o personagem para o combate: HP cheio, Sobreescudo e atributos com o Reforço de Habilidade e o equipamento. */
 function combatenteDoPersonagem(current: CharacterDocument): Combatente {
   // A ficha de combate do equipamento: o motor só lê o que está aqui (arma: dano, tipo, elemento e status)
-  const ficha = calcularFichaEquipamento(current.equipamento, current.armas, current.armaduras);
+  const ficha = calcularFichaEquipamento(current.equipamento, current.armas, current.armaduras, emblemasEquipadosDe(current));
   const arma = ficha.arma;
   // Habilidades de armadura que dependem do estado da luta (dano e crítico condicionais, Heroísmo)
   const habilidadesNoMotor = Object.fromEntries(
@@ -1900,27 +1914,20 @@ export async function executarGuerreiro(uid: string, dificuldadeId: unknown, opc
     resultado.xpGanho = 0;
     resultado.ouroGanho = 0;
 
-    const emblemasGanhos = venceu
-      ? sortearEmblemas(dificuldade, sorteioDeDrops(opcoes.seed))
-      : (Object.fromEntries(EMBLEMA_RARIDADES.map((r) => [r.id, 0])) as Record<EmblemaRaridade, number>);
+    const emblemasGanhos = venceu ? sortearEmblemas(dificuldade, sorteioDeDrops(opcoes.seed)) : [];
     const primeiraVitoria = venceu && !(current.guerreiroVencidas ?? []).includes(dificuldade);
 
-    const emblemas = { ...(current.emblemas ?? {}) };
-    for (const r of EMBLEMA_RARIDADES) {
-      if (emblemasGanhos[r.id] > 0) emblemas[r.id] = (emblemas[r.id] ?? 0) + emblemasGanhos[r.id];
-    }
+    const novosEmblemas: EmblemaItem[] = emblemasGanhos.map((e) => ({ id: randomUUID(), tipo: e.tipoId, estrelas: 1 }));
     const character = salvarPersonagem(ctx, current, {
       guerreiroTentativas: { ...(current.guerreiroTentativas ?? {}), [String(dificuldade)]: diaDeBrasilia(agora) },
       guerreiroVencidas: primeiraVitoria ? [...(current.guerreiroVencidas ?? []), dificuldade].sort((a, b) => a - b) : current.guerreiroVencidas ?? [],
-      emblemas,
+      emblemasItens: [...(current.emblemasItens ?? []), ...novosEmblemas],
     });
 
     const mensagens: string[] = [
       ...resultado.mensagens,
       venceu
-        ? `Provação do Guerreiro: ${chefe.nome} foi derrotado! Emblemas: ${EMBLEMA_RARIDADES.filter((r) => emblemasGanhos[r.id] > 0)
-            .map((r) => `${r.nome} x${emblemasGanhos[r.id]}`)
-            .join(', ')}.`
+        ? `Provação do Guerreiro: ${chefe.nome} foi derrotado! Emblemas: ${emblemasGanhos.map((e) => `${TIPO_EMBLEMA_MAP[e.tipoId].nome} (${EMBLEMA_RARIDADE_MAP[e.raridade].nome})`).join(', ')}.`
         : `Você caiu diante de ${chefe.nome}. Pode tentar de novo amanhã.`,
     ];
     const guerreiro: ResumoGuerreiroRegistro = {
@@ -1930,7 +1937,7 @@ export async function executarGuerreiro(uid: string, dificuldadeId: unknown, opc
       mecanicaNome: chefe.mecanicaNome,
       venceu,
       primeiraVitoria,
-      emblemas: emblemasGanhos,
+      emblemas: emblemasGanhos.map((e) => ({ tipoId: e.tipoId, nome: TIPO_EMBLEMA_MAP[e.tipoId].nome, raridade: e.raridade })),
     };
     const registro: RegistroCombate = {
       id: idRegistro,
@@ -1947,6 +1954,45 @@ export async function executarGuerreiro(uid: string, dificuldadeId: unknown, opc
     ctx.gravarCombate(registro);
 
     return { character, combateId, repetido: false, resultado, mensagens, guerreiro };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Emblemas: equipar, desequipar e fundir
+// ---------------------------------------------------------------------------
+
+export interface RespostaEmblemas {
+  character: CharacterDocument;
+  /** Fusão: o emblema criado. */
+  criado?: EmblemaItem;
+}
+
+/** Equipa um emblema no primeiro espaço livre (4 espaços; o mesmo tipo pode ocupar até 4). */
+export function equiparEmblemaDoPersonagem(uid: string, itemId: unknown): Promise<RespostaEmblemas> {
+  return repositorio.executarTransacao('equiparEmblema', async (ctx) => {
+    const current = await carregarPersonagem(ctx, uid);
+    const r = equiparEmblema(current.emblemasItens ?? [], current.emblemasEquipados ?? [], itemId);
+    if (!r.ok) throw new Error(MENSAGEM_BLOQUEIO_EMBLEMA[r.motivo]);
+    return { character: salvarPersonagem(ctx, current, { emblemasEquipados: r.equipados }) };
+  });
+}
+
+export function desequiparEmblemaDoPersonagem(uid: string, itemId: unknown): Promise<RespostaEmblemas> {
+  return repositorio.executarTransacao('desequiparEmblema', async (ctx) => {
+    const current = await carregarPersonagem(ctx, uid);
+    const r = desequiparEmblema(current.emblemasEquipados ?? [], itemId);
+    if (!r.ok) throw new Error(MENSAGEM_BLOQUEIO_EMBLEMA[r.motivo]);
+    return { character: salvarPersonagem(ctx, current, { emblemasEquipados: r.equipados }) };
+  });
+}
+
+/** Funde emblemas iguais (mesmo tipo e estrela, fora dos espaços): 2 de 1★ dão 1 de 2★; 3 de 2★ dão 1 de 3★. */
+export function fundirEmblemasDoPersonagem(uid: string, tipoId: unknown, estrelas: unknown): Promise<RespostaEmblemas> {
+  return repositorio.executarTransacao('fundirEmblemas', async (ctx) => {
+    const current = await carregarPersonagem(ctx, uid);
+    const r = fundirEmblemas(current.emblemasItens ?? [], current.emblemasEquipados ?? [], tipoId, estrelas, randomUUID());
+    if (!r.ok) throw new Error(MENSAGEM_BLOQUEIO_EMBLEMA[r.motivo]);
+    return { character: salvarPersonagem(ctx, current, { emblemasItens: r.itens }), criado: r.criado };
   });
 }
 

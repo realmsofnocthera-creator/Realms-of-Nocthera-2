@@ -121,6 +121,28 @@ export default function PersonagemPage() {
   const handleDesequiparItem = (slot: SlotEquipamento) =>
     chamarEquipamento('desequipar', slot === 'arma' ? { tipo: 'arma' } : { tipo: 'armadura', espaco: slot });
 
+  /** Chama as rotas de emblemas e atualiza o personagem. Devolve a mensagem de erro, se houver. */
+  const chamarEmblemas = async (rota: 'equipar' | 'fundir', corpo: Record<string, unknown>): Promise<string | null> => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return 'Sessão expirada. Entre de novo.';
+      const res = await fetch(`/api/emblemas/${rota}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(corpo),
+      });
+      const data = await res.json();
+      if (!res.ok) return data.error || 'Não foi possível alterar os emblemas.';
+      if (data.character) setCharacter(data.character);
+      return null;
+    } catch {
+      return 'Erro ao alterar os emblemas.';
+    }
+  };
+
+  const handleEmblemaAcao = (id: string, acao: 'equipar' | 'desequipar') => chamarEmblemas('equipar', { id, acao });
+  const handleFundirEmblemas = (tipo: string, estrelas: number) => chamarEmblemas('fundir', { tipo, estrelas });
+
   const handleLogout = async () => {
     await logoutUser();
     router.replace('/login');
@@ -147,6 +169,8 @@ export default function PersonagemPage() {
         onEquiparHabilidade={handleEquiparHabilidade}
         onEquiparItem={handleEquiparItem}
         onDesequiparItem={handleDesequiparItem}
+        onEmblemaAcao={handleEmblemaAcao}
+        onFundirEmblemas={handleFundirEmblemas}
         userEmail={user.email || 'Aventureiro'}
       />
     </main>
