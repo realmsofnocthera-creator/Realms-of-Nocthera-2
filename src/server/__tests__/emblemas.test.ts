@@ -75,4 +75,22 @@ describe('Emblemas (servidor)', () => {
     await expect(fundirEmblemasDoPersonagem('e6', 'dargan', 'x')).rejects.toThrow('Estrela de emblema inválida');
     expect((await getCharacterByUid('e6'))!.emblemasItens).toHaveLength(1);
   });
+
+  it('equipar emblemas muda os atributos efetivos e o HP; desequipar volta ao normal', async () => {
+    await setup('e7', [{ id: 'a', tipo: 'odrak', estrelas: 3 }, { id: 'b', tipo: 'odrak', estrelas: 3 }]);
+    const antes = (await getCharacterByUid('e7'))!;
+    expect(antes.bonusEquipamento?.vigor ?? 0).toBe(0);
+    await equiparEmblemaDoPersonagem('e7', 'a');
+    await equiparEmblemaDoPersonagem('e7', 'b');
+    const com = (await getCharacterByUid('e7'))!;
+    // Odrak é Lendário: 6 pontos em Vigor, Vitalidade e Força por emblema na 3★
+    expect(com.bonusEquipamento).toMatchObject({ vigor: 12, vitalidade: 12, forca: 12 });
+    expect(com.hpMax).toBeGreaterThan(antes.hpMax);
+    expect(com.sobreescudoMax).toBeGreaterThan(antes.sobreescudoMax);
+    await desequiparEmblemaDoPersonagem('e7', 'a');
+    await desequiparEmblemaDoPersonagem('e7', 'b');
+    const depois = (await getCharacterByUid('e7'))!;
+    expect(depois.hpMax).toBe(antes.hpMax);
+    expect(depois.bonusEquipamento?.vigor ?? 0).toBe(0);
+  });
 });

@@ -1,5 +1,7 @@
 import type { CharacterDocument } from '@/server/characterService';
-import { CUSTO_DA_FUSAO, EmblemaItem, nivelDasHabilidades, SLOTS_EMBLEMA } from '@/game/emblemas';
+import { atributosDoEmblema, atributosDosEmblemas, CUSTO_DA_FUSAO, EmblemaItem, nivelDasHabilidades, SLOTS_EMBLEMA } from '@/game/emblemas';
+import { ATTRIBUTES } from '@/rules/attributes';
+import { ATTRIBUTE_DISPLAY_NAMES } from '@/rules/attributeInfo';
 import { EMBLEMA_RARIDADE_MAP, EMBLEMA_RARIDADES } from '@/rules/emblemas';
 import { TIPO_EMBLEMA_MAP, TipoEmblema } from '@/rules/emblemasCatalogo';
 
@@ -106,4 +108,19 @@ export function habilidadesEmAcao(c: Personagem): HabilidadeEmAcaoTela[] {
     const tipo = TIPO_EMBLEMA_MAP[n.tipo];
     return { tipoNome: tipo.nome, nome: n.habilidade.nome, descricao: n.habilidade.descricao, nivel: n.nivel, cor: EMBLEMA_RARIDADE_MAP[tipo.raridade].cor };
   });
+}
+
+/** Os atributos que o emblema soma na estrela dada, em texto: "Força +2, Sorte +2, Agilidade +2". */
+export function atributosDoEmblemaEmTexto(item: Pick<EmblemaItem, 'tipo' | 'estrelas'>): string {
+  const a = atributosDoEmblema(item);
+  return ATTRIBUTES.filter((n) => a[n] > 0).map((n) => `${ATTRIBUTE_DISPLAY_NAMES[n]} +${a[n]}`).join(', ');
+}
+
+/** O que os emblemas equipados somam nos atributos, em texto ("Força +6, Sorte +6"); vazio se não houver nada equipado. */
+export function atributosDosEquipadosEmTexto(c: Personagem): string {
+  const equipados = (c.emblemasEquipados ?? [])
+    .map((id) => (c.emblemasItens ?? []).find((i) => i.id === id))
+    .filter((i): i is EmblemaItem => !!i && !!TIPO_EMBLEMA_MAP[i.tipo]);
+  const soma = atributosDosEmblemas(equipados);
+  return ATTRIBUTES.filter((n) => soma[n] > 0).map((n) => `${ATTRIBUTE_DISPLAY_NAMES[n]} +${soma[n]}`).join(', ');
 }

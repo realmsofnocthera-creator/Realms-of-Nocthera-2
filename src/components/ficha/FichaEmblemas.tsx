@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import type { CharacterDocument } from '@/server/characterService';
+import { ATTRIBUTE_DISPLAY_NAMES } from '@/rules/attributeInfo';
 import { SLOTS_EMBLEMA } from '@/game/emblemas';
-import { COR_ESTRELA_VERMELHA, habilidadesEmAcao, inventarioDeEmblemas, slotsDeEmblema } from '@/lib/emblemasTela';
+import { atributosDoEmblemaEmTexto, atributosDosEquipadosEmTexto, COR_ESTRELA_VERMELHA, habilidadesEmAcao, inventarioDeEmblemas, slotsDeEmblema } from '@/lib/emblemasTela';
 
 const OURO = '#B2A66C';
 
@@ -58,12 +59,18 @@ export function FichaSlotsEmblema({ character, onAbrir }: { character: Character
 /** Resumo no pé da ficha: as habilidades dos emblemas equipados e o nível de cada uma. */
 export function FichaResumoEmblemas({ character, className = '' }: { character: CharacterDocument; className?: string }) {
   const habilidades = habilidadesEmAcao(character);
+  const atributos = atributosDosEquipadosEmTexto(character);
   return (
     <section
       aria-label="Habilidades dos emblemas"
       className={`w-full rounded-lg border px-2 py-1.5 flex flex-col gap-1 max-h-[26dvh] overflow-y-auto ${className}`}
       style={{ borderColor: `${OURO}66`, background: 'linear-gradient(160deg, rgba(28,24,20,0.94) 0%, rgba(13,13,13,0.95) 100%)' }}
     >
+      {atributos && (
+        <p className="text-[10.5px] font-semibold leading-snug" style={{ color: '#F3C769' }} aria-label="Atributos dos emblemas">
+          Atributos dos emblemas: <span style={{ color: '#F5F3E0' }}>{atributos}</span>
+        </p>
+      )}
       {habilidades.length === 0 ? (
         <p className="text-[11px] text-center py-1" style={{ color: '#D5C7A4' }}>
           Nenhum emblema equipado. Toque num espaço para equipar. Emblemas iguais equipados juntos sobem o nível das habilidades (até 4).
@@ -126,6 +133,9 @@ export function FichaEmblemaModal({
                 <div className="text-[13px] font-cinzel font-bold leading-tight" style={{ color: g.cor }}>Emblema {g.nome}</div>
                 <div className="text-[10.5px]" style={{ color: '#D5C7A4' }}>{g.raridadeNome}</div>
               </div>
+              <p className="text-[10.5px]" style={{ color: '#D5C7A4' }}>
+                Atributos: {g.tipo.atributos.map((a) => ATTRIBUTE_DISPLAY_NAMES[a]).join(', ')}
+              </p>
               <ul className="text-[10.5px] leading-snug flex flex-col gap-0.5" style={{ color: '#E2D6B6' }}>
                 {g.tipo.habilidades.map((h, i) => (
                   <li key={h.nome}><Estrelas n={i + 1} /> <b>{h.nome}:</b> {h.descricao}</li>
@@ -134,7 +144,7 @@ export function FichaEmblemaModal({
               {g.porEstrela.map((e) => (
                 <div key={e.estrelas} className="flex items-center gap-2 flex-wrap border-t pt-1.5" style={{ borderColor: `${OURO}33` }}>
                   <span className="text-[12px] font-semibold" style={{ color: '#F5F3E0' }}>
-                    <Estrelas n={e.estrelas} /> x{e.total}
+                    <Estrelas n={e.estrelas} /> x{e.total} <span className="text-[10.5px] font-normal" style={{ color: '#D5C7A4' }}>({atributosDoEmblemaEmTexto({ tipo: g.tipo.id, estrelas: e.estrelas })} cada)</span>
                     {e.equipados > 0 && <span className="text-[10.5px] font-normal" style={{ color: '#D5C7A4' }}> ({e.equipados} equipado{e.equipados > 1 ? 's' : ''})</span>}
                   </span>
                   <span className="flex-1" />

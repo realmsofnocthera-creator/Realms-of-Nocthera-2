@@ -1,3 +1,4 @@
+import type { AttributeName } from './attributes';
 import type { EmblemaRaridade } from './emblemas';
 
 /**
@@ -18,6 +19,8 @@ export interface TipoEmblema {
   raridade: EmblemaRaridade;
   /** 3 para todos, 4 para os Míticos. */
   estrelasMax: 3 | 4;
+  /** Os 3 atributos que o emblema soma (escolhidos pelo tema do emblema); os pontos crescem com a estrela e a raridade. */
+  atributos: readonly [AttributeName, AttributeName, AttributeName];
   lore: string;
   /** Uma habilidade por estrela, na ordem em que são desbloqueadas. */
   habilidades: readonly HabilidadeEmblema[];
@@ -26,7 +29,7 @@ export interface TipoEmblema {
 export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
   // ---- Comum ----
   {
-    id: 'dargan', nome: 'Dargan, o Saqueador Pálido', raridade: 'comum', estrelasMax: 3,
+    id: 'dargan', nome: 'Dargan, o Saqueador Pálido', raridade: 'comum', estrelasMax: 3, atributos: ['forca', 'sorte', 'agilidade'],
     lore: 'Um saqueador brutal que aprendeu a explorar as fraquezas dos inimigos feridos. Seu poder favorece combatentes agressivos.',
     habilidades: [
       { nome: 'Instinto de Carniceiro', descricao: 'Causa 8% de dano adicional contra inimigos com menos de 40% de HP.' },
@@ -35,7 +38,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'vesper', nome: 'Vesper, a Portadora da Peste', raridade: 'comum', estrelasMax: 3,
+    id: 'vesper', nome: 'Vesper, a Portadora da Peste', raridade: 'comum', estrelasMax: 3, atributos: ['inteligencia', 'arcano', 'vigor'],
     lore: 'Uma cultista que contaminava seus inimigos com substâncias proibidas. Suas habilidades favorecem o desgaste gradual dos adversários.',
     habilidades: [
       { nome: 'Seiva Pestilenta', descricao: 'Aumenta em 8% o dano causado por veneno.' },
@@ -45,7 +48,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
   },
   // ---- Raro ----
   {
-    id: 'kael-draven', nome: 'Kael Draven, o Cavaleiro Decaído', raridade: 'raro', estrelasMax: 3,
+    id: 'kael-draven', nome: 'Kael Draven, o Cavaleiro Decaído', raridade: 'raro', estrelasMax: 3, atributos: ['vitalidade', 'vigor', 'forca'],
     lore: 'Um antigo cavaleiro que abandonou seus juramentos. Sua experiência defensiva permanece intacta.',
     habilidades: [
       { nome: 'Juramento Quebrado', descricao: 'Aumenta a DEF em 8%.' },
@@ -54,7 +57,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'elyss', nome: 'Elyss, a Noiva sem Túmulo', raridade: 'raro', estrelasMax: 3,
+    id: 'elyss', nome: 'Elyss, a Noiva sem Túmulo', raridade: 'raro', estrelasMax: 3, atributos: ['arcano', 'vitalidade', 'inteligencia'],
     lore: 'Um espírito preso entre o luto e a vingança, capaz de enfraquecer aqueles que ousam perturbar seu descanso.',
     habilidades: [
       { nome: 'Presença Espectral', descricao: 'Aumenta em 8% a resistência a efeitos de estado negativos.' },
@@ -63,7 +66,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'grimhall', nome: 'Grimhall, o Devorador de Trilhas', raridade: 'raro', estrelasMax: 3,
+    id: 'grimhall', nome: 'Grimhall, o Devorador de Trilhas', raridade: 'raro', estrelasMax: 3, atributos: ['sorte', 'agilidade', 'vigor'],
     lore: 'Uma besta que jamais abandona uma presa ferida. Sua força aumenta à medida que o inimigo se aproxima da derrota.',
     habilidades: [
       { nome: 'Faro Predatório', descricao: 'Aumenta em 6% a chance de acerto crítico.' },
@@ -73,7 +76,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
   },
   // ---- Muito raro ----
   {
-    id: 'lutero', nome: 'Lutero, o Louco', raridade: 'muitoRaro', estrelasMax: 3,
+    id: 'lutero', nome: 'Lutero, o Louco', raridade: 'muitoRaro', estrelasMax: 3, atributos: ['forca', 'agilidade', 'sorte'],
     lore: 'Um assassino imprevisível cuja loucura transforma cada batalha em uma sequência de violência. Suas passivas recompensam o combate agressivo.',
     habilidades: [
       { nome: 'Riso Macabro', descricao: 'Aumenta o ATQ em 8%.' },
@@ -82,7 +85,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'morvath', nome: 'Morvath, o Rei das Cinzas', raridade: 'muitoRaro', estrelasMax: 3,
+    id: 'morvath', nome: 'Morvath, o Rei das Cinzas', raridade: 'muitoRaro', estrelasMax: 3, atributos: ['inteligencia', 'vigor', 'arcano'],
     lore: 'Um monarca morto que continua comandando as cinzas de seu reino perdido.',
     habilidades: [
       { nome: 'Coroa Sepulcral', descricao: 'Aumenta em 10% o dano sombrio causado.' },
@@ -91,7 +94,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'grizzham', nome: 'Grizzham, o Trono das Feras', raridade: 'muitoRaro', estrelasMax: 3,
+    id: 'grizzham', nome: 'Grizzham, o Trono das Feras', raridade: 'muitoRaro', estrelasMax: 3, atributos: ['vitalidade', 'forca', 'vigor'],
     lore: 'Uma besta colossal que domina seu território pela força. Seu emblema favorece personagens resistentes.',
     habilidades: [
       { nome: 'Couraça Primordial', descricao: 'Aumenta a DEF em 10%.' },
@@ -100,7 +103,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'rhazkida', nome: 'Rhazkida, a Lâmina Exilada', raridade: 'muitoRaro', estrelasMax: 3,
+    id: 'rhazkida', nome: 'Rhazkida, a Lâmina Exilada', raridade: 'muitoRaro', estrelasMax: 3, atributos: ['agilidade', 'forca', 'sorte'],
     lore: 'Uma predadora de movimentos precisos, especializada em abrir feridas que não cicatrizam.',
     habilidades: [
       { nome: 'Corte Cirúrgico', descricao: 'Aumenta em 10% o dano de sangramento causado.' },
@@ -110,7 +113,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
   },
   // ---- Épico ----
   {
-    id: 'vharok', nome: 'Vharok, o Devorador de Almas', raridade: 'epico', estrelasMax: 3,
+    id: 'vharok', nome: 'Vharok, o Devorador de Almas', raridade: 'epico', estrelasMax: 3, atributos: ['inteligencia', 'arcano', 'vigor'],
     lore: 'Uma entidade que consome a essência dos derrotados para ampliar sua própria existência.',
     habilidades: [
       { nome: 'Fome Espiritual', descricao: 'Aumenta em 10% o dano sombrio causado.' },
@@ -119,7 +122,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'vargheist', nome: 'Vargheist, o Terror de Duas Faces', raridade: 'epico', estrelasMax: 3,
+    id: 'vargheist', nome: 'Vargheist, o Terror de Duas Faces', raridade: 'epico', estrelasMax: 3, atributos: ['forca', 'agilidade', 'sorte'],
     lore: 'Um predador alado que alterna entre fúria descontrolada e precisão mortal.',
     habilidades: [
       { nome: 'Dupla Natureza', descricao: 'Aumenta o ATQ em 7% e a iniciativa em 5%.' },
@@ -128,7 +131,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'floragoth', nome: 'Floragoth, o Jardim Faminto', raridade: 'epico', estrelasMax: 3,
+    id: 'floragoth', nome: 'Floragoth, o Jardim Faminto', raridade: 'epico', estrelasMax: 3, atributos: ['inteligencia', 'arcano', 'vitalidade'],
     lore: 'Uma entidade vegetal que transforma o campo de batalha em um jardim de espinhos e raízes devoradoras.',
     habilidades: [
       { nome: 'Raízes Sufocantes', descricao: 'Aumenta em 10% o dano causado por efeitos de veneno.' },
@@ -137,7 +140,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'nharzuel', nome: 'Nharzuel, o Dragão Sepulcral', raridade: 'epico', estrelasMax: 3,
+    id: 'nharzuel', nome: 'Nharzuel, o Dragão Sepulcral', raridade: 'epico', estrelasMax: 3, atributos: ['inteligencia', 'vitalidade', 'arcano'],
     lore: 'Um dragão morto cuja maldição mantém seus ossos em movimento.',
     habilidades: [
       { nome: 'Sopro Funéreo', descricao: 'Aumenta em 10% o dano sombrio.' },
@@ -146,7 +149,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'seraphel', nome: 'Seraphel, o Santo Corrompido', raridade: 'epico', estrelasMax: 3,
+    id: 'seraphel', nome: 'Seraphel, o Santo Corrompido', raridade: 'epico', estrelasMax: 3, atributos: ['inteligencia', 'arcano', 'sorte'],
     lore: 'Um antigo guardião sagrado que converteu sua fé em um instrumento de punição.',
     habilidades: [
       { nome: 'Luz Condenatória', descricao: 'Aumenta em 10% o dano sagrado.' },
@@ -155,7 +158,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'akumetsu', nome: 'Akumetsu, o Último Shogun', raridade: 'epico', estrelasMax: 3,
+    id: 'akumetsu', nome: 'Akumetsu, o Último Shogun', raridade: 'epico', estrelasMax: 3, atributos: ['forca', 'sorte', 'vitalidade'],
     lore: 'Um senhor da guerra que continuou lutando mesmo depois da queda de seu império.',
     habilidades: [
       { nome: 'Disciplina da Lâmina', descricao: 'Aumenta o ATQ em 8%.' },
@@ -165,7 +168,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
   },
   // ---- Lendário ----
   {
-    id: 'azhrak', nome: 'Azhrak, o Imperador Escarlate', raridade: 'lendario', estrelasMax: 3,
+    id: 'azhrak', nome: 'Azhrak, o Imperador Escarlate', raridade: 'lendario', estrelasMax: 3, atributos: ['inteligencia', 'forca', 'vigor'],
     lore: 'Um dragão soberano que reduziu reinos inteiros a campos de cinzas.',
     habilidades: [
       { nome: 'Sangue Vulcânico', descricao: 'Aumenta em 12% o dano de fogo.' },
@@ -174,7 +177,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'nyxara', nome: 'Nyxara, a Rainha do Véu', raridade: 'lendario', estrelasMax: 3,
+    id: 'nyxara', nome: 'Nyxara, a Rainha do Véu', raridade: 'lendario', estrelasMax: 3, atributos: ['arcano', 'vitalidade', 'agilidade'],
     lore: 'Uma soberana que ocultou sua existência em um véu entre a vida e a morte.',
     habilidades: [
       { nome: 'Véu Imortal', descricao: 'Aumenta em 10% a resistência a efeitos negativos.' },
@@ -183,7 +186,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'odrak', nome: 'Odrak, o Colosso Imortal', raridade: 'lendario', estrelasMax: 3,
+    id: 'odrak', nome: 'Odrak, o Colosso Imortal', raridade: 'lendario', estrelasMax: 3, atributos: ['vigor', 'vitalidade', 'forca'],
     lore: 'Uma arma viva concebida para resistir a guerras intermináveis.',
     habilidades: [
       { nome: 'Estrutura Inquebrável', descricao: 'Aumenta o HP máximo em 12%.' },
@@ -192,7 +195,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'vaelgrim', nome: 'Vaelgrim, o Rei do Inverno Eterno', raridade: 'lendario', estrelasMax: 3,
+    id: 'vaelgrim', nome: 'Vaelgrim, o Rei do Inverno Eterno', raridade: 'lendario', estrelasMax: 3, atributos: ['inteligencia', 'arcano', 'vitalidade'],
     lore: 'Uma besta ancestral cuja presença congela tudo ao seu redor.',
     habilidades: [
       { nome: 'Sangue Glacial', descricao: 'Aumenta em 12% o dano de gelo.' },
@@ -201,7 +204,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'malachar', nome: 'Malachar, o Carrasco dos Mil Juramentos', raridade: 'lendario', estrelasMax: 3,
+    id: 'malachar', nome: 'Malachar, o Carrasco dos Mil Juramentos', raridade: 'lendario', estrelasMax: 3, atributos: ['forca', 'inteligencia', 'sorte'],
     lore: 'Um executor que transforma promessas quebradas em maldições mortais.',
     habilidades: [
       { nome: 'Marca do Condenado', descricao: 'Aumenta em 10% o dano contra inimigos amaldiçoados.' },
@@ -211,7 +214,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
   },
   // ---- Mítico ----
   {
-    id: 'lautrec', nome: 'Lautrec, o Soberano do Tormento', raridade: 'mitico', estrelasMax: 4,
+    id: 'lautrec', nome: 'Lautrec, o Soberano do Tormento', raridade: 'mitico', estrelasMax: 4, atributos: ['forca', 'vigor', 'vitalidade'],
     lore: 'Uma divindade do tormento que transforma a dor em poder e a resistência em condenação.',
     habilidades: [
       { nome: 'Trono da Agonia', descricao: 'Aumenta em 10% o ATQ.' },
@@ -221,7 +224,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'nimb', nome: 'Nimb, o Senhor das Tempestades', raridade: 'mitico', estrelasMax: 4,
+    id: 'nimb', nome: 'Nimb, o Senhor das Tempestades', raridade: 'mitico', estrelasMax: 4, atributos: ['agilidade', 'inteligencia', 'sorte'],
     lore: 'Um deus das tempestades cuja velocidade e poder elétrico ultrapassam os limites dos mortais.',
     habilidades: [
       { nome: 'Coração Trovejante', descricao: 'Aumenta a iniciativa em 10%.' },
@@ -231,7 +234,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'lana', nome: 'Lana, a Deusa do Luar Silencioso', raridade: 'mitico', estrelasMax: 4,
+    id: 'lana', nome: 'Lana, a Deusa do Luar Silencioso', raridade: 'mitico', estrelasMax: 4, atributos: ['arcano', 'inteligencia', 'agilidade'],
     lore: 'Uma deusa enigmática associada à noite, ao silêncio e aos segredos ocultos na escuridão.',
     habilidades: [
       { nome: 'Manto Lunar', descricao: 'Aumenta em 10% a resistência a efeitos negativos.' },
@@ -241,7 +244,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'aurelion', nome: 'Aurelion, o Arquiteto da Origem', raridade: 'mitico', estrelasMax: 4,
+    id: 'aurelion', nome: 'Aurelion, o Arquiteto da Origem', raridade: 'mitico', estrelasMax: 4, atributos: ['vigor', 'forca', 'vitalidade'],
     lore: 'Uma divindade primordial proposta, associada às leis fundamentais que sustentam a existência.',
     habilidades: [
       { nome: 'Lei Primordial', descricao: 'Aumenta em 5% o ATQ, a DEF e o HP máximo.' },
@@ -251,7 +254,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
     ],
   },
   {
-    id: 'nymeris', nome: 'Nymeris, a Mãe do Abismo', raridade: 'mitico', estrelasMax: 4,
+    id: 'nymeris', nome: 'Nymeris, a Mãe do Abismo', raridade: 'mitico', estrelasMax: 4, atributos: ['inteligencia', 'arcano', 'vigor'],
     lore: 'Uma entidade primordial proposta, associada ao vazio anterior à luz e às forças que existem além da compreensão mortal.',
     habilidades: [
       { nome: 'Essência do Vazio', descricao: 'Aumenta em 12% o dano sombrio.' },

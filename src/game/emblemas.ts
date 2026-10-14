@@ -1,3 +1,4 @@
+import { ATTRIBUTES, Attributes } from '@/rules/attributes';
 import { EmblemaRaridade } from '@/rules/emblemas';
 import { HabilidadeEmblema, TIPO_EMBLEMA_MAP, tiposDaRaridade, TipoEmblema } from '@/rules/emblemasCatalogo';
 
@@ -17,8 +18,33 @@ export interface EmblemaItem {
 
 export const SLOTS_EMBLEMA = 4;
 
+/**
+ * Pontos que o emblema soma em CADA um dos 3 atributos dele, no total até aquela estrela (não é o ganho da estrela):
+ * [1★, 2★, 3★, ★ vermelha]. PROPOSTA de balanceamento: quatro Épicos 3★ somam 60 pontos, na ordem de uma arma Épica
+ * (41 a 65); os Míticos chegam a 27 por emblema na ★ vermelha. O Yuri ajusta aqui.
+ */
+export const PONTOS_DE_ATRIBUTO_POR_ESTRELA: Readonly<Record<EmblemaRaridade, readonly number[]>> = {
+  comum: [1, 1, 2],
+  raro: [1, 2, 3],
+  muitoRaro: [2, 3, 4],
+  epico: [2, 3, 5],
+  lendario: [3, 4, 6],
+  mitico: [3, 5, 7, 9],
+};
+
 /** Quantos emblemas iguais (mesmo tipo e mesma estrela) a fusão consome para dar 1 com uma estrela a mais. */
 export const CUSTO_DA_FUSAO: Readonly<Record<number, number>> = { 1: 2, 2: 3, 3: 3 };
+
+/**
+ * Quanto o valor de uma habilidade cresce com o nível dela (1 a 4): o nível 1 vale o valor do catálogo e os seguintes
+ * valem 1,5×, 2× e 2,5× (aprovado pelo Yuri em 14/10/2026). Os efeitos das habilidades no combate entram nos próximos PRs.
+ */
+export const MULTIPLICADOR_POR_NIVEL_DA_HABILIDADE: readonly number[] = [1, 1.5, 2, 2.5];
+
+export function multiplicadorDoNivel(nivel: number): number {
+  const i = Math.min(MULTIPLICADOR_POR_NIVEL_DA_HABILIDADE.length, Math.max(1, Math.floor(nivel))) - 1;
+  return MULTIPLICADOR_POR_NIVEL_DA_HABILIDADE[i];
+}
 
 export type MotivoBloqueioEmblema =
   | 'itemNaoEncontrado'
@@ -142,4 +168,31 @@ export function nivelDasHabilidades(equipados: readonly EmblemaItem[]): NivelDeH
 export function escolherTipoDaRaridade(raridade: EmblemaRaridade, valor: number): TipoEmblema {
   const tipos = tiposDaRaridade(raridade);
   return tipos[Math.min(tipos.length - 1, Math.floor((valor / 100) * tipos.length))];
+}
+
+/** Os atributos que um emblema soma na estrela dele (os 3 atributos do tipo, com os pontos da raridade e da estrela). */
+export function atributosDoEmblema(item: Pick<EmblemaItem, 'tipo' | 'estrelas'>): Attributes {
+  const resultado = Object.fromEntries(ATTRIBUTES.map((a) => [a, 0])) as Attributes;
+  const tipo = TIPO_EMBLEMA_MAP[item.tipo];
+  if (!tipo) return resultado;
+  const tabela = PONTOS_DE_ATRIBUTO_POR_ESTRELA[tipo.raridade];
+  const pontos = tabela[Math.min(tabela.length, Math.max(0, item.estrelas)) - 1] ?? 0;
+  for (const a of tipo.atributos) resultado[a] += pontos;
+  return resultado;
+}
+
+/** Soma dos atributos de todos os emblemas equipados. */
+export function atributosDosEmblemas(equipados: readonly Pick<EmblemaItem, 'tipo' | 'estrelas'>[]): Attributes {
+  const resultado = Object.fromEntries(ATTRIBUTES.map((a) => [a, 0])) as Attributes;
+  for (const e of equipados) {
+    const a = atributosDoEmblema(e);
+    for (const nome of ATTRIBUTES) resultado[nome] += a[nome];
+  }
+  return resultado;
+}
+
+/** Os emblemas equipados do personagem (na ordem dos espaços), descartando ids que não existem mais. */
+export function emblemasEquipadosDe(c: { emblemasItens?: readonly EmblemaItem[]; emblemasEquipados?: readonly string[] }): EmblemaItem[] {
+  const itens = c.emblemasItens ?? [];
+  return (c.emblemasEquipados ?? []).map((id) => itens.find((i) => i.id === id)).filter((i): i is EmblemaItem => !!i);
 }

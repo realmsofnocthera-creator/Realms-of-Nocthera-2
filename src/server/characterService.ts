@@ -97,6 +97,7 @@ import { TIPO_EMBLEMA_MAP } from '@/rules/emblemasCatalogo';
 import {
   desequiparEmblema,
   EmblemaItem,
+  emblemasEquipadosDe,
   equiparEmblema,
   fundirEmblemas,
   MENSAGEM_BLOQUEIO_EMBLEMA,
@@ -398,16 +399,18 @@ function mesclarPersonagem(
 
 /** Atributos que valem em combate e nos derivados: os gravados, o Reforço de Habilidade e o equipamento equipado. */
 export function atributosEfetivos(
-  char: Pick<CharacterDocument, 'atributos' | 'reforcoHabilidade'> & Partial<Pick<CharacterDocument, 'equipamento' | 'armas' | 'armaduras'>>
+  char: Pick<CharacterDocument, 'atributos' | 'reforcoHabilidade'> &
+    Partial<Pick<CharacterDocument, 'equipamento' | 'armas' | 'armaduras' | 'emblemasItens' | 'emblemasEquipados'>>
 ): Attributes {
   const comReforco = aplicarReforcoAtributos(char.atributos, char.reforcoHabilidade);
-  if (!char.equipamento) return comReforco;
-  return aplicarEquipamentoAosAtributos(comReforco, calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras));
+  const emblemas = emblemasEquipadosDe(char);
+  if (!char.equipamento && emblemas.length === 0) return comReforco;
+  return aplicarEquipamentoAosAtributos(comReforco, calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras, emblemas));
 }
 
 /** Derivados calculados com o Reforço e o equipamento (atributos, HP e defesa) e a Ascensão (nível das passivas). */
 function derivadosComReforco(char: CharacterDocument) {
-  const ficha = calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras);
+  const ficha = calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras, emblemasEquipadosDe(char));
   const comReforco = aplicarReforcoAtributos(char.atributos, char.reforcoHabilidade);
   const efetivos = aplicarEquipamentoAosAtributos(comReforco, ficha);
   const derivados = calcularAtributosDerivados(efetivos, char.classeId, char.nivel, char);
@@ -1282,7 +1285,7 @@ function idDoRegistroCombate(uid: string, combateId: string): string {
 /** Monta o personagem para o combate: HP cheio, Sobreescudo e atributos com o Reforço de Habilidade e o equipamento. */
 function combatenteDoPersonagem(current: CharacterDocument): Combatente {
   // A ficha de combate do equipamento: o motor só lê o que está aqui (arma: dano, tipo, elemento e status)
-  const ficha = calcularFichaEquipamento(current.equipamento, current.armas, current.armaduras);
+  const ficha = calcularFichaEquipamento(current.equipamento, current.armas, current.armaduras, emblemasEquipadosDe(current));
   const arma = ficha.arma;
   // Habilidades de armadura que dependem do estado da luta (dano e crítico condicionais, Heroísmo)
   const habilidadesNoMotor = Object.fromEntries(

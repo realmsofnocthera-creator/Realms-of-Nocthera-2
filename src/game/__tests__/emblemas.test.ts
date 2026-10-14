@@ -1,17 +1,23 @@
 import { describe, it, expect } from 'vitest';
 import {
+  atributosDoEmblema,
+  atributosDosEmblemas,
   CUSTO_DA_FUSAO,
+  emblemasEquipadosDe,
+  PONTOS_DE_ATRIBUTO_POR_ESTRELA,
   desequiparEmblema,
   equiparEmblema,
   escolherTipoDaRaridade,
   fundirEmblemas,
   habilidadesDesbloqueadas,
   lerEmblemasPersonagem,
+  multiplicadorDoNivel,
   nivelDasHabilidades,
   SLOTS_EMBLEMA,
   type EmblemaItem,
 } from '../emblemas';
 import { TIPOS_EMBLEMA, tiposDaRaridade } from '@/rules/emblemasCatalogo';
+import { calcularFichaEquipamento } from '../equipamento';
 
 const item = (id: string, tipo: string, estrelas = 1): EmblemaItem => ({ id, tipo, estrelas });
 
@@ -137,5 +143,69 @@ describe('Emblemas (regras)', () => {
     expect(escolherTipoDaRaridade('comum', 99.9).id).toBe('vesper');
     expect(escolherTipoDaRaridade('mitico', 99.9).raridade).toBe('mitico');
     expect(new Set([0, 20, 40, 60, 80].map((v) => escolherTipoDaRaridade('mitico', v).id)).size).toBe(5);
+  });
+});
+
+describe('Valor da habilidade por nível', () => {
+  it('o nível 1 vale o valor do catálogo e os níveis 2, 3 e 4 valem 1,5x, 2x e 2,5x', () => {
+    expect([1, 2, 3, 4].map(multiplicadorDoNivel)).toEqual([1, 1.5, 2, 2.5]);
+    // fora da faixa, vale o limite
+    expect(multiplicadorDoNivel(0)).toBe(1);
+    expect(multiplicadorDoNivel(9)).toBe(2.5);
+    // ex.: "Aumenta o ATQ em 8%" com 4 emblemas iguais vale 20%
+    expect(8 * multiplicadorDoNivel(4)).toBe(20);
+  });
+});
+
+describe('Atributos dos emblemas', () => {
+  it('cada emblema tem 3 atributos diferentes, escolhidos pelo tema', () => {
+    for (const t of TIPOS_EMBLEMA) {
+      expect(t.atributos).toHaveLength(3);
+      expect(new Set(t.atributos).size).toBe(3);
+    }
+    const por = Object.fromEntries(TIPOS_EMBLEMA.map((t) => [t.id, t.atributos]));
+    expect(por.dargan).toEqual(['forca', 'sorte', 'agilidade']); // saqueador agressivo
+    expect(por.odrak).toEqual(['vigor', 'vitalidade', 'forca']); // colosso resistente
+    expect(por.nimb).toEqual(['agilidade', 'inteligencia', 'sorte']); // tempestade veloz
+  });
+
+  it('os pontos crescem com a estrela e com a raridade; só o Mítico tem a 4ª estrela', () => {
+    const ordem = ['comum', 'raro', 'muitoRaro', 'epico', 'lendario', 'mitico'] as const;
+    for (const r of ordem) {
+      const t = PONTOS_DE_ATRIBUTO_POR_ESTRELA[r];
+      expect(t).toHaveLength(r === 'mitico' ? 4 : 3);
+      for (let i = 1; i < t.length; i++) expect(t[i]).toBeGreaterThanOrEqual(t[i - 1]);
+    }
+    for (let e = 0; e < 3; e++) {
+      for (let i = 1; i < ordem.length; i++) {
+        expect(PONTOS_DE_ATRIBUTO_POR_ESTRELA[ordem[i]][e]).toBeGreaterThanOrEqual(PONTOS_DE_ATRIBUTO_POR_ESTRELA[ordem[i - 1]][e]);
+      }
+    }
+  });
+
+  it('o emblema soma os pontos da estrela nos 3 atributos dele', () => {
+    expect(atributosDoEmblema({ tipo: 'dargan', estrelas: 1 })).toMatchObject({ forca: 1, sorte: 1, agilidade: 1, vigor: 0, arcano: 0 });
+    expect(atributosDoEmblema({ tipo: 'dargan', estrelas: 3 })).toMatchObject({ forca: 2, sorte: 2, agilidade: 2 });
+    expect(atributosDoEmblema({ tipo: 'vharok', estrelas: 3 })).toMatchObject({ inteligencia: 5, arcano: 5, vigor: 5 });
+    expect(atributosDoEmblema({ tipo: 'lautrec', estrelas: 4 })).toMatchObject({ forca: 9, vigor: 9, vitalidade: 9 });
+    expect(Object.values(atributosDoEmblema({ tipo: 'inventado', estrelas: 3 })).every((v) => v === 0)).toBe(true);
+  });
+
+  it('os atributos de vários emblemas equipados se somam', () => {
+    const soma = atributosDosEmblemas([item('a', 'dargan', 1), item('b', 'dargan', 1), item('c', 'grimhall', 2)]);
+    // Dargan: Força, Sorte, Agilidade (1 cada) x2; Grimhall (Raro, 2★ = 2): Sorte, Agilidade, Vigor
+    expect(soma).toMatchObject({ forca: 2, sorte: 4, agilidade: 4, vigor: 2 });
+  });
+
+  it('os emblemas equipados entram na ficha de equipamento (mesmo sem arma nem armadura)', () => {
+    const ficha = calcularFichaEquipamento(undefined, [], [], [item('a', 'odrak', 3)]);
+    expect(ficha.atributos).toMatchObject({ vigor: 6, vitalidade: 6, forca: 6 });
+    expect(calcularFichaEquipamento(undefined, [], [], []).atributos.vigor).toBe(0);
+  });
+
+  it('emblemasEquipadosDe devolve os itens na ordem dos espaços e ignora ids que não existem', () => {
+    const itens = [item('a', 'dargan'), item('b', 'vesper')];
+    expect(emblemasEquipadosDe({ emblemasItens: itens, emblemasEquipados: ['b', 'zzz', 'a'] }).map((i) => i.id)).toEqual(['b', 'a']);
+    expect(emblemasEquipadosDe({})).toEqual([]);
   });
 });

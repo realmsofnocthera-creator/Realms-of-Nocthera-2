@@ -15,6 +15,7 @@ import type { EfeitoStatus } from '@/rules/statusEffects';
 import { somarEfeitosEstaticos } from './habilidadesArmaduraEfeitos';
 import type { ArmaPersonagem } from './forja';
 import type { ArmaduraPersonagem } from './armaduraForja';
+import { atributosDosEmblemas, EmblemaItem } from './emblemas';
 
 /**
  * Equipamento do personagem (decidido pelo Yuri em 13/10/2026): uma arma e uma peça em cada um dos 5 espaços de
@@ -160,7 +161,9 @@ function somarModificador(p: PercentuaisEquipamento, m: ModificadorArma): void {
 export function calcularFichaEquipamento(
   equipamento: EquipamentoPersonagem | undefined,
   armas: readonly ArmaPersonagem[] = [],
-  armaduras: readonly ArmaduraPersonagem[] = []
+  armaduras: readonly ArmaduraPersonagem[] = [],
+  /** Emblemas equipados: somam os atributos deles (as habilidades entram à parte). */
+  emblemasEquipados: readonly EmblemaItem[] = []
 ): FichaEquipamento {
   const ficha: FichaEquipamento = {
     atributos: zerarAtributos(),
@@ -172,6 +175,8 @@ export function calcularFichaEquipamento(
     hpPercentual: 0,
     resistenciaElemental: {},
   };
+  const doEmblema = atributosDosEmblemas(emblemasEquipados);
+  for (const a of ATTRIBUTES) ficha.atributos[a] += doEmblema[a];
   if (!equipamento) return ficha;
 
   // Peças primeiro: as habilidades delas (somadas) mexem no dano fixo da arma e nos percentuais
