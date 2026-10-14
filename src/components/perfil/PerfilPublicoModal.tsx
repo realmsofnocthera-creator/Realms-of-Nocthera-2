@@ -28,6 +28,8 @@ import { getAvatarFaceStyle, resolveAvatarSrc } from '@/assets/avatars';
 import { HUD_IMAGES } from '@/assets/hud';
 import { PERFIL_IMAGES } from '@/assets/perfil';
 import { AvatarPicker } from '@/components/AvatarPicker';
+import { PerfilEquipamentos } from '@/components/perfil/PerfilEquipamentos';
+import { equipamentosDoPerfil, itensEquipados } from '@/lib/perfilEquipamentos';
 
 
 export interface PerfilPublicoModalProps {
@@ -36,6 +38,8 @@ export interface PerfilPublicoModalProps {
   ownCharacter: CharacterDocument;
   onSobreUpdated?: (novoSobre: string) => void;
   onAvatarUpdated?: (novoAvatarId: string) => void;
+  /** Os ids dos equipamentos que o jogador escolheu mostrar no perfil. */
+  onEquipamentosUpdated?: (ids: string[]) => void;
 }
 
 type TrocaMenuStep = 'closed' | 'menu' | 'avatar' | 'moldura' | 'titulo';
@@ -67,6 +71,7 @@ function characterToPublicProfile(char: CharacterDocument): PublicCharacterProfi
     atributosFinais: char.atributos,
     poderTotal: calcularPoderTotal(char.atributos),
     sobre: typeof char.sobre === 'string' ? char.sobre : '',
+    equipamentosPrincipais: equipamentosDoPerfil(char),
   };
 }
 
@@ -76,6 +81,7 @@ export function PerfilPublicoModal({
   ownCharacter,
   onSobreUpdated,
   onAvatarUpdated,
+  onEquipamentosUpdated,
 }: PerfilPublicoModalProps) {
   const [searchedProfile, setSearchedProfile] = useState<PublicCharacterProfile | null>(
     null
@@ -88,6 +94,9 @@ export function PerfilPublicoModal({
   const [sobreDraft, setSobreDraft] = useState('');
   const [savingSobre, setSavingSobre] = useState(false);
   const [sobreError, setSobreError] = useState<string | null>(null);
+
+  const [salvandoEquip, setSalvandoEquip] = useState(false);
+  const [equipError, setEquipError] = useState<string | null>(null);
 
   const [trocaStep, setTrocaStep] = useState<TrocaMenuStep>('closed');
   const [localOwnAvatarId, setLocalOwnAvatarId] = useState<string | null>(null);
@@ -167,6 +176,32 @@ export function PerfilPublicoModal({
       );
     } finally {
       setSearchLoading(false);
+    }
+  };
+
+  const handleSalvarEquipamentos = async (ids: string[]) => {
+    if (!isOwnProfile || salvandoEquip) return;
+    setSalvandoEquip(true);
+    setEquipError(null);
+    try {
+      const token = await resolveCurrentToken();
+      if (!token) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+      const res = await fetch('/api/character/perfil-equipamentos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ itens: ids }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Falha ao salvar os equipamentos do perfil.');
+      }
+      onEquipamentosUpdated?.(ids);
+    } catch (err) {
+      setEquipError(err instanceof Error ? err.message : 'Erro ao salvar os equipamentos do perfil.');
+    } finally {
+      setSalvandoEquip(false);
     }
   };
 
@@ -709,19 +744,14 @@ export function PerfilPublicoModal({
                 <div className="flex-1 h-px bg-[#B8A88A]" />
               </div>
 
-              <div className="grid grid-cols-4 gap-1.5">
-                {[1, 2, 3, 4].map((slot) => (
-                  <div
-                    key={slot}
-                    className="aspect-[3/4] rounded bg-gradient-to-b from-[#2A221E] to-[#171210] border border-[#C8A656]/80 flex flex-col items-center justify-center p-1 text-center shadow-sm opacity-85"
-                  >
-                    <Lock className="w-3.5 h-3.5 text-[#D4AF37] mb-1" />
-                    <span className="text-[8px] sm:text-[9px] font-cinzel text-[#E2D6B6] leading-tight">
-                      Em breve
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <PerfilEquipamentos
+                itens={viewedProfile.equipamentosPrincipais ?? []}
+                editavel={isOwnProfile}
+                equipados={isOwnProfile ? itensEquipados(effectiveOwnCharacter) : []}
+                salvando={salvandoEquip}
+                erro={equipError}
+                onSalvar={handleSalvarEquipamentos}
+              />
             </div>
 
             {/* SEÇÃO CONQUISTAS (fileira de insígnias hexagonais travadas como na referência) */}

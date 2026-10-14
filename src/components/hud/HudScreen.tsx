@@ -26,11 +26,13 @@ export function HudScreen({
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [customSobre, setCustomSobre] = useState<string | null>(null);
   const [customAvatarId, setCustomAvatarId] = useState<string | null>(null);
+  const [customPerfilEquip, setCustomPerfilEquip] = useState<string[] | null>(null);
 
   const localPersonagem: CharacterDocument = {
     ...personagem,
     ...(customSobre !== null ? { sobre: customSobre } : {}),
     ...(customAvatarId !== null ? { avatarId: customAvatarId } : {}),
+    ...(customPerfilEquip !== null ? { perfilEquipamentos: customPerfilEquip } : {}),
   };
 
   const handleNavigatePersonagem = () => {
@@ -163,6 +165,7 @@ export function HudScreen({
         onAvatarUpdated={(novoAvatarId) => {
           setCustomAvatarId(novoAvatarId);
         }}
+        onEquipamentosUpdated={setCustomPerfilEquip}
       />
     </main>
   );

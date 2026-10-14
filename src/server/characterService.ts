@@ -113,6 +113,7 @@ import {
 } from '@/game/torreCelestial';
 import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
 import { CHEFES_ESPECIAIS_MAP } from '@/rules/chefesEspeciais';
+import { equipamentosDoPerfil, validarEscolhaDoPerfil, type EquipamentoPerfil } from '@/lib/perfilEquipamentos';
 import { randomInt, randomUUID } from 'node:crypto';
 import { registrarLog } from './log';
 import {
@@ -184,6 +185,8 @@ export interface CharacterDocument {
   armaduras?: ArmaduraPersonagem[];
   /** Equipamento: a arma e as peças de armadura equipadas na ficha. */
   equipamento?: EquipamentoPersonagem;
+  /** Ids dos até 4 itens equipados que o jogador mostra no perfil público (sem o campo, a escolha é automática). */
+  perfilEquipamentos?: string[];
   /** Quanto o equipamento soma em cada atributo (pontos e % de Agilidade). Derivado, não é gravado. */
   bonusEquipamento?: Attributes;
   /** Mitigação física e mágica das peças de Defesa, com a % de Defesa da arma. Derivado, não é gravado. */
@@ -217,6 +220,8 @@ export interface PublicCharacterProfile {
   atributosFinais: Attributes;
   poderTotal: number;
   sobre: string;
+  /** Os equipamentos principais que o jogador mostra (até 4). */
+  equipamentosPrincipais: EquipamentoPerfil[];
 }
 
 export interface CreateCharacterInput {
@@ -376,6 +381,7 @@ function mesclarPersonagem(
     ...((updates.guerreiroVencidas ?? current.guerreiroVencidas) ? { guerreiroVencidas: updates.guerreiroVencidas ?? current.guerreiroVencidas } : {}),
     ...((updates.emblemasItens ?? current.emblemasItens) ? { emblemasItens: updates.emblemasItens ?? current.emblemasItens } : {}),
     ...((updates.emblemasEquipados ?? current.emblemasEquipados) ? { emblemasEquipados: updates.emblemasEquipados ?? current.emblemasEquipados } : {}),
+    ...((updates.perfilEquipamentos ?? current.perfilEquipamentos) ? { perfilEquipamentos: updates.perfilEquipamentos ?? current.perfilEquipamentos } : {}),
     armas: updates.armas ?? current.armas ?? [],
     armaduras: updates.armaduras ?? current.armaduras ?? [],
     equipamento: updates.equipamento ?? current.equipamento ?? EQUIPAMENTO_VAZIO,
@@ -542,6 +548,7 @@ function toPublicCharacterProfile(char: CharacterDocument): PublicCharacterProfi
     atributosFinais,
     poderTotal: calcularPoderTotal(atributosFinais),
     sobre: typeof char.sobre === 'string' ? char.sobre : '',
+    equipamentosPrincipais: equipamentosDoPerfil(char),
   };
 }
 
@@ -790,6 +797,16 @@ export async function updateCharacterSobre(
   return repositorio.executarTransacao('atualizarSobre', async (ctx) => {
     const current = await carregarPersonagem(ctx, uid);
     return salvarPersonagem(ctx, current, { sobre: sobreNormalizado });
+  });
+}
+
+/** Escolhe os até 4 itens equipados que aparecem nos "Equipamentos principais" do perfil público. */
+export async function definirEquipamentosDoPerfil(uid: string, itens: unknown): Promise<CharacterDocument> {
+  return repositorio.executarTransacao('perfilEquipamentos', async (ctx) => {
+    const current = await carregarPersonagem(ctx, uid);
+    const r = validarEscolhaDoPerfil(current, itens);
+    if (!r.ok) throw new Error(r.erro);
+    return salvarPersonagem(ctx, current, { perfilEquipamentos: r.ids });
   });
 }
 
