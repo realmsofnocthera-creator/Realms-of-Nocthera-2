@@ -14,8 +14,8 @@ export interface ChefeGuerreiro {
   carta: string;
   mecanicaNome: string;
   mecanicaDescricao: string;
-  /** Mecânica já implementada no motor; sem ela o chefe ainda não está disponível. */
-  mecanica?: MecanicaChefeId;
+  /** A mecânica única do chefe, implementada no motor de combate. */
+  mecanica: MecanicaChefeId;
   categoriaCorporal: CategoriaCorporal;
   elementoAtaque?: Elemento;
   tipoDano: 'fisico' | 'magico';
@@ -56,31 +56,31 @@ export const CHEFES_GUERREIRO: readonly ChefeGuerreiro[] = [
     dificuldade: 6, id: 'selvara-roda-da-fortuna', nome: 'Selvara, a Roda da Fortuna', carta: 'A Roda da Fortuna',
     mecanicaNome: 'Destino Giratório',
     mecanicaDescricao: 'A cada 2 turnos a roda escolhe um efeito: Fortuna (o chefe perde defesa), Infortúnio (o personagem perde atributos) ou Reversão (cura e dano se invertem).',
-    categoriaCorporal: 'eterio', tipoDano: 'magico',
+    mecanica: 'destinoGiratorio', categoriaCorporal: 'eterio', tipoDano: 'magico',
   },
   {
     dificuldade: 7, id: 'nekrath-morte', nome: 'Nekrath, a Morte', carta: 'A Morte',
     mecanicaNome: 'Ceifador de Almas',
     mecanicaDescricao: 'Cada 20% da vida máxima que o personagem perde cria uma alma espectral; com 3 almas o chefe recupera vida e fortalece o próximo ataque.',
-    categoriaCorporal: 'sombrio', elementoAtaque: 'sombrio', tipoDano: 'fisico',
+    mecanica: 'ceifadorDeAlmas', categoriaCorporal: 'sombrio', elementoAtaque: 'sombrio', tipoDano: 'fisico',
   },
   {
     dificuldade: 8, id: 'belzareth-diabo', nome: 'Belzareth, o Diabo', carta: 'O Diabo',
     mecanicaNome: 'Pacto Profano',
     mecanicaDescricao: 'No início da luta recebe uma maldição aleatória que muda as regras: cura reduzida, dano de retorno nos críticos ou parte do dano convertida em escudo.',
-    categoriaCorporal: 'aberrante', elementoAtaque: 'fogo', tipoDano: 'magico',
+    mecanica: 'pactoProfano', categoriaCorporal: 'aberrante', elementoAtaque: 'fogo', tipoDano: 'magico',
   },
   {
     dificuldade: 9, id: 'kolossar-torre', nome: 'Kolossar, a Torre', carta: 'A Torre',
     mecanicaNome: 'Colapso Estrutural',
     mecanicaDescricao: 'Três partes vulneráveis (núcleo, braços e couraça), uma exposta por fase. Sem dano suficiente na parte exposta em 3 turnos, executa um colapso de dano massivo.',
-    categoriaCorporal: 'rochoso', tipoDano: 'fisico',
+    mecanica: 'colapsoEstrutural', categoriaCorporal: 'rochoso', tipoDano: 'fisico',
   },
   {
     dificuldade: 10, id: 'aetherion-mundo', nome: 'Aetherion, o Mundo', carta: 'O Mundo',
     mecanicaNome: 'Ciclo da Existência',
     mecanicaDescricao: 'Alterna quatro estados: Criação (escudo), Expansão (mais ataque), Declínio (desgaste) e Renascimento (recupera vida e reinicia o ciclo).',
-    categoriaCorporal: 'eterio', elementoAtaque: 'sagrado', tipoDano: 'magico',
+    mecanica: 'cicloDaExistencia', categoriaCorporal: 'eterio', elementoAtaque: 'sagrado', tipoDano: 'magico',
   },
 ];
 

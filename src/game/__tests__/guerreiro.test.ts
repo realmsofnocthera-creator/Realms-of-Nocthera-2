@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   CHANCE_EMBLEMA_POR_DIFICULDADE,
-  chefeDisponivel,
   conferirEntradaGuerreiro,
   dificuldadeLiberadaGuerreiro,
   GUERREIRO,
@@ -26,8 +25,11 @@ describe('Provação do Guerreiro (regras)', () => {
     expect(CHEFES_GUERREIRO.map((c) => c.carta)).toEqual(['O Louco', 'O Mago', 'O Carro', 'A Força', 'A Justiça', 'A Roda da Fortuna', 'A Morte', 'O Diabo', 'A Torre', 'O Mundo']);
   });
 
-  it('por enquanto só os chefes 1 a 5 estão disponíveis (a mecânica deles já existe)', () => {
-    expect([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(chefeDisponivel)).toEqual([true, true, true, true, true, false, false, false, false, false]);
+  it('todos os 10 chefes têm a mecânica implementada', () => {
+    expect(CHEFES_GUERREIRO.map((c) => c.mecanica)).toEqual([
+      'caosImprevisivel', 'convergenciaArcana', 'investidaImparavel', 'furiaContida', 'balancaDoJulgamento',
+      'destinoGiratorio', 'ceifadorDeAlmas', 'pactoProfano', 'colapsoEstrutural', 'cicloDaExistencia',
+    ]);
   });
 
   it('entrada: nível 12; cada dificuldade abre ao vencer a anterior; 1 tentativa por dia por chefe', () => {
@@ -39,7 +41,7 @@ describe('Provação do Guerreiro (regras)', () => {
     expect(conferirEntradaGuerreiro(1, 12, undefined, [], HOJE)).toMatchObject({ ok: true, dificuldade: 1 });
     expect(conferirEntradaGuerreiro(2, 12, undefined, [], HOJE)).toEqual({ ok: false, motivo: 'dificuldadeBloqueada' });
     expect(conferirEntradaGuerreiro(2, 12, undefined, [1], HOJE)).toMatchObject({ ok: true, dificuldade: 2 });
-    expect(conferirEntradaGuerreiro(6, 30, undefined, [1, 2, 3, 4, 5], HOJE)).toEqual({ ok: false, motivo: 'chefeIndisponivel' });
+    expect(conferirEntradaGuerreiro(6, 30, undefined, [1, 2, 3, 4, 5], HOJE)).toMatchObject({ ok: true, dificuldade: 6 });
     const usada = { '1': diaDeBrasilia(HOJE) };
     expect(conferirEntradaGuerreiro(1, 12, usada, [], HOJE)).toEqual({ ok: false, motivo: 'semTentativa' });
     // outro chefe ainda tem a tentativa dele, e no dia seguinte a do primeiro volta
@@ -117,6 +119,7 @@ describe('Provação do Guerreiro (regras)', () => {
     expect(montarChefeGuerreiro(1).atributos.forca).toBeGreaterThan(1);
     expect(montarChefeGuerreiro(1).atributos.inteligencia).toBe(0);
     expect(montarChefeGuerreiro(1).mecanica).toBe('caosImprevisivel');
-    expect(montarChefeGuerreiro(6).mecanica).toBeUndefined();
+    expect(montarChefeGuerreiro(6).mecanica).toBe('destinoGiratorio');
+    expect(montarChefeGuerreiro(10).mecanica).toBe('cicloDaExistencia');
   });
 });

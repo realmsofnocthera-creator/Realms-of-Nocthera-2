@@ -23,13 +23,12 @@ describe('Provação do Guerreiro (tela)', () => {
     expect(d[0].aviso).toBe('Requer nível 12');
   });
 
-  it('no nível 12 só o Astaroth está disponível; os outros esperam o anterior e os chefes 6 a 10 estão "em breve"', () => {
+  it('no nível 12 só o Astaroth está disponível; os outros esperam o anterior', () => {
     const d = dificuldadesDoGuerreiro({ nivel: 12 }, HOJE);
     expect(d.map((x) => x.estado)).toEqual(['disponivel', 'bloqueado', 'bloqueado', 'bloqueado', 'bloqueado', 'bloqueado', 'bloqueado', 'bloqueado', 'bloqueado', 'bloqueado']);
     expect(d[1].aviso).toBe('Vença Astaroth, o Louco');
     const tudo = dificuldadesDoGuerreiro({ nivel: 30, guerreiroVencidas: [1, 2, 3, 4, 5, 6, 7, 8, 9] }, HOJE);
-    expect(tudo.map((x) => x.estado)).toEqual(['disponivel', 'disponivel', 'disponivel', 'disponivel', 'disponivel', 'indisponivel', 'indisponivel', 'indisponivel', 'indisponivel', 'indisponivel']);
-    expect(tudo[5].aviso).toBe('Em breve');
+    expect(tudo.every((x) => x.estado === 'disponivel')).toBe(true);
   });
 
   it('a tentativa usada hoje aparece e volta no dia seguinte', () => {

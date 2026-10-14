@@ -1,7 +1,6 @@
 import type { CharacterDocument } from '@/server/characterService';
 import {
   CHANCE_EMBLEMA_POR_DIFICULDADE,
-  chefeDisponivel,
   conferirEntradaGuerreiro,
   GUERREIRO,
   NIVEL_GUERREIRO,
@@ -13,7 +12,7 @@ import { EMBLEMA_RARIDADES, EMBLEMA_RARIDADE_MAP, EmblemaRaridade } from '@/rule
 
 type Personagem = Pick<CharacterDocument, 'nivel' | 'guerreiroTentativas' | 'guerreiroVencidas' | 'emblemas'>;
 
-export type EstadoChefeGuerreiro = 'disponivel' | 'bloqueado' | 'indisponivel' | 'tentativaUsada';
+export type EstadoChefeGuerreiro = 'disponivel' | 'bloqueado' | 'tentativaUsada';
 
 export interface ChanceEmblemaTela {
   raridade: EmblemaRaridade;
@@ -29,7 +28,7 @@ export interface DificuldadeGuerreiroTela {
   mecanicaNome: string;
   mecanicaDescricao: string;
   estado: EstadoChefeGuerreiro;
-  /** Texto do que impede a luta agora (nível, chefe anterior, em breve ou tentativa do dia). */
+  /** Texto do que impede a luta agora (nível, chefe anterior ou tentativa do dia). */
   aviso: string | null;
   vencido: boolean;
   chances: ChanceEmblemaTela[];
@@ -48,9 +47,6 @@ export function dificuldadesDoGuerreiro(c: Personagem, agora: Date = new Date())
       } else if (entrada.motivo === 'dificuldadeBloqueada') {
         estado = 'bloqueado';
         aviso = `Vença ${CHEFES_GUERREIRO[d - 2]?.nome ?? 'o chefe anterior'}`;
-      } else if (entrada.motivo === 'chefeIndisponivel') {
-        estado = 'indisponivel';
-        aviso = 'Em breve';
       } else if (entrada.motivo === 'semTentativa') {
         estado = 'tentativaUsada';
         aviso = 'Tentativa de hoje já usada';
@@ -92,4 +88,3 @@ export function emblemasDoPersonagem(emblemas: Record<string, number> | undefine
 }
 
 export const EMBLEMAS_POR_VITORIA = GUERREIRO.emblemasPorVitoria;
-export const CHEFES_GUERREIRO_DISPONIVEIS = CHEFES_GUERREIRO.filter((c) => chefeDisponivel(c.dificuldade)).length;

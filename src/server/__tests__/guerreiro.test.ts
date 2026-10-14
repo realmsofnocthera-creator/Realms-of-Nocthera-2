@@ -15,6 +15,8 @@ describe('Provação do Guerreiro (servidor)', () => {
   const FRACO = { vigor: 1, sorte: 0, forca: 0, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 0 };
   /** Aguenta muito e quase não bate: a luta dura até o limite de rodadas e as mecânicas aparecem várias vezes. */
   const TANQUE = { vigor: 30000, sorte: 0, forca: 1, vitalidade: 30000, arcano: 0, inteligencia: 0, agilidade: 1 };
+  /** Aguenta algumas rodadas e perde: dá tempo de ver as mecânicas dos chefes 6 a 10 em ação. */
+  const MEDIO = { vigor: 120, sorte: 0, forca: 3, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 5 };
   const HOJE = new Date('2026-10-14T15:00:00Z');
   const AMANHA = new Date('2026-10-15T15:00:00Z');
 
@@ -32,14 +34,12 @@ describe('Provação do Guerreiro (servidor)', () => {
   const nomesDasAcoes = (r: Awaited<ReturnType<typeof executarGuerreiro>>) =>
     new Set(r.resultado.logTurnos.flatMap((t) => t.ataques.map((a) => a.habilidadeAcionada).filter((n): n is string => !!n)));
 
-  it('bloqueia nível 11, dificuldade inválida, dificuldade fechada e chefe ainda indisponível', async () => {
+  it('bloqueia nível 11, dificuldade inválida e dificuldade fechada', async () => {
     await setup('g1', { nivel: 11 });
     await expect(executarGuerreiro('g1', 1, { seed: 1, agora: HOJE })).rejects.toThrow('Nível insuficiente');
     await updateCharacter('g1', { nivel: 30 });
     await expect(executarGuerreiro('g1', 11, { seed: 1, agora: HOJE })).rejects.toThrow('inválida');
     await expect(executarGuerreiro('g1', 3, { seed: 1, agora: HOJE })).rejects.toThrow('Vença o chefe da dificuldade anterior');
-    await updateCharacter('g1', { guerreiroVencidas: [1, 2, 3, 4, 5] });
-    await expect(executarGuerreiro('g1', 6, { seed: 1, agora: HOJE })).rejects.toThrow('ainda não está disponível');
     const c = (await getCharacterByUid('g1'))!;
     expect(c.guerreiroTentativas).toBeUndefined();
     expect(c.emblemas).toBeUndefined();
@@ -120,10 +120,33 @@ describe('Provação do Guerreiro (servidor)', () => {
     }
   });
 
-  it('Gorvath: o frenesi aparece no registro da luta quando o personagem causa dano', async () => {
-    await setup('gm4', { atributos: { ...MUITO_FORTE, forca: 600, vigor: 30000, vitalidade: 30000 }, guerreiroVencidas: [1, 2, 3] });
-    const r = await executarGuerreiro('gm4', 4, { seed: 3, combateId: 'guerreiro-m4', agora: HOJE });
-    const mensagensMecanica = r.resultado.logTurnos.flatMap((t) => t.eventosMecanica ?? []);
-    expect(mensagensMecanica.some((m) => m.includes('frenesi') || m.includes('vulnerável'))).toBe(true);
+  it('Gorvath: numa luta mais longa o frenesi e a vulnerabilidade aparecem no registro', async () => {
+    const vistas = new Set<string>();
+    for (const forca of [20]) {
+      const uid = `gm4-${forca}`;
+      await setup(uid, { atributos: { ...MUITO_FORTE, forca }, guerreiroVencidas: [1, 2, 3] });
+      const r = await executarGuerreiro(uid, 4, { seed: 3, combateId: `guerreiro-m4-${forca}`, agora: HOJE });
+      for (const m of r.resultado.logTurnos.flatMap((t) => t.eventosMecanica ?? [])) vistas.add(m);
+    }
+    const todas = [...vistas].join(' | ');
+    expect(todas).toContain('explode em frenesi');
+    expect(todas).toContain('vulnerável');
+  });
+
+  it('os chefes 6 a 10 também lutam e mostram a mecânica no registro (Selvara, Nekrath, Belzareth, Kolossar e Aetherion)', async () => {
+    const esperado: [number, string][] = [
+      [6, 'A Roda gira'],
+      [7, 'colhe uma alma'],
+      [8, 'sela o Pacto'],
+      [9, 'expõe'],
+      [10, 'entra em'],
+    ];
+    for (const [dificuldade, trecho] of esperado) {
+      const uid = `gx${dificuldade}`;
+      await setup(uid, { atributos: MEDIO, guerreiroVencidas: [1, 2, 3, 4, 5, 6, 7, 8, 9] });
+      const r = await executarGuerreiro(uid, dificuldade, { seed: 9, combateId: `guerreiro-x${dificuldade}`, agora: HOJE });
+      const todas = r.resultado.logTurnos.flatMap((t) => t.eventosMecanica ?? []).join(' | ');
+      expect(todas, `${dificuldade}: ${todas.slice(0, 200)}`).toContain(trecho);
+    }
   });
 });
