@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { descreverVersao, situacaoDoConteudo, sugerirIdentificador } from '@/lib/conteudoTela';
+import { bytesDoDataUrl, descreverVersao, situacaoDoConteudo, sugerirIdentificador } from '@/lib/conteudoTela';
 import { descreverAcao } from '@/lib/mestreTela';
 
 describe('Textos do conteúdo no painel', () => {
@@ -27,5 +27,12 @@ describe('Textos do conteúdo no painel', () => {
       'Falhou: Voltou mapa__vila para a versão 1 (nova versão 4)'
     );
     expect(descreverAcao({ acao: 'conteudo.criar', alvo: 'mapa__vila' })).toBe('Criou mapa__vila (rascunho)');
+  });
+
+  it('tamanho em bytes de um data URL', () => {
+    for (const n of [0, 1, 2, 3, 10, 1000]) {
+      const url = `data:image/png;base64,${Buffer.alloc(n, 7).toString('base64')}`;
+      expect(bytesDoDataUrl(url)).toBe(n);
+    }
   });
 });

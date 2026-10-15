@@ -1,21 +1,24 @@
 import type { PermissaoMestre } from '@/rules/mestre';
-import { validarMapa, type ResultadoValidacao } from '@/rules/mapa';
+import { validarMapa, type MapaDados, type ResultadoValidacao } from '@/rules/mapa';
+import { validarTileset } from '@/rules/tileset';
 
 /**
  * Conteúdo editável pelo Painel do Mestre (3.5.2.2): cada item tem um rascunho e versões publicadas numeradas.
  * Publicar cria uma versão nova; voltar atrás publica de novo uma versão antiga como versão nova (o histórico só cresce).
  * O jogo lê apenas a versão publicada.
  */
-export const TIPOS_DE_CONTEUDO = ['mapa'] as const;
+export const TIPOS_DE_CONTEUDO = ['mapa', 'tileset'] as const;
 export type TipoDeConteudo = (typeof TIPOS_DE_CONTEUDO)[number];
 
 export const NOME_DO_TIPO: Readonly<Record<TipoDeConteudo, string>> = {
   mapa: 'Mapa',
+  tileset: 'Tileset',
 };
 
 /** Permissão para criar e editar o rascunho de cada tipo; publicar e voltar atrás pedem 'conteudo.publicar'. */
 export const PERMISSAO_DE_EDICAO: Readonly<Record<TipoDeConteudo, PermissaoMestre>> = {
   mapa: 'mapas.editar',
+  tileset: 'mapas.editar',
 };
 
 /** Identificador do item: minúsculas, números e hífen (ex.: "vila-inicial"). Fica fixo depois de criado. */
@@ -35,7 +38,14 @@ export function chaveDoConteudo(tipo: TipoDeConteudo, id: string): string {
 
 const VALIDADORES: Readonly<Record<TipoDeConteudo, (bruto: unknown) => ResultadoValidacao<unknown>>> = {
   mapa: validarMapa,
+  tileset: validarTileset,
 };
+
+/** Outros conteúdos que este usa (já validado): o mapa aponta para os seus tilesets. */
+export function referenciasDoConteudo(tipo: TipoDeConteudo, dados: unknown): { tipo: TipoDeConteudo; id: string }[] {
+  if (tipo === 'mapa') return (dados as MapaDados).tilesets.map((id) => ({ tipo: 'tileset' as const, id }));
+  return [];
+}
 
 /** Valida o conteúdo pelo schema do tipo e pelo tamanho; devolve a cópia limpa. */
 export function validarConteudo(tipo: TipoDeConteudo, bruto: unknown): ResultadoValidacao<unknown> {

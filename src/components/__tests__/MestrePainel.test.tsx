@@ -3,6 +3,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MestrePainel, type SessaoDoPainel } from '@/components/mestre/MestrePainel';
 import { ConteudoPainel } from '@/components/mestre/ConteudoPainel';
+import { ImportarTileset } from '@/components/mestre/ImportarTileset';
+import { EditorDeMapa } from '@/components/mestre/EditorDeMapa';
 import { DESCRICAO_DO_PAPEL, NOME_DO_PAPEL, permissoesDoPapel, type PapelMestre } from '@/rules/mestre';
 
 vi.mock('next/link', () => ({ default: ({ href, children, ...p }: { href: string; children: React.ReactNode }) => <a href={href} {...p}>{children}</a> }));
@@ -43,7 +45,7 @@ describe('Painel do Mestre (tela)', () => {
     const html = render('mestre');
     expect(html).toContain('Mestre');
     expect(html).toContain('u1@test.com');
-    expect(html).toContain('Editor de mapas 2D (camadas, pincel, borracha, preencher) e importador de tiles');
+    expect(html).toContain('Salas, conexões, objetos e gatilhos dos mapas; jogar o mapa');
   });
 
   it('quem lê conteúdo vê a aba Mapas; o moderador não', () => {
@@ -62,5 +64,25 @@ describe('Mapas no painel (tela)', () => {
     const suporte = lista('suporte');
     expect(suporte).not.toContain('Novo mapa');
     expect(suporte).toContain('Carregando...');
+  });
+
+  it('mapas e tilesets em abas; o importador começa pedindo a imagem', () => {
+    const html = lista('mestre');
+    expect(html).toContain('Mapas');
+    expect(html).toContain('Tilesets');
+    const importador = renderToStaticMarkup(<ImportarTileset tokenFresco={async () => 't'} criado={() => {}} />);
+    expect(importador).toContain('Escolher imagem');
+    expect(importador).toContain('accept="image/*"');
+  });
+
+  it('o editor abre carregando; o suporte só tem a ferramenta de mover e não tem Salvar', () => {
+    const mestre = renderToStaticMarkup(<EditorDeMapa id="vila" sessao={sessao('mestre')} tokenFresco={async () => 't'} />);
+    expect(mestre).toContain('Abrindo o mapa...');
+    expect(mestre).toContain('aria-label="Pincel"');
+    expect(mestre).toContain('Salvar');
+    const suporte = renderToStaticMarkup(<EditorDeMapa id="vila" sessao={sessao('suporte')} tokenFresco={async () => 't'} />);
+    expect(suporte).not.toContain('aria-label="Pincel"');
+    expect(suporte).toContain('aria-label="Mover"');
+    expect(suporte).not.toContain('Salvar');
   });
 });
