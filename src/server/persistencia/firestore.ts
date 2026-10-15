@@ -9,12 +9,43 @@ import { EmblemaItem, lerEmblemasPersonagem } from '@/game/emblemas';
 import type { Attributes } from '@/rules/attributes';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import { descreverErro, registrarLog } from '@/server/log';
+import { ehPapelMestre } from '@/rules/mestre';
 import {
   ContextoTransacao,
+  EntradaLogAdmin,
   ErroPersistencia,
+  PapelMestreDocumento,
   RegistroCombate,
   Repositorio,
 } from './tipos';
+
+function papelMestreDoDocumento(uid: string, data: DocumentData | undefined): PapelMestreDocumento | null {
+  if (!data || !ehPapelMestre(data.papel)) return null;
+  return {
+    uid,
+    papel: data.papel,
+    concedidoPor: typeof data.concedidoPor === 'string' ? data.concedidoPor : '',
+    concedidoEm: typeof data.concedidoEm === 'string' ? data.concedidoEm : '',
+    motivo: typeof data.motivo === 'string' ? data.motivo : '',
+  };
+}
+
+function entradaLogDoDocumento(id: string, data: DocumentData): EntradaLogAdmin | null {
+  if (!ehPapelMestre(data.papel) || typeof data.acao !== 'string' || typeof data.uid !== 'string') return null;
+  return {
+    id,
+    criadoEm: typeof data.criadoEm === 'string' ? data.criadoEm : '',
+    uid: data.uid,
+    email: typeof data.email === 'string' ? data.email : '',
+    papel: data.papel,
+    acao: data.acao,
+    ...(typeof data.alvo === 'string' ? { alvo: data.alvo } : {}),
+    ...(data.antes !== undefined ? { antes: data.antes } : {}),
+    ...(data.depois !== undefined ? { depois: data.depois } : {}),
+    ...(typeof data.motivo === 'string' ? { motivo: data.motivo } : {}),
+    ...(typeof data.ip === 'string' ? { ip: data.ip } : {}),
+  };
+}
 
 const TIMEOUT_TRANSACAO_MS = 10_000;
 const TIMEOUT_LEITURA_MS = 5_000;
@@ -407,5 +438,64 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
         throw new ErroPersistencia(`gravarRevogacao:${uid}`, error);
       }
     },
+
+    async lerPapelMestre(uid: string) {
+      return lerComRetry(`lerPapelMestre:${uid}`, async () => {
+        const snap = await db.collection('mestres').doc(uid).get();
+        return snap.exists ? papelMestreDoDocumento(uid, snap.data()) : null;
+      });
+    },
+
+    async gravarPapelMestre(papel: PapelMestreDocumento) {
+      await gravarSimples(`gravarPapelMestre:${papel.uid}`, () =>
+        db.collection('mestres').doc(papel.uid).set({
+          papel: papel.papel,
+          concedidoPor: papel.concedidoPor,
+          concedidoEm: papel.concedidoEm,
+          motivo: papel.motivo,
+        })
+      );
+    },
+
+    async removerPapelMestre(uid: string) {
+      await gravarSimples(`removerPapelMestre:${uid}`, () => db.collection('mestres').doc(uid).delete());
+    },
+
+    async listarPapeisMestre() {
+      return lerComRetry('listarPapeisMestre', async () => {
+        const snap = await db.collection('mestres').get();
+        return snap.docs.flatMap((d) => {
+          const papel = papelMestreDoDocumento(d.id, d.data());
+          return papel ? [papel] : [];
+        });
+      });
+    },
+
+    async registrarLogAdmin(entrada: EntradaLogAdmin) {
+      const { id, ...dados } = entrada;
+      // create() falha se o documento já existe: o log nunca é sobrescrito
+      await gravarSimples(`registrarLogAdmin:${id}`, () => db.collection('logAdmin').doc(id).create(dados));
+    },
+
+    async listarLogAdmin(limite: number) {
+      return lerComRetry('listarLogAdmin', async () => {
+        const snap = await db.collection('logAdmin').orderBy('criadoEm', 'desc').limit(limite).get();
+        return snap.docs.flatMap((d) => {
+          const entrada = entradaLogDoDocumento(d.id, d.data());
+          return entrada ? [entrada] : [];
+        });
+      });
+    },
   };
+
+  /** Gravação simples (sem transação): erro do banco vira ErroPersistencia e nunca sucesso silencioso. */
+  async function gravarSimples(operacao: string, gravar: () => Promise<unknown>): Promise<void> {
+    try {
+      await comTimeout(gravar(), TIMEOUT_LEITURA_MS);
+    } catch (error) {
+      const { codigo, mensagem } = descreverErro(error);
+      registrarLog('ERROR', 'firestore.gravacao_falhou', { operacao, codigo, mensagem });
+      throw new ErroPersistencia(operacao, error);
+    }
+  }
 }

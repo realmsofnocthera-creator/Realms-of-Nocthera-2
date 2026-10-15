@@ -105,7 +105,7 @@ const REGRAS: Record<GrupoLimite, { porIp: RegraLimite; porConta: RegraLimite }>
 
 const limitador = criarLimitador();
 
-function ipDaRequisicao(req: NextRequest): string {
+export function ipDaRequisicao(req: NextRequest): string {
   const encaminhado = req.headers.get('x-forwarded-for');
   if (encaminhado) {
     return encaminhado.split(',')[0].trim() || 'desconhecido';

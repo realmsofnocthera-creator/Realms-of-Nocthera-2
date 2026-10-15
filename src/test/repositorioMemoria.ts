@@ -8,6 +8,8 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import type {
   ContextoTransacao,
+  EntradaLogAdmin,
+  PapelMestreDocumento,
   RegistroCombate,
   Repositorio,
 } from '@/server/persistencia/tipos';
@@ -20,6 +22,8 @@ interface Estado {
   transacoes: TransactionDocument[];
   combates: Map<string, RegistroCombate>;
   revogacoes: Map<string, number>;
+  papeisMestre: Map<string, PapelMestreDocumento>;
+  logAdmin: EntradaLogAdmin[];
 }
 
 const estado: Estado = {
@@ -28,7 +32,11 @@ const estado: Estado = {
   transacoes: [],
   combates: new Map(),
   revogacoes: new Map(),
+  papeisMestre: new Map(),
+  logAdmin: [],
 };
+
+let falhaNoLogAdmin: ((entrada: EntradaLogAdmin) => void) | null = null;
 
 let falhaAoGravar: ((operacao: string) => void) | null = null;
 let fila: Promise<unknown> = Promise.resolve();
@@ -110,7 +118,45 @@ export const repositorio: Repositorio = {
   async gravarRevogacaoSessoes(uid: string, revogadoEmSegundos: number) {
     estado.revogacoes.set(uid, revogadoEmSegundos);
   },
+
+  async lerPapelMestre(uid: string) {
+    const valor = estado.papeisMestre.get(uid);
+    return valor ? structuredClone(valor) : null;
+  },
+
+  async gravarPapelMestre(papel: PapelMestreDocumento) {
+    estado.papeisMestre.set(papel.uid, structuredClone(papel));
+  },
+
+  async removerPapelMestre(uid: string) {
+    estado.papeisMestre.delete(uid);
+  },
+
+  async listarPapeisMestre() {
+    return [...estado.papeisMestre.values()].map((p) => structuredClone(p));
+  },
+
+  async registrarLogAdmin(entrada: EntradaLogAdmin) {
+    falhaNoLogAdmin?.(entrada);
+    if (estado.logAdmin.some((e) => e.id === entrada.id)) {
+      throw Object.assign(new Error(`logAdmin/${entrada.id} já existe`), { code: 6 });
+    }
+    estado.logAdmin.push(structuredClone(entrada));
+  },
+
+  async listarLogAdmin(limite: number) {
+    return estado.logAdmin
+      .map((e, i) => ({ e, i }))
+      .sort((a, b) => (a.e.criadoEm < b.e.criadoEm ? 1 : a.e.criadoEm > b.e.criadoEm ? -1 : b.i - a.i))
+      .slice(0, limite)
+      .map(({ e }) => structuredClone(e));
+  },
 };
+
+/** Simula falha ao gravar no log administrativo: o hook recebe a entrada e, se lançar erro, ela não é gravada. */
+export function setTestAdminLogFailHook(hook: ((entrada: EntradaLogAdmin) => void) | null): void {
+  falhaNoLogAdmin = hook;
+}
 
 /** Limpa todos os dados entre testes. */
 export function resetCharacterStore(): void {
@@ -119,6 +165,9 @@ export function resetCharacterStore(): void {
   estado.transacoes.length = 0;
   estado.combates.clear();
   estado.revogacoes.clear();
+  estado.papeisMestre.clear();
+  estado.logAdmin.length = 0;
+  falhaNoLogAdmin = null;
   falhaAoGravar = null;
 }
 

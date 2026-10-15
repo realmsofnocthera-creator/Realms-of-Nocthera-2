@@ -198,6 +198,78 @@
       "required": [
         "revogadoEm"
       ]
+    },
+    "papelMestre": {
+      "title": "Papel no Painel do Mestre",
+      "description": "Papel concedido pelo Dono no painel (mestre, moderador ou suporte). O Dono não é gravado aqui: vem da variável MESTRE_DONO_UIDS do servidor.",
+      "type": "object",
+      "properties": {
+        "papel": {
+          "type": "string",
+          "enum": [
+            "mestre",
+            "moderador",
+            "suporte"
+          ]
+        },
+        "concedidoPor": {
+          "type": "string"
+        },
+        "concedidoEm": {
+          "type": "string"
+        },
+        "motivo": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "papel"
+      ]
+    },
+    "logAdmin": {
+      "title": "Registro do log administrativo",
+      "description": "Quem fez o quê no painel, com antes, depois, motivo e IP. Só se cria: nunca se altera nem se apaga.",
+      "type": "object",
+      "properties": {
+        "criadoEm": {
+          "type": "string"
+        },
+        "uid": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "papel": {
+          "type": "string",
+          "enum": [
+            "dono",
+            "mestre",
+            "moderador",
+            "suporte"
+          ]
+        },
+        "acao": {
+          "type": "string"
+        },
+        "alvo": {
+          "type": "string"
+        },
+        "antes": {},
+        "depois": {},
+        "motivo": {
+          "type": "string"
+        },
+        "ip": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "criadoEm",
+        "uid",
+        "papel",
+        "acao"
+      ]
     }
   },
   "firestore": {
@@ -224,6 +296,14 @@
     "/revogacoes/{uid}": {
       "schema": "revogacao",
       "description": "Revogação de sessões por logout (só servidor)"
+    },
+    "/mestres/{uid}": {
+      "schema": "papelMestre",
+      "description": "Papéis do Painel do Mestre (só servidor)"
+    },
+    "/logAdmin/{id}": {
+      "schema": "logAdmin",
+      "description": "Log administrativo imutável (só servidor)"
     }
   }
 }
