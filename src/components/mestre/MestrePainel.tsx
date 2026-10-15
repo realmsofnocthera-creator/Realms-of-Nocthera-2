@@ -2,14 +2,14 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Lock, ScrollText, ShieldCheck, Users } from 'lucide-react';
+import { ArrowLeft, Layers, Lock, ScrollText, ShieldCheck, Users } from 'lucide-react';
 import { NOME_DA_PERMISSAO, NOME_DO_PAPEL, PAPEIS_MESTRE, type PapelMestre, type PermissaoMestre } from '@/rules/mestre';
 import { dataDoLog, descreverAcao } from '@/lib/mestreTela';
 import type { EntradaLogAdmin } from '@/server/persistencia';
 import type { PapelListado } from '@/server/mestre';
 import { NOCTHERA_THEME } from '@/theme/theme';
-
-const OURO = '#C8A656';
+import { Cartao, chamar, OURO, VERMELHO } from '@/components/mestre/comum';
+import { ConteudoPainel } from '@/components/mestre/ConteudoPainel';
 
 export interface SessaoDoPainel {
   uid: string;
@@ -21,11 +21,11 @@ export interface SessaoDoPainel {
   permissoes: PermissaoMestre[];
 }
 
-type Aba = 'geral' | 'papeis' | 'log';
+type Aba = 'geral' | 'conteudo' | 'papeis' | 'log';
 
 const MODULOS_EM_BREVE = [
-  'Conteúdo versionado (rascunho, publicado e volta atrás)',
-  'Construtor de mapas 2D e importador de tiles',
+  'Editor de mapas 2D (camadas, pincel, borracha, preencher) e importador de tiles',
+  'Salas, conexões, objetos e gatilhos dos mapas',
   'Monstros, itens e tabelas de drop',
   'Jogadores: busca, ajustes e sanções',
   'Feature flags e modo manutenção',
@@ -36,9 +36,11 @@ export function MestrePainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel; 
   const { colors } = NOCTHERA_THEME;
   const podePapeis = sessao.permissoes.includes('papeis.gerir');
   const podeLog = sessao.permissoes.includes('log.ler');
+  const podeConteudo = sessao.permissoes.includes('conteudo.ler');
   const [aba, setAba] = useState<Aba>('geral');
   const abas: { id: Aba; nome: string; icone: React.ReactNode }[] = [
     { id: 'geral', nome: 'Visão geral', icone: <ShieldCheck className="w-3.5 h-3.5" /> },
+    ...(podeConteudo ? [{ id: 'conteudo' as const, nome: 'Mapas', icone: <Layers className="w-3.5 h-3.5" /> }] : []),
     ...(podePapeis ? [{ id: 'papeis' as const, nome: 'Papéis', icone: <Users className="w-3.5 h-3.5" /> }] : []),
     ...(podeLog ? [{ id: 'log' as const, nome: 'Log', icone: <ScrollText className="w-3.5 h-3.5" /> }] : []),
   ];
@@ -77,20 +79,11 @@ export function MestrePainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel; 
         </div>
 
         {aba === 'geral' && <VisaoGeral sessao={sessao} />}
+        {aba === 'conteudo' && podeConteudo && <ConteudoPainel sessao={sessao} tokenFresco={tokenFresco} />}
         {aba === 'papeis' && podePapeis && <Papeis sessao={sessao} tokenFresco={tokenFresco} />}
         {aba === 'log' && podeLog && <Log tokenFresco={tokenFresco} />}
       </div>
     </main>
-  );
-}
-
-function Cartao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
-  const { colors } = NOCTHERA_THEME;
-  return (
-    <section className="rounded-sm border px-3 py-2.5 flex flex-col gap-1.5" style={{ backgroundColor: colors.background.secondary, borderColor: `${OURO}66` }}>
-      <h2 className="text-[13px] font-cinzel font-bold" style={{ color: '#F5E3B3' }}>{titulo}</h2>
-      {children}
-    </section>
   );
 }
 
@@ -118,13 +111,6 @@ function VisaoGeral({ sessao }: { sessao: SessaoDoPainel }) {
       </Cartao>
     </div>
   );
-}
-
-async function chamar(tokenFresco: () => Promise<string>, url: string, init?: RequestInit): Promise<{ ok: boolean; dados: Record<string, unknown> }> {
-  const token = await tokenFresco();
-  const res = await fetch(url, { ...init, headers: { ...(init?.headers ?? {}), Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } });
-  const dados = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  return { ok: res.ok, dados };
 }
 
 function Papeis({ sessao, tokenFresco }: { sessao: SessaoDoPainel; tokenFresco: () => Promise<string> }) {
@@ -197,7 +183,7 @@ function Papeis({ sessao, tokenFresco }: { sessao: SessaoDoPainel; tokenFresco: 
         <p className="text-[11px]" style={{ color: colors.text.secondary }}>
           Cada mudança fica no log. O papel de Dono não se concede aqui: ele vem do ambiente do servidor.
         </p>
-        {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: '#E5736B' }}>{erro}</p>}
+        {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
       </Cartao>
 
       <Cartao titulo="Quem tem papel">
@@ -218,7 +204,7 @@ function Papeis({ sessao, tokenFresco }: { sessao: SessaoDoPainel; tokenFresco: 
                   {p.origem === 'ambiente' ? (
                     <span className="text-[10px]" style={{ color: colors.text.secondary }}>ambiente</span>
                   ) : (
-                    <button type="button" onClick={() => { setRemovendo(p.uid); setMotivoRemocao(''); }} className="px-2 py-1 rounded border text-[11px]" style={{ borderColor: '#E5736B', color: '#E5736B' }}>
+                    <button type="button" onClick={() => { setRemovendo(p.uid); setMotivoRemocao(''); }} className="px-2 py-1 rounded border text-[11px]" style={{ borderColor: VERMELHO, color: VERMELHO }}>
                       Remover
                     </button>
                   )}
@@ -232,7 +218,7 @@ function Papeis({ sessao, tokenFresco }: { sessao: SessaoDoPainel; tokenFresco: 
                     }}
                   >
                     <input value={motivoRemocao} onChange={(e) => setMotivoRemocao(e.target.value)} placeholder="Motivo da remoção" className={campo} style={estiloCampo} required />
-                    <button type="submit" disabled={ocupado} className="px-2 py-1 rounded text-[11px] font-bold disabled:opacity-50" style={{ backgroundColor: '#E5736B', color: colors.background.secondary }}>Confirmar</button>
+                    <button type="submit" disabled={ocupado} className="px-2 py-1 rounded text-[11px] font-bold disabled:opacity-50" style={{ backgroundColor: VERMELHO, color: colors.background.secondary }}>Confirmar</button>
                     <button type="button" onClick={() => setRemovendo(null)} className="px-2 py-1 rounded border text-[11px]" style={{ borderColor: `${OURO}66` }}>Cancelar</button>
                   </form>
                 )}
@@ -267,7 +253,7 @@ function Log({ tokenFresco }: { tokenFresco: () => Promise<string> }) {
         <p className="text-[11px]" style={{ color: colors.text.secondary }}>Cada ação do painel fica aqui e não pode ser alterada.</p>
         <button type="button" onClick={() => void carregar()} className="px-2 py-1 rounded border text-[11px]" style={{ borderColor: `${OURO}66` }}>Atualizar</button>
       </div>
-      {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: '#E5736B' }}>{erro}</p>}
+      {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
       {log === null ? (
         <p className="text-[12px]" style={{ color: colors.text.secondary }}>Carregando...</p>
       ) : log.length === 0 ? (

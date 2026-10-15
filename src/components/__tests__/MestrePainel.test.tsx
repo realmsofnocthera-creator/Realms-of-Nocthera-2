@@ -2,6 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MestrePainel, type SessaoDoPainel } from '@/components/mestre/MestrePainel';
+import { ConteudoPainel } from '@/components/mestre/ConteudoPainel';
 import { DESCRICAO_DO_PAPEL, NOME_DO_PAPEL, permissoesDoPapel, type PapelMestre } from '@/rules/mestre';
 
 vi.mock('next/link', () => ({ default: ({ href, children, ...p }: { href: string; children: React.ReactNode }) => <a href={href} {...p}>{children}</a> }));
@@ -42,6 +43,24 @@ describe('Painel do Mestre (tela)', () => {
     const html = render('mestre');
     expect(html).toContain('Mestre');
     expect(html).toContain('u1@test.com');
-    expect(html).toContain('Construtor de mapas 2D e importador de tiles');
+    expect(html).toContain('Editor de mapas 2D (camadas, pincel, borracha, preencher) e importador de tiles');
+  });
+
+  it('quem lê conteúdo vê a aba Mapas; o moderador não', () => {
+    expect(render('mestre')).toContain('Mapas');
+    expect(render('suporte')).toContain('Mapas');
+    expect(render('moderador')).not.toContain('Mapas');
+  });
+});
+
+describe('Mapas no painel (tela)', () => {
+  const lista = (papel: PapelMestre) => renderToStaticMarkup(<ConteudoPainel sessao={sessao(papel)} tokenFresco={async () => 't'} />);
+
+  it('quem edita mapas vê o formulário de mapa novo; o suporte só a lista', () => {
+    expect(lista('mestre')).toContain('Novo mapa');
+    expect(lista('dono')).toContain('Novo mapa');
+    const suporte = lista('suporte');
+    expect(suporte).not.toContain('Novo mapa');
+    expect(suporte).toContain('Carregando...');
   });
 });

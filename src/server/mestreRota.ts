@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exigirPermissao, respostaErroMestre, type SessaoMestre } from '@/server/mestre';
+import { ErroMestre, exigirPermissao, respostaErroMestre, type SessaoMestre } from '@/server/mestre';
 import { registrarLog, descreverErro } from '@/server/log';
 import { limitarPorConta, limitarPorIp, type GrupoLimite } from '@/server/rateLimit';
 import type { PermissaoMestre } from '@/rules/mestre';
@@ -27,4 +27,15 @@ export async function rotaDoMestre(
     registrarLog('ERROR', 'mestre.rota_falhou', descreverErro(error));
     return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
   }
+}
+
+/** Lê o corpo JSON do pedido; corpo que não é objeto vira 400. */
+export async function corpoDoPedido(req: NextRequest): Promise<Record<string, unknown>> {
+  try {
+    const b = await req.json();
+    if (b && typeof b === 'object' && !Array.isArray(b)) return b as Record<string, unknown>;
+  } catch {
+    // cai no erro abaixo
+  }
+  throw new ErroMestre(400, 'Pedido inválido.');
 }

@@ -1,5 +1,6 @@
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import type { PapelMestre } from '@/rules/mestre';
+import type { TipoDeConteudo } from '@/rules/conteudo';
 
 /**
  * Registro de um combate resolvido (0.5-B1/B3): guarda a semente e a entrada para
@@ -118,6 +119,50 @@ export interface EntradaLogAdmin {
   ip?: string;
 }
 
+/** Item de conteúdo sem os dados (para listas): rascunho atual e versão publicada. */
+export interface ResumoConteudo {
+  chave: string;
+  tipo: TipoDeConteudo;
+  id: string;
+  nome: string;
+  /** Sobe a cada gravação do rascunho: quem salva ou publica informa a revisão que viu. */
+  revisao: number;
+  hashRascunho: string;
+  editadoEm: string;
+  editadoPor: string;
+  criadoEm: string;
+  criadoPor: string;
+  /** Número da versão no ar, ou null se nunca foi publicado. */
+  versaoPublicada: number | null;
+  hashPublicado: string | null;
+  /** Maior número de versão já criado (as versões nunca se apagam). */
+  ultimaVersao: number;
+}
+
+/** conteudo/{chave}: o item com o rascunho. */
+export interface ConteudoDocumento extends ResumoConteudo {
+  rascunho: unknown;
+}
+
+/** Versão publicada sem os dados (para o histórico). */
+export interface ResumoVersao {
+  versao: number;
+  hash: string;
+  publicadoEm: string;
+  publicadoPor: string;
+  motivo: string;
+  /** 'publicacao' veio do rascunho; 'reversao' republicou a versão `revertidaDe`. */
+  origem: 'publicacao' | 'reversao';
+  revertidaDe: number | null;
+}
+
+/** conteudo/{chave}/versoes/{versao}: só se cria, nunca se altera. */
+export interface VersaoConteudo extends ResumoVersao {
+  dados: unknown;
+}
+
+export type FalhaConteudo = 'inexistente' | 'conflito';
+
 export interface Repositorio {
   /**
    * Executa `fn` de forma atômica: ou todas as gravações são aplicadas, ou nenhuma.
@@ -140,6 +185,28 @@ export interface Repositorio {
   registrarLogAdmin(entrada: EntradaLogAdmin): Promise<void>;
   /** Os registros mais recentes primeiro. */
   listarLogAdmin(limite: number): Promise<EntradaLogAdmin[]>;
+  lerConteudo(chave: string): Promise<ConteudoDocumento | null>;
+  listarConteudos(tipo: TipoDeConteudo): Promise<ResumoConteudo[]>;
+  /** Cria o item (false se a chave já existe). */
+  criarConteudo(doc: ConteudoDocumento): Promise<boolean>;
+  /** Troca o rascunho se a revisão ainda for `revisaoBase` (senão 'conflito'); a revisão sobe 1. */
+  salvarRascunhoConteudo(
+    chave: string,
+    revisaoBase: number,
+    alteracao: { rascunho: unknown; hashRascunho: string; editadoEm: string; editadoPor: string; nome?: string }
+  ): Promise<ConteudoDocumento | FalhaConteudo>;
+  /**
+   * Numa transação: confere a condição (revisão do rascunho e/ou última versão), cria a versão ultimaVersao + 1
+   * e a põe no ar. 'conflito' se a condição não vale mais.
+   */
+  publicarVersaoConteudo(
+    chave: string,
+    condicao: { revisao?: number; ultimaVersao?: number },
+    versao: Omit<VersaoConteudo, 'versao'>
+  ): Promise<{ conteudo: ConteudoDocumento; versao: VersaoConteudo } | FalhaConteudo>;
+  /** As versões mais recentes primeiro. */
+  listarVersoesConteudo(chave: string, limite: number): Promise<ResumoVersao[]>;
+  lerVersaoConteudo(chave: string, versao: number): Promise<VersaoConteudo | null>;
 }
 
 /**

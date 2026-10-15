@@ -10,14 +10,73 @@ import type { Attributes } from '@/rules/attributes';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import { descreverErro, registrarLog } from '@/server/log';
 import { ehPapelMestre } from '@/rules/mestre';
+import { ehTipoDeConteudo } from '@/rules/conteudo';
 import {
+  ConteudoDocumento,
   ContextoTransacao,
   EntradaLogAdmin,
   ErroPersistencia,
   PapelMestreDocumento,
   RegistroCombate,
   Repositorio,
+  ResumoConteudo,
+  ResumoVersao,
+  VersaoConteudo,
 } from './tipos';
+
+const texto = (v: unknown) => (typeof v === 'string' ? v : '');
+const inteiroOuNulo = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) ? v : null);
+
+const CAMPOS_DO_RESUMO = ['tipo', 'id', 'nome', 'revisao', 'hashRascunho', 'editadoEm', 'editadoPor', 'criadoEm', 'criadoPor', 'versaoPublicada', 'hashPublicado', 'ultimaVersao'];
+const CAMPOS_DA_VERSAO = ['versao', 'hash', 'publicadoEm', 'publicadoPor', 'motivo', 'origem', 'revertidaDe'];
+
+function resumoConteudoDoDocumento(chave: string, data: DocumentData | undefined): ResumoConteudo | null {
+  if (!data || !ehTipoDeConteudo(data.tipo) || typeof data.id !== 'string') return null;
+  return {
+    chave,
+    tipo: data.tipo,
+    id: data.id,
+    nome: texto(data.nome),
+    revisao: inteiroOuNulo(data.revisao) ?? 0,
+    hashRascunho: texto(data.hashRascunho),
+    editadoEm: texto(data.editadoEm),
+    editadoPor: texto(data.editadoPor),
+    criadoEm: texto(data.criadoEm),
+    criadoPor: texto(data.criadoPor),
+    versaoPublicada: inteiroOuNulo(data.versaoPublicada),
+    hashPublicado: typeof data.hashPublicado === 'string' ? data.hashPublicado : null,
+    ultimaVersao: inteiroOuNulo(data.ultimaVersao) ?? 0,
+  };
+}
+
+function conteudoDoDocumento(chave: string, data: DocumentData | undefined): ConteudoDocumento | null {
+  const resumo = resumoConteudoDoDocumento(chave, data);
+  return resumo ? { ...resumo, rascunho: data?.rascunho ?? null } : null;
+}
+
+function resumoVersaoDoDocumento(data: DocumentData | undefined): ResumoVersao | null {
+  const versao = inteiroOuNulo(data?.versao);
+  if (!data || versao === null) return null;
+  return {
+    versao,
+    hash: texto(data.hash),
+    publicadoEm: texto(data.publicadoEm),
+    publicadoPor: texto(data.publicadoPor),
+    motivo: texto(data.motivo),
+    origem: data.origem === 'reversao' ? 'reversao' : 'publicacao',
+    revertidaDe: inteiroOuNulo(data.revertidaDe),
+  };
+}
+
+function versaoDoDocumento(data: DocumentData | undefined): VersaoConteudo | null {
+  const resumo = resumoVersaoDoDocumento(data);
+  return resumo ? { ...resumo, dados: data?.dados ?? null } : null;
+}
+
+function documentoDoConteudo(doc: ConteudoDocumento): DocumentData {
+  const { chave: _chave, ...dados } = doc;
+  return dados;
+}
 
 function papelMestreDoDocumento(uid: string, data: DocumentData | undefined): PapelMestreDocumento | null {
   if (!data || !ehPapelMestre(data.papel)) return null;
@@ -486,7 +545,102 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
         });
       });
     },
+
+    async lerConteudo(chave: string) {
+      return lerComRetry(`lerConteudo:${chave}`, async () => {
+        const snap = await db.collection('conteudo').doc(chave).get();
+        return snap.exists ? conteudoDoDocumento(chave, snap.data()) : null;
+      });
+    },
+
+    async listarConteudos(tipo) {
+      return lerComRetry(`listarConteudos:${tipo}`, async () => {
+        // select(): a lista não traz o rascunho (que pode ser grande)
+        const snap = await db.collection('conteudo').where('tipo', '==', tipo).select(...CAMPOS_DO_RESUMO).get();
+        return snap.docs.flatMap((d) => {
+          const resumo = resumoConteudoDoDocumento(d.id, d.data());
+          return resumo ? [resumo] : [];
+        });
+      });
+    },
+
+    async criarConteudo(doc: ConteudoDocumento) {
+      try {
+        await comTimeout(db.collection('conteudo').doc(doc.chave).create(documentoDoConteudo(doc)), TIMEOUT_LEITURA_MS);
+        return true;
+      } catch (error) {
+        // ALREADY_EXISTS: a chave já está em uso
+        if ((error as { code?: unknown })?.code === 6) return false;
+        const { codigo, mensagem } = descreverErro(error);
+        registrarLog('ERROR', 'firestore.gravacao_falhou', { operacao: 'criarConteudo', codigo, mensagem });
+        throw new ErroPersistencia(`criarConteudo:${doc.chave}`, error);
+      }
+    },
+
+    async salvarRascunhoConteudo(chave, revisaoBase, alteracao) {
+      return transacaoDireta(`salvarRascunho:${chave}`, async (tx) => {
+        const ref = db.collection('conteudo').doc(chave);
+        const atual = conteudoDoDocumento(chave, (await tx.get(ref)).data());
+        if (!atual) return 'inexistente' as const;
+        if (atual.revisao !== revisaoBase) return 'conflito' as const;
+        const novo: ConteudoDocumento = { ...atual, ...alteracao, revisao: atual.revisao + 1 };
+        tx.set(ref, documentoDoConteudo(novo));
+        return novo;
+      });
+    },
+
+    async publicarVersaoConteudo(chave, condicao, versao) {
+      return transacaoDireta(`publicarConteudo:${chave}`, async (tx) => {
+        const ref = db.collection('conteudo').doc(chave);
+        const atual = conteudoDoDocumento(chave, (await tx.get(ref)).data());
+        if (!atual) return 'inexistente' as const;
+        if (condicao.revisao !== undefined && atual.revisao !== condicao.revisao) return 'conflito' as const;
+        if (condicao.ultimaVersao !== undefined && atual.ultimaVersao !== condicao.ultimaVersao) return 'conflito' as const;
+        const numero = atual.ultimaVersao + 1;
+        const nova: VersaoConteudo = { ...versao, versao: numero };
+        const conteudo: ConteudoDocumento = { ...atual, versaoPublicada: numero, hashPublicado: nova.hash, ultimaVersao: numero };
+        // create(): uma versão nunca é sobrescrita
+        tx.create(ref.collection('versoes').doc(String(numero)), { ...nova });
+        tx.set(ref, documentoDoConteudo(conteudo));
+        return { conteudo, versao: nova };
+      });
+    },
+
+    async listarVersoesConteudo(chave: string, limite: number) {
+      return lerComRetry(`listarVersoes:${chave}`, async () => {
+        const snap = await db
+          .collection('conteudo')
+          .doc(chave)
+          .collection('versoes')
+          .orderBy('versao', 'desc')
+          .limit(limite)
+          .select(...CAMPOS_DA_VERSAO)
+          .get();
+        return snap.docs.flatMap((d) => {
+          const v = resumoVersaoDoDocumento(d.data());
+          return v ? [v] : [];
+        });
+      });
+    },
+
+    async lerVersaoConteudo(chave: string, versao: number) {
+      return lerComRetry(`lerVersao:${chave}:${versao}`, async () => {
+        const snap = await db.collection('conteudo').doc(chave).collection('versoes').doc(String(versao)).get();
+        return snap.exists ? versaoDoDocumento(snap.data()) : null;
+      });
+    },
   };
+
+  /** Transação curta fora do contexto do jogo: erro do banco vira ErroPersistencia; o runTransaction já repete em conflito. */
+  async function transacaoDireta<T>(operacao: string, fn: (tx: Transaction) => Promise<T>): Promise<T> {
+    try {
+      return await comTimeout(db.runTransaction(fn), TIMEOUT_TRANSACAO_MS);
+    } catch (error) {
+      const { codigo, mensagem } = descreverErro(error);
+      registrarLog('ERROR', 'firestore.transacao_falhou', { operacao, codigo, mensagem });
+      throw new ErroPersistencia(operacao, error);
+    }
+  }
 
   /** Gravação simples (sem transação): erro do banco vira ErroPersistencia e nunca sucesso silencioso. */
   async function gravarSimples(operacao: string, gravar: () => Promise<unknown>): Promise<void> {
