@@ -1,0 +1,37 @@
+import { NOME_DO_PAPEL, ehPapelMestre } from '@/rules/mestre';
+import type { EntradaLogAdmin } from '@/server/persistencia';
+
+/** Textos do painel do Mestre (sem React). */
+
+const nomeDoPapel = (v: unknown): string => {
+  if (v === null || v === undefined) return 'nenhum';
+  return ehPapelMestre(v) ? NOME_DO_PAPEL[v] : String(v);
+};
+
+const papelDe = (v: unknown): unknown => (v && typeof v === 'object' ? (v as { papel?: unknown }).papel : undefined);
+
+/** Uma frase que descreve o que o registro do log diz que foi feito. */
+export function descreverAcao(e: Pick<EntradaLogAdmin, 'acao' | 'alvo' | 'antes' | 'depois'>): string {
+  const alvo = e.alvo ?? 'jogador';
+  const falhou = e.acao.endsWith('.falhou');
+  const base = falhou ? e.acao.slice(0, -'.falhou'.length) : e.acao;
+  let texto: string;
+  switch (base) {
+    case 'papel.conceder':
+      texto = `Papel de ${alvo}: ${nomeDoPapel(papelDe(e.antes))} → ${nomeDoPapel(papelDe(e.depois))}`;
+      break;
+    case 'papel.revogar':
+      texto = `Papel de ${alvo} removido (era ${nomeDoPapel(papelDe(e.antes))})`;
+      break;
+    default:
+      texto = e.alvo ? `${base} em ${e.alvo}` : base;
+  }
+  return falhou ? `Falhou: ${texto}` : texto;
+}
+
+/** Data e hora em português do Brasil, no fuso de Brasília. */
+export function dataDoLog(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' });
+}

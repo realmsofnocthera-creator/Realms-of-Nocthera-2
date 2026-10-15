@@ -1,4 +1,5 @@
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
+import type { PapelMestre } from '@/rules/mestre';
 
 /**
  * Registro de um combate resolvido (0.5-B1/B3): guarda a semente e a entrada para
@@ -93,6 +94,30 @@ export interface ContextoTransacao {
   gravarCombate(registro: RegistroCombate): void;
 }
 
+/** Papel de Mestre concedido pelo painel (o Dono vem do ambiente e não é gravado aqui). */
+export interface PapelMestreDocumento {
+  uid: string;
+  papel: PapelMestre;
+  concedidoPor: string;
+  concedidoEm: string;
+  motivo: string;
+}
+
+/** Registro do log administrativo (3.5.5.1): só se cria, nunca se altera nem se apaga. */
+export interface EntradaLogAdmin {
+  id: string;
+  criadoEm: string;
+  uid: string;
+  email: string;
+  papel: PapelMestre;
+  acao: string;
+  alvo?: string;
+  antes?: unknown;
+  depois?: unknown;
+  motivo?: string;
+  ip?: string;
+}
+
 export interface Repositorio {
   /**
    * Executa `fn` de forma atômica: ou todas as gravações são aplicadas, ou nenhuma.
@@ -107,6 +132,14 @@ export interface Repositorio {
    */
   lerRevogacaoSessoes(uid: string): Promise<number | null>;
   gravarRevogacaoSessoes(uid: string, revogadoEmSegundos: number): Promise<void>;
+  lerPapelMestre(uid: string): Promise<PapelMestreDocumento | null>;
+  gravarPapelMestre(papel: PapelMestreDocumento): Promise<void>;
+  removerPapelMestre(uid: string): Promise<void>;
+  listarPapeisMestre(): Promise<PapelMestreDocumento[]>;
+  /** Cria o registro (falha se o id já existe): o log não aceita alteração. */
+  registrarLogAdmin(entrada: EntradaLogAdmin): Promise<void>;
+  /** Os registros mais recentes primeiro. */
+  listarLogAdmin(limite: number): Promise<EntradaLogAdmin[]>;
 }
 
 /**
