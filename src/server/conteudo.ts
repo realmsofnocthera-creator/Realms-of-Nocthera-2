@@ -7,6 +7,7 @@ import {
   NOME_MAXIMO,
   NOME_MINIMO,
   PERMISSAO_DE_EDICAO,
+  referenciasDoConteudo,
   validarConteudo,
   type TipoDeConteudo,
 } from '@/rules/conteudo';
@@ -59,6 +60,19 @@ function dadosValidos(tipo: TipoDeConteudo, bruto: unknown): unknown {
   const r = validarConteudo(tipo, bruto);
   if (!r.ok) throw new ErroMestre(400, `${NOME_DO_TIPO[tipo]} inválido: ${r.erros.join(' ')}`);
   return r.dados;
+}
+
+/**
+ * As referências precisam existir para salvar, e estar publicadas para publicar (senão o jogo não teria o que mostrar).
+ */
+async function conferirReferencias(tipo: TipoDeConteudo, dados: unknown, exigirPublicadas: boolean): Promise<void> {
+  for (const ref of referenciasDoConteudo(tipo, dados)) {
+    const doc = await repositorio.lerConteudo(chaveDoConteudo(ref.tipo, ref.id));
+    if (!doc) throw new ErroMestre(400, `${NOME_DO_TIPO[ref.tipo]} "${ref.id}" não existe.`);
+    if (exigirPublicadas && doc.versaoPublicada === null) {
+      throw new ErroMestre(400, `Publique antes o ${NOME_DO_TIPO[ref.tipo].toLowerCase()} "${ref.id}": o jogo só usa o que está publicado.`);
+    }
+  }
 }
 
 async function lerOuFalhar(tipo: TipoDeConteudo, id: string): Promise<ConteudoDocumento> {
@@ -123,6 +137,7 @@ export async function criarConteudo(sessao: SessaoMestre, pedido: PedidoDeCriaca
   const id = idValido(pedido.id);
   const nome = nomeValido(pedido.nome);
   const dados = dadosValidos(tipo, pedido.dados);
+  await conferirReferencias(tipo, dados, false);
   const agora = new Date().toISOString();
   const doc: ConteudoDocumento = {
     chave: chaveDoConteudo(tipo, id),
@@ -168,6 +183,7 @@ export async function salvarRascunho(
   const revisao = inteiroValido(pedido.revisao, 'a revisão que você abriu');
   if (revisao !== atual.revisao) throw new ErroMestre(409, ERRO_CONFLITO);
   const dados = dadosValidos(tipo, pedido.dados);
+  await conferirReferencias(tipo, dados, false);
   const nome = pedido.nome === undefined ? undefined : nomeValido(pedido.nome);
   const hashRascunho = hashDe(dados);
   const resultado = await comRegistro(
@@ -214,6 +230,7 @@ export async function publicarConteudo(
   if (revisao !== atual.revisao) throw new ErroMestre(409, ERRO_CONFLITO);
   if (atual.hashPublicado === atual.hashRascunho) throw new ErroMestre(400, 'O rascunho é igual ao que já está no ar.');
   const dados = dadosValidos(tipo, atual.rascunho);
+  await conferirReferencias(tipo, dados, true);
   const hash = hashDe(dados);
   return publicar(sessao, atual, { revisao }, { dados, hash, motivo, origem: 'publicacao', revertidaDe: null }, 'conteudo.publicar', ip);
 }
@@ -245,6 +262,7 @@ export async function reverterConteudo(
   if (!antiga) throw new ErroMestre(404, 'Versão não encontrada.');
   // a versão antiga passou no schema da época; se ele mudou, ela precisa passar no de hoje para voltar ao ar
   const dados = dadosValidos(tipo, antiga.dados);
+  await conferirReferencias(tipo, dados, true);
   return publicar(sessao, atual, { ultimaVersao }, { dados, hash: hashDe(dados), motivo, origem: 'reversao', revertidaDe: alvo }, 'conteudo.reverter', ip);
 }
 

@@ -30,3 +30,10 @@ export function sugerirIdentificador(nome: string): string {
     .replace(/-+$/g, '');
   return ID_DE_CONTEUDO.test(id) ? id : '';
 }
+
+/** Quantos bytes o arquivo de um data URL em base64 ocupa. */
+export function bytesDoDataUrl(dataUrl: string): number {
+  const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+  const sobra = b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0;
+  return Math.floor((b64.length * 3) / 4) - sobra;
+}

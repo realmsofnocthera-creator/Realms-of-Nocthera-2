@@ -12,7 +12,8 @@ import {
 } from '@/server/conteudo';
 import type { SessaoMestre } from '@/server/mestre';
 import { repositorio } from '@/server/persistencia';
-import { mapaVazio } from '@/rules/mapa';
+import { mapaVazio, valorDoTile } from '@/rules/mapa';
+import { tilesetDeTeste } from '@/test/pngDeTeste';
 import { resetCharacterStore, setTestAdminLogFailHook, setTestPersistenceFailHook } from '@/test/repositorioMemoria';
 
 const sessao = (papel: SessaoMestre['papel'], uid = papel + '1'): SessaoMestre => ({ uid, email: `${uid}@test.com`, papel, origem: papel === 'dono' ? 'ambiente' : 'painel' });
@@ -21,11 +22,13 @@ const mestre = sessao('mestre');
 const suporte = sessao('suporte');
 const moderador = sessao('moderador');
 
+/** Um mapa marcado: a colisão fica ligada só na posição n (0 a 15), para conferir qual versão o jogo vê. */
 const comTile = (n: number) => {
   const m = mapaVazio(4, 4);
-  m.camadas.chao[0] = n;
+  m.camadas.colisao[n] = 1;
   return m;
 };
+const marca = (dados: unknown) => (dados as ReturnType<typeof mapaVazio>).camadas.colisao.indexOf(1);
 
 async function criarVila(quem: SessaoMestre = mestre) {
   return criarConteudo(quem, { tipo: 'mapa', id: 'vila', nome: 'Vila Inicial', dados: mapaVazio(4, 4) });
@@ -66,7 +69,7 @@ describe('Conteúdo versionado (servidor)', () => {
       expect(salvo).toMatchObject({ revisao: 2, nome: 'Vila de Althor' });
       await expect(salvarRascunho(dono, 'mapa', 'vila', { dados: comTile(7), revisao: 1 })).rejects.toMatchObject({ status: 409 });
       const { conteudo } = await lerConteudoDoPainel(suporte, 'mapa', 'vila');
-      expect((conteudo.rascunho as ReturnType<typeof mapaVazio>).camadas.chao[0]).toBe(5);
+      expect(marca(conteudo.rascunho)).toBe(5);
     });
 
     it('rascunho inválido não é salvo', async () => {
@@ -88,11 +91,11 @@ describe('Conteúdo versionado (servidor)', () => {
 
       const noJogo = await lerConteudoPublicado('mapa', 'vila');
       expect(noJogo).toMatchObject({ versao: 1, nome: 'Vila Inicial' });
-      expect((noJogo?.dados as ReturnType<typeof mapaVazio>).camadas.chao[0]).toBe(5);
+      expect(marca(noJogo?.dados)).toBe(5);
 
       await salvarRascunho(mestre, 'mapa', 'vila', { dados: comTile(8), revisao: 2 });
       limparCacheDoConteudo();
-      expect(((await lerConteudoPublicado('mapa', 'vila'))?.dados as ReturnType<typeof mapaVazio>).camadas.chao[0]).toBe(5);
+      expect(marca((await lerConteudoPublicado('mapa', 'vila'))?.dados)).toBe(5);
     });
 
     it('não publica o mesmo conteúdo duas vezes, nem com revisão velha', async () => {
@@ -108,13 +111,13 @@ describe('Conteúdo versionado (servidor)', () => {
       await publicarConteudo(mestre, 'mapa', 'vila', { revisao: 1, motivo: 'versão vazia' });
       await salvarRascunho(mestre, 'mapa', 'vila', { dados: comTile(9), revisao: 1 });
       await publicarConteudo(mestre, 'mapa', 'vila', { revisao: 2, motivo: 'com um tile' });
-      expect(((await lerConteudoPublicado('mapa', 'vila'))?.dados as ReturnType<typeof mapaVazio>).camadas.chao[0]).toBe(9);
+      expect(marca((await lerConteudoPublicado('mapa', 'vila'))?.dados)).toBe(9);
 
       const { versao, conteudo } = await reverterConteudo(dono, 'mapa', 'vila', { versao: 1, ultimaVersao: 2, motivo: 'tile errado' });
       expect(versao).toMatchObject({ versao: 3, origem: 'reversao', revertidaDe: 1 });
       expect(conteudo).toMatchObject({ versaoPublicada: 3, ultimaVersao: 3, revisao: 2 });
       // o cache do jogo foi limpo na publicação: a volta atrás vale na hora nesta instância
-      expect(((await lerConteudoPublicado('mapa', 'vila'))?.dados as ReturnType<typeof mapaVazio>).camadas.chao[0]).toBe(0);
+      expect(marca((await lerConteudoPublicado('mapa', 'vila'))?.dados)).toBe(-1);
 
       const { versoes } = await lerConteudoDoPainel(suporte, 'mapa', 'vila');
       expect(versoes.map((v) => v.versao)).toEqual([3, 2, 1]);
@@ -183,5 +186,43 @@ describe('Conteúdo versionado (servidor)', () => {
       expect(await lerConteudoPublicado('monstro', 'vila')).toBeNull();
       expect(await lerConteudoPublicado('mapa', '../x')).toBeNull();
     });
+  });
+});
+
+describe('Conteúdo versionado: tilesets e referências do mapa', () => {
+  beforeEach(() => {
+    resetCharacterStore();
+    limparCacheDoConteudo();
+  });
+
+  const mapaComFloresta = () => {
+    const m = { ...mapaVazio(4, 4), tilesets: ['floresta'] };
+    m.camadas.chao[0] = valorDoTile(0, 3);
+    return m;
+  };
+
+  it('o mapa só salva com tileset que existe, e só publica com o tileset publicado', async () => {
+    await expect(criarConteudo(mestre, { tipo: 'mapa', id: 'vila', nome: 'Vila', dados: mapaComFloresta() })).rejects.toMatchObject({
+      status: 400,
+      message: 'Tileset "floresta" não existe.',
+    });
+    await criarConteudo(mestre, { tipo: 'tileset', id: 'floresta', nome: 'Floresta', dados: tilesetDeTeste() });
+    await criarConteudo(mestre, { tipo: 'mapa', id: 'vila', nome: 'Vila', dados: mapaComFloresta() });
+    await expect(publicarConteudo(mestre, 'mapa', 'vila', { revisao: 1, motivo: 'primeira versão' })).rejects.toMatchObject({
+      status: 400,
+      message: expect.stringMatching(/Publique antes o tileset "floresta"/),
+    });
+    await publicarConteudo(mestre, 'tileset', 'floresta', { revisao: 1, motivo: 'tileset novo' });
+    const { versao } = await publicarConteudo(mestre, 'mapa', 'vila', { revisao: 1, motivo: 'primeira versão' });
+    expect(versao.versao).toBe(1);
+    expect((await lerConteudoPublicado('tileset', 'floresta'))?.dados).toEqual(tilesetDeTeste());
+  });
+
+  it('tileset inválido não é criado', async () => {
+    await expect(criarConteudo(mestre, { tipo: 'tileset', id: 'floresta', nome: 'Floresta', dados: { ...tilesetDeTeste(), colunas: 9 } })).rejects.toMatchObject({
+      status: 400,
+      message: expect.stringMatching(/^Tileset inválido/),
+    });
+    await expect(criarConteudo(suporte, { tipo: 'tileset', id: 'floresta', nome: 'Floresta', dados: tilesetDeTeste() })).rejects.toMatchObject({ status: 403 });
   });
 });

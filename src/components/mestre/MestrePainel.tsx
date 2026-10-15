@@ -24,8 +24,7 @@ export interface SessaoDoPainel {
 type Aba = 'geral' | 'conteudo' | 'papeis' | 'log';
 
 const MODULOS_EM_BREVE = [
-  'Editor de mapas 2D (camadas, pincel, borracha, preencher) e importador de tiles',
-  'Salas, conexões, objetos e gatilhos dos mapas',
+  'Salas, conexões, objetos e gatilhos dos mapas; jogar o mapa',
   'Monstros, itens e tabelas de drop',
   'Jogadores: busca, ajustes e sanções',
   'Feature flags e modo manutenção',

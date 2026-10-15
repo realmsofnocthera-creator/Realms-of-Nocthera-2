@@ -61,7 +61,7 @@ describe('Rotas do conteúdo versionado', () => {
     expect((await noJogo(pedido('/api/conteudo/mapa/vila', null), vila)).status).toBe(401);
 
     const comTile = mapaVazio(4, 4);
-    comTile.camadas.chao[1] = 3;
+    comTile.camadas.colisao[1] = 1;
     const salvo = await salvar(pedido('/api/mestre/conteudo/mapa/vila', 'm1', 'PUT', { dados: comTile, revisao: 1 }), vila);
     expect((await salvo.json()).conteudo.revisao).toBe(2);
     expect((await salvar(pedido('/api/mestre/conteudo/mapa/vila', 'm1', 'PUT', { dados: comTile, revisao: 1 }), vila)).status).toBe(409);
@@ -72,7 +72,7 @@ describe('Rotas do conteúdo versionado', () => {
 
     const lido = await (await noJogo(pedido('/api/conteudo/mapa/vila', 'jogador'), vila)).json();
     expect(lido.conteudo).toMatchObject({ tipo: 'mapa', id: 'vila', versao: 1 });
-    expect(lido.conteudo.dados.camadas.chao[1]).toBe(3);
+    expect(lido.conteudo.dados.camadas.colisao[1]).toBe(1);
 
     await salvar(pedido('/api/mestre/conteudo/mapa/vila', 'm1', 'PUT', { dados: mapaVazio(4, 4), revisao: 2 }), vila);
     await publicar(pedido('/api/mestre/conteudo/mapa/vila/publicar', 'm1', 'POST', { revisao: 3, motivo: 'limpei o mapa' }), vila);
@@ -84,7 +84,7 @@ describe('Rotas do conteúdo versionado', () => {
     expect(d.conteudo.versaoPublicada).toBe(3);
 
     const v1 = await versao(pedido('/api/mestre/conteudo/mapa/vila/versoes/1', 's1'), params({ tipo: 'mapa', id: 'vila', versao: '1' }));
-    expect((await v1.json()).versao.dados.camadas.chao[1]).toBe(3);
+    expect((await v1.json()).versao.dados.camadas.colisao[1]).toBe(1);
 
     const lista = await (await listar(pedido('/api/mestre/conteudo?tipo=mapa', 's1'))).json();
     expect(lista.itens).toHaveLength(1);

@@ -1,8 +1,8 @@
 /**
  * Formato do mapa 2D (3.5.6.5), versão 1. O mesmo validador roda no servidor (antes de salvar ou publicar) e na tela.
  * Cada camada é uma lista com largura × altura posições, linha por linha (da esquerda para a direita, de cima para baixo).
- * Nas camadas de chão e de objetos, 0 é vazio e os outros números apontam para um tile; na de colisão, 1 bloqueia.
- * Os tilesets e as referências a monstros, NPCs e itens entram com o editor (3.5.6) e as salas (3.5.6.3).
+ * Nas camadas de chão e de objetos, 0 é vazio e os outros números apontam para um tile (ver valorDoTile); na de
+ * colisão, 1 bloqueia. As referências a monstros, NPCs e itens entram com as salas (3.5.6.3).
  */
 export const FORMATO_DO_MAPA = 1;
 export const LADO_MINIMO_DO_MAPA = 4;
@@ -12,6 +12,20 @@ export const TAMANHOS_DE_TILE = [16, 24, 32, 48, 64] as const;
 export const TILE_PADRAO = 32;
 export const MAIOR_TILE = 65_535;
 export const MAXIMO_DE_TILESETS = 16;
+/** Cada tileset da lista do mapa ocupa um bloco de 4096 números: valor = posição do tileset × 4096 + tile + 1. */
+export const BLOCO_DO_TILESET = 4096;
+
+/** O número gravado no mapa para o tile `tile` (a partir de 0) do tileset na posição `tileset` da lista. */
+export function valorDoTile(tileset: number, tile: number): number {
+  return tileset * BLOCO_DO_TILESET + tile + 1;
+}
+
+/** O caminho inverso de valorDoTile; null para vazio (0) ou número que não aponta para tile nenhum. */
+export function tileDoValor(valor: number): { tileset: number; tile: number } | null {
+  const resto = valor % BLOCO_DO_TILESET;
+  if (valor <= 0 || resto === 0) return null;
+  return { tileset: Math.floor(valor / BLOCO_DO_TILESET), tile: resto - 1 };
+}
 
 export const CAMADAS_DO_MAPA = ['chao', 'objetos', 'colisao'] as const;
 export type CamadaDoMapa = (typeof CAMADAS_DO_MAPA)[number];
@@ -105,6 +119,10 @@ export function validarMapa(bruto: unknown): ResultadoValidacao<MapaDados> {
       const maximo = c === 'colisao' ? 1 : MAIOR_TILE;
       if (valores.some((v) => !inteiroEntre(v, 0, maximo))) {
         erros.push(c === 'colisao' ? 'A camada Colisão só aceita 0 (livre) e 1 (bloqueado).' : `A camada ${nome} só aceita números inteiros de 0 a ${MAIOR_TILE}.`);
+      } else if (c !== 'colisao') {
+        const qtdTilesets = Array.isArray(tilesets) ? tilesets.length : 0;
+        const fora = valores.some((v) => v !== 0 && (tileDoValor(v) === null || tileDoValor(v)!.tileset >= qtdTilesets));
+        if (fora) erros.push(`A camada ${nome} usa um tile de um tileset que não está na lista do mapa.`);
       }
     }
   }

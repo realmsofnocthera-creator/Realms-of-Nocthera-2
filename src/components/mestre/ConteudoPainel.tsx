@@ -1,18 +1,31 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, History, Plus, Upload } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, History, PencilRuler, Plus, Upload } from 'lucide-react';
 import { LADO_MAXIMO_DO_MAPA, LADO_MINIMO_DO_MAPA, mapaVazio, TAMANHOS_DE_TILE, TILE_PADRAO, type MapaDados } from '@/rules/mapa';
+import type { TilesetDados } from '@/rules/tileset';
+import { NOME_DO_TIPO, type TipoDeConteudo } from '@/rules/conteudo';
 import { situacaoDoConteudo, descreverVersao, sugerirIdentificador } from '@/lib/conteudoTela';
 import { dataDoLog } from '@/lib/mestreTela';
 import type { ConteudoDocumento, ResumoConteudo, ResumoVersao } from '@/server/persistencia/tipos';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { Cartao, chamar, OURO, VERMELHO } from '@/components/mestre/comum';
 import type { SessaoDoPainel } from '@/components/mestre/MestrePainel';
+import { ImportarTileset } from '@/components/mestre/ImportarTileset';
 
 type Token = () => Promise<string>;
 
 const COR_DA_SITUACAO = { rascunho: '#9AA0A6', 'no-ar': '#7BC47F', mudancas: '#E6C775' } as const;
+
+function resumoDosDados(tipo: TipoDeConteudo, dados: unknown): string {
+  if (tipo === 'mapa') {
+    const m = dados as MapaDados;
+    return `${m.largura} × ${m.altura} tiles de ${m.tamanhoDoTile} px · ${m.tilesets.length} tileset(s)`;
+  }
+  const t = dados as TilesetDados;
+  return `${t.larguraImagem} × ${t.alturaImagem} px · ${t.colunas * t.linhas} tiles de ${t.tamanhoDoTile} px`;
+}
 
 function useEstilos() {
   const { colors } = NOCTHERA_THEME;
@@ -25,20 +38,50 @@ function useEstilos() {
   };
 }
 
+const PLURAL: Record<TipoDeConteudo, string> = { mapa: 'Mapas', tileset: 'Tilesets' };
+const EXPLICACAO: Record<TipoDeConteudo, string> = {
+  mapa: 'Cada mapa tem um rascunho e versões publicadas. O jogo só vê a versão publicada; voltar atrás republica uma versão antiga.',
+  tileset: 'Os tilesets são as imagens cortadas em tiles que os mapas usam. Publique o tileset antes do mapa que o usa.',
+};
+
 /**
- * Mapas no Painel do Mestre (3.5.2.2): lista, novo mapa, publicar, histórico e voltar atrás.
- * O editor com pincel e camadas entra na próxima etapa; aqui o rascunho já é salvo e validado no servidor.
+ * Mapas e tilesets no Painel do Mestre (3.5.2.2 e 3.5.6): listas, criar, publicar, histórico e voltar atrás.
+ * O desenho do mapa é no editor (/mestre/mapas/[id]); aqui fica o ciclo de rascunho e publicação.
  */
 export function ConteudoPainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel; tokenFresco: Token }) {
+  const { colors } = useEstilos();
+  const [tipo, setTipo] = useState<TipoDeConteudo>('mapa');
   const [aberto, setAberto] = useState<string | null>(null);
-  return aberto ? (
-    <DetalheDoMapa id={aberto} sessao={sessao} tokenFresco={tokenFresco} voltar={() => setAberto(null)} />
-  ) : (
-    <ListaDeMapas sessao={sessao} tokenFresco={tokenFresco} abrir={setAberto} />
+  return (
+    <div className="flex flex-col gap-3">
+      <div role="tablist" aria-label="Tipo de conteúdo" className="flex gap-1">
+        {(['mapa', 'tileset'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            role="tab"
+            aria-selected={tipo === t}
+            onClick={() => {
+              setTipo(t);
+              setAberto(null);
+            }}
+            className="rounded-sm border px-3 py-1 text-[12px] font-bold"
+            style={{ backgroundColor: tipo === t ? colors.accent.primary : colors.background.secondary, color: tipo === t ? colors.background.secondary : colors.text.primary, borderColor: tipo === t ? colors.accent.primary : `${OURO}66` }}
+          >
+            {PLURAL[t]}
+          </button>
+        ))}
+      </div>
+      {aberto ? (
+        <Detalhe key={`${tipo}:${aberto}`} tipo={tipo} id={aberto} sessao={sessao} tokenFresco={tokenFresco} voltar={() => setAberto(null)} />
+      ) : (
+        <Lista key={tipo} tipo={tipo} sessao={sessao} tokenFresco={tokenFresco} abrir={setAberto} />
+      )}
+    </div>
   );
 }
 
-function ListaDeMapas({ sessao, tokenFresco, abrir }: { sessao: SessaoDoPainel; tokenFresco: Token; abrir: (id: string) => void }) {
+function Lista({ tipo, sessao, tokenFresco, abrir }: { tipo: TipoDeConteudo; sessao: SessaoDoPainel; tokenFresco: Token; abrir: (id: string) => void }) {
   const { colors } = useEstilos();
   const podeEditar = sessao.permissoes.includes('mapas.editar');
   const [itens, setItens] = useState<ResumoConteudo[] | null>(null);
@@ -46,10 +89,10 @@ function ListaDeMapas({ sessao, tokenFresco, abrir }: { sessao: SessaoDoPainel; 
 
   const carregar = useCallback(async () => {
     setErro(null);
-    const r = await chamar(tokenFresco, '/api/mestre/conteudo?tipo=mapa');
+    const r = await chamar(tokenFresco, `/api/mestre/conteudo?tipo=${tipo}`);
     if (r.ok) setItens(r.dados.itens as ResumoConteudo[]);
-    else setErro(String(r.dados.error ?? 'Não foi possível carregar os mapas.'));
-  }, [tokenFresco]);
+    else setErro(String(r.dados.error ?? 'Não foi possível carregar a lista.'));
+  }, [tokenFresco, tipo]);
 
   useEffect(() => {
     void carregar();
@@ -57,16 +100,15 @@ function ListaDeMapas({ sessao, tokenFresco, abrir }: { sessao: SessaoDoPainel; 
 
   return (
     <div className="flex flex-col gap-3">
-      {podeEditar && <NovoMapa tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
-      <Cartao titulo="Mapas">
-        <p className="text-[11px]" style={{ color: colors.text.secondary }}>
-          Cada mapa tem um rascunho e versões publicadas. O jogo só vê a versão publicada; voltar atrás republica uma versão antiga.
-        </p>
+      {podeEditar && tipo === 'mapa' && <NovoMapa tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
+      {podeEditar && tipo === 'tileset' && <ImportarTileset tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
+      <Cartao titulo={PLURAL[tipo]}>
+        <p className="text-[11px]" style={{ color: colors.text.secondary }}>{EXPLICACAO[tipo]}</p>
         {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
         {itens === null ? (
           <p className="text-[12px]" style={{ color: colors.text.secondary }}>Carregando...</p>
         ) : itens.length === 0 ? (
-          <p className="text-[12px]" style={{ color: colors.text.secondary }}>Nenhum mapa ainda.</p>
+          <p className="text-[12px]" style={{ color: colors.text.secondary }}>Nada criado ainda.</p>
         ) : (
           <ul className="flex flex-col gap-1.5">
             {itens.map((m) => {
@@ -145,7 +187,7 @@ function NovoMapa({ tokenFresco, criado }: { tokenFresco: Token; criado: (id: st
   );
 }
 
-function DetalheDoMapa({ id, sessao, tokenFresco, voltar }: { id: string; sessao: SessaoDoPainel; tokenFresco: Token; voltar: () => void }) {
+function Detalhe({ tipo, id, sessao, tokenFresco, voltar }: { tipo: TipoDeConteudo; id: string; sessao: SessaoDoPainel; tokenFresco: Token; voltar: () => void }) {
   const { colors, campo, estiloCampo, botao, estiloBotao } = useEstilos();
   const podeEditar = sessao.permissoes.includes('mapas.editar');
   const podePublicar = sessao.permissoes.includes('conteudo.publicar');
@@ -157,14 +199,14 @@ function DetalheDoMapa({ id, sessao, tokenFresco, voltar }: { id: string; sessao
   const [revertendo, setRevertendo] = useState<number | null>(null);
   const [motivoReversao, setMotivoReversao] = useState('');
   const [ocupado, setOcupado] = useState(false);
-  const base = `/api/mestre/conteudo/mapa/${id}`;
+  const base = `/api/mestre/conteudo/${tipo}/${id}`;
 
   const carregar = useCallback(async () => {
     const r = await chamar(tokenFresco, base);
     if (r.ok) {
       setConteudo(r.dados.conteudo as ConteudoDocumento);
       setVersoes(r.dados.versoes as ResumoVersao[]);
-    } else setErro(String(r.dados.error ?? 'Não foi possível abrir o mapa.'));
+    } else setErro(String(r.dados.error ?? 'Não foi possível abrir.'));
   }, [tokenFresco, base]);
 
   useEffect(() => {
@@ -189,14 +231,13 @@ function DetalheDoMapa({ id, sessao, tokenFresco, voltar }: { id: string; sessao
 
   if (!conteudo) {
     return (
-      <Cartao titulo="Mapa">
+      <Cartao titulo={NOME_DO_TIPO[tipo]}>
         <button type="button" onClick={voltar} className="self-start inline-flex items-center gap-1 text-[11px]"><ArrowLeft className="w-3.5 h-3.5" /> Voltar</button>
         <p className="text-[12px]" style={{ color: erro ? VERMELHO : colors.text.secondary }}>{erro ?? 'Carregando...'}</p>
       </Cartao>
     );
   }
 
-  const mapa = conteudo.rascunho as MapaDados;
   const s = situacaoDoConteudo(conteudo);
   const temMudancas = conteudo.hashPublicado !== conteudo.hashRascunho;
 
@@ -204,15 +245,22 @@ function DetalheDoMapa({ id, sessao, tokenFresco, voltar }: { id: string; sessao
     <div className="flex flex-col gap-3">
       <Cartao titulo={conteudo.nome}>
         <button type="button" onClick={voltar} className="self-start inline-flex items-center gap-1 text-[11px]" style={{ color: colors.text.secondary }}>
-          <ArrowLeft className="w-3.5 h-3.5" /> Todos os mapas
+          <ArrowLeft className="w-3.5 h-3.5" /> Voltar à lista
         </button>
         <p className="text-[12px]">
-          {conteudo.id} · {mapa.largura} × {mapa.altura} tiles de {mapa.tamanhoDoTile} px · revisão {conteudo.revisao} do rascunho
+          {conteudo.id} · {resumoDosDados(tipo, conteudo.rascunho)} · revisão {conteudo.revisao} do rascunho
         </p>
         <p className="text-[12px] font-semibold" style={{ color: COR_DA_SITUACAO[s.situacao] }}>{s.texto}</p>
-        <p className="text-[11px]" style={{ color: colors.text.secondary }}>
-          Rascunho editado em {dataDoLog(conteudo.editadoEm)}. O editor com camadas e pincel chega na próxima etapa.
-        </p>
+        <p className="text-[11px]" style={{ color: colors.text.secondary }}>Rascunho editado em {dataDoLog(conteudo.editadoEm)}.</p>
+        {tipo === 'mapa' && (
+          <Link href={`/mestre/mapas/${id}`} className="self-start inline-flex items-center gap-1 px-3 py-1.5 rounded font-cinzel font-bold text-xs" style={estiloBotao}>
+            <PencilRuler className="w-3.5 h-3.5" /> {podeEditar ? 'Abrir no editor' : 'Ver no editor'}
+          </Link>
+        )}
+        {tipo === 'tileset' && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={(conteudo.rascunho as TilesetDados).imagem} alt={`Tileset ${conteudo.nome}`} className="max-h-64 self-start rounded-sm border object-contain" style={{ imageRendering: 'pixelated', borderColor: `${OURO}33` }} />
+        )}
         {aviso && <p role="status" className="text-[12px] font-semibold" style={{ color: COR_DA_SITUACAO['no-ar'] }}>{aviso}</p>}
         {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
       </Cartao>
