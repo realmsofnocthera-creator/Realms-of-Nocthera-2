@@ -31,10 +31,14 @@ export class ErroMestre extends Error {
 
 const ID_VALIDO = /^[a-zA-Z0-9_-]{1,128}$/;
 
-/** Os uids dos Donos, lidos do ambiente a cada chamada. */
+/** Donos registrados no código do projeto (uids do Firebase Auth; não são segredo). Somam-se aos da variável de ambiente. */
+export const DONOS_DO_PROJETO: readonly string[] = ['MDET0IAPXDYTPWy0TdvUlyyhQpa2'];
+
+/** Os uids dos Donos: os do projeto mais os da variável MESTRE_DONO_UIDS, lida a cada chamada. */
 export function donosDoAmbiente(): ReadonlySet<string> {
   const bruto = process.env.MESTRE_DONO_UIDS ?? '';
-  return new Set(bruto.split(',').map((s) => s.trim()).filter((s) => ID_VALIDO.test(s)));
+  const doAmbiente = bruto.split(',').map((s) => s.trim());
+  return new Set([...DONOS_DO_PROJETO, ...doAmbiente].filter((s) => ID_VALIDO.test(s)));
 }
 
 export interface SessaoMestre {

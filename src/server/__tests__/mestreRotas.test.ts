@@ -4,6 +4,7 @@ import { GET as eu } from '@/app/api/mestre/eu/route';
 import { GET as listarPapeis, POST as conceder, DELETE as revogar } from '@/app/api/mestre/papeis/route';
 import { GET as lerLog } from '@/app/api/mestre/log/route';
 import { limparCacheRevogacao } from '@/server/auth';
+import { DONOS_DO_PROJETO } from '@/server/mestre';
 import { createCharacter } from '@/server/characterService';
 import { repositorio } from '@/server/persistencia';
 import { resetCharacterStore } from '@/test/repositorioMemoria';
@@ -32,6 +33,7 @@ describe('Rotas do Painel do Mestre', () => {
 
   beforeEach(() => {
     (process.env as Record<string, string | undefined>).NODE_ENV = 'test';
+    (DONOS_DO_PROJETO as string[]).length = 0; // aqui só vale o Dono da variável de ambiente
     process.env.MESTRE_DONO_UIDS = 'dono1';
     resetCharacterStore();
     limparCacheRevogacao();

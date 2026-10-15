@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   concederPapel,
+  DONOS_DO_PROJETO,
   donosDoAmbiente,
   exigirPermissao,
   listarLog,
@@ -27,6 +28,7 @@ describe('Painel do Mestre (servidor)', () => {
 
   beforeEach(() => {
     (process.env as Record<string, string | undefined>).NODE_ENV = 'test';
+    (DONOS_DO_PROJETO as string[]).length = 0; // aqui só vale o Dono da variável de ambiente
     process.env.MESTRE_DONO_UIDS = 'dono1';
     resetCharacterStore();
     limparCacheRevogacao();
