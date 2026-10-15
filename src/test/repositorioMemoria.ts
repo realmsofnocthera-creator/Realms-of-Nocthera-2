@@ -7,8 +7,12 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import type {
+  ConteudoDocumento,
   ContextoTransacao,
   EntradaLogAdmin,
+  ResumoConteudo,
+  ResumoVersao,
+  VersaoConteudo,
   PapelMestreDocumento,
   RegistroCombate,
   Repositorio,
@@ -24,6 +28,8 @@ interface Estado {
   revogacoes: Map<string, number>;
   papeisMestre: Map<string, PapelMestreDocumento>;
   logAdmin: EntradaLogAdmin[];
+  conteudo: Map<string, ConteudoDocumento>;
+  versoes: Map<string, VersaoConteudo[]>;
 }
 
 const estado: Estado = {
@@ -34,7 +40,19 @@ const estado: Estado = {
   revogacoes: new Map(),
   papeisMestre: new Map(),
   logAdmin: [],
+  conteudo: new Map(),
+  versoes: new Map(),
 };
+
+function resumoDe(doc: ConteudoDocumento): ResumoConteudo {
+  const { rascunho: _rascunho, ...resumo } = doc;
+  return structuredClone(resumo);
+}
+
+function resumoDaVersao(v: VersaoConteudo): ResumoVersao {
+  const { dados: _dados, ...resumo } = v;
+  return structuredClone(resumo);
+}
 
 let falhaNoLogAdmin: ((entrada: EntradaLogAdmin) => void) | null = null;
 
@@ -151,6 +169,55 @@ export const repositorio: Repositorio = {
       .slice(0, limite)
       .map(({ e }) => structuredClone(e));
   },
+
+  async lerConteudo(chave: string) {
+    const doc = estado.conteudo.get(chave);
+    return doc ? structuredClone(doc) : null;
+  },
+
+  async listarConteudos(tipo) {
+    return [...estado.conteudo.values()].filter((d) => d.tipo === tipo).map(resumoDe);
+  },
+
+  async criarConteudo(doc: ConteudoDocumento) {
+    if (estado.conteudo.has(doc.chave)) return false;
+    falhaAoGravar?.(`criarConteudo:${doc.chave}`);
+    estado.conteudo.set(doc.chave, structuredClone(doc));
+    return true;
+  },
+
+  async salvarRascunhoConteudo(chave, revisaoBase, alteracao) {
+    const atual = estado.conteudo.get(chave);
+    if (!atual) return 'inexistente';
+    if (atual.revisao !== revisaoBase) return 'conflito';
+    falhaAoGravar?.(`salvarRascunho:${chave}`);
+    const novo: ConteudoDocumento = structuredClone({ ...atual, ...alteracao, revisao: atual.revisao + 1 });
+    estado.conteudo.set(chave, novo);
+    return structuredClone(novo);
+  },
+
+  async publicarVersaoConteudo(chave, condicao, versao) {
+    const atual = estado.conteudo.get(chave);
+    if (!atual) return 'inexistente';
+    if (condicao.revisao !== undefined && atual.revisao !== condicao.revisao) return 'conflito';
+    if (condicao.ultimaVersao !== undefined && atual.ultimaVersao !== condicao.ultimaVersao) return 'conflito';
+    falhaAoGravar?.(`publicarConteudo:${chave}`);
+    const numero = atual.ultimaVersao + 1;
+    const nova: VersaoConteudo = structuredClone({ ...versao, versao: numero });
+    const conteudo: ConteudoDocumento = { ...atual, versaoPublicada: numero, hashPublicado: nova.hash, ultimaVersao: numero };
+    estado.versoes.set(chave, [...(estado.versoes.get(chave) ?? []), nova]);
+    estado.conteudo.set(chave, conteudo);
+    return { conteudo: structuredClone(conteudo), versao: structuredClone(nova) };
+  },
+
+  async listarVersoesConteudo(chave: string, limite: number) {
+    return [...(estado.versoes.get(chave) ?? [])].sort((a, b) => b.versao - a.versao).slice(0, limite).map(resumoDaVersao);
+  },
+
+  async lerVersaoConteudo(chave: string, versao: number) {
+    const v = estado.versoes.get(chave)?.find((x) => x.versao === versao);
+    return v ? structuredClone(v) : null;
+  },
 };
 
 /** Simula falha ao gravar no log administrativo: o hook recebe a entrada e, se lançar erro, ela não é gravada. */
@@ -167,6 +234,8 @@ export function resetCharacterStore(): void {
   estado.revogacoes.clear();
   estado.papeisMestre.clear();
   estado.logAdmin.length = 0;
+  estado.conteudo.clear();
+  estado.versoes.clear();
   falhaNoLogAdmin = null;
   falhaAoGravar = null;
 }

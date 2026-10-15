@@ -22,7 +22,7 @@ import {
 
 export class ErroMestre extends Error {
   constructor(
-    readonly status: 400 | 401 | 403 | 404,
+    readonly status: 400 | 401 | 403 | 404 | 409,
     mensagem: string
   ) {
     super(mensagem);
@@ -118,7 +118,7 @@ export async function comRegistro<T>(sessao: SessaoMestre, dados: DadosDaAcao, a
   }
 }
 
-function motivoValido(motivo: unknown): string {
+export function motivoValido(motivo: unknown): string {
   const texto = typeof motivo === 'string' ? motivo.trim() : '';
   if (texto.length < MOTIVO_MINIMO || texto.length > MOTIVO_MAXIMO) {
     throw new ErroMestre(400, `Escreva o motivo (de ${MOTIVO_MINIMO} a ${MOTIVO_MAXIMO} caracteres).`);
@@ -127,7 +127,7 @@ function motivoValido(motivo: unknown): string {
 }
 
 const ERRO_SEM_PERMISSAO = 'Seu papel não permite esta ação.';
-function exigir(sessao: SessaoMestre, permissao: PermissaoMestre): void {
+export function exigir(sessao: SessaoMestre, permissao: PermissaoMestre): void {
   if (!papelTem(sessao.papel, permissao)) throw new ErroMestre(403, ERRO_SEM_PERMISSAO);
 }
 

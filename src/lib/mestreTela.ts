@@ -10,6 +10,11 @@ const nomeDoPapel = (v: unknown): string => {
 
 const papelDe = (v: unknown): unknown => (v && typeof v === 'object' ? (v as { papel?: unknown }).papel : undefined);
 
+const numeroDe = (v: unknown, campo: string): string => {
+  const n = v && typeof v === 'object' ? (v as Record<string, unknown>)[campo] : undefined;
+  return typeof n === 'number' ? String(n) : '?';
+};
+
 /** Uma frase que descreve o que o registro do log diz que foi feito. */
 export function descreverAcao(e: Pick<EntradaLogAdmin, 'acao' | 'alvo' | 'antes' | 'depois'>): string {
   const alvo = e.alvo ?? 'jogador';
@@ -22,6 +27,18 @@ export function descreverAcao(e: Pick<EntradaLogAdmin, 'acao' | 'alvo' | 'antes'
       break;
     case 'papel.revogar':
       texto = `Papel de ${alvo} removido (era ${nomeDoPapel(papelDe(e.antes))})`;
+      break;
+    case 'conteudo.criar':
+      texto = `Criou ${alvo} (rascunho)`;
+      break;
+    case 'conteudo.rascunho':
+      texto = `Salvou o rascunho de ${alvo}`;
+      break;
+    case 'conteudo.publicar':
+      texto = `Publicou ${alvo}: versão ${numeroDe(e.depois, 'versaoPublicada')}`;
+      break;
+    case 'conteudo.reverter':
+      texto = `Voltou ${alvo} para a versão ${numeroDe(e.depois, 'revertidaDe')} (nova versão ${numeroDe(e.depois, 'versaoPublicada')})`;
       break;
     default:
       texto = e.alvo ? `${base} em ${e.alvo}` : base;

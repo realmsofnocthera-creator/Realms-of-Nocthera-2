@@ -270,6 +270,112 @@
         "papel",
         "acao"
       ]
+    },
+    "conteudo": {
+      "title": "Conteúdo editável do Painel do Mestre",
+      "description": "Um item (por enquanto, mapa) com o rascunho atual e a versão publicada. A chave é <tipo>__<id>. O jogo só lê a versão publicada.",
+      "type": "object",
+      "properties": {
+        "tipo": {
+          "type": "string",
+          "enum": [
+            "mapa"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "nome": {
+          "type": "string"
+        },
+        "revisao": {
+          "type": "integer"
+        },
+        "rascunho": {
+          "type": "object"
+        },
+        "hashRascunho": {
+          "type": "string"
+        },
+        "editadoEm": {
+          "type": "string"
+        },
+        "editadoPor": {
+          "type": "string"
+        },
+        "criadoEm": {
+          "type": "string"
+        },
+        "criadoPor": {
+          "type": "string"
+        },
+        "versaoPublicada": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "hashPublicado": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ultimaVersao": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tipo",
+        "id",
+        "nome",
+        "revisao",
+        "ultimaVersao"
+      ]
+    },
+    "versaoConteudo": {
+      "title": "Versão publicada de um conteúdo",
+      "description": "Cópia imutável do conteúdo no momento em que foi publicado. Voltar atrás cria uma versão nova com os dados de uma antiga (origem reversao).",
+      "type": "object",
+      "properties": {
+        "versao": {
+          "type": "integer"
+        },
+        "dados": {
+          "type": "object"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "publicadoEm": {
+          "type": "string"
+        },
+        "publicadoPor": {
+          "type": "string"
+        },
+        "motivo": {
+          "type": "string"
+        },
+        "origem": {
+          "type": "string",
+          "enum": [
+            "publicacao",
+            "reversao"
+          ]
+        },
+        "revertidaDe": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "versao",
+        "dados",
+        "hash",
+        "origem"
+      ]
     }
   },
   "firestore": {
@@ -304,6 +410,14 @@
     "/logAdmin/{id}": {
       "schema": "logAdmin",
       "description": "Log administrativo imutável (só servidor)"
+    },
+    "/conteudo/{chave}": {
+      "schema": "conteudo",
+      "description": "Conteúdo editável com rascunho (só servidor)"
+    },
+    "/conteudo/{chave}/versoes/{versao}": {
+      "schema": "versaoConteudo",
+      "description": "Versões publicadas, imutáveis (só servidor)"
     }
   }
 }

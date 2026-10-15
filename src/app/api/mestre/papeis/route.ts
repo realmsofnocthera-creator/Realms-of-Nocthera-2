@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { concederPapel, ErroMestre, listarPapeis, revogarPapel } from '@/server/mestre';
-import { rotaDoMestre } from '@/server/mestreRota';
+import { concederPapel, listarPapeis, revogarPapel } from '@/server/mestre';
+import { corpoDoPedido as corpo, rotaDoMestre } from '@/server/mestreRota';
 import { ipDaRequisicao } from '@/server/rateLimit';
-
-async function corpo(req: NextRequest): Promise<Record<string, unknown>> {
-  try {
-    const b = await req.json();
-    return b && typeof b === 'object' ? (b as Record<string, unknown>) : {};
-  } catch {
-    throw new ErroMestre(400, 'Pedido inválido.');
-  }
-}
 
 /** Lista os papéis (o Dono do ambiente e os concedidos pelo painel). */
 export function GET(req: NextRequest) {
