@@ -8,6 +8,7 @@ import { CharacterDocument } from '@/server/characterService';
 import { MENU_PRINCIPAL } from '@/rules/menuPrincipal';
 import { MENU_PRINCIPAL_IMAGES } from '@/assets/menuPrincipal';
 import { NOCTHERA_THEME } from '@/theme/theme';
+import { AtalhoMestre } from '@/components/mestre/AtalhoMestre';
 
 export interface MenuScreenProps {
   personagem?: CharacterDocument | null;
@@ -167,6 +168,10 @@ export function MenuScreen({ personagem }: MenuScreenProps) {
             );
           })}
         </section>
+
+        <div className="w-full flex justify-center">
+          <AtalhoMestre />
+        </div>
       </div>
     </main>
   );
