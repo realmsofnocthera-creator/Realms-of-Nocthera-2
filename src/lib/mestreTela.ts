@@ -45,6 +45,9 @@ export function descreverAcao(e: Pick<EntradaLogAdmin, 'acao' | 'alvo' | 'antes'
     case 'jogador.banir':
       texto = `Baniu ${alvo}`;
       break;
+    case 'jogador.ajustar':
+      texto = `Ajustou ${alvo}: ${resumoDoAjuste(e.depois)}`;
+      break;
     case 'jogador.desbanir':
       texto = `Levantou a sanção de ${alvo}`;
       break;
@@ -71,4 +74,10 @@ export function dataDoLog(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' });
+}
+
+function resumoDoAjuste(depois: unknown): string {
+  if (!depois || typeof depois !== 'object') return 'sem detalhes';
+  const partes = Object.entries(depois as Record<string, unknown>).map(([k, v]) => `${k.replace('material:', '')} ${typeof v === 'number' && v > 0 ? '+' : ''}${String(v)}`);
+  return partes.join(', ') || 'sem detalhes';
 }

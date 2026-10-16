@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Search, ShieldAlert } from 'lucide-react';
 import { ACOES_DE_SANCAO, DIAS_MAXIMOS_DE_SUSPENSAO, DIAS_MINIMOS_DE_SUSPENSAO, NOME_DA_ACAO, type AcaoDeSancao } from '@/rules/sancoes';
+import { CAMPOS_DE_AJUSTE, NOME_DO_CAMPO, type CampoDeAjuste } from '@/rules/ajustes';
 import { NOME_DO_PAPEL } from '@/rules/mestre';
 import { dataDoLog } from '@/lib/mestreTela';
 import { descreverTransacao, situacaoDaConta } from '@/lib/jogadoresTela';
@@ -21,6 +22,7 @@ const COR_DO_TOM = { ok: '#7BC47F', aviso: '#E6C775', perigo: VERMELHO } as cons
 export function JogadoresPainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel; tokenFresco: Token }) {
   const { colors } = NOCTHERA_THEME;
   const podeSancionar = sessao.permissoes.includes('jogadores.sancionar');
+  const podeAjustar = sessao.permissoes.includes('jogadores.ajustar');
   const [busca, setBusca] = useState('');
   const [ficha, setFicha] = useState<FichaDoJogador | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -79,6 +81,21 @@ export function JogadoresPainel({ sessao, tokenFresco }: { sessao: SessaoDoPaine
             return String(r.dados.error ?? 'Não foi possível concluir.');
           }}
           aviso={aviso}
+        />
+      )}
+      {ficha && podeAjustar && (
+        <Ajustes
+          key={ficha.uid}
+          ajustar={async (corpo) => {
+            setAviso(null);
+            const r = await chamar(tokenFresco, `/api/mestre/jogadores/${ficha.uid}/ajustes`, { method: 'POST', body: JSON.stringify(corpo) });
+            if (r.ok) {
+              setFicha(r.dados.jogador as FichaDoJogador);
+              setAviso('Ajuste feito. Está no extrato de transações e no log.');
+              return null;
+            }
+            return String(r.dados.error ?? 'Não foi possível concluir.');
+          }}
         />
       )}
       {ficha && <Transacoes ficha={ficha} />}
@@ -191,6 +208,71 @@ function Sancoes({ ficha, podeSancionar, aplicar, aviso }: { ficha: FichaDoJogad
       )}
       {aviso && <p role="status" className="text-[12px] font-semibold" style={{ color: COR_DO_TOM.ok }}>{aviso}</p>}
       {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
+    </Cartao>
+  );
+}
+
+/** Ajustes (3.5.4.2, só o Dono): os números são variações (+/−), não o valor final. Motivo obrigatório. */
+function Ajustes({ ajustar }: { ajustar: (corpo: Record<string, unknown>) => Promise<string | null> }) {
+  const { colors } = NOCTHERA_THEME;
+  const [valores, setValores] = useState<Partial<Record<CampoDeAjuste, string>>>({});
+  const [material, setMaterial] = useState('');
+  const [qtd, setQtd] = useState('');
+  const [motivo, setMotivo] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const campo = 'rounded-sm border px-2 py-1 text-[12px] w-full';
+  const estiloCampo = { backgroundColor: colors.background.primary, borderColor: `${OURO}66`, color: colors.text.primary };
+
+  return (
+    <Cartao titulo="Ajustar (só o Dono)">
+      <form
+        className="flex flex-col gap-2"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const campos: Record<string, number> = {};
+          for (const c of CAMPOS_DE_AJUSTE) {
+            const v = valores[c];
+            if (v !== undefined && v !== '') campos[c] = Number(v);
+          }
+          const materiais = material.trim() && qtd !== '' ? { [material.trim()]: Number(qtd) } : {};
+          setOcupado(true);
+          setErro(null);
+          const falha = await ajustar({ campos, materiais, motivo });
+          setOcupado(false);
+          if (falha) setErro(falha);
+          else {
+            setValores({});
+            setMaterial('');
+            setQtd('');
+            setMotivo('');
+          }
+        }}
+      >
+        <p className="text-[11px]" style={{ color: colors.text.secondary }}>
+          Escreva a variação: 500 soma, −500 retira. XP só pode ser concedido (e sobe de nível sozinho). Deixe em branco o que não muda.
+        </p>
+        <div className="grid gap-2 grid-cols-2 md:grid-cols-3">
+          {CAMPOS_DE_AJUSTE.map((c) => (
+            <label key={c} className="text-[11px] flex flex-col gap-0.5">{NOME_DO_CAMPO[c]}
+              <input type="number" step={1} value={valores[c] ?? ''} onChange={(e) => setValores({ ...valores, [c]: e.target.value })} className={campo} style={estiloCampo} />
+            </label>
+          ))}
+          <label className="text-[11px] flex flex-col gap-0.5">Material (id)
+            <input value={material} onChange={(e) => setMaterial(e.target.value)} placeholder="pelo-de-rato" className={campo} style={estiloCampo} autoComplete="off" />
+          </label>
+          <label className="text-[11px] flex flex-col gap-0.5">Quantidade do material
+            <input type="number" step={1} value={qtd} onChange={(e) => setQtd(e.target.value)} className={campo} style={estiloCampo} />
+          </label>
+        </div>
+        <label className="text-[11px] flex flex-col gap-0.5">Motivo (vai para o extrato e o log)
+          <input value={motivo} onChange={(e) => setMotivo(e.target.value)} className={campo} style={estiloCampo} required minLength={5} maxLength={300} />
+        </label>
+        <button type="submit" disabled={ocupado} className="self-start px-3 py-1.5 rounded font-cinzel font-bold text-xs disabled:opacity-50" style={{ backgroundColor: colors.accent.primary, color: colors.background.secondary }}>
+          {ocupado ? 'Aplicando...' : 'Aplicar ajuste'}
+        </button>
+        {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
+      </form>
     </Cartao>
   );
 }

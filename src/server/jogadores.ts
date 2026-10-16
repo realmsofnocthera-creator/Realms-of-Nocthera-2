@@ -11,7 +11,10 @@ import {
   type SancaoEmVigor,
 } from '@/rules/sancoes';
 import type { PapelMestre } from '@/rules/mestre';
-import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
+import { ajustarPersonagemPorMestre, type AjusteDoMestre, type CharacterDocument, type Moeda, type TransactionDocument } from '@/server/characterService';
+import { ehCampoDeAjuste, LIMITE_DE_MATERIAL_POR_PEDIDO, LIMITE_POR_CAMPO, MAXIMO_DE_MATERIAIS_POR_PEDIDO, NOME_DO_CAMPO } from '@/rules/ajustes';
+import { MATERIAIS_MAP } from '@/rules/materiais';
+import { MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
 import { adminAuth } from '@/server/firebaseAdmin';
 import { registrarLog } from '@/server/log';
 import { comRegistro, donosDoAmbiente, ErroMestre, exigir, motivoValido, papelDoUsuario, type SessaoMestre } from '@/server/mestre';
@@ -218,5 +221,72 @@ export async function aplicarSancao(sessao: SessaoMestre, uidAlvo: unknown, pedi
   );
   atualizarCacheDeSancao(proximo);
 
+  return montarFicha(uidAlvo);
+}
+
+export interface PedidoDeAjuste {
+  /** { ouro: 500, diamantes: -2, xp: 300 }: variações, não valores finais. */
+  campos?: unknown;
+  /** { "pelo-de-rato": 5 }: variação por material. */
+  materiais?: unknown;
+  motivo: unknown;
+}
+
+function inteiroNaoZero(v: unknown): v is number {
+  return typeof v === 'number' && Number.isInteger(v) && v !== 0;
+}
+
+/**
+ * Ajusta moedas, XP e materiais de um jogador (só o Dono). Valores são variações e vão para o extrato de
+ * transações com o motivo; o resultado nunca fica negativo. Sem log, nada muda.
+ */
+export async function ajustarJogador(sessao: SessaoMestre, uidAlvo: unknown, pedido: PedidoDeAjuste, ip?: string): Promise<FichaDoJogador> {
+  exigir(sessao, 'jogadores.ajustar');
+  if (typeof uidAlvo !== 'string' || !ID_VALIDO.test(uidAlvo)) throw new ErroMestre(400, 'Informe o identificador (uid) do jogador.');
+  const motivo = motivoValido(pedido.motivo);
+
+  const ajuste: AjusteDoMestre = { moedas: {} };
+  const resumo: Record<string, number> = {};
+  const campos = pedido.campos && typeof pedido.campos === 'object' && !Array.isArray(pedido.campos) ? (pedido.campos as Record<string, unknown>) : {};
+  for (const [campo, valor] of Object.entries(campos)) {
+    if (valor === undefined || valor === null || valor === '') continue;
+    if (!ehCampoDeAjuste(campo)) throw new ErroMestre(400, `Campo não permitido: ${campo}.`);
+    if (!inteiroNaoZero(valor)) throw new ErroMestre(400, `${NOME_DO_CAMPO[campo]}: informe um número inteiro diferente de zero.`);
+    if (Math.abs(valor) > LIMITE_POR_CAMPO[campo]) {
+      throw new ErroMestre(400, `${NOME_DO_CAMPO[campo]}: o limite por ajuste é ${LIMITE_POR_CAMPO[campo].toLocaleString('pt-BR')}.`);
+    }
+    if (campo === 'xp') {
+      if (valor < 0) throw new ErroMestre(400, 'XP só pode ser concedido, não retirado.');
+      ajuste.xp = valor;
+    } else ajuste.moedas[campo as Moeda] = valor;
+    resumo[campo] = valor;
+  }
+  const mats = pedido.materiais && typeof pedido.materiais === 'object' && !Array.isArray(pedido.materiais) ? (pedido.materiais as Record<string, unknown>) : {};
+  const idsDeMateriais = Object.keys(mats).filter((id) => mats[id] !== undefined && mats[id] !== null && mats[id] !== '');
+  if (idsDeMateriais.length > MAXIMO_DE_MATERIAIS_POR_PEDIDO) throw new ErroMestre(400, `No máximo ${MAXIMO_DE_MATERIAIS_POR_PEDIDO} materiais por ajuste.`);
+  if (idsDeMateriais.length) ajuste.materiais = {};
+  for (const id of idsDeMateriais) {
+    const valor = mats[id];
+    if (!MATERIAIS_MAP[id] && !MATERIAIS_MUNDO_MAP[id]) throw new ErroMestre(400, `Material desconhecido: ${id}.`);
+    if (!inteiroNaoZero(valor) || Math.abs(valor) > LIMITE_DE_MATERIAL_POR_PEDIDO) {
+      throw new ErroMestre(400, `Material ${id}: informe um inteiro diferente de zero, até ${LIMITE_DE_MATERIAL_POR_PEDIDO} por ajuste.`);
+    }
+    ajuste.materiais![id] = valor;
+    resumo[`material:${id}`] = valor;
+  }
+  if (Object.keys(resumo).length === 0) throw new ErroMestre(400, 'Informe ao menos um valor para ajustar.');
+
+  const antes = await repositorio.lerPersonagem(uidAlvo);
+  if (!antes) throw new ErroMestre(404, 'Nenhum jogador com esse identificador.');
+
+  await comRegistro(sessao, { acao: 'jogador.ajustar', alvo: uidAlvo, antes: { nivel: antes.nivel, xp: antes.xpAtual }, depois: resumo, motivo, ip }, async () => {
+    try {
+      await ajustarPersonagemPorMestre(uidAlvo, ajuste, `Ajuste do painel: ${motivo}`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : '';
+      if (/insuficiente/i.test(msg)) throw new ErroMestre(400, `O ajuste deixaria o saldo negativo (${msg}). Nada foi alterado.`);
+      throw error;
+    }
+  });
   return montarFicha(uidAlvo);
 }
