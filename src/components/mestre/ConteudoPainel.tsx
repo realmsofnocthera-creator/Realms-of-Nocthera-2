@@ -8,6 +8,9 @@ import type { TilesetDados } from '@/rules/tileset';
 import { NOME_DO_TIPO, PERMISSAO_DE_EDICAO, type TipoDeConteudo } from '@/rules/conteudo';
 import { monstroDadosDeDefinicao, type MonstroDados } from '@/rules/monstroConteudo';
 import { EditorDeMonstro } from '@/components/mestre/EditorDeMonstro';
+import { EditorDeArma } from '@/components/mestre/EditorDeArma';
+import { armaDadosDeBase, type ArmaDados } from '@/rules/armaConteudo';
+import { armaOriginal } from '@/rules/catalogoAoVivo';
 import { situacaoDoConteudo, descreverVersao, sugerirIdentificador } from '@/lib/conteudoTela';
 import { dataDoLog } from '@/lib/mestreTela';
 import type { ConteudoDocumento, ResumoConteudo, ResumoVersao } from '@/server/persistencia/tipos';
@@ -24,6 +27,10 @@ function resumoDosDados(tipo: TipoDeConteudo, dados: unknown): string {
   if (tipo === 'mapa') {
     const m = dados as MapaDados;
     return `${m.largura} × ${m.altura} tiles de ${m.tamanhoDoTile} px · ${m.tilesets.length} tileset(s)`;
+  }
+  if (tipo === 'arma') {
+    const a = dados as ArmaDados;
+    return `${a.raridade} · ${a.receita.ouro.toLocaleString('pt-BR')} de ouro${a.ativo ? '' : ' · FORA DE USO'}`;
   }
   if (tipo === 'monstro') {
     const m = dados as MonstroDados;
@@ -44,11 +51,12 @@ function useEstilos() {
   };
 }
 
-const PLURAL: Record<TipoDeConteudo, string> = { mapa: 'Mapas', tileset: 'Tilesets', monstro: 'Monstros' };
+const PLURAL: Record<TipoDeConteudo, string> = { mapa: 'Mapas', tileset: 'Tilesets', monstro: 'Monstros', arma: 'Armas' };
 const EXPLICACAO: Record<TipoDeConteudo, string> = {
   mapa: 'Cada mapa tem um rascunho e versões publicadas. O jogo só vê a versão publicada; voltar atrás republica uma versão antiga.',
   tileset: 'Os tilesets são as imagens cortadas em tiles que os mapas usam. Publique o tileset antes do mapa que o usa.',
   monstro: 'Monstros do banco. Com o mesmo identificador de um monstro do código, o publicado substitui os números dele; com identificador novo, é um monstro novo. Desmarcar "Ativo" tira o monstro de uso.',
+  arma: 'Armas do catálogo da Forja. O publicado substitui nomes, raridade e receita da arma do código; desmarcar "Ativo" impede fabricar.',
 };
 
 /**
@@ -62,7 +70,7 @@ export function ConteudoPainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel
   return (
     <div className="flex flex-col gap-3">
       <div role="tablist" aria-label="Tipo de conteúdo" className="flex gap-1">
-        {(['mapa', 'tileset', 'monstro'] as const).map((t) => (
+        {(['mapa', 'tileset', 'monstro', 'arma'] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -108,6 +116,7 @@ function Lista({ tipo, sessao, tokenFresco, abrir }: { tipo: TipoDeConteudo; ses
   return (
     <div className="flex flex-col gap-3">
       {podeEditar && tipo === 'mapa' && <NovoMapa tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
+      {podeEditar && tipo === 'arma' && <NovaArma tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
       {podeEditar && tipo === 'monstro' && <NovoMonstro tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
       {podeEditar && tipo === 'tileset' && <ImportarTileset tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
       <Cartao titulo={PLURAL[tipo]}>
@@ -157,6 +166,51 @@ function monstroEmBranco(): MonstroDados {
     atributos: { vigor: 1, sorte: 0, forca: 1, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 1 },
     xpConcedido: 10, ouroConcedido: { min: 1, max: 5 }, modificadoresElementais: {}, elementoAtaque: null, efeitosAplicados: [], imunidadesStatus: [], enfurecido: false, ativo: true,
   };
+}
+
+function NovaArma({ tokenFresco, criado }: { tokenFresco: Token; criado: (id: string) => void }) {
+  const { colors, campo, estiloCampo, botao, estiloBotao } = useEstilos();
+  const [lista, setLista] = useState<{ id: string; nome: string; estrela: number }[]>([]);
+  const [escolhida, setEscolhida] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+
+  useEffect(() => {
+    void import('@/rules/armasCatalogo').then(({ ARMAS_BASE }) =>
+      setLista(ARMAS_BASE.map((a) => ({ id: a.id, nome: a.nomes.espadaGrande, estrela: a.estrela })))
+    );
+  }, []);
+
+  return (
+    <Cartao titulo="Editar uma arma do catálogo">
+      <form
+        className="grid gap-2 grid-cols-1 md:grid-cols-[1fr_auto] items-end"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const base = armaOriginal(escolhida);
+          if (!base) return setErro('Escolha uma arma.');
+          setOcupado(true);
+          setErro(null);
+          const r = await chamar(tokenFresco, '/api/mestre/conteudo', { method: 'POST', body: JSON.stringify({ tipo: 'arma', id: base.id, nome: base.nomes.espadaGrande, dados: armaDadosDeBase(base) }) });
+          setOcupado(false);
+          if (r.ok) criado(base.id);
+          else setErro(String(r.dados.error ?? 'Não foi possível criar o rascunho.'));
+        }}
+      >
+        <label className="text-[11px] flex flex-col gap-0.5">Arma (mostrada pelo nome da Espada grande)
+          <select value={escolhida} onChange={(e) => setEscolhida(e.target.value)} className={campo} style={estiloCampo} required>
+            <option value="">Escolha...</option>
+            {lista.map((a) => <option key={a.id} value={a.id}>{a.estrela}★ · {a.nome} ({a.id})</option>)}
+          </select>
+        </label>
+        <button type="submit" disabled={ocupado} className={`${botao} inline-flex items-center gap-1 justify-center`} style={estiloBotao}>
+          <Plus className="w-3.5 h-3.5" /> Criar rascunho
+        </button>
+      </form>
+      <p className="text-[11px]" style={{ color: colors.text.secondary }}>O rascunho nasce com os valores atuais da arma e o mesmo identificador; ao publicar, substitui os do código.</p>
+      {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
+    </Cartao>
+  );
 }
 
 function NovoMonstro({ tokenFresco, criado }: { tokenFresco: Token; criado: (id: string) => void }) {
@@ -358,6 +412,23 @@ function Detalhe({ tipo, id, sessao, tokenFresco, voltar }: { tipo: TipoDeConteu
         {aviso && <p role="status" className="text-[12px] font-semibold" style={{ color: COR_DA_SITUACAO['no-ar'] }}>{aviso}</p>}
         {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
       </Cartao>
+
+      {tipo === 'arma' && (
+        <EditorDeArma
+          key={conteudo.revisao}
+          inicial={conteudo.rascunho as ArmaDados}
+          podeEditar={podeEditar}
+          salvar={async (dados) => {
+            const r = await chamar(tokenFresco, base, { method: 'PUT', body: JSON.stringify({ dados, revisao: conteudo.revisao }) });
+            if (!r.ok) {
+              if (r.status === 409) void carregar();
+              return String(r.dados.error ?? 'Não foi possível salvar.');
+            }
+            await carregar();
+            return null;
+          }}
+        />
+      )}
 
       {tipo === 'monstro' && (
         <EditorDeMonstro
