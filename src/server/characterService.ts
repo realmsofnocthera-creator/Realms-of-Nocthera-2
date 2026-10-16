@@ -261,7 +261,7 @@ export function calcularXpComBonusRacial(xpBase: number, racaId: string): number
   return xpBase;
 }
 
-type Moeda = 'ouro' | 'diamantes' | 'fragmentosAlma' | 'essenciaHabilidade' | 'fragmentosAscensao';
+export type Moeda = 'ouro' | 'diamantes' | 'fragmentosAlma' | 'essenciaHabilidade' | 'fragmentosAscensao';
 
 const MENSAGEM_SALDO_INSUFICIENTE: Record<Moeda, string> = {
   ouro: 'Ouro insuficiente',
@@ -823,6 +823,54 @@ async function alterarMoeda(
     const current = await carregarPersonagem(ctx, uid);
     const { character } = alterarSaldoEm(ctx, current, moeda, delta, motivo);
     return salvarPersonagem(ctx, current, { [moeda]: character[moeda] });
+  });
+}
+
+/** Ajustes do Painel do Mestre (3.5.4.2): variações (deltas) por campo; cada moeda gera uma transação. */
+export interface AjusteDoMestre {
+  moedas: Partial<Record<Moeda, number>>;
+  /** Só aumenta: dá XP e sobe de nível como no combate. */
+  xp?: number;
+  /** Variação por material (mochila). Resultado negativo é recusado; zero remove a entrada. */
+  materiais?: Record<string, number>;
+}
+
+/**
+ * Aplica o ajuste do Painel do Mestre numa única transação: moedas (com extrato), XP (com subida de nível) e
+ * materiais. Se qualquer parte falhar, nada é gravado. Função exclusiva de servidor.
+ */
+export async function ajustarPersonagemPorMestre(uid: string, ajuste: AjusteDoMestre, motivo: string): Promise<CharacterDocument> {
+  return repositorio.executarTransacao('ajusteDoMestre', async (ctx) => {
+    let atual = await carregarPersonagem(ctx, uid);
+    const patch: Partial<CharacterDocument> = {};
+    for (const [moeda, delta] of Object.entries(ajuste.moedas) as [Moeda, number][]) {
+      const r = alterarSaldoEm(ctx, atual, moeda, delta, motivo);
+      atual = r.character;
+      patch[moeda] = r.character[moeda] as never;
+    }
+    if (ajuste.xp) {
+      let xp = atual.xpAtual + ajuste.xp;
+      let nivel = atual.nivel;
+      let pontos = atual.pontosDisponiveis;
+      while (nivel < GAME_CONFIG.NIVEL_MAXIMO_GRAU_1 && xp >= xpParaProximoNivel(nivel)) {
+        xp -= xpParaProximoNivel(nivel);
+        nivel += 1;
+        pontos += GAME_CONFIG.PONTOS_POR_NIVEL;
+      }
+      if (nivel >= GAME_CONFIG.NIVEL_MAXIMO_GRAU_1) nivel = GAME_CONFIG.NIVEL_MAXIMO_GRAU_1;
+      Object.assign(patch, { xpAtual: xp, nivel, pontosDisponiveis: pontos });
+    }
+    if (ajuste.materiais) {
+      const inventario = { ...(atual.inventario ?? {}) };
+      for (const [id, delta] of Object.entries(ajuste.materiais)) {
+        const novo = (inventario[id] ?? 0) + delta;
+        if (novo < 0) throw new Error(`Material insuficiente: ${id}`);
+        if (novo === 0) delete inventario[id];
+        else inventario[id] = novo;
+      }
+      patch.inventario = inventario;
+    }
+    return salvarPersonagem(ctx, atual, patch);
   });
 }
 
