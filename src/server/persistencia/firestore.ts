@@ -678,6 +678,34 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
       });
     },
 
+    async listarCombatesDoJogador(uid: string, limite: number) {
+      return lerComRetry(`listarCombates:${uid}`, async () => {
+        const snap = await db.collection('combates').where('uid', '==', uid).get();
+        return snap.docs
+          .map((d) => d.data() as RegistroCombate)
+          .sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)))
+          .slice(0, limite);
+      });
+    },
+
+    async excluirDadosDoJogador(uid: string, chaveNome: string | null) {
+      await gravarSimples(`excluirDadosDoJogador:${uid}`, async () => {
+        const refs = [db.collection('characters').doc(uid), db.collection('sancoes').doc(uid), db.collection('revogacoes').doc(uid)];
+        if (chaveNome) {
+          const nome = await db.collection('nomes').doc(chaveNome).get();
+          if (nome.exists && nome.data()?.uid === uid) refs.push(nome.ref);
+        }
+        const transacoes = await db.collection('transactions').where('uid', '==', uid).get();
+        refs.push(...transacoes.docs.map((d) => d.ref));
+        // lotes de 400 (o limite do Firestore é 500 por lote)
+        for (let i = 0; i < refs.length; i += 400) {
+          const lote = db.batch();
+          for (const ref of refs.slice(i, i + 400)) lote.delete(ref);
+          await lote.commit();
+        }
+      });
+    },
+
     async lerVersaoConteudo(chave: string, versao: number) {
       return lerComRetry(`lerVersao:${chave}:${versao}`, async () => {
         const snap = await db.collection('conteudo').doc(chave).collection('versoes').doc(String(versao)).get();

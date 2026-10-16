@@ -213,6 +213,13 @@ export interface Repositorio {
   gravarSancao(doc: SancaoDocumento): Promise<void>;
   /** As transações de moeda do jogador, da mais recente para a mais antiga (3.5.4.1). */
   listarTransacoes(uid: string, limite: number): Promise<TransactionDocument[]>;
+  /** Os combates registrados do jogador, do mais recente para o mais antigo (exportação de dados, 3.5.4.4). */
+  listarCombatesDoJogador(uid: string, limite: number): Promise<RegistroCombate[]>;
+  /**
+   * Apaga os dados do jogador: personagem, reserva do nome, transações, sanção e marca de logout.
+   * NÃO apaga o log administrativo nem os registros de combate (auditoria). Idempotente.
+   */
+  excluirDadosDoJogador(uid: string, chaveNome: string | null): Promise<void>;
 }
 
 /**

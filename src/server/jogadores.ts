@@ -11,7 +11,7 @@ import {
   type SancaoEmVigor,
 } from '@/rules/sancoes';
 import type { PapelMestre } from '@/rules/mestre';
-import { ajustarPersonagemPorMestre, type AjusteDoMestre, type CharacterDocument, type Moeda, type TransactionDocument } from '@/server/characterService';
+import { ajustarPersonagemPorMestre, zerarProgressaoPorMestre, type AjusteDoMestre, type CharacterDocument, type Moeda, type TransactionDocument } from '@/server/characterService';
 import { ehCampoDeAjuste, LIMITE_DE_MATERIAL_POR_PEDIDO, LIMITE_POR_CAMPO, MAXIMO_DE_MATERIAIS_POR_PEDIDO, NOME_DO_CAMPO } from '@/rules/ajustes';
 import { MATERIAIS_MAP } from '@/rules/materiais';
 import { MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
@@ -21,6 +21,7 @@ import { comRegistro, donosDoAmbiente, ErroMestre, exigir, motivoValido, papelDo
 import { repositorio } from '@/server/persistencia';
 import { chaveDoNome } from '@/server/persistencia/tipos';
 import { atualizarCacheDeSancao } from '@/server/sancoes';
+import type { RegistroCombate } from '@/server/persistencia/tipos';
 
 /**
  * Gestão de jogadores no Painel do Mestre (3.5.4): busca e ficha (3.5.4.1) e sanções (3.5.4.3).
@@ -289,4 +290,117 @@ export async function ajustarJogador(sessao: SessaoMestre, uidAlvo: unknown, ped
     }
   });
   return montarFicha(uidAlvo);
+}
+
+export const LIMITE_DE_REGISTROS_NA_EXPORTACAO = 5000;
+
+export interface ExportacaoDoJogador {
+  exportadoEm: string;
+  uid: string;
+  email: string | null;
+  personagem: CharacterDocument;
+  transacoes: TransactionDocument[];
+  combates: RegistroCombate[];
+  sancao: SancaoDocumento | null;
+  papelNoPainel: PapelMestre | null;
+  aviso: string;
+}
+
+/** Todos os dados do jogador em um JSON (LGPD, 3.5.4.4). Fica no log, porque são dados pessoais. */
+export async function exportarJogador(sessao: SessaoMestre, uidAlvo: unknown, ip?: string): Promise<ExportacaoDoJogador> {
+  exigir(sessao, 'jogadores.dados');
+  if (typeof uidAlvo !== 'string' || !ID_VALIDO.test(uidAlvo)) throw new ErroMestre(400, 'Informe o identificador (uid) do jogador.');
+  return comRegistro(sessao, { acao: 'jogador.exportar', alvo: uidAlvo, ip }, async () => {
+    const personagem = await repositorio.lerPersonagem(uidAlvo);
+    if (!personagem) throw new ErroMestre(404, 'Nenhum jogador com esse identificador.');
+    const [transacoes, combates, sancao, email, papel] = await Promise.all([
+      repositorio.listarTransacoes(uidAlvo, LIMITE_DE_REGISTROS_NA_EXPORTACAO),
+      repositorio.listarCombatesDoJogador(uidAlvo, LIMITE_DE_REGISTROS_NA_EXPORTACAO),
+      repositorio.lerSancao(uidAlvo),
+      emailDoJogador(uidAlvo),
+      papelDoUsuario(uidAlvo),
+    ]);
+    return {
+      exportadoEm: new Date().toISOString(),
+      uid: uidAlvo,
+      email,
+      personagem,
+      transacoes,
+      combates,
+      sancao,
+      papelNoPainel: papel?.papel ?? null,
+      aviso: `Até ${LIMITE_DE_REGISTROS_NA_EXPORTACAO} transações e ${LIMITE_DE_REGISTROS_NA_EXPORTACAO} combates mais recentes.`,
+    };
+  });
+}
+
+export interface PedidoDestrutivo {
+  motivo: unknown;
+  /** O nome do personagem digitado por inteiro, para confirmar. */
+  confirmarNome?: unknown;
+}
+
+/** Valida o alvo e a confirmação das ações destrutivas; devolve o personagem. */
+async function alvoDestrutivo(sessao: SessaoMestre, uidAlvo: unknown, pedido: PedidoDestrutivo): Promise<{ uid: string; personagem: CharacterDocument; motivo: string }> {
+  exigir(sessao, 'jogadores.dados');
+  if (typeof uidAlvo !== 'string' || !ID_VALIDO.test(uidAlvo)) throw new ErroMestre(400, 'Informe o identificador (uid) do jogador.');
+  const motivo = motivoValido(pedido.motivo);
+  if (uidAlvo === sessao.uid) throw new ErroMestre(400, 'Você não pode fazer isso com a própria conta.');
+  if (donosDoAmbiente().has(uidAlvo) || (await papelDoUsuario(uidAlvo))) {
+    throw new ErroMestre(400, 'Esse jogador tem papel no painel. Tire o papel dele antes.');
+  }
+  const personagem = await repositorio.lerPersonagem(uidAlvo);
+  if (!personagem) throw new ErroMestre(404, 'Nenhum jogador com esse identificador.');
+  if (typeof pedido.confirmarNome !== 'string' || pedido.confirmarNome.trim() !== personagem.nome) {
+    throw new ErroMestre(400, 'Confirmação incorreta: digite o nome do personagem exatamente como ele é.');
+  }
+  return { uid: uidAlvo, personagem, motivo };
+}
+
+/** Volta o personagem ao nível 1 sem moedas, mochila, equipamento nem progresso, mantendo nome, raça e classe. */
+export async function zerarProgressaoDoJogador(sessao: SessaoMestre, uidAlvo: unknown, pedido: PedidoDestrutivo, ip?: string): Promise<FichaDoJogador> {
+  const { uid, personagem, motivo } = await alvoDestrutivo(sessao, uidAlvo, pedido);
+  await comRegistro(
+    sessao,
+    {
+      acao: 'jogador.zerar',
+      alvo: uid,
+      antes: { nivel: personagem.nivel, ouro: personagem.ouro, diamantes: personagem.diamantes ?? 0, torreAndar: personagem.torreAndar ?? 0 },
+      depois: { nivel: 1 },
+      motivo,
+      ip,
+    },
+    () => zerarProgressaoPorMestre(uid, `Zerar progressão pelo painel: ${motivo}`)
+  );
+  return montarFicha(uid);
+}
+
+export interface ResultadoDaExclusao {
+  excluido: true;
+  /** O login (Firebase Auth) também foi removido; false se a API falhou (o jogador pode criar outro personagem). */
+  loginRemovido: boolean;
+}
+
+/**
+ * Exclui o jogador por inteiro: personagem, reserva do nome, transações, sanção e marca de logout, e tenta
+ * remover o login. O log administrativo e os registros de combate ficam (auditoria). Sem log, nada muda.
+ */
+export async function excluirJogador(sessao: SessaoMestre, uidAlvo: unknown, pedido: PedidoDestrutivo, ip?: string): Promise<ResultadoDaExclusao> {
+  const { uid, personagem, motivo } = await alvoDestrutivo(sessao, uidAlvo, pedido);
+  await comRegistro(
+    sessao,
+    { acao: 'jogador.excluir', alvo: uid, antes: { nome: personagem.nome, nivel: personagem.nivel }, depois: { excluido: true }, motivo, ip },
+    () => repositorio.excluirDadosDoJogador(uid, chaveDoNome(personagem.nome))
+  );
+  atualizarCacheDeSancao(sancaoDocumentoVazio(uid));
+  let loginRemovido = true;
+  try {
+    await adminAuth.deleteUser(uid);
+  } catch (error) {
+    if ((error as { code?: string })?.code !== 'auth/user-not-found') {
+      loginRemovido = false;
+      registrarLog('WARNING', 'mestre.excluir_login_falhou', { codigo: (error as { code?: string })?.code ?? 'desconhecido' });
+    }
+  }
+  return { excluido: true, loginRemovido };
 }

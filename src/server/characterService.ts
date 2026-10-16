@@ -875,6 +875,58 @@ export async function ajustarPersonagemPorMestre(uid: string, ajuste: AjusteDoMe
 }
 
 /**
+ * Zera a progressão do personagem (Painel do Mestre, 3.5.4.4): volta ao nível 1, sem XP, moedas, mochila,
+ * equipamentos, subclasse, reforço e progresso de modos. Mantém a identidade (nome, avatar, sobre, raça, classe,
+ * linhagem, criadoEm) e os atributos da criação (tira os pontos de nível e o bônus de subclasse).
+ * Registra uma transação de perda para cada moeda que tinha saldo. Função exclusiva de servidor.
+ */
+export async function zerarProgressaoPorMestre(uid: string, motivo: string): Promise<CharacterDocument> {
+  return repositorio.executarTransacao('zerarProgressao', async (ctx) => {
+    const atual = await carregarPersonagem(ctx, uid);
+    let atributos = { ...atual.atributos };
+    const alocados = atual.pontosAlocadosPorNivel ?? { ...ZEROS_ATRIBUTOS };
+    for (const a of ATTRIBUTES) atributos[a] = Math.max(0, atributos[a] - (alocados[a] || 0));
+    if (atual.bonusSubclasseAplicado) atributos = removerBonusSubclasse(atributos, atual.bonusSubclasseAplicado);
+
+    let corrente = atual;
+    const moedas: Moeda[] = ['ouro', 'diamantes', 'fragmentosAlma', 'essenciaHabilidade', 'fragmentosAscensao'];
+    for (const moeda of moedas) {
+      const saldo = (corrente[moeda] as number | undefined) ?? 0;
+      if (saldo > 0) corrente = alterarSaldoEm(ctx, corrente, moeda, -saldo, motivo).character;
+    }
+
+    // monta do zero a partir da identidade: nenhum campo de progresso escapa
+    const limpo: CharacterDocument = {
+      uid: atual.uid,
+      nome: atual.nome,
+      avatarId: atual.avatarId,
+      sobre: atual.sobre ?? '',
+      racaId: atual.racaId,
+      classeId: atual.classeId,
+      ...(atual.linhagem ? { linhagem: atual.linhagem } : {}),
+      nivel: 1,
+      xpAtual: 0,
+      pontosDisponiveis: 0,
+      pontosAlocadosPorNivel: { ...ZEROS_ATRIBUTOS },
+      habilidadesEquipadas: habilidadesPadraoDaClasse(atual.classeId),
+      fragmentosAlma: 0,
+      subclasseAtualId: null,
+      subclasseTiers: {},
+      fragmentosSubclasse: {},
+      atributos,
+      ouro: 0,
+      diamantes: 0,
+      hpMax: atual.hpMax,
+      sobreescudoMax: atual.sobreescudoMax,
+      criadoEm: atual.criadoEm,
+    } as CharacterDocument;
+    const gravado = mesclarPersonagem(limpo, {});
+    ctx.gravarPersonagem(gravado);
+    return gravado;
+  });
+}
+
+/**
  * Altera o saldo de diamantes do personagem e registra a transação, atomicamente.
  * - delta deve ser inteiro e diferente de zero.
  * - se o saldo resultante ficar abaixo de 0, lança Error('Diamantes insuficientes')

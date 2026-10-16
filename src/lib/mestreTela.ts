@@ -48,6 +48,15 @@ export function descreverAcao(e: Pick<EntradaLogAdmin, 'acao' | 'alvo' | 'antes'
     case 'jogador.ajustar':
       texto = `Ajustou ${alvo}: ${resumoDoAjuste(e.depois)}`;
       break;
+    case 'jogador.exportar':
+      texto = `Exportou os dados de ${alvo}`;
+      break;
+    case 'jogador.zerar':
+      texto = `Zerou a progressão de ${alvo}`;
+      break;
+    case 'jogador.excluir':
+      texto = `Excluiu o jogador ${alvo}`;
+      break;
     case 'jogador.desbanir':
       texto = `Levantou a sanção de ${alvo}`;
       break;

@@ -234,6 +234,22 @@ export const repositorio: Repositorio = {
       .slice(0, limite);
   },
 
+  async listarCombatesDoJogador(uid: string, limite: number) {
+    return [...estado.combates.values()]
+      .filter((c) => c.uid === uid)
+      .map((c) => structuredClone(c))
+      .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
+      .slice(0, limite);
+  },
+
+  async excluirDadosDoJogador(uid: string, chaveNome: string | null) {
+    estado.personagens.delete(uid);
+    if (chaveNome && estado.nomes.get(chaveNome)?.uid === uid) estado.nomes.delete(chaveNome);
+    estado.transacoes = estado.transacoes.filter((t) => t.uid !== uid);
+    estado.sancoes.delete(uid);
+    estado.revogacoes.delete(uid);
+  },
+
   async lerVersaoConteudo(chave: string, versao: number) {
     const v = estado.versoes.get(chave)?.find((x) => x.versao === versao);
     return v ? structuredClone(v) : null;
