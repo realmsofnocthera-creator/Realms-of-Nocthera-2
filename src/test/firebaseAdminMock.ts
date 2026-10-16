@@ -38,6 +38,17 @@ export const adminAuth = {
     }
     return { uid: decoded.uid, email: `${decoded.uid}@test.com`, auth_time: decoded.authTime };
   },
+  /** Usuário do Auth pelo uid (o e-mail de teste é <uid>@test.com). */
+  async getUser(uid: string) {
+    return { uid, email: `${uid}@test.com` };
+  },
+  /** Só acha e-mails no formato <uid>@test.com; "indisponivel@test.com" simula a API de login desativada. */
+  async getUserByEmail(email: string) {
+    if (email === 'indisponivel@test.com') throw Object.assign(new Error('API desativada'), { code: 'auth/internal-error' });
+    const m = /^([a-zA-Z0-9_-]+)@test\.com$/.exec(email);
+    if (!m) throw Object.assign(new Error('Usuário não encontrado'), { code: 'auth/user-not-found' });
+    return { uid: m[1], email };
+  },
 };
 
 export const adminDb = new Proxy(

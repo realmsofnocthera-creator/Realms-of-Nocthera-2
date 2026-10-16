@@ -15,6 +15,11 @@ const numeroDe = (v: unknown, campo: string): string => {
   return typeof n === 'number' ? String(n) : '?';
 };
 
+const diasDe = (v: unknown): string => {
+  const n = v && typeof v === 'object' ? (v as Record<string, unknown>).dias : undefined;
+  return typeof n === 'number' ? ` por ${n} dia${n === 1 ? '' : 's'}` : '';
+};
+
 /** Uma frase que descreve o que o registro do log diz que foi feito. */
 export function descreverAcao(e: Pick<EntradaLogAdmin, 'acao' | 'alvo' | 'antes' | 'depois'>): string {
   const alvo = e.alvo ?? 'jogador';
@@ -27,6 +32,21 @@ export function descreverAcao(e: Pick<EntradaLogAdmin, 'acao' | 'alvo' | 'antes'
       break;
     case 'papel.revogar':
       texto = `Papel de ${alvo} removido (era ${nomeDoPapel(papelDe(e.antes))})`;
+      break;
+    case 'jogador.consultar':
+      texto = `Consultou a ficha de ${alvo}`;
+      break;
+    case 'jogador.advertir':
+      texto = `Advertiu ${alvo}`;
+      break;
+    case 'jogador.suspender':
+      texto = `Suspendeu ${alvo}${diasDe(e.depois)}`;
+      break;
+    case 'jogador.banir':
+      texto = `Baniu ${alvo}`;
+      break;
+    case 'jogador.desbanir':
+      texto = `Levantou a sanção de ${alvo}`;
       break;
     case 'conteudo.criar':
       texto = `Criou ${alvo} (rascunho)`;

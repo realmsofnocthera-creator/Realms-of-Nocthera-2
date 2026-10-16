@@ -377,6 +377,59 @@
         "hash",
         "origem"
       ]
+    },
+    "sancao": {
+      "title": "Sanção de um jogador",
+      "description": "Estado da conta (suspensão ou banimento, com prazo e motivo) e o histórico de advertências. Só o servidor lê e grava; a autenticação consulta antes de cada pedido.",
+      "type": "object",
+      "properties": {
+        "tipo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "suspensao",
+            "banimento",
+            null
+          ]
+        },
+        "ate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "motivo": {
+          "type": "string"
+        },
+        "aplicadaPor": {
+          "type": "string"
+        },
+        "aplicadaEm": {
+          "type": "string"
+        },
+        "advertencias": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "em": {
+                "type": "string"
+              },
+              "por": {
+                "type": "string"
+              },
+              "motivo": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "tipo"
+      ]
     }
   },
   "firestore": {
@@ -419,6 +472,10 @@
     "/conteudo/{chave}/versoes/{versao}": {
       "schema": "versaoConteudo",
       "description": "Versões publicadas, imutáveis (só servidor)"
+    },
+    "/sancoes/{uid}": {
+      "schema": "sancao",
+      "description": "Suspensão, banimento e advertências do jogador (só servidor)"
     }
   }
 }

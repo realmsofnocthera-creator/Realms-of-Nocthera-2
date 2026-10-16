@@ -1,0 +1,217 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Search, ShieldAlert } from 'lucide-react';
+import { ACOES_DE_SANCAO, DIAS_MAXIMOS_DE_SUSPENSAO, DIAS_MINIMOS_DE_SUSPENSAO, NOME_DA_ACAO, type AcaoDeSancao } from '@/rules/sancoes';
+import { NOME_DO_PAPEL } from '@/rules/mestre';
+import { dataDoLog } from '@/lib/mestreTela';
+import { descreverTransacao, situacaoDaConta } from '@/lib/jogadoresTela';
+import type { FichaDoJogador } from '@/server/jogadores';
+import { NOCTHERA_THEME } from '@/theme/theme';
+import { Cartao, chamar, OURO, VERMELHO } from '@/components/mestre/comum';
+import type { SessaoDoPainel } from '@/components/mestre/MestrePainel';
+
+type Token = () => Promise<string>;
+const COR_DO_TOM = { ok: '#7BC47F', aviso: '#E6C775', perigo: VERMELHO } as const;
+
+/**
+ * Jogadores (3.5.4): busca por nome, e-mail ou uid, ficha completa com as transações e as sanções.
+ * Quem lê vê tudo; só Moderador e Dono veem o formulário de sanção. Toda consulta e toda sanção ficam no log.
+ */
+export function JogadoresPainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel; tokenFresco: Token }) {
+  const { colors } = NOCTHERA_THEME;
+  const podeSancionar = sessao.permissoes.includes('jogadores.sancionar');
+  const [busca, setBusca] = useState('');
+  const [ficha, setFicha] = useState<FichaDoJogador | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const campo = 'rounded-sm border px-2 py-1 text-[12px] w-full';
+  const estiloCampo = { backgroundColor: colors.background.primary, borderColor: `${OURO}66`, color: colors.text.primary };
+
+  const procurar = async () => {
+    setOcupado(true);
+    setErro(null);
+    setAviso(null);
+    const r = await chamar(tokenFresco, `/api/mestre/jogadores?busca=${encodeURIComponent(busca.trim())}`);
+    setOcupado(false);
+    if (r.ok) setFicha(r.dados.jogador as FichaDoJogador);
+    else {
+      setFicha(null);
+      setErro(String(r.dados.error ?? 'Não foi possível buscar.'));
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Cartao titulo="Buscar jogador">
+        <form
+          className="flex gap-2 items-end"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void procurar();
+          }}
+        >
+          <label className="text-[11px] flex flex-col gap-0.5 flex-1">Nome do personagem (inteiro), e-mail ou identificador (uid)
+            <input value={busca} onChange={(e) => setBusca(e.target.value)} className={campo} style={estiloCampo} autoComplete="off" required minLength={2} />
+          </label>
+          <button type="submit" disabled={ocupado} className="inline-flex items-center gap-1 px-3 py-1.5 rounded font-cinzel font-bold text-xs disabled:opacity-50" style={{ backgroundColor: colors.accent.primary, color: colors.background.secondary }}>
+            <Search className="w-3.5 h-3.5" /> Buscar
+          </button>
+        </form>
+        <p className="text-[11px]" style={{ color: colors.text.secondary }}>Cada consulta fica no log administrativo, porque a ficha tem dados pessoais.</p>
+        {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
+      </Cartao>
+
+      {ficha && <Ficha ficha={ficha} />}
+      {ficha && (
+        <Sancoes
+          ficha={ficha}
+          podeSancionar={podeSancionar}
+          aplicar={async (corpo) => {
+            setAviso(null);
+            const r = await chamar(tokenFresco, `/api/mestre/jogadores/${ficha.uid}/sancoes`, { method: 'POST', body: JSON.stringify(corpo) });
+            if (r.ok) {
+              setFicha(r.dados.jogador as FichaDoJogador);
+              setAviso('Feito. A sanção vale em até 30 segundos em todas as instâncias do servidor.');
+              return null;
+            }
+            return String(r.dados.error ?? 'Não foi possível concluir.');
+          }}
+          aviso={aviso}
+        />
+      )}
+      {ficha && <Transacoes ficha={ficha} />}
+    </div>
+  );
+}
+
+function Ficha({ ficha }: { ficha: FichaDoJogador }) {
+  const { colors } = NOCTHERA_THEME;
+  const p = ficha.personagem;
+  const sit = situacaoDaConta(ficha.sancao);
+  const linhas: [string, string][] = [
+    ['Nível', `${p.nivel} (XP ${p.xpAtual.toLocaleString('pt-BR')})`],
+    ['Raça e classe', `${p.racaId} · ${p.classeId}${p.linhagem ? ` · ${p.linhagem}` : ''}`],
+    ['Subclasse', p.subclasseAtualId ?? 'nenhuma'],
+    ['Ouro', p.ouro.toLocaleString('pt-BR')],
+    ['Diamantes', p.diamantes.toLocaleString('pt-BR')],
+    ['Fragmentos de alma', String(p.fragmentosAlma)],
+    ['Essência e fragmentos de ascensão', `${p.essenciaHabilidade} · ${p.fragmentosAscensao}`],
+    ['Torre Celestial', p.torreAndar ? `andar ${p.torreAndar}` : 'não começou'],
+    ['Caçada (estrelas vencidas)', p.cacadaChavesVencidas.length ? p.cacadaChavesVencidas.join(', ') : 'nenhuma'],
+    ['Armas · armaduras · emblemas', `${p.quantidadeDeArmas} · ${p.quantidadeDeArmaduras} · ${p.quantidadeDeEmblemas}`],
+    ['Materiais diferentes na mochila', String(Object.keys(p.inventario).length)],
+    ['Criado em', dataDoLog(p.criadoEm)],
+  ];
+  return (
+    <Cartao titulo={p.nome}>
+      <p className="text-[11px] break-all" style={{ color: colors.text.secondary }}>uid {ficha.uid} · {ficha.email ?? 'e-mail indisponível'}</p>
+      <p className="text-[12px] font-semibold" style={{ color: COR_DO_TOM[sit.tom] }}>{sit.texto}</p>
+      {ficha.papelNoPainel && <p className="text-[11px]" style={{ color: colors.text.secondary }}>Tem papel no painel: {NOME_DO_PAPEL[ficha.papelNoPainel]}. Não pode ser sancionado.</p>}
+      <dl className="grid gap-x-3 gap-y-1 grid-cols-1 md:grid-cols-2">
+        {linhas.map(([r, v]) => (
+          <div key={r} className="flex flex-col">
+            <dt className="text-[10px] uppercase tracking-wider" style={{ color: colors.text.secondary }}>{r}</dt>
+            <dd className="text-[12px]">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </Cartao>
+  );
+}
+
+function Sancoes({ ficha, podeSancionar, aplicar, aviso }: { ficha: FichaDoJogador; podeSancionar: boolean; aplicar: (corpo: Record<string, unknown>) => Promise<string | null>; aviso: string | null }) {
+  const { colors } = NOCTHERA_THEME;
+  const [acao, setAcao] = useState<AcaoDeSancao>('advertir');
+  const [dias, setDias] = useState(3);
+  const [motivo, setMotivo] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const campo = 'rounded-sm border px-2 py-1 text-[12px] w-full';
+  const estiloCampo = { backgroundColor: colors.background.primary, borderColor: `${OURO}66`, color: colors.text.primary };
+  const bloqueado = ficha.papelNoPainel !== null;
+  const gravidade = acao === 'banir' || acao === 'suspender';
+
+  return (
+    <Cartao titulo="Sanções">
+      {ficha.advertencias.length === 0 ? (
+        <p className="text-[12px]" style={{ color: colors.text.secondary }}>Nenhuma advertência.</p>
+      ) : (
+        <ul className="flex flex-col gap-1">
+          {ficha.advertencias.map((a, i) => (
+            <li key={`${a.em}-${i}`} className="text-[12px]">
+              <span style={{ color: colors.text.secondary }}>{dataDoLog(a.em)} · {a.por}:</span> {a.motivo}
+            </li>
+          ))}
+        </ul>
+      )}
+      {ficha.sancao && (
+        <p className="text-[12px]" style={{ color: COR_DO_TOM[situacaoDaConta(ficha.sancao).tom] }}>
+          Em vigor: {situacaoDaConta(ficha.sancao).texto}. Motivo: {ficha.sancao.motivo}
+        </p>
+      )}
+      {!podeSancionar ? (
+        <p className="text-[11px]" style={{ color: colors.text.secondary }}>Seu papel só consulta. Quem sanciona é o Moderador ou o Dono.</p>
+      ) : bloqueado ? null : (
+        <form
+          className="flex flex-col gap-2"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setOcupado(true);
+            setErro(null);
+            const falha = await aplicar({ acao, ...(acao === 'suspender' ? { dias } : {}), motivo });
+            setOcupado(false);
+            if (falha) setErro(falha);
+            else setMotivo('');
+          }}
+        >
+          <div className="grid gap-2 grid-cols-2 md:grid-cols-[1.2fr_0.6fr_2fr_auto] items-end">
+            <label className="text-[11px] flex flex-col gap-0.5">Ação
+              <select value={acao} onChange={(e) => setAcao(e.target.value as AcaoDeSancao)} className={campo} style={estiloCampo}>
+                {ACOES_DE_SANCAO.map((a) => <option key={a} value={a}>{NOME_DA_ACAO[a]}</option>)}
+              </select>
+            </label>
+            {acao === 'suspender' ? (
+              <label className="text-[11px] flex flex-col gap-0.5">Dias
+                <input type="number" min={DIAS_MINIMOS_DE_SUSPENSAO} max={DIAS_MAXIMOS_DE_SUSPENSAO} value={dias} onChange={(e) => setDias(Number(e.target.value))} className={campo} style={estiloCampo} />
+              </label>
+            ) : <span />}
+            <label className="text-[11px] flex flex-col gap-0.5 col-span-2 md:col-span-1">Motivo (o jogador lê quando tenta entrar)
+              <input value={motivo} onChange={(e) => setMotivo(e.target.value)} className={campo} style={estiloCampo} required />
+            </label>
+            <button type="submit" disabled={ocupado} className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded font-cinzel font-bold text-xs disabled:opacity-50" style={{ backgroundColor: gravidade ? VERMELHO : colors.accent.primary, color: colors.background.secondary }}>
+              <ShieldAlert className="w-3.5 h-3.5" /> Aplicar
+            </button>
+          </div>
+          <p className="text-[11px]" style={{ color: colors.text.secondary }}>
+            Advertir só registra. Suspender e banir bloqueiam a conta na hora; o banimento não tem prazo e a suspensão termina sozinha. Tudo fica no log.
+          </p>
+        </form>
+      )}
+      {aviso && <p role="status" className="text-[12px] font-semibold" style={{ color: COR_DO_TOM.ok }}>{aviso}</p>}
+      {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
+    </Cartao>
+  );
+}
+
+function Transacoes({ ficha }: { ficha: FichaDoJogador }) {
+  const { colors } = NOCTHERA_THEME;
+  return (
+    <Cartao titulo={`Transações (as ${ficha.transacoes.length} mais recentes)`}>
+      {ficha.transacoes.length === 0 ? (
+        <p className="text-[12px]" style={{ color: colors.text.secondary }}>Nenhuma transação de moeda.</p>
+      ) : (
+        <ul className="flex flex-col gap-1">
+          {ficha.transacoes.map((t, i) => (
+            <li key={t.id ?? i} className="text-[12px] flex flex-col md:flex-row md:gap-2">
+              <span className="font-semibold" style={{ color: t.tipo === 'ganho' ? '#7BC47F' : VERMELHO }}>{descreverTransacao(t)}</span>
+              <span>{t.motivo}</span>
+              <span className="text-[10px] md:ml-auto" style={{ color: colors.text.secondary }}>{dataDoLog(t.timestamp)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Cartao>
+  );
+}
