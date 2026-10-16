@@ -8,6 +8,7 @@ import { SUBCLASSES } from '@/rules/subclasses';
 import { custoDoTier } from '@/rules/subclasseTiers';
 import { MONSTERS_MAP } from '@/rules/monsters';
 import { monstroEfetivo } from '@/server/monstros';
+import { sincronizarCatalogoDeItens } from '@/server/catalogoItens';
 import {
   DropSorteado,
   MENSAGEM_BLOQUEIO_CACADA,
@@ -444,6 +445,7 @@ async function carregarPersonagem(
   uid: string,
   mensagemSeAusente = 'Personagem não encontrado.'
 ): Promise<CharacterDocument> {
+  await sincronizarCatalogoDeItens();
   const raw = await ctx.lerPersonagem(uid);
   if (!raw) {
     throw new Error(mensagemSeAusente);

@@ -13,6 +13,7 @@ import {
   sortearPontosDaArma,
 } from '@/rules/armas';
 import { ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
+import { armaDesativada } from '@/rules/catalogoAoVivo';
 import { MATERIAIS_MAP } from '@/rules/materiais';
 import { ORBES_ARMADURA_MAP } from '@/rules/armaduras';
 import { MATERIAIS_MUNDO, MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
@@ -58,6 +59,7 @@ export function nomeDoItem(id: string): string {
 
 export type MotivoBloqueioForja =
   | 'armaInvalida'
+  | 'armaDesativada'
   | 'categoriaInvalida'
   | 'armaAnteriorAusente'
   | 'materiaisInsuficientes'
@@ -72,6 +74,7 @@ export type MotivoBloqueioForja =
 
 export const MENSAGEM_BLOQUEIO_FORJA: Readonly<Record<MotivoBloqueioForja, string>> = {
   armaInvalida: 'Arma inválida.',
+  armaDesativada: 'Esta arma não está disponível para fabricação no momento.',
   categoriaInvalida: 'Categoria de arma inválida.',
   armaAnteriorAusente: 'Para evoluir, escolha a arma anterior da árvore (mesma categoria).',
   materiaisInsuficientes: 'Materiais insuficientes para esta receita.',
@@ -156,6 +159,7 @@ export function planejarFabricacao(
 ): ResultadoForja<{ inventario: Record<string, number>; ouroGasto: number; armas: ArmaPersonagem[]; arma: ArmaPersonagem; base: ArmaBase }> {
   const base = typeof pedido.baseId === 'string' ? ARMAS_BASE_MAP[pedido.baseId] : undefined;
   if (!base) return { ok: false, motivo: 'armaInvalida' };
+  if (armaDesativada(base.id)) return { ok: false, motivo: 'armaDesativada' };
   if (typeof pedido.categoria !== 'string' || !(pedido.categoria in CATEGORIAS_ARMA_MAP)) {
     return { ok: false, motivo: 'categoriaInvalida' };
   }

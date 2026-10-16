@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { carregarCatalogoPublicado } from '@/lib/catalogoCliente';
 import type { CharacterDocument } from '@/server/characterService';
 
 /**
@@ -33,6 +34,10 @@ export function usePersonagemLogado() {
           if (data?.character) {
             setCharacter(data.character);
             setLoading(false);
+            // itens editados no painel: depois de aplicados, uma cópia nova do personagem redesenha as telas
+            void carregarCatalogoPublicado(token).then((mudou) => {
+              if (mudou && !cancelado) setCharacter((c) => (c ? { ...c } : c));
+            });
             return;
           }
         } catch {
