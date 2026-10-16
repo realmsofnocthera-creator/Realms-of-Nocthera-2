@@ -11,6 +11,7 @@ import type { CharacterDocument, TransactionDocument } from '@/server/characterS
 import { descreverErro, registrarLog } from '@/server/log';
 import { ehPapelMestre } from '@/rules/mestre';
 import { ehTipoDeConteudo } from '@/rules/conteudo';
+import { MAXIMO_DE_ADVERTENCIAS, sancaoDocumentoVazio, type Advertencia, type SancaoDocumento } from '@/rules/sancoes';
 import {
   ConteudoDocumento,
   ContextoTransacao,
@@ -25,6 +26,26 @@ import {
 } from './tipos';
 
 const texto = (v: unknown) => (typeof v === 'string' ? v : '');
+function sancaoDoDocumento(uid: string, data: DocumentData | undefined): SancaoDocumento | null {
+  if (!data) return null;
+  const base = sancaoDocumentoVazio(uid);
+  const advertencias: Advertencia[] = Array.isArray(data.advertencias)
+    ? data.advertencias
+        .filter((a: unknown): a is Record<string, unknown> => typeof a === 'object' && a !== null)
+        .map((a) => ({ em: texto(a.em), por: texto(a.por), motivo: texto(a.motivo) }))
+        .slice(-MAXIMO_DE_ADVERTENCIAS)
+    : [];
+  return {
+    ...base,
+    tipo: data.tipo === 'suspensao' || data.tipo === 'banimento' ? data.tipo : null,
+    ate: typeof data.ate === 'string' ? data.ate : null,
+    motivo: texto(data.motivo),
+    aplicadaPor: texto(data.aplicadaPor),
+    aplicadaEm: texto(data.aplicadaEm),
+    advertencias,
+  };
+}
+
 const inteiroOuNulo = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) ? v : null);
 
 const CAMPOS_DO_RESUMO = ['tipo', 'id', 'nome', 'revisao', 'hashRascunho', 'editadoEm', 'editadoPor', 'criadoEm', 'criadoPor', 'versaoPublicada', 'hashPublicado', 'ultimaVersao'];
@@ -620,6 +641,40 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
           const v = resumoVersaoDoDocumento(d.data());
           return v ? [v] : [];
         });
+      });
+    },
+
+    async lerSancao(uid: string) {
+      return lerComRetry(`lerSancao:${uid}`, async () => {
+        const snap = await db.collection('sancoes').doc(uid).get();
+        return snap.exists ? sancaoDoDocumento(uid, snap.data()) : null;
+      });
+    },
+
+    async gravarSancao(doc: SancaoDocumento) {
+      const { uid, ...dados } = doc;
+      await gravarSimples(`gravarSancao:${uid}`, () => db.collection('sancoes').doc(uid).set(dados));
+    },
+
+    async listarTransacoes(uid: string, limite: number) {
+      return lerComRetry(`listarTransacoes:${uid}`, async () => {
+        // sem orderBy: ordenar no banco pediria um índice composto; o volume por jogador é pequeno
+        const snap = await db.collection('transactions').where('uid', '==', uid).get();
+        return snap.docs
+          .map((d): TransactionDocument => {
+            const t = d.data();
+            return {
+              id: d.id,
+              uid,
+              tipo: t.tipo === 'perda' ? 'perda' : 'ganho',
+              quantidade: typeof t.quantidade === 'number' ? t.quantidade : 0,
+              moeda: typeof t.moeda === 'string' ? (t.moeda as TransactionDocument['moeda']) : 'ouro',
+              motivo: texto(t.motivo),
+              timestamp: texto(t.timestamp),
+            };
+          })
+          .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+          .slice(0, limite);
       });
     },
 

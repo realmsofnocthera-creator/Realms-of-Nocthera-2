@@ -6,6 +6,7 @@
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
+import type { SancaoDocumento } from '@/rules/sancoes';
 import type {
   ConteudoDocumento,
   ContextoTransacao,
@@ -30,6 +31,7 @@ interface Estado {
   logAdmin: EntradaLogAdmin[];
   conteudo: Map<string, ConteudoDocumento>;
   versoes: Map<string, VersaoConteudo[]>;
+  sancoes: Map<string, SancaoDocumento>;
 }
 
 const estado: Estado = {
@@ -42,6 +44,7 @@ const estado: Estado = {
   logAdmin: [],
   conteudo: new Map(),
   versoes: new Map(),
+  sancoes: new Map(),
 };
 
 function resumoDe(doc: ConteudoDocumento): ResumoConteudo {
@@ -214,6 +217,23 @@ export const repositorio: Repositorio = {
     return [...(estado.versoes.get(chave) ?? [])].sort((a, b) => b.versao - a.versao).slice(0, limite).map(resumoDaVersao);
   },
 
+  async lerSancao(uid: string) {
+    const doc = estado.sancoes.get(uid);
+    return doc ? structuredClone(doc) : null;
+  },
+
+  async gravarSancao(doc: SancaoDocumento) {
+    estado.sancoes.set(doc.uid, structuredClone(doc));
+  },
+
+  async listarTransacoes(uid: string, limite: number) {
+    return estado.transacoes
+      .filter((t) => t.uid === uid)
+      .map((t) => ({ ...t }))
+      .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+      .slice(0, limite);
+  },
+
   async lerVersaoConteudo(chave: string, versao: number) {
     const v = estado.versoes.get(chave)?.find((x) => x.versao === versao);
     return v ? structuredClone(v) : null;
@@ -236,6 +256,7 @@ export function resetCharacterStore(): void {
   estado.logAdmin.length = 0;
   estado.conteudo.clear();
   estado.versoes.clear();
+  estado.sancoes.clear();
   falhaNoLogAdmin = null;
   falhaAoGravar = null;
 }

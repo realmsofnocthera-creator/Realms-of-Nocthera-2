@@ -1,5 +1,6 @@
 import { adminAuth } from '@/server/firebaseAdmin';
 import { repositorio } from '@/server/persistencia';
+import { exigirContaLivre } from '@/server/sancoes';
 
 export interface AuthenticatedUser {
   uid: string;
@@ -53,7 +54,8 @@ async function instanteDaRevogacao(uid: string): Promise<number | null> {
  *
  * O firebase-admin confere a assinatura do Google, o projeto (aud/iss) e a expiração (exp),
  * sem nenhuma chamada à API de login. Depois o token é comparado com o último logout do
- * usuário. Se o Firestore falhar, lança ErroPersistencia (as rotas respondem 503).
+ * usuário e a conta é conferida contra suspensão e banimento. Se o Firestore falhar, lança
+ * ErroPersistencia (as rotas respondem 503); conta sancionada lança ErroContaSancionada (403).
  */
 export async function verifyAuthToken(authHeader: string | null): Promise<AuthenticatedUser | null> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -77,6 +79,9 @@ export async function verifyAuthToken(authHeader: string | null): Promise<Authen
   if (revogadoEm !== null && loginEm <= revogadoEm) {
     return null;
   }
+
+  // Conta suspensa ou banida (3.5.4.3): lança ErroContaSancionada, que as rotas respondem com 403
+  await exigirContaLivre(decoded.uid);
 
   return { uid: decoded.uid, email: decoded.email || '' };
 }

@@ -1,6 +1,7 @@
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import type { PapelMestre } from '@/rules/mestre';
 import type { TipoDeConteudo } from '@/rules/conteudo';
+import type { SancaoDocumento } from '@/rules/sancoes';
 
 /**
  * Registro de um combate resolvido (0.5-B1/B3): guarda a semente e a entrada para
@@ -207,6 +208,11 @@ export interface Repositorio {
   /** As versões mais recentes primeiro. */
   listarVersoesConteudo(chave: string, limite: number): Promise<ResumoVersao[]>;
   lerVersaoConteudo(chave: string, versao: number): Promise<VersaoConteudo | null>;
+  /** Sanção da conta (3.5.4.3), ou null se o jogador nunca foi sancionado. */
+  lerSancao(uid: string): Promise<SancaoDocumento | null>;
+  gravarSancao(doc: SancaoDocumento): Promise<void>;
+  /** As transações de moeda do jogador, da mais recente para a mais antiga (3.5.4.1). */
+  listarTransacoes(uid: string, limite: number): Promise<TransactionDocument[]>;
 }
 
 /**

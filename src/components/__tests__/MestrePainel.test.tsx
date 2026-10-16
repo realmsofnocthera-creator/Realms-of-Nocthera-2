@@ -5,6 +5,7 @@ import { MestrePainel, type SessaoDoPainel } from '@/components/mestre/MestrePai
 import { ConteudoPainel } from '@/components/mestre/ConteudoPainel';
 import { ImportarTileset } from '@/components/mestre/ImportarTileset';
 import { EditorDeMapa } from '@/components/mestre/EditorDeMapa';
+import { JogadoresPainel } from '@/components/mestre/JogadoresPainel';
 import { DESCRICAO_DO_PAPEL, NOME_DO_PAPEL, permissoesDoPapel, type PapelMestre } from '@/rules/mestre';
 
 vi.mock('next/link', () => ({ default: ({ href, children, ...p }: { href: string; children: React.ReactNode }) => <a href={href} {...p}>{children}</a> }));
@@ -84,5 +85,20 @@ describe('Mapas no painel (tela)', () => {
     expect(suporte).not.toContain('aria-label="Pincel"');
     expect(suporte).toContain('aria-label="Mover"');
     expect(suporte).not.toContain('Salvar');
+  });
+
+  it('Jogadores: o Suporte, o Moderador, o Mestre e o Dono veem a aba', () => {
+    for (const papel of ['suporte', 'moderador', 'mestre', 'dono'] as const) expect(render(papel)).toContain('Jogadores');
+  });
+});
+
+describe('Jogadores no painel (tela)', () => {
+  const tela = (papel: PapelMestre) => renderToStaticMarkup(<JogadoresPainel sessao={sessao(papel)} tokenFresco={async () => 't'} />);
+
+  it('começa só com a busca, que explica que a consulta fica no log', () => {
+    const html = tela('suporte');
+    expect(html).toContain('Buscar jogador');
+    expect(html).toContain('Cada consulta fica no log administrativo');
+    expect(html).not.toContain('Sanções');
   });
 });
