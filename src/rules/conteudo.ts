@@ -1,24 +1,27 @@
 import type { PermissaoMestre } from '@/rules/mestre';
 import { validarMapa, type MapaDados, type ResultadoValidacao } from '@/rules/mapa';
 import { validarTileset } from '@/rules/tileset';
+import { validarMonstro } from '@/rules/monstroConteudo';
 
 /**
  * Conteúdo editável pelo Painel do Mestre (3.5.2.2): cada item tem um rascunho e versões publicadas numeradas.
  * Publicar cria uma versão nova; voltar atrás publica de novo uma versão antiga como versão nova (o histórico só cresce).
  * O jogo lê apenas a versão publicada.
  */
-export const TIPOS_DE_CONTEUDO = ['mapa', 'tileset'] as const;
+export const TIPOS_DE_CONTEUDO = ['mapa', 'tileset', 'monstro'] as const;
 export type TipoDeConteudo = (typeof TIPOS_DE_CONTEUDO)[number];
 
 export const NOME_DO_TIPO: Readonly<Record<TipoDeConteudo, string>> = {
   mapa: 'Mapa',
   tileset: 'Tileset',
+  monstro: 'Monstro',
 };
 
 /** Permissão para criar e editar o rascunho de cada tipo; publicar e voltar atrás pedem 'conteudo.publicar'. */
 export const PERMISSAO_DE_EDICAO: Readonly<Record<TipoDeConteudo, PermissaoMestre>> = {
   mapa: 'mapas.editar',
   tileset: 'mapas.editar',
+  monstro: 'conteudo.editar',
 };
 
 /** Identificador do item: minúsculas, números e hífen (ex.: "vila-inicial"). Fica fixo depois de criado. */
@@ -39,6 +42,7 @@ export function chaveDoConteudo(tipo: TipoDeConteudo, id: string): string {
 const VALIDADORES: Readonly<Record<TipoDeConteudo, (bruto: unknown) => ResultadoValidacao<unknown>>> = {
   mapa: validarMapa,
   tileset: validarTileset,
+  monstro: validarMonstro,
 };
 
 /** Outros conteúdos que este usa (já validado): o mapa aponta para os seus tilesets. */
