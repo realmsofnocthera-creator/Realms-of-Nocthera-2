@@ -72,7 +72,8 @@ describe('Formato do mapa (v1)', () => {
 describe('Conteúdo (tipos e chaves)', () => {
   it('tipos, chave e identificadores', () => {
     expect(ehTipoDeConteudo('mapa')).toBe(true);
-    expect(ehTipoDeConteudo('monstro')).toBe(false);
+    expect(ehTipoDeConteudo('monstro')).toBe(true);
+    expect(ehTipoDeConteudo('quest')).toBe(false);
     expect(chaveDoConteudo('mapa', 'vila-inicial')).toBe('mapa__vila-inicial');
     expect(ID_DE_CONTEUDO.test('vila-inicial')).toBe(true);
     for (const ruim of ['a', 'Vila', 'vila_inicial', '-vila', 'x'.repeat(49), 'a/b']) expect(ID_DE_CONTEUDO.test(ruim)).toBe(false);

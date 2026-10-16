@@ -7,6 +7,7 @@ import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import { SUBCLASSES } from '@/rules/subclasses';
 import { custoDoTier } from '@/rules/subclasseTiers';
 import { MONSTERS_MAP } from '@/rules/monsters';
+import { monstroEfetivo } from '@/server/monstros';
 import {
   DropSorteado,
   MENSAGEM_BLOQUEIO_CACADA,
@@ -1469,7 +1470,7 @@ export async function executarCombate(
   monsterId: string,
   opcoes: OpcoesCombate
 ): Promise<RespostaCombate> {
-  const monstro = MONSTERS_MAP[monsterId];
+  const monstro = await monstroEfetivo(monsterId, MONSTERS_MAP[monsterId]);
   if (!monstro) {
     throw new Error(`Monstro "${monsterId}" não encontrado.`);
   }
@@ -1591,7 +1592,8 @@ export async function executarCacada(
     if (!entradaCacada.ok) {
       throw new Error(MENSAGEM_BLOQUEIO_CACADA[entradaCacada.motivo]);
     }
-    const { monstro, dados, estrela } = entradaCacada;
+    const { dados, estrela } = entradaCacada;
+    const monstro = (await monstroEfetivo(entradaCacada.monstro.id, entradaCacada.monstro)) ?? entradaCacada.monstro;
 
     const combatentePersonagem = combatenteDoPersonagem(current);
     const entrada = structuredClone(combatentePersonagem);
@@ -1750,7 +1752,8 @@ export async function executarBatalhaSangrenta(
     let hpAtual = entradaCombatente.hp;
     let ondasVencidas = 0;
     for (const [indice, onda] of plano.entries()) {
-      const monstro = MONSTROS_CACADA_MAP[onda.monstroId] ?? CHEFES_ESPECIAIS_MAP[onda.monstroId];
+      const baseDoCodigo = MONSTROS_CACADA_MAP[onda.monstroId] ?? CHEFES_ESPECIAIS_MAP[onda.monstroId];
+      const monstro = (await monstroEfetivo(onda.monstroId, baseDoCodigo)) ?? baseDoCodigo;
       const combatente = combatenteDoPersonagem(current);
       combatente.hp = hpAtual;
       const resultado = resolverCombate(combatente, monstro, sementeDaOnda(opcoes.seed, indice));

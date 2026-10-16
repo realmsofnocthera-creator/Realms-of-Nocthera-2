@@ -51,7 +51,7 @@ describe('Conteúdo versionado (servidor)', () => {
     it('valida no servidor: identificador, nome, tipo e o schema do mapa', async () => {
       await expect(criarConteudo(mestre, { tipo: 'mapa', id: 'Vila!', nome: 'Vila', dados: mapaVazio(4, 4) })).rejects.toMatchObject({ status: 400 });
       await expect(criarConteudo(mestre, { tipo: 'mapa', id: 'vila', nome: 'V', dados: mapaVazio(4, 4) })).rejects.toMatchObject({ status: 400 });
-      await expect(criarConteudo(mestre, { tipo: 'monstro', id: 'vila', nome: 'Vila', dados: {} })).rejects.toMatchObject({ status: 400 });
+      await expect(criarConteudo(mestre, { tipo: 'quest', id: 'vila', nome: 'Vila', dados: {} })).rejects.toMatchObject({ status: 400 });
       await expect(criarConteudo(mestre, { tipo: 'mapa', id: 'vila', nome: 'Vila', dados: { ...mapaVazio(4, 4), largura: 999 } })).rejects.toMatchObject({
         status: 400,
         message: expect.stringMatching(/^Mapa inválido: .*largura/),
