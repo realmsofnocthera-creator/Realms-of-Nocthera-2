@@ -23,6 +23,7 @@ export function JogadoresPainel({ sessao, tokenFresco }: { sessao: SessaoDoPaine
   const { colors } = NOCTHERA_THEME;
   const podeSancionar = sessao.permissoes.includes('jogadores.sancionar');
   const podeAjustar = sessao.permissoes.includes('jogadores.ajustar');
+  const podeDados = sessao.permissoes.includes('jogadores.dados');
   const [busca, setBusca] = useState('');
   const [ficha, setFicha] = useState<FichaDoJogador | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -95,6 +96,38 @@ export function JogadoresPainel({ sessao, tokenFresco }: { sessao: SessaoDoPaine
               return null;
             }
             return String(r.dados.error ?? 'Não foi possível concluir.');
+          }}
+        />
+      )}
+      {ficha && podeDados && !ficha.papelNoPainel && (
+        <DadosDoJogador
+          key={ficha.uid}
+          ficha={ficha}
+          exportar={async () => {
+            const r = await chamar(tokenFresco, `/api/mestre/jogadores/${ficha.uid}/exportar`);
+            if (!r.ok) return String(r.dados.error ?? 'Não foi possível exportar.');
+            const blob = new Blob([JSON.stringify(r.dados.exportacao, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `jogador-${ficha.uid}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            return null;
+          }}
+          executar={async (acao, corpo) => {
+            setAviso(null);
+            const r = await chamar(tokenFresco, `/api/mestre/jogadores/${ficha.uid}/${acao}`, { method: 'POST', body: JSON.stringify(corpo) });
+            if (!r.ok) return String(r.dados.error ?? 'Não foi possível concluir.');
+            if (acao === 'zerar') {
+              setFicha(r.dados.jogador as FichaDoJogador);
+              setAviso('Progressão zerada. Está no log.');
+            } else {
+              setFicha(null);
+              const login = (r.dados.resultado as { loginRemovido?: boolean } | undefined)?.loginRemovido;
+              setAviso(login === false ? 'Jogador excluído. O login não pôde ser removido agora (a conta pode criar outro personagem).' : 'Jogador excluído por inteiro. Está no log.');
+            }
+            return null;
           }}
         />
       )}
@@ -207,6 +240,82 @@ function Sancoes({ ficha, podeSancionar, aplicar, aviso }: { ficha: FichaDoJogad
         </form>
       )}
       {aviso && <p role="status" className="text-[12px] font-semibold" style={{ color: COR_DO_TOM.ok }}>{aviso}</p>}
+      {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
+    </Cartao>
+  );
+}
+
+/** Dados do jogador (3.5.4.4, só o Dono): exportar (LGPD), zerar a progressão e excluir por inteiro. */
+function DadosDoJogador({
+  ficha,
+  exportar,
+  executar,
+}: {
+  ficha: FichaDoJogador;
+  exportar: () => Promise<string | null>;
+  executar: (acao: 'zerar' | 'excluir', corpo: Record<string, unknown>) => Promise<string | null>;
+}) {
+  const { colors } = NOCTHERA_THEME;
+  const [acao, setAcao] = useState<'zerar' | 'excluir'>('zerar');
+  const [motivo, setMotivo] = useState('');
+  const [nome, setNome] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const campo = 'rounded-sm border px-2 py-1 text-[12px] w-full';
+  const estiloCampo = { backgroundColor: colors.background.primary, borderColor: `${OURO}66`, color: colors.text.primary };
+
+  return (
+    <Cartao titulo="Dados do jogador (só o Dono)">
+      <div className="flex flex-col gap-1 items-start">
+        <button
+          type="button"
+          disabled={ocupado}
+          onClick={async () => {
+            setOcupado(true);
+            setErro(await exportar());
+            setOcupado(false);
+          }}
+          className="px-3 py-1.5 rounded border text-[12px] disabled:opacity-50"
+          style={{ borderColor: OURO, color: '#E6C775' }}
+        >
+          Exportar dados (JSON)
+        </button>
+        <p className="text-[11px]" style={{ color: colors.text.secondary }}>Para atender um pedido do jogador (LGPD). Fica no log.</p>
+      </div>
+      <form
+        className="flex flex-col gap-2 border-t pt-2"
+        style={{ borderColor: `${VERMELHO}55` }}
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setOcupado(true);
+          setErro(null);
+          const falha = await executar(acao, { motivo, confirmarNome: nome });
+          setOcupado(false);
+          if (falha) setErro(falha);
+        }}
+      >
+        <p className="text-[12px] font-semibold" style={{ color: VERMELHO }}>Ações sem volta</p>
+        <label className="text-[11px] flex flex-col gap-0.5">Ação
+          <select value={acao} onChange={(e) => setAcao(e.target.value as 'zerar' | 'excluir')} className={campo} style={estiloCampo}>
+            <option value="zerar">Zerar progressão (volta ao nível 1; mantém nome, raça e classe)</option>
+            <option value="excluir">Excluir o jogador por inteiro (personagem, nome, transações, sanção e login)</option>
+          </select>
+        </label>
+        <p className="text-[11px]" style={{ color: colors.text.secondary }}>
+          {acao === 'zerar'
+            ? 'Tira nível, XP, moedas, mochila, armas, armaduras, subclasse, reforço e progresso de Caçada, Torre e demais modos. Os atributos voltam aos da criação.'
+            : 'O nome do personagem fica livre e o login é removido. O log administrativo e os registros de combate são mantidos para auditoria.'}
+        </p>
+        <label className="text-[11px] flex flex-col gap-0.5">Motivo (vai para o log)
+          <input value={motivo} onChange={(e) => setMotivo(e.target.value)} className={campo} style={estiloCampo} required minLength={5} maxLength={300} />
+        </label>
+        <label className="text-[11px] flex flex-col gap-0.5">Para confirmar, digite o nome do personagem: {ficha.personagem.nome}
+          <input value={nome} onChange={(e) => setNome(e.target.value)} className={campo} style={estiloCampo} autoComplete="off" required />
+        </label>
+        <button type="submit" disabled={ocupado || nome.trim() !== ficha.personagem.nome} className="self-start px-3 py-1.5 rounded font-cinzel font-bold text-xs disabled:opacity-50" style={{ backgroundColor: VERMELHO, color: colors.background.secondary }}>
+          {acao === 'zerar' ? 'Zerar progressão' : 'Excluir jogador'}
+        </button>
+      </form>
       {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
     </Cartao>
   );

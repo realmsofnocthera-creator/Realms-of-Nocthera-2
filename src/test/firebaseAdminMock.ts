@@ -30,6 +30,9 @@ function decodificar(token: string): { uid: string; authTime: number } | null {
   return { uid: resto.slice(0, ponto), authTime };
 }
 
+/** Só para testes: os logins removidos por deleteUser. */
+export const loginsRemovidos: string[] = [];
+
 export const adminAuth = {
   async verifyIdToken(token: string) {
     const decoded = decodificar(token);
@@ -41,6 +44,11 @@ export const adminAuth = {
   /** Usuário do Auth pelo uid (o e-mail de teste é <uid>@test.com). */
   async getUser(uid: string) {
     return { uid, email: `${uid}@test.com` };
+  },
+  /** Remove o login; uids que começam com "semlogin" simulam a API falhando. */
+  async deleteUser(uid: string) {
+    if (uid.startsWith('semlogin')) throw Object.assign(new Error('API desativada'), { code: 'auth/internal-error' });
+    loginsRemovidos.push(uid);
   },
   /** Só acha e-mails no formato <uid>@test.com; "indisponivel@test.com" simula a API de login desativada. */
   async getUserByEmail(email: string) {
