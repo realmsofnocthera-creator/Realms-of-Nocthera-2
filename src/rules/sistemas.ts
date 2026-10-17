@@ -9,6 +9,7 @@ export const SISTEMAS = [
   { id: 'torre', nome: 'Provação da Torre Celestial' },
   { id: 'guerreiro', nome: 'Provação do Guerreiro' },
   { id: 'forja', nome: 'Forja e Ferreiro (armas e armaduras)' },
+  { id: 'campanha', nome: 'Campanha (explorar o mundo)' },
 ] as const;
 export type SistemaId = (typeof SISTEMAS)[number]['id'];
 
@@ -30,6 +31,8 @@ export interface EstadoDoSistema {
 
 export interface ConfiguracaoDeSistemas {
   manutencao: { ativa: boolean; mensagem: string };
+  /** Campanha (5.5): o mapa onde o jogador começa. Vazio = a Campanha ainda não começou. */
+  campanha: { mapaInicial: string };
   sistemas: Record<SistemaId, EstadoDoSistema>;
   atualizadoEm: string;
   atualizadoPor: string;
@@ -38,6 +41,7 @@ export interface ConfiguracaoDeSistemas {
 export function configuracaoPadrao(): ConfiguracaoDeSistemas {
   return {
     manutencao: { ativa: false, mensagem: '' },
+    campanha: { mapaInicial: '' },
     sistemas: Object.fromEntries(SISTEMAS.map((s) => [s.id, { ativo: true, mensagem: '' }])) as Record<SistemaId, EstadoDoSistema>,
     atualizadoEm: '',
     atualizadoPor: '',
@@ -52,6 +56,8 @@ export function configuracaoDoDocumento(bruto: unknown): ConfiguracaoDeSistemas 
   const texto = (v: unknown) => (typeof v === 'string' ? v.slice(0, MENSAGEM_MAXIMA) : '');
   const m = d.manutencao as Record<string, unknown> | undefined;
   if (m && typeof m === 'object') base.manutencao = { ativa: m.ativa === true, mensagem: texto(m.mensagem) };
+  const c = d.campanha as Record<string, unknown> | undefined;
+  if (c && typeof c === 'object' && typeof c.mapaInicial === 'string' && /^[a-z0-9][a-z0-9-]{1,47}$/.test(c.mapaInicial)) base.campanha = { mapaInicial: c.mapaInicial };
   const s = d.sistemas as Record<string, unknown> | undefined;
   if (s && typeof s === 'object') {
     for (const sistema of SISTEMAS) {

@@ -54,6 +54,9 @@ export function descreverAcao(e: Pick<EntradaLogAdmin, 'acao' | 'alvo' | 'antes'
     case 'sistema.definir':
       texto = `${(e.depois as { ativo?: boolean } | null | undefined)?.ativo ? 'Ligou' : 'Desligou'} o sistema ${alvo.split(':')[1] ?? alvo}`;
       break;
+    case 'campanha.mapa-inicial':
+      texto = `Mapa inicial da Campanha: ${(e.depois as { mapaInicial?: string } | null | undefined)?.mapaInicial || '(nenhum)'}`;
+      break;
     case 'jogador.exportar':
       texto = `Exportou os dados de ${alvo}`;
       break;
