@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Brush, Eraser, Grid3x3, Hand, PaintBucket, Pipette, Plus, Redo2, Save, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowLeft, Brush, MapPinned, Eraser, Grid3x3, Hand, PaintBucket, Pipette, Plus, Redo2, Save, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
 import { CAMADAS_DO_MAPA, MAXIMO_DE_TILESETS, NOME_DA_CAMADA, tileDoValor, valorDoTile, type CamadaDoMapa, type MapaDados } from '@/rules/mapa';
 import { recorteDoTile, type TilesetDados } from '@/rules/tileset';
 import {
@@ -22,6 +22,9 @@ import {
   type Mudanca,
   type Ponto,
 } from '@/lib/editorMapa';
+import { atualizarObjeto, colocarObjeto, errosDosObjetos, moverObjeto, objetoNoPonto, removerObjeto } from '@/lib/objetosEditor';
+import { LETRA_DO_OBJETO, type ObjetoDoMapa, type TipoDeObjeto } from '@/rules/objetosDoMapa';
+import { COR_DO_OBJETO, PainelDeObjetos } from '@/components/mestre/PainelDeObjetos';
 import type { ConteudoDocumento, ResumoConteudo } from '@/server/persistencia/tipos';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { chamar, OURO, VERMELHO } from '@/components/mestre/comum';
@@ -46,6 +49,37 @@ const FERRAMENTAS: { id: Ferramenta; nome: string; atalho: string; icone: React.
   { id: 'conta-gotas', nome: 'Pegar tile', atalho: 'I', icone: <Pipette className="w-4 h-4" /> },
   { id: 'mover', nome: 'Mover', atalho: 'H', icone: <Hand className="w-4 h-4" /> },
 ];
+
+/** Marcadores dos objetos interativos por cima do mapa: quadrado com a letra do tipo; área de monstros em retângulo. */
+function desenharObjetos(ctx: CanvasRenderingContext2D, objetos: readonly ObjetoDoMapa[], lado: number, ox: number, oy: number, selecionado: string | null) {
+  for (const o of objetos) {
+    const cor = COR_DO_OBJETO[o.tipo];
+    const x = o.x * lado - ox;
+    const y = o.y * lado - oy;
+    if (o.tipo === 'cacada') {
+      ctx.fillStyle = `${cor}33`;
+      ctx.fillRect(x, y, (o.largura ?? 1) * lado, (o.altura ?? 1) * lado);
+      ctx.strokeStyle = cor;
+      ctx.lineWidth = o.id === selecionado ? 3 : 1.5;
+      ctx.setLineDash([6, 4]);
+      ctx.strokeRect(x + 0.5, y + 0.5, (o.largura ?? 1) * lado - 1, (o.altura ?? 1) * lado - 1);
+      ctx.setLineDash([]);
+    } else {
+      ctx.fillStyle = `${cor}CC`;
+      ctx.fillRect(x + 2, y + 2, lado - 4, lado - 4);
+      ctx.strokeStyle = o.id === selecionado ? '#FFFFFF' : '#0D0D0D';
+      ctx.lineWidth = o.id === selecionado ? 3 : 1.5;
+      ctx.strokeRect(x + 2, y + 2, lado - 4, lado - 4);
+    }
+    if (lado >= 14) {
+      ctx.fillStyle = '#0D0D0D';
+      ctx.font = `bold ${Math.max(10, Math.floor(lado * 0.5))}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(LETRA_DO_OBJETO[o.tipo], x + lado / 2, y + lado / 2);
+    }
+  }
+}
 
 function carregarImagem(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -90,6 +124,11 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
   const [sujo, setSujo] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState<{ texto: string; erro: boolean } | null>(null);
+  const [modo, setModo] = useState<'tiles' | 'objetos'>('tiles');
+  const [tipoDeObjeto, setTipoDeObjeto] = useState<TipoDeObjeto>('npc');
+  const [selecionado, setSelecionado] = useState<string | null>(null);
+  const [movendoObjeto, setMovendoObjeto] = useState(false);
+  const [opcoes, setOpcoes] = useState<{ mapas: { id: string; nome: string }[]; monstros: { id: string; nome: string }[]; materiais: { id: string; nome: string }[] }>({ mapas: [], monstros: [], materiais: [] });
   const [desenho, setDesenho] = useState(0);
   const redesenhar = useCallback(() => setDesenho((n) => n + 1), []);
 
@@ -116,6 +155,26 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
       }
       const outros = await chamar(tokenFresco, '/api/mestre/conteudo?tipo=tileset');
       if (ativo && outros.ok) setDisponiveis(outros.dados.itens as ResumoConteudo[]);
+      // opções dos objetos: mapas de destino, monstros (do código e do banco) e materiais dos baús
+      const [mapasR, monstrosR, cacada, monstrosCodigo, chefes, materiais, mundo] = await Promise.all([
+        chamar(tokenFresco, '/api/mestre/conteudo?tipo=mapa'),
+        chamar(tokenFresco, '/api/mestre/conteudo?tipo=monstro'),
+        import('@/rules/cacada'),
+        import('@/rules/monsters'),
+        import('@/rules/chefesEspeciais'),
+        import('@/rules/materiais'),
+        import('@/rules/materiaisArmas'),
+      ]);
+      if (ativo) {
+        const doBanco = monstrosR.ok ? (monstrosR.dados.itens as ResumoConteudo[]).map((m) => ({ id: m.id, nome: `${m.nome} (banco)` })) : [];
+        const doCodigo = [...monstrosCodigo.MONSTERS, ...cacada.MONSTROS_CACADA, ...Object.values(chefes.CHEFES_ESPECIAIS_MAP)].map((m) => ({ id: m.id, nome: m.nome }));
+        const ids = new Set(doCodigo.map((m) => m.id));
+        setOpcoes({
+          mapas: mapasR.ok ? (mapasR.dados.itens as ResumoConteudo[]).map((m) => ({ id: m.id, nome: m.nome })) : [],
+          monstros: [...doCodigo, ...doBanco.filter((m) => !ids.has(m.id))].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+          materiais: [...materiais.MATERIAIS, ...mundo.MATERIAIS_MUNDO].map((m) => ({ id: m.id, nome: m.nome })),
+        });
+      }
       if (ativo) setCarregado(true);
     })();
     return () => {
@@ -219,7 +278,8 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
     ctx.strokeStyle = OURO;
     ctx.lineWidth = 2;
     ctx.strokeRect(-ox, -oy, mapa.largura * lado, mapa.altura * lado);
-  }, [desenho, tamanho, lado, tilesets, grade, mostrarColisao, camada]);
+    desenharObjetos(ctx, mapa.objetos, lado, ox, oy, modo === 'objetos' ? selecionado : null);
+  }, [desenho, tamanho, lado, tilesets, grade, mostrarColisao, camada, modo, selecionado]);
 
   const limitarDeslocamento = useCallback(() => {
     const mapa = mapaRef.current;
@@ -261,14 +321,67 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
     return { px: e.clientX - r.left + deslocamento.current.x, py: e.clientY - r.top + deslocamento.current.y, tx: e.clientX, ty: e.clientY };
   };
 
+  const guardarObjetos = useCallback((lote: Parameters<typeof registrar>[1]) => {
+    setHistorico((h) => registrar(h, lote));
+    setSujo(true);
+  }, []);
+
+  /** Toque no modo dos objetos: mover o selecionado, selecionar o que estiver no tile ou colocar um novo. */
+  const aoTocarNosObjetos = (mapa: MapaDados, celula: Ponto) => {
+    setMensagem(null);
+    if (movendoObjeto && selecionado && podeEditar) {
+      const r = moverObjeto(mapa, selecionado, celula);
+      if (r.ok) guardarObjetos(r.lote);
+      else setMensagem({ texto: r.erro, erro: true });
+      setMovendoObjeto(false);
+      redesenhar();
+      return;
+    }
+    const existente = objetoNoPonto(mapa, celula);
+    if (existente) {
+      setSelecionado(existente.id);
+      redesenhar();
+      return;
+    }
+    if (!podeEditar) return;
+    const r = colocarObjeto(mapa, tipoDeObjeto, celula);
+    if (r.ok) {
+      guardarObjetos(r.lote);
+      setSelecionado(r.objeto!.id);
+    } else setMensagem({ texto: r.erro, erro: true });
+    redesenhar();
+  };
+
+  const mudarObjeto = (campo: string, fn: (o: ObjetoDoMapa) => void) => {
+    const mapa = mapaRef.current;
+    if (!mapa || !selecionado || !podeEditar) return;
+    const r = atualizarObjeto(mapa, selecionado, fn);
+    if (r.ok) guardarObjetos({ ...r.lote, grupo: `${selecionado}:${campo}` });
+    redesenhar();
+  };
+
+  const tirarObjeto = () => {
+    const mapa = mapaRef.current;
+    if (!mapa || !selecionado || !podeEditar) return;
+    const r = removerObjeto(mapa, selecionado);
+    if (r.ok) guardarObjetos(r.lote);
+    setSelecionado(null);
+    setMovendoObjeto(false);
+    redesenhar();
+  };
+
   const aoApertar = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const mapa = mapaRef.current;
     if (!mapa) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const { px, py, tx, ty } = pontoDoEvento(e);
     const celula = celulaDoPonto(px, py, lado);
-    const usar = ferramenta === 'mover' || !podeEditar || e.button === 1 ? 'mover' : ferramenta;
+    const usar = ferramenta === 'mover' || (!podeEditar && modo !== 'objetos') || e.button === 1 ? 'mover' : ferramenta;
 
+    if (modo === 'objetos' && usar !== 'mover') {
+      aoTocarNosObjetos(mapa, celula);
+      return;
+    }
     if (usar === 'mover') {
       traco.current = { ultimo: celula, mudancas: [], movendo: { x: tx, y: ty } };
       return;
@@ -358,6 +471,11 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
   const salvar = useCallback(async () => {
     const mapa = mapaRef.current;
     if (!mapa || !podeEditar) return;
+    const problemas = errosDosObjetos(mapa);
+    if (problemas.length) {
+      setMensagem({ texto: `Corrija os objetos antes de salvar: ${problemas[0]}`, erro: true });
+      return;
+    }
     setSalvando(true);
     setMensagem(null);
     const r = await chamar(tokenFresco, `/api/mestre/conteudo/mapa/${id}`, { method: 'PUT', body: JSON.stringify({ dados: mapa, revisao }) });
@@ -373,7 +491,7 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
 
   useEffect(() => {
     const teclas = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) return;
       const ctrl = e.ctrlKey || e.metaKey;
       if (ctrl && e.key.toLowerCase() === 'z') {
         e.preventDefault();
@@ -444,21 +562,37 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
       </header>
 
       <div className="flex items-center gap-1 px-2 py-1.5 flex-wrap border-b" style={{ borderColor: `${OURO}22` }}>
-        <div role="radiogroup" aria-label="Camada" className="flex gap-1">
-          {CAMADAS_DO_MAPA.map((c) => (
-            <button key={c} type="button" role="radio" aria-checked={camada === c} onClick={() => setCamada(c)} className="px-2 py-1 rounded border text-[11px] font-bold" style={botao(camada === c)}>
-              {NOME_DA_CAMADA[c]}
-            </button>
-          ))}
+        <div role="radiogroup" aria-label="Modo do editor" className="flex gap-1">
+          <button type="button" role="radio" aria-checked={modo === 'tiles'} onClick={() => { setModo('tiles'); setMovendoObjeto(false); }} className="px-2 py-1 rounded border text-[11px] font-bold" style={botao(modo === 'tiles')}>Tiles</button>
+          <button type="button" role="radio" aria-checked={modo === 'objetos'} onClick={() => setModo('objetos')} className="inline-flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-bold" style={botao(modo === 'objetos')}>
+            <MapPinned className="w-3.5 h-3.5" /> Interativos
+          </button>
         </div>
         <span className="w-px h-5 mx-1" style={{ backgroundColor: `${OURO}44` }} />
-        <div role="radiogroup" aria-label="Ferramenta" className="flex gap-1">
-          {FERRAMENTAS.filter((f) => podeEditar || f.id === 'mover').map((f) => (
-            <button key={f.id} type="button" role="radio" aria-checked={ferramenta === f.id} aria-label={f.nome} title={`${f.nome} (${f.atalho})`} onClick={() => setFerramenta(f.id)} className="p-1.5 rounded border" style={botao(ferramenta === f.id)}>
-              {f.icone}
-            </button>
-          ))}
-        </div>
+        {modo === 'tiles' ? (
+          <>
+            <div role="radiogroup" aria-label="Camada" className="flex gap-1">
+              {CAMADAS_DO_MAPA.map((c) => (
+                <button key={c} type="button" role="radio" aria-checked={camada === c} onClick={() => setCamada(c)} className="px-2 py-1 rounded border text-[11px] font-bold" style={botao(camada === c)}>
+                  {NOME_DA_CAMADA[c]}
+                </button>
+              ))}
+            </div>
+            <span className="w-px h-5 mx-1" style={{ backgroundColor: `${OURO}44` }} />
+            <div role="radiogroup" aria-label="Ferramenta" className="flex gap-1">
+              {FERRAMENTAS.filter((f) => podeEditar || f.id === 'mover').map((f) => (
+                <button key={f.id} type="button" role="radio" aria-checked={ferramenta === f.id} aria-label={f.nome} title={`${f.nome} (${f.atalho})`} onClick={() => setFerramenta(f.id)} className="p-1.5 rounded border" style={botao(ferramenta === f.id)}>
+                  {f.icone}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div role="radiogroup" aria-label="Ferramenta dos objetos" className="flex gap-1">
+            <button type="button" role="radio" aria-checked={ferramenta !== 'mover'} onClick={() => setFerramenta('pincel')} className="px-2 py-1 rounded border text-[11px] font-bold" style={botao(ferramenta !== 'mover')}>{podeEditar ? 'Colocar e selecionar' : 'Selecionar'}</button>
+            <button type="button" role="radio" aria-checked={ferramenta === 'mover'} aria-label="Arrastar o mapa" onClick={() => setFerramenta('mover')} className="p-1.5 rounded border" style={botao(ferramenta === 'mover')}><Hand className="w-4 h-4" /></button>
+          </div>
+        )}
         <span className="w-px h-5 mx-1" style={{ backgroundColor: `${OURO}44` }} />
         <button type="button" aria-label="Diminuir zoom" onClick={() => mudarZoom(1 / 1.25)} className="p-1.5 rounded border" style={botao(false)}><ZoomOut className="w-4 h-4" /></button>
         <span className="text-[10px] w-9 text-center">{Math.round(zoom * 100)}%</span>
@@ -469,11 +603,14 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
         </label>
       </div>
 
-      {mensagem && (
-        <p role={mensagem.erro ? 'alert' : 'status'} className="px-2 py-1 text-[11px] font-semibold" style={{ color: mensagem.erro ? VERMELHO : '#7BC47F' }}>
-          {mensagem.texto}
-        </p>
-      )}
+      {/* altura fixa: a mensagem aparecer não pode empurrar o mapa e fazer o próximo toque cair no tile errado */}
+      <div className="px-2 h-6 flex items-center overflow-hidden">
+        {mensagem && (
+          <p role={mensagem.erro ? 'alert' : 'status'} className="text-[11px] font-semibold truncate" style={{ color: mensagem.erro ? VERMELHO : '#7BC47F' }}>
+            {mensagem.texto}
+          </p>
+        )}
+      </div>
 
       <div className="flex-1 min-h-0 flex flex-col md:flex-row">
         <div ref={caixaRef} className="flex-1 min-h-0 min-w-0 relative">
@@ -495,6 +632,24 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
           )}
         </div>
 
+        {modo === 'objetos' ? (
+          <PainelDeObjetos
+            tipo={tipoDeObjeto}
+            setTipo={setTipoDeObjeto}
+            objetos={mapa?.objetos ?? []}
+            selecionado={selecionado}
+            selecionar={setSelecionado}
+            podeEditar={podeEditar}
+            movendo={movendoObjeto}
+            setMovendo={setMovendoObjeto}
+            mudar={mudarObjeto}
+            remover={tirarObjeto}
+            erros={mapa ? errosDosObjetos(mapa) : []}
+            mapas={opcoes.mapas}
+            monstros={opcoes.monstros}
+            materiais={opcoes.materiais}
+          />
+        ) : (
         <Paleta
           tilesets={tilesets}
           ativo={tilesetAtivo}
@@ -510,6 +665,7 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
           cheio={(mapa?.tilesets.length ?? 0) >= MAXIMO_DE_TILESETS}
           adicionar={(t) => void adicionarTileset(t)}
         />
+        )}
       </div>
     </main>
   );

@@ -1,4 +1,5 @@
 import type { CamadaDoMapa, MapaDados } from '@/rules/mapa';
+import type { ObjetoDoMapa } from '@/rules/objetosDoMapa';
 
 /**
  * Lógica do editor de mapas 2D (3.5.6.2), sem React: pintar, apagar, preencher e o histórico de desfazer e refazer.
@@ -16,9 +17,23 @@ export interface Ponto {
 /** Uma posição que mudou: índice na camada, valor antes e depois. */
 export type Mudanca = [indice: number, antes: number, depois: number];
 
-export interface Lote {
+/** Mudança nos tiles de uma camada. */
+export interface LoteDeCamada {
   camada: CamadaDoMapa;
   mudancas: Mudanca[];
+}
+
+/** Mudança nos objetos interativos: a lista inteira antes e depois (são poucos, no máximo 200). */
+export interface LoteDeObjetos {
+  objetos: { antes: ObjetoDoMapa[]; depois: ObjetoDoMapa[] };
+  /** Edições seguidas do mesmo campo (digitar um texto) viram um só passo do desfazer. */
+  grupo?: string;
+}
+
+export type Lote = LoteDeCamada | LoteDeObjetos;
+
+function ehLoteDeObjetos(l: Lote): l is LoteDeObjetos {
+  return 'objetos' in l;
 }
 
 export interface Historico {
@@ -110,12 +125,21 @@ export function juntarMudancas(mudancas: Mudanca[]): Mudanca[] {
 
 /** Guarda um lote no histórico (uma ação nova apaga o que dava para refazer). */
 export function registrar(h: Historico, lote: Lote): Historico {
-  if (lote.mudancas.length === 0) return h;
+  if (ehLoteDeObjetos(lote) ? JSON.stringify(lote.objetos.antes) === JSON.stringify(lote.objetos.depois) : lote.mudancas.length === 0) return h;
+  const ultimo = h.desfazer[h.desfazer.length - 1];
+  if (ultimo && ehLoteDeObjetos(lote) && lote.grupo && ehLoteDeObjetos(ultimo) && ultimo.grupo === lote.grupo) {
+    const junto: LoteDeObjetos = { objetos: { antes: ultimo.objetos.antes, depois: lote.objetos.depois }, grupo: lote.grupo };
+    return { desfazer: [...h.desfazer.slice(0, -1), junto], refazer: [] };
+  }
   const desfazer = [...h.desfazer, lote];
   return { desfazer: desfazer.slice(-LIMITE_DO_HISTORICO), refazer: [] };
 }
 
 function aplicar(mapa: MapaDados, lote: Lote, sentido: 'antes' | 'depois') {
+  if (ehLoteDeObjetos(lote)) {
+    mapa.objetos = structuredClone(lote.objetos[sentido]);
+    return;
+  }
   const lista = mapa.camadas[lote.camada];
   for (const [i, antes, depois] of lote.mudancas) lista[i] = sentido === 'antes' ? antes : depois;
 }
@@ -146,6 +170,7 @@ export function copiarMapa(mapa: MapaDados): MapaDados {
     ...mapa,
     tilesets: [...mapa.tilesets],
     camadas: { chao: [...mapa.camadas.chao], objetos: [...mapa.camadas.objetos], colisao: [...mapa.camadas.colisao] },
+    objetos: structuredClone(mapa.objetos ?? []),
   };
 }
 

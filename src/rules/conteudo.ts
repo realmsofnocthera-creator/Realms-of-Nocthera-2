@@ -67,10 +67,35 @@ const VALIDADORES: Readonly<Record<TipoDeConteudo, (bruto: unknown) => Resultado
   anuncio: validarAnuncio,
 };
 
-/** Outros conteúdos que este usa (já validado): o mapa aponta para os seus tilesets. */
-export function referenciasDoConteudo(tipo: TipoDeConteudo, dados: unknown): { tipo: TipoDeConteudo; id: string }[] {
-  if (tipo === 'mapa') return (dados as MapaDados).tilesets.map((id) => ({ tipo: 'tileset' as const, id }));
-  return [];
+/** Um conteúdo que outro usa. `soExistir`: basta existir (não precisa estar publicado). `podeSerDoCodigo`: o monstro pode ser do código. */
+export interface ReferenciaDeConteudo {
+  tipo: TipoDeConteudo;
+  id: string;
+  soExistir?: boolean;
+  podeSerDoCodigo?: boolean;
+}
+
+/**
+ * Outros conteúdos que este usa (já validado). O mapa aponta para os seus tilesets (têm de estar publicados), para os
+ * mapas de destino das portas (basta existirem: dois mapas que se ligam não conseguiriam ser publicados um antes do
+ * outro) e para os monstros das áreas de monstros (do código ou do banco).
+ */
+export function referenciasDoConteudo(tipo: TipoDeConteudo, dados: unknown): ReferenciaDeConteudo[] {
+  if (tipo !== 'mapa') return [];
+  const mapa = dados as MapaDados;
+  const refs: ReferenciaDeConteudo[] = mapa.tilesets.map((id) => ({ tipo: 'tileset' as const, id }));
+  const vistos = new Set<string>();
+  for (const o of mapa.objetos ?? []) {
+    if (o.tipo === 'porta' && o.destino && !vistos.has(`mapa:${o.destino.mapa}`)) {
+      vistos.add(`mapa:${o.destino.mapa}`);
+      refs.push({ tipo: 'mapa', id: o.destino.mapa, soExistir: true });
+    }
+    if (o.tipo === 'cacada' && o.monstroId && !vistos.has(`monstro:${o.monstroId}`)) {
+      vistos.add(`monstro:${o.monstroId}`);
+      refs.push({ tipo: 'monstro', id: o.monstroId, podeSerDoCodigo: true });
+    }
+  }
+  return refs;
 }
 
 /** Valida o conteúdo pelo schema do tipo e pelo tamanho; devolve a cópia limpa. */
