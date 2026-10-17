@@ -30,6 +30,14 @@ export function usePersonagemLogado() {
           const token = await usuario.getIdToken();
           const res = await fetch('/api/character/me', { headers: { Authorization: `Bearer ${token}` } });
           const data = res.ok ? await res.json() : null;
+          // jogo em manutenção (3.5.5.2): em vez de mandar para o login, mostra a tela de manutenção
+          if (!res.ok && res.status === 503) {
+            const corpo = await res.json().catch(() => null);
+            if (corpo?.manutencao && !cancelado) {
+              router.replace('/manutencao');
+              return;
+            }
+          }
           if (cancelado) return;
           if (data?.character) {
             setCharacter(data.character);

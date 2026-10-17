@@ -9,6 +9,7 @@ import { custoDoTier } from '@/rules/subclasseTiers';
 import { MONSTERS_MAP } from '@/rules/monsters';
 import { monstroEfetivo } from '@/server/monstros';
 import { sincronizarCatalogoDeItens } from '@/server/catalogoItens';
+import { exigirSistemaLigado } from '@/server/sistemasLeitura';
 import {
   DropSorteado,
   MENSAGEM_BLOQUEIO_CACADA,
@@ -1472,6 +1473,7 @@ export async function executarCombate(
   monsterId: string,
   opcoes: OpcoesCombate
 ): Promise<RespostaCombate> {
+  await exigirSistemaLigado(uid, 'combate');
   const monstro = await monstroEfetivo(monsterId, MONSTERS_MAP[monsterId]);
   if (!monstro) {
     throw new Error(`Monstro "${monsterId}" não encontrado.`);
@@ -1565,6 +1567,7 @@ export async function executarCacada(
   monstroId: unknown,
   opcoes: OpcoesCombate
 ): Promise<RespostaCacada> {
+  await exigirSistemaLigado(uid, 'cacada');
   const combateId = opcoes.combateId ?? `cac-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   const idRegistro = idDoRegistroCombate(uid, combateId);
 
@@ -1729,6 +1732,7 @@ export async function executarBatalhaSangrenta(
   dificuldadeId: unknown,
   opcoes: OpcoesBatalhaSangrenta
 ): Promise<RespostaBatalhaSangrenta> {
+  await exigirSistemaLigado(uid, 'batalhaSangrenta');
   const combateId = opcoes.combateId ?? `bs-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   const idRegistro = idDoRegistroCombate(uid, combateId);
   const agora = opcoes.agora ?? new Date();
@@ -1879,6 +1883,7 @@ export interface RespostaTorre {
  * combateId devolve o resultado gravado.
  */
 export async function executarTorre(uid: string, opcoes: OpcoesCombate): Promise<RespostaTorre> {
+  await exigirSistemaLigado(uid, 'torre');
   const combateId = opcoes.combateId ?? `tor-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   const idRegistro = idDoRegistroCombate(uid, combateId);
 
@@ -2011,6 +2016,7 @@ export interface RespostaGuerreiro {
  * conferido no servidor; reenvio com o mesmo combateId devolve o resultado gravado.
  */
 export async function executarGuerreiro(uid: string, dificuldadeId: unknown, opcoes: OpcoesGuerreiro): Promise<RespostaGuerreiro> {
+  await exigirSistemaLigado(uid, 'guerreiro');
   const combateId = opcoes.combateId ?? `gue-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   const idRegistro = idDoRegistroCombate(uid, combateId);
   const agora = opcoes.agora ?? new Date();
@@ -2170,6 +2176,7 @@ export async function fabricarArma(
   pedido: { baseId: unknown; categoria: unknown; armaAnteriorId?: unknown },
   opcoes: OpcoesForja = {}
 ): Promise<RespostaForja> {
+  await exigirSistemaLigado(uid, 'forja');
   return repositorio.executarTransacao('forjaFabricar', async (ctx) => {
     const current = await carregarPersonagem(ctx, uid);
     const plano = planejarFabricacao(estadoForja(current), pedido, {
@@ -2185,6 +2192,7 @@ export async function fabricarArma(
 
 /** Reforjar: sorteia de novo os pontos do atributo da arma, pagando parte da receita. */
 export async function reforjarArma(uid: string, armaId: unknown, opcoes: OpcoesForja = {}): Promise<RespostaForja> {
+  await exigirSistemaLigado(uid, 'forja');
   return repositorio.executarTransacao('forjaReforjar', async (ctx) => {
     const current = await carregarPersonagem(ctx, uid);
     const plano = planejarReforja(estadoForja(current), armaId, { aleatorio: opcoes.aleatorio ?? aleatorioDoServidor });
@@ -2195,6 +2203,7 @@ export async function reforjarArma(uid: string, armaId: unknown, opcoes: OpcoesF
 
 /** Customização (só Mítico): +1 ponto na opção, por ouro e Bilhete de melhoria. */
 export async function customizarArma(uid: string, armaId: unknown, opcao: unknown): Promise<RespostaForja> {
+  await exigirSistemaLigado(uid, 'forja');
   return repositorio.executarTransacao('forjaCustomizar', async (ctx) => {
     const current = await carregarPersonagem(ctx, uid);
     const plano = planejarCustomizacao(estadoForja(current), armaId, opcao);
@@ -2219,6 +2228,7 @@ function estadoArmaduras(char: CharacterDocument): EstadoArmaduras {
 
 /** Fabrica uma peça de armadura: paga a receita e sorteia o atributo. Tudo numa transação. */
 export async function fabricarArmadura(uid: string, pecaId: unknown, opcoes: OpcoesForja = {}): Promise<RespostaArmadura> {
+  await exigirSistemaLigado(uid, 'forja');
   return repositorio.executarTransacao('armaduraFabricar', async (ctx) => {
     const current = await carregarPersonagem(ctx, uid);
     const plano = planejarFabricacaoArmadura(estadoArmaduras(current), pecaId, {
@@ -2235,6 +2245,7 @@ export async function fabricarArmadura(uid: string, pecaId: unknown, opcoes: Opc
 
 /** Reforja uma peça de armadura: sorteia de novo os pontos do atributo, pagando parte da receita. */
 export async function reforjarArmadura(uid: string, armaduraId: unknown, opcoes: OpcoesForja = {}): Promise<RespostaArmadura> {
+  await exigirSistemaLigado(uid, 'forja');
   return repositorio.executarTransacao('armaduraReforjar', async (ctx) => {
     const current = await carregarPersonagem(ctx, uid);
     const plano = planejarReforjaArmadura(estadoArmaduras(current), armaduraId, { aleatorio: opcoes.aleatorio ?? aleatorioDoServidor });
@@ -2251,6 +2262,7 @@ export async function usarOrbesArmadura(
   armaduraId: unknown,
   orbes: unknown
 ): Promise<RespostaArmadura & { xpGanho: number; nivelAntes: number; nivelDepois: number }> {
+  await exigirSistemaLigado(uid, 'forja');
   return repositorio.executarTransacao('armaduraOrbes', async (ctx) => {
     const current = await carregarPersonagem(ctx, uid);
     const plano = planejarUsoDeOrbes(estadoArmaduras(current), armaduraId, orbes);

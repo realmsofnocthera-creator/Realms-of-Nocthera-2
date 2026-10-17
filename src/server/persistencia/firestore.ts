@@ -11,6 +11,7 @@ import type { CharacterDocument, TransactionDocument } from '@/server/characterS
 import { descreverErro, registrarLog } from '@/server/log';
 import { ehPapelMestre } from '@/rules/mestre';
 import { ehTipoDeConteudo } from '@/rules/conteudo';
+import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
 import { MAXIMO_DE_ADVERTENCIAS, sancaoDocumentoVazio, type Advertencia, type SancaoDocumento } from '@/rules/sancoes';
 import {
   ConteudoDocumento,
@@ -676,6 +677,17 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
           .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
           .slice(0, limite);
       });
+    },
+
+    async lerConfiguracaoDeSistemas() {
+      return lerComRetry('lerConfiguracaoDeSistemas', async () => {
+        const snap = await db.collection('configuracao').doc('sistemas').get();
+        return snap.exists ? configuracaoDoDocumento(snap.data()) : null;
+      });
+    },
+
+    async gravarConfiguracaoDeSistemas(config: ConfiguracaoDeSistemas) {
+      await gravarSimples('gravarConfiguracaoDeSistemas', () => db.collection('configuracao').doc('sistemas').set(config));
     },
 
     async listarCombatesDoJogador(uid: string, limite: number) {

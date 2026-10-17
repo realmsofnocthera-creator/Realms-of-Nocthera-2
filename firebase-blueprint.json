@@ -435,6 +435,34 @@
       "required": [
         "tipo"
       ]
+    },
+    "configuracaoDeSistemas": {
+      "title": "Sistemas e modo manutenção",
+      "description": "Estado de cada sistema do jogo (ligado ou desligado, com mensagem ao jogador) e do modo manutenção. Só o servidor lê e grava; as rotas do jogo consultam com cache curto e, se o banco falhar, o jogo segue aberto.",
+      "type": "object",
+      "properties": {
+        "manutencao": {
+          "type": "object",
+          "properties": {
+            "ativa": {
+              "type": "boolean"
+            },
+            "mensagem": {
+              "type": "string"
+            }
+          }
+        },
+        "sistemas": {
+          "type": "object",
+          "description": "Por id do sistema (combate, cacada, batalhaSangrenta, torre, guerreiro, forja): { ativo, mensagem }"
+        },
+        "atualizadoEm": {
+          "type": "string"
+        },
+        "atualizadoPor": {
+          "type": "string"
+        }
+      }
     }
   },
   "firestore": {
@@ -481,6 +509,10 @@
     "/sancoes/{uid}": {
       "schema": "sancao",
       "description": "Suspensão, banimento e advertências do jogador (só servidor)"
+    },
+    "/configuracao/sistemas": {
+      "schema": "configuracaoDeSistemas",
+      "description": "Sistemas desligados e modo manutenção (só servidor)"
     }
   }
 }

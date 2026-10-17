@@ -7,6 +7,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import type { SancaoDocumento } from '@/rules/sancoes';
+import type { ConfiguracaoDeSistemas } from '@/rules/sistemas';
 import type {
   ConteudoDocumento,
   ContextoTransacao,
@@ -32,6 +33,7 @@ interface Estado {
   conteudo: Map<string, ConteudoDocumento>;
   versoes: Map<string, VersaoConteudo[]>;
   sancoes: Map<string, SancaoDocumento>;
+  configuracaoDeSistemas: ConfiguracaoDeSistemas | null;
 }
 
 const estado: Estado = {
@@ -45,6 +47,7 @@ const estado: Estado = {
   conteudo: new Map(),
   versoes: new Map(),
   sancoes: new Map(),
+  configuracaoDeSistemas: null,
 };
 
 function resumoDe(doc: ConteudoDocumento): ResumoConteudo {
@@ -57,6 +60,7 @@ function resumoDaVersao(v: VersaoConteudo): ResumoVersao {
   return structuredClone(resumo);
 }
 
+let falhaNaConfiguracao: (() => void) | null = null;
 let falhaNoLogAdmin: ((entrada: EntradaLogAdmin) => void) | null = null;
 
 let falhaAoGravar: ((operacao: string) => void) | null = null;
@@ -234,6 +238,15 @@ export const repositorio: Repositorio = {
       .slice(0, limite);
   },
 
+  async lerConfiguracaoDeSistemas() {
+    falhaNaConfiguracao?.();
+    return estado.configuracaoDeSistemas ? structuredClone(estado.configuracaoDeSistemas) : null;
+  },
+
+  async gravarConfiguracaoDeSistemas(config: ConfiguracaoDeSistemas) {
+    estado.configuracaoDeSistemas = structuredClone(config);
+  },
+
   async listarCombatesDoJogador(uid: string, limite: number) {
     return [...estado.combates.values()]
       .filter((c) => c.uid === uid)
@@ -273,6 +286,8 @@ export function resetCharacterStore(): void {
   estado.conteudo.clear();
   estado.versoes.clear();
   estado.sancoes.clear();
+  estado.configuracaoDeSistemas = null;
+  falhaNaConfiguracao = null;
   falhaNoLogAdmin = null;
   falhaAoGravar = null;
 }
@@ -292,4 +307,9 @@ export function setTestPersistenceFailHook(hook: ((operacao: string) => void) | 
 
 export function obterCombateRegistrado(id: string): RegistroCombate | undefined {
   return estado.combates.get(id);
+}
+
+/** Só para testes: faz a leitura da configuração de sistemas falhar (ou volta ao normal com null). */
+export function setTestSystemsConfigFailHook(hook: (() => void) | null): void {
+  falhaNaConfiguracao = hook;
 }

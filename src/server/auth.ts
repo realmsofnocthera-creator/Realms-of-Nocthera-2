@@ -1,3 +1,4 @@
+import { exigirJogoAberto } from '@/server/sistemasLeitura';
 import { adminAuth } from '@/server/firebaseAdmin';
 import { repositorio } from '@/server/persistencia';
 import { exigirContaLivre } from '@/server/sancoes';
@@ -82,6 +83,9 @@ export async function verifyAuthToken(authHeader: string | null): Promise<Authen
 
   // Conta suspensa ou banida (3.5.4.3): lança ErroContaSancionada, que as rotas respondem com 403
   await exigirContaLivre(decoded.uid);
+
+  // Manutenção (3.5.5.2): lança ErroManutencao (503) para quem não tem papel no painel
+  await exigirJogoAberto(decoded.uid);
 
   return { uid: decoded.uid, email: decoded.email || '' };
 }
