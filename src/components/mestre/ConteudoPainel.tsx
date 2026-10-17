@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, History, PencilRuler, Plus, Upload } from 'lucide-react';
+import { ArrowLeft, Gamepad2, History, PencilRuler, Plus, Upload } from 'lucide-react';
 import { LADO_MAXIMO_DO_MAPA, LADO_MINIMO_DO_MAPA, mapaVazio, TAMANHOS_DE_TILE, TILE_PADRAO, type MapaDados } from '@/rules/mapa';
 import type { TilesetDados } from '@/rules/tileset';
 import { NOME_DO_TIPO, PERMISSAO_DE_EDICAO, type TipoDeConteudo } from '@/rules/conteudo';
@@ -512,6 +512,11 @@ function Detalhe({ tipo, id, sessao, tokenFresco, voltar }: { tipo: TipoDeConteu
         {tipo === 'mapa' && (
           <Link href={`/mestre/mapas/${id}`} className="self-start inline-flex items-center gap-1 px-3 py-1.5 rounded font-cinzel font-bold text-xs" style={estiloBotao}>
             <PencilRuler className="w-3.5 h-3.5" /> {podeEditar ? 'Abrir no editor' : 'Ver no editor'}
+          </Link>
+        )}
+        {tipo === 'mapa' && (
+          <Link href={`/mestre/mapas/${id}/jogar`} className="self-start inline-flex items-center gap-1 px-3 py-1.5 rounded border font-cinzel font-bold text-xs" style={{ borderColor: '#7BC47F', color: '#7BC47F' }}>
+            <Gamepad2 className="w-3.5 h-3.5" /> Jogar o mapa (teste)
           </Link>
         )}
         {tipo === 'monstro' && (
