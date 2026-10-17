@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Brush, MapPinned, Eraser, Grid3x3, Hand, PaintBucket, Pipette, Plus, Redo2, Save, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowLeft, Brush, Gamepad2, MapPinned, Eraser, Grid3x3, Hand, PaintBucket, Pipette, Plus, Redo2, Save, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
 import { CAMADAS_DO_MAPA, MAXIMO_DE_TILESETS, NOME_DA_CAMADA, tileDoValor, valorDoTile, type CamadaDoMapa, type MapaDados } from '@/rules/mapa';
 import { recorteDoTile, type TilesetDados } from '@/rules/tileset';
 import {
@@ -28,16 +28,10 @@ import { COR_DO_OBJETO, PainelDeObjetos } from '@/components/mestre/PainelDeObje
 import type { ConteudoDocumento, ResumoConteudo } from '@/server/persistencia/tipos';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { chamar, OURO, VERMELHO } from '@/components/mestre/comum';
+import { carregarTileset, type TilesetCarregado } from '@/components/mestre/carregarTileset';
 import type { SessaoDoPainel } from '@/components/mestre/MestrePainel';
 
 type Token = () => Promise<string>;
-
-interface TilesetCarregado {
-  id: string;
-  nome: string;
-  dados: TilesetDados;
-  imagem: HTMLImageElement;
-}
 
 const ZOOM_MINIMO = 0.25;
 const ZOOM_MAXIMO = 4;
@@ -79,23 +73,6 @@ function desenharObjetos(ctx: CanvasRenderingContext2D, objetos: readonly Objeto
       ctx.fillText(LETRA_DO_OBJETO[o.tipo], x + lado / 2, y + lado / 2);
     }
   }
-}
-
-function carregarImagem(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Não foi possível abrir a imagem do tileset.'));
-    img.src = src;
-  });
-}
-
-async function carregarTileset(tokenFresco: Token, id: string): Promise<TilesetCarregado> {
-  const r = await chamar(tokenFresco, `/api/mestre/conteudo/tileset/${id}`);
-  if (!r.ok) throw new Error(String(r.dados.error ?? `Não foi possível abrir o tileset ${id}.`));
-  const conteudo = r.dados.conteudo as ConteudoDocumento;
-  const dados = conteudo.rascunho as TilesetDados;
-  return { id, nome: conteudo.nome, dados, imagem: await carregarImagem(dados.imagem) };
 }
 
 /**
@@ -539,6 +516,9 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
       <header className="flex items-center gap-2 px-2 py-1.5 border-b flex-wrap" style={{ borderColor: `${OURO}44` }}>
         <Link href="/mestre" className="inline-flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-cinzel font-bold" style={{ borderColor: OURO, color: '#E6C775' }}>
           <ArrowLeft className="w-3.5 h-3.5" /> Painel
+        </Link>
+        <Link href={`/mestre/mapas/${id}/jogar`} title={sujo ? 'Salve antes: o teste usa o rascunho salvo' : 'Andar pelo rascunho do mapa'} className="inline-flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-cinzel font-bold" style={{ borderColor: '#7BC47F', color: '#7BC47F' }}>
+          <Gamepad2 className="w-3.5 h-3.5" /> Jogar o mapa
         </Link>
         <span className="text-[12px] font-cinzel font-bold truncate" style={{ color: '#F5E3B3' }}>
           {nome || id} {sujo && <span style={{ color: '#E6C775' }}>· não salvo</span>}
