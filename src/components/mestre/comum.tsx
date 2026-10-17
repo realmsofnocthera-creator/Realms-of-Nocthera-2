@@ -23,7 +23,7 @@ export async function chamar(
 ): Promise<{ ok: boolean; status: number; dados: Record<string, unknown> }> {
   try {
     const token = await tokenFresco();
-    const res = await fetch(url, { ...init, headers: { ...(init?.headers ?? {}), Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } });
+    const res = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}), Authorization: `Bearer ${token}` } });
     const dados = (await res.json().catch(() => ({}))) as Record<string, unknown>;
     return { ok: res.ok, status: res.status, dados };
   } catch (error) {

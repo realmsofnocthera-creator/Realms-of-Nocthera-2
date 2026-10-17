@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BYTES_MAXIMOS_DO_PNG, dimensoesDoPng, gradeDoTileset, recorteDoTile, TILES_POR_TILESET, validarTileset } from '@/rules/tileset';
+import { BYTES_MAXIMOS_DO_PNG, chaveDaImagemNoEndereco, dimensoesDoPng, origemDaImagem, gradeDoTileset, recorteDoTile, TILES_POR_TILESET, validarTileset } from '@/rules/tileset';
 import { pngDeTeste, tilesetDeTeste } from '@/test/pngDeTeste';
 
 const erros = (bruto: unknown) => {
@@ -50,5 +50,37 @@ describe('Tileset importado (formato 1)', () => {
     expect(erros({ ...tilesetDeTeste(), tamanhoDoTile: 4 })).toMatch(/tile vai de 8 a 128/);
     expect(erros({ ...tilesetDeTeste(), nome: 'x' })).toMatch(/Campos desconhecidos no tileset: nome/);
     expect(erros('texto')).toMatch(/objeto/);
+  });
+
+  describe('imagem no armazenamento (imagemUrl)', () => {
+    const HASH = 'a'.repeat(64);
+    const porUrl = (extra: Record<string, unknown> = {}) => {
+      const { imagem: _imagem, ...resto } = tilesetDeTeste();
+      return { ...resto, imagemUrl: `https://arquivos.exemplo.test/tilesets/${HASH}.png`, ...extra };
+    };
+
+    it('aceita o endereço de uma imagem do jogo e não guarda o PNG em texto', () => {
+      const r = validarTileset(porUrl());
+      expect(r.ok && r.dados.imagemUrl).toBe(`https://arquivos.exemplo.test/tilesets/${HASH}.png`);
+      expect(r.ok && 'imagem' in r.dados).toBe(false);
+      expect(chaveDaImagemNoEndereco(`https://x.dev/tilesets/${HASH}.png`)).toBe(`tilesets/${HASH}.png`);
+    });
+
+    it('recusa endereço de fora do padrão, os dois campos juntos e dimensões fora do limite', () => {
+      expect(erros(porUrl({ imagemUrl: 'http://x.dev/tilesets/' + HASH + '.png' }))).toMatch(/enviada pelo painel/);
+      expect(erros(porUrl({ imagemUrl: 'https://x.dev/outro/' + HASH + '.png' }))).toMatch(/enviada pelo painel/);
+      expect(erros(porUrl({ imagemUrl: 'https://x.dev/tilesets/curto.png' }))).toMatch(/enviada pelo painel/);
+      expect(erros(porUrl({ imagem: pngDeTeste(64, 32) }))).toMatch(/não os dois/);
+      expect(erros(porUrl({ larguraImagem: 5000 }))).toMatch(/1 a 4096/);
+    });
+
+    it('confere a grade com as dimensões informadas', () => {
+      expect(erros(porUrl({ colunas: 9 }))).toMatch(/Colunas e linhas não batem/);
+    });
+
+    it('origemDaImagem escolhe o endereço ou o PNG em texto', () => {
+      expect(origemDaImagem({ imagem: 'data:x' })).toBe('data:x');
+      expect(origemDaImagem({ imagemUrl: 'https://x' })).toBe('https://x');
+    });
   });
 });

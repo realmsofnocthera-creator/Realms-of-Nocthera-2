@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ImagePlus } from 'lucide-react';
 import {
   BYTES_MAXIMOS_DO_PNG,
+  BYTES_MAXIMOS_DO_PNG_NO_ARMAZENAMENTO,
   FORMATO_DO_TILESET,
   gradeDoTileset,
   LADO_MAXIMO_DA_IMAGEM,
@@ -25,6 +26,13 @@ interface ImagemLida {
   largura: number;
   altura: number;
   imagem: HTMLImageElement;
+}
+
+function bytesDoPng(dataUrl: string): Uint8Array {
+  const bin = atob(dataUrl.slice(dataUrl.indexOf(',') + 1));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
 }
 
 /** Abre qualquer imagem que o navegador entenda (PNG, JPG, WebP, GIF...) e a converte para PNG. */
@@ -100,11 +108,11 @@ export function ImportarTileset({ tokenFresco, criado }: { tokenFresco: Token; c
     }
   }, [lida, grade, tile, margem, espacamento]);
 
-  const montar = (): TilesetDados | null =>
+  const montar = (imagemUrl?: string): TilesetDados | null =>
     lida && grade
       ? {
           formato: FORMATO_DO_TILESET,
-          imagem: lida.png,
+          ...(imagemUrl ? { imagemUrl } : { imagem: lida.png }),
           larguraImagem: lida.largura,
           alturaImagem: lida.altura,
           tamanhoDoTile: tile,
@@ -119,7 +127,7 @@ export function ImportarTileset({ tokenFresco, criado }: { tokenFresco: Token; c
     <Cartao titulo="Importar tileset">
       <p className="text-[11px]" style={{ color: colors.text.secondary }}>
         Qualquer imagem serve: ela é convertida para PNG e cortada em tiles quadrados. Até {LADO_MAXIMO_DA_IMAGEM} px de lado,{' '}
-        {Math.round(BYTES_MAXIMOS_DO_PNG / 1000)} KB e {TILES_POR_TILESET} tiles.
+        {Math.round(BYTES_MAXIMOS_DO_PNG_NO_ARMAZENAMENTO / 1024)} KB e {TILES_POR_TILESET} tiles.
       </p>
       <label className="inline-flex items-center gap-1.5 self-start px-3 py-1.5 rounded border text-[12px] cursor-pointer" style={{ borderColor: OURO, color: '#E6C775' }}>
         <ImagePlus className="w-4 h-4" /> Escolher imagem
@@ -150,12 +158,26 @@ export function ImportarTileset({ tokenFresco, criado }: { tokenFresco: Token; c
           className="flex flex-col gap-2"
           onSubmit={async (e) => {
             e.preventDefault();
-            const dados = montar();
-            if (!dados) return;
-            const v = validarTileset(dados);
-            if (!v.ok) return setErro(v.erros.join(' '));
+            if (!lida) return;
             setOcupado(true);
             setErro(null);
+            // a imagem vai para o armazenamento de arquivos (até 1 MB); se ele não estiver ligado, o PNG segue em texto (até 420 KB)
+            let imagemUrl: string | undefined;
+            const envio = await chamar(tokenFresco, '/api/mestre/tilesets/imagem', { method: 'POST', body: bytesDoPng(lida.png) as BodyInit, headers: { 'Content-Type': 'image/png' } });
+            if (envio.ok) imagemUrl = String((envio.dados.imagem as { url: string }).url);
+            else if (envio.status !== 503) {
+              setOcupado(false);
+              return setErro(String(envio.dados.error ?? 'Não foi possível enviar a imagem.'));
+            } else if (bytes > BYTES_MAXIMOS_DO_PNG) {
+              setOcupado(false);
+              return setErro(`O armazenamento de imagens está desligado e a imagem passa de ${Math.round(BYTES_MAXIMOS_DO_PNG / 1000)} KB.`);
+            }
+            const dados = montar(imagemUrl);
+            const v = dados ? validarTileset(dados) : null;
+            if (!dados || (v && !v.ok)) {
+              setOcupado(false);
+              return setErro(v && !v.ok ? v.erros.join(' ') : 'Não foi possível montar o tileset.');
+            }
             const r = await chamar(tokenFresco, '/api/mestre/conteudo', { method: 'POST', body: JSON.stringify({ tipo: 'tileset', id, nome, dados }) });
             setOcupado(false);
             if (r.ok) {

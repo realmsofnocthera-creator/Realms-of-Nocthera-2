@@ -1,4 +1,4 @@
-import type { TilesetDados } from '@/rules/tileset';
+import { origemDaImagem, type TilesetDados } from '@/rules/tileset';
 import type { ConteudoDocumento } from '@/server/persistencia/tipos';
 import { chamar } from '@/components/mestre/comum';
 
@@ -24,5 +24,5 @@ export async function carregarTileset(tokenFresco: () => Promise<string>, id: st
   if (!r.ok) throw new Error(String(r.dados.error ?? `Não foi possível abrir o tileset ${id}.`));
   const conteudo = r.dados.conteudo as ConteudoDocumento;
   const dados = conteudo.rascunho as TilesetDados;
-  return { id, nome: conteudo.nome, dados, imagem: await carregarImagem(dados.imagem) };
+  return { id, nome: conteudo.nome, dados, imagem: await carregarImagem(origemDaImagem(dados)) };
 }
