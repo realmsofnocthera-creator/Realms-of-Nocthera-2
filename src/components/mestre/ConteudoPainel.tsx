@@ -14,6 +14,7 @@ import { EditorDeEmblema } from '@/components/mestre/EditorDeEmblema';
 import { EditorDeAnuncio } from '@/components/mestre/EditorDeAnuncio';
 import { anuncioEmBranco, NOME_DO_TIPO_DE_ANUNCIO, type AnuncioDados } from '@/rules/anuncio';
 import { descreverJanela } from '@/lib/anunciosTela';
+import type { ProblemaDoMapa } from '@/rules/verificarMapa';
 import { armaduraDadosDePeca, type ArmaduraDados } from '@/rules/armaduraConteudo';
 import { emblemaDadosDeTipo, type EmblemaDados } from '@/rules/emblemaConteudo';
 import { armaDadosDeBase, type ArmaDados } from '@/rules/armaConteudo';
@@ -188,6 +189,52 @@ function monstroEmBranco(): MonstroDados {
     atributos: { vigor: 1, sorte: 0, forca: 1, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 1 },
     xpConcedido: 10, ouroConcedido: { min: 1, max: 5 }, modificadoresElementais: {}, elementoAtaque: null, efeitosAplicados: [], imunidadesStatus: [], enfurecido: false, ativo: true,
   };
+}
+
+/** Problemas do mapa antes de publicar (3.5.6.6): erros impedem a publicação; avisos só informam. */
+export function VerificacaoDoMapa({ base, tokenFresco }: { base: string; tokenFresco: Token }) {
+  const { colors } = useEstilos();
+  const [problemas, setProblemas] = useState<ProblemaDoMapa[] | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+
+  const verificar = useCallback(async () => {
+    setOcupado(true);
+    setErro(null);
+    const r = await chamar(tokenFresco, `${base}/verificar`);
+    setOcupado(false);
+    if (r.ok) setProblemas(r.dados.problemas as ProblemaDoMapa[]);
+    else setErro(String(r.dados.error ?? 'Não foi possível verificar o mapa.'));
+  }, [base, tokenFresco]);
+
+  useEffect(() => {
+    void verificar();
+  }, [verificar]);
+
+  const erros = (problemas ?? []).filter((p) => p.nivel === 'erro');
+  const avisos = (problemas ?? []).filter((p) => p.nivel === 'aviso');
+  return (
+    <Cartao titulo="Verificar o mapa antes de publicar">
+      <p className="text-[11px]" style={{ color: colors.text.secondary }}>
+        Confere o rascunho salvo: início, portas e destinos, o que o jogador alcança e se o mapa está isolado. <strong>Erros</strong> impedem a publicação; <strong>avisos</strong> só informam.
+      </p>
+      {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
+      {problemas && problemas.length === 0 && <p role="status" className="text-[12px] font-semibold" style={{ color: COR_DA_SITUACAO['no-ar'] }}>Nenhum problema encontrado.</p>}
+      {erros.length > 0 && (
+        <ul aria-label="Erros do mapa" className="list-disc pl-4 text-[12px]" style={{ color: VERMELHO }}>
+          {erros.map((p) => <li key={p.texto}>{p.texto}</li>)}
+        </ul>
+      )}
+      {avisos.length > 0 && (
+        <ul aria-label="Avisos do mapa" className="list-disc pl-4 text-[12px]" style={{ color: '#E6C775' }}>
+          {avisos.map((p) => <li key={p.texto}>{p.texto}</li>)}
+        </ul>
+      )}
+      <button type="button" disabled={ocupado} onClick={() => void verificar()} className="self-start px-3 py-1.5 rounded border text-[11px] font-bold disabled:opacity-50" style={{ borderColor: `${OURO}88` }}>
+        {ocupado ? 'Verificando...' : 'Verificar de novo'}
+      </button>
+    </Cartao>
+  );
 }
 
 function NovoAnuncio({ tokenFresco, criado }: { tokenFresco: Token; criado: (id: string) => void }) {
@@ -529,6 +576,8 @@ function Detalhe({ tipo, id, sessao, tokenFresco, voltar }: { tipo: TipoDeConteu
         {aviso && <p role="status" className="text-[12px] font-semibold" style={{ color: COR_DA_SITUACAO['no-ar'] }}>{aviso}</p>}
         {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
       </Cartao>
+
+      {tipo === 'mapa' && <VerificacaoDoMapa key={conteudo.revisao} base={base} tokenFresco={tokenFresco} />}
 
       {tipo === 'anuncio' && (
         <EditorDeAnuncio
