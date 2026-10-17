@@ -1,6 +1,7 @@
 import type {NextConfig} from 'next';
 import {PHASE_DEVELOPMENT_SERVER} from 'next/constants';
 import firebaseConfig from './firebase-applet-config.json';
+import {origensDeImagemDoArmazenamento} from './src/lib/origensDeImagem';
 
 /**
  * Headers de segurança (0.5-D6).
@@ -15,7 +16,7 @@ function securityHeaders(dev: boolean) {
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''} https://apis.google.com https://www.gstatic.com`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://i.ibb.co https://i.supaimg.com https://picsum.photos https://lh3.googleusercontent.com",
+    `img-src 'self' data: blob: https://i.ibb.co https://i.supaimg.com https://picsum.photos https://lh3.googleusercontent.com ${origensDeImagemDoArmazenamento(process.env.R2_PUBLIC_URL).join(' ')}`,
     "font-src 'self' data:",
     `connect-src 'self' https://*.googleapis.com https://apis.google.com wss://*.firebaseio.com https://*.firebaseio.com${dev ? ' ws: wss:' : ''}`,
     `frame-src 'self' https://${firebaseConfig.authDomain} https://accounts.google.com https://apis.google.com`,
