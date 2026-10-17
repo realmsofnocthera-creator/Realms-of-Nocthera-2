@@ -60,6 +60,46 @@ function itensDaReceita(bruto: unknown, rotulo: string, existe: (id: string) => 
   return itens;
 }
 
+/** Confere a receita (materiais conhecidos, quantidades e ouro) e devolve uma cópia limpa; os problemas vão para `erros`. */
+export function validarReceita(brutoReceita: unknown, erros: string[]): ReceitaArma {
+  let receita: ReceitaArma = { materiaisMonstro: [], materiaisMundo: [], diversos: null, ouro: 0 };
+  if (!ehObjeto(brutoReceita)) erros.push('Receita: precisa ser um objeto.');
+  else {
+    const r = brutoReceita;
+    const extra = Object.keys(r).filter((k) => !(CHAVES_DA_RECEITA as readonly string[]).includes(k));
+    if (extra.length) erros.push(`Campos desconhecidos na receita: ${extra.join(', ')}.`);
+    if (!inteiro(r.ouro, 0, OURO_MAXIMO_DA_RECEITA)) erros.push(`Ouro da receita: inteiro de 0 a ${OURO_MAXIMO_DA_RECEITA.toLocaleString('pt-BR')}.`);
+    let diversos: ReceitaArma['diversos'] = null;
+    if (r.diversos !== null && r.diversos !== undefined) {
+      if (!ehObjeto(r.diversos) || !RARIDADES_MATERIAL.some((x) => x.id === (r.diversos as Record<string, unknown>).raridade)) {
+        erros.push('Diversos: raridade inválida.');
+      } else if (!inteiro((r.diversos as Record<string, unknown>).qtd, 1, QUANTIDADE_MAXIMA_NA_RECEITA)) {
+        erros.push(`Diversos: quantidade de 1 a ${QUANTIDADE_MAXIMA_NA_RECEITA}.`);
+      } else {
+        const d = r.diversos as Record<string, unknown>;
+        diversos = { raridade: d.raridade as RaridadeMaterial, qtd: d.qtd as number };
+      }
+    }
+    receita = {
+      materiaisMonstro: itensDaReceita(r.materiaisMonstro, 'Materiais do monstro', (id) => id in MATERIAIS_MAP, erros),
+      materiaisMundo: itensDaReceita(r.materiaisMundo, 'Materiais do mundo', (id) => id in MATERIAIS_MUNDO_MAP, erros),
+      diversos,
+      ouro: typeof r.ouro === 'number' ? r.ouro : 0,
+    };
+  }
+  return receita;
+}
+
+/** Cópia profunda da receita. */
+export function copiarReceita(r: ReceitaArma): ReceitaArma {
+  return {
+    materiaisMonstro: r.materiaisMonstro.map((i) => ({ ...i })),
+    materiaisMundo: r.materiaisMundo.map((i) => ({ ...i })),
+    diversos: r.diversos ? { ...r.diversos } : null,
+    ouro: r.ouro,
+  };
+}
+
 /** Confere a arma e devolve uma cópia limpa. Campo desconhecido é erro. */
 export function validarArma(bruto: unknown): ResultadoValidacao<ArmaDados> {
   const erros: string[] = [];
@@ -82,31 +122,7 @@ export function validarArma(bruto: unknown): ResultadoValidacao<ArmaDados> {
     }
   }
 
-  let receita: ReceitaArma = { materiaisMonstro: [], materiaisMundo: [], diversos: null, ouro: 0 };
-  if (!ehObjeto(bruto.receita)) erros.push('Receita: precisa ser um objeto.');
-  else {
-    const r = bruto.receita;
-    const extra = Object.keys(r).filter((k) => !(CHAVES_DA_RECEITA as readonly string[]).includes(k));
-    if (extra.length) erros.push(`Campos desconhecidos na receita: ${extra.join(', ')}.`);
-    if (!inteiro(r.ouro, 0, OURO_MAXIMO_DA_RECEITA)) erros.push(`Ouro da receita: inteiro de 0 a ${OURO_MAXIMO_DA_RECEITA.toLocaleString('pt-BR')}.`);
-    let diversos: ReceitaArma['diversos'] = null;
-    if (r.diversos !== null && r.diversos !== undefined) {
-      if (!ehObjeto(r.diversos) || !RARIDADES_MATERIAL.some((x) => x.id === (r.diversos as Record<string, unknown>).raridade)) {
-        erros.push('Diversos: raridade inválida.');
-      } else if (!inteiro((r.diversos as Record<string, unknown>).qtd, 1, QUANTIDADE_MAXIMA_NA_RECEITA)) {
-        erros.push(`Diversos: quantidade de 1 a ${QUANTIDADE_MAXIMA_NA_RECEITA}.`);
-      } else {
-        const d = r.diversos as Record<string, unknown>;
-        diversos = { raridade: d.raridade as RaridadeMaterial, qtd: d.qtd as number };
-      }
-    }
-    receita = {
-      materiaisMonstro: itensDaReceita(r.materiaisMonstro, 'Materiais do monstro', (id) => id in MATERIAIS_MAP, erros),
-      materiaisMundo: itensDaReceita(r.materiaisMundo, 'Materiais do mundo', (id) => id in MATERIAIS_MUNDO_MAP, erros),
-      diversos,
-      ouro: typeof r.ouro === 'number' ? r.ouro : 0,
-    };
-  }
+  const receita = validarReceita(bruto.receita, erros);
 
   if (erros.length) return { ok: false, erros };
   return { ok: true, dados: { formato: FORMATO_DA_ARMA, nomes, raridade: bruto.raridade as RaridadeArma, receita, ativo: bruto.ativo as boolean } };

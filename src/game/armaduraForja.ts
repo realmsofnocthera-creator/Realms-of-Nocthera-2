@@ -11,6 +11,7 @@ import {
   sortearPontosDaArmadura,
 } from '@/rules/armaduras';
 import { PECAS_ARMADURA_MAP } from '@/rules/armadurasCatalogo';
+import { pecaDesativada } from '@/rules/catalogoAoVivo';
 import { percentualCustoReforja } from '@/rules/armas';
 import { MATERIAIS_MAP } from '@/rules/materiais';
 import { RARIDADE_MAP, RaridadeMaterial } from '@/rules/raridades';
@@ -44,6 +45,7 @@ export const MAX_ARMADURAS_POR_PERSONAGEM = 300;
 
 export type MotivoBloqueioArmadura =
   | 'pecaInvalida'
+  | 'pecaDesativada'
   | 'materiaisInsuficientes'
   | 'ouroInsuficiente'
   | 'limiteDeArmaduras'
@@ -54,6 +56,7 @@ export type MotivoBloqueioArmadura =
 
 export const MENSAGEM_BLOQUEIO_ARMADURA: Readonly<Record<MotivoBloqueioArmadura, string>> = {
   pecaInvalida: 'Peça de armadura inválida.',
+  pecaDesativada: 'Esta peça não está disponível para fabricação no momento.',
   materiaisInsuficientes: 'Materiais insuficientes para esta receita.',
   ouroInsuficiente: 'Ouro insuficiente.',
   limiteDeArmaduras: `Você já tem ${MAX_ARMADURAS_POR_PERSONAGEM} peças de armadura. Libere espaço para fabricar outra.`,
@@ -85,6 +88,7 @@ export function planejarFabricacaoArmadura(
 ): ResultadoArmadura<PlanoComCusto> {
   const peca = typeof pecaId === 'string' ? PECAS_ARMADURA_MAP[pecaId] : undefined;
   if (!peca) return { ok: false, motivo: 'pecaInvalida' };
+  if (pecaDesativada(peca.id)) return { ok: false, motivo: 'pecaDesativada' };
   if (estado.armaduras.length >= MAX_ARMADURAS_POR_PERSONAGEM) return { ok: false, motivo: 'limiteDeArmaduras' };
 
   const custo = custoDaReceita(peca.receita);

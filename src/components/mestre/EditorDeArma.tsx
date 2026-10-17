@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Plus, X } from 'lucide-react';
-import { CATEGORIAS_ARMA, RARIDADES_ARMA, type ItemReceita, type RaridadeArma } from '@/rules/armas';
+import { CATEGORIAS_ARMA, RARIDADES_ARMA, type ItemReceita, type RaridadeArma, type ReceitaArma } from '@/rules/armas';
 import { RARIDADES_MATERIAL, type RaridadeMaterial } from '@/rules/raridades';
 import { ITENS_MAXIMOS_NA_RECEITA, validarArma, type ArmaDados } from '@/rules/armaConteudo';
 import { NOCTHERA_THEME } from '@/theme/theme';
@@ -48,6 +48,52 @@ function ListaDeMateriais({
   );
 }
 
+/** Receita de uma arma ou peça: ouro, diversos e as duas listas de materiais (com a lista de ids para autocompletar). */
+export function EditorDeReceita({ receita, podeEditar, aoMudar }: { receita: ReceitaArma; podeEditar: boolean; aoMudar: (r: ReceitaArma) => void }) {
+  const { colors } = NOCTHERA_THEME;
+  const estilo = estiloDoCampo(colors);
+  const [materiais, setMateriais] = useState<{ monstro: { id: string; nome: string }[]; mundo: { id: string; nome: string }[] }>({ monstro: [], mundo: [] });
+
+  useEffect(() => {
+    void Promise.all([import('@/rules/materiais'), import('@/rules/materiaisArmas')]).then(([m, w]) =>
+      setMateriais({ monstro: m.MATERIAIS.map((x) => ({ id: x.id, nome: x.nome })), mundo: w.MATERIAIS_MUNDO.map((x) => ({ id: x.id, nome: x.nome })) })
+    );
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <datalist id="materiais-monstro">{materiais.monstro.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}</datalist>
+      <datalist id="materiais-mundo">{materiais.mundo.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}</datalist>
+      <div className="grid gap-2 grid-cols-2 md:grid-cols-4">
+        <label className="text-[11px] flex flex-col gap-0.5">Ouro da receita
+          <input type="number" min={0} step={1} value={receita.ouro} disabled={!podeEditar} onChange={(e) => aoMudar({ ...receita, ouro: Number(e.target.value) || 0 })} className={CAMPO} style={estilo} />
+        </label>
+        <label className="text-[11px] flex flex-col gap-0.5">Diversos (raridade)
+          <select
+            value={receita.diversos?.raridade ?? ''}
+            disabled={!podeEditar}
+            onChange={(e) => aoMudar({ ...receita, diversos: e.target.value ? { raridade: e.target.value as RaridadeMaterial, qtd: receita.diversos?.qtd ?? 1 } : null })}
+            className={CAMPO}
+            style={estilo}
+          >
+            <option value="">Nenhum</option>
+            {RARIDADES_MATERIAL.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+          </select>
+        </label>
+        {receita.diversos && (
+          <label className="text-[11px] flex flex-col gap-0.5">Diversos (quantidade)
+            <input type="number" min={1} step={1} value={receita.diversos.qtd} disabled={!podeEditar} onChange={(e) => aoMudar({ ...receita, diversos: { raridade: receita.diversos!.raridade, qtd: Number(e.target.value) || 0 } })} className={CAMPO} style={estilo} />
+          </label>
+        )}
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <ListaDeMateriais rotulo="Materiais do monstro" itens={receita.materiaisMonstro} listaId="materiais-monstro" desabilitado={!podeEditar} aoMudar={(itens) => aoMudar({ ...receita, materiaisMonstro: itens })} />
+        <ListaDeMateriais rotulo="Materiais do mundo" itens={receita.materiaisMundo} listaId="materiais-mundo" desabilitado={!podeEditar} aoMudar={(itens) => aoMudar({ ...receita, materiaisMundo: itens })} />
+      </div>
+    </div>
+  );
+}
+
 /**
  * Edita nomes, raridade, receita e o estado "ativo" de uma arma do catálogo (3.5.3.2). Salva só o rascunho;
  * publicar é no painel. Elemento, status, estrela e a árvore continuam no código.
@@ -59,22 +105,11 @@ export function EditorDeArma({ inicial, podeEditar, salvar }: { inicial: ArmaDad
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
-  const [materiais, setMateriais] = useState<{ monstro: { id: string; nome: string }[]; mundo: { id: string; nome: string }[] }>({ monstro: [], mundo: [] });
-
-  useEffect(() => {
-    void Promise.all([import('@/rules/materiais'), import('@/rules/materiaisArmas')]).then(([m, w]) =>
-      setMateriais({ monstro: m.MATERIAIS.map((x) => ({ id: x.id, nome: x.nome })), mundo: w.MATERIAIS_MUNDO.map((x) => ({ id: x.id, nome: x.nome })) })
-    );
-  }, []);
-
-  const receita = d.receita;
   return (
     <Cartao titulo="Dados da arma">
       <p className="text-[11px]" style={{ color: colors.text.secondary }}>
         O que você publicar aqui substitui nomes, raridade e receita desta arma. Elemento, status, estrela e a árvore de evolução continuam no código.
       </p>
-      <datalist id="materiais-monstro">{materiais.monstro.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}</datalist>
-      <datalist id="materiais-mundo">{materiais.mundo.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}</datalist>
       <form
         className="flex flex-col gap-3"
         onSubmit={async (e) => {
@@ -98,38 +133,13 @@ export function EditorDeArma({ inicial, podeEditar, salvar }: { inicial: ArmaDad
           ))}
         </div>
 
-        <div className="grid gap-2 grid-cols-2 md:grid-cols-4">
-          <label className="text-[11px] flex flex-col gap-0.5">Raridade
-            <select value={d.raridade} disabled={!podeEditar} onChange={(e) => setD({ ...d, raridade: e.target.value as RaridadeArma })} className={CAMPO} style={estilo}>
-              {RARIDADES_ARMA.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-            </select>
-          </label>
-          <label className="text-[11px] flex flex-col gap-0.5">Ouro da receita
-            <input type="number" min={0} step={1} value={receita.ouro} disabled={!podeEditar} onChange={(e) => setD({ ...d, receita: { ...receita, ouro: Number(e.target.value) || 0 } })} className={CAMPO} style={estilo} />
-          </label>
-          <label className="text-[11px] flex flex-col gap-0.5">Diversos (raridade)
-            <select
-              value={receita.diversos?.raridade ?? ''}
-              disabled={!podeEditar}
-              onChange={(e) => setD({ ...d, receita: { ...receita, diversos: e.target.value ? { raridade: e.target.value as RaridadeMaterial, qtd: receita.diversos?.qtd ?? 1 } : null } })}
-              className={CAMPO}
-              style={estilo}
-            >
-              <option value="">Nenhum</option>
-              {RARIDADES_MATERIAL.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-            </select>
-          </label>
-          {receita.diversos && (
-            <label className="text-[11px] flex flex-col gap-0.5">Diversos (quantidade)
-              <input type="number" min={1} step={1} value={receita.diversos.qtd} disabled={!podeEditar} onChange={(e) => setD({ ...d, receita: { ...receita, diversos: { raridade: receita.diversos!.raridade, qtd: Number(e.target.value) || 0 } } })} className={CAMPO} style={estilo} />
-            </label>
-          )}
-        </div>
+        <label className="text-[11px] flex flex-col gap-0.5 max-w-xs">Raridade
+          <select value={d.raridade} disabled={!podeEditar} onChange={(e) => setD({ ...d, raridade: e.target.value as RaridadeArma })} className={CAMPO} style={estilo}>
+            {RARIDADES_ARMA.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+          </select>
+        </label>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          <ListaDeMateriais rotulo="Materiais do monstro" itens={receita.materiaisMonstro} listaId="materiais-monstro" desabilitado={!podeEditar} aoMudar={(itens) => setD({ ...d, receita: { ...receita, materiaisMonstro: itens } })} />
-          <ListaDeMateriais rotulo="Materiais do mundo" itens={receita.materiaisMundo} listaId="materiais-mundo" desabilitado={!podeEditar} aoMudar={(itens) => setD({ ...d, receita: { ...receita, materiaisMundo: itens } })} />
-        </div>
+        <EditorDeReceita receita={d.receita} podeEditar={podeEditar} aoMudar={(receita) => setD({ ...d, receita })} />
 
         <label className="text-[11px] inline-flex items-center gap-1">
           <input type="checkbox" checked={d.ativo} disabled={!podeEditar} onChange={() => setD({ ...d, ativo: !d.ativo })} /> Ativo (desmarcado = não dá mais para fabricar; quem já tem continua com a arma)

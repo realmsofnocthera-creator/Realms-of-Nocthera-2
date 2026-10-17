@@ -9,8 +9,12 @@ import { NOME_DO_TIPO, PERMISSAO_DE_EDICAO, type TipoDeConteudo } from '@/rules/
 import { monstroDadosDeDefinicao, type MonstroDados } from '@/rules/monstroConteudo';
 import { EditorDeMonstro } from '@/components/mestre/EditorDeMonstro';
 import { EditorDeArma } from '@/components/mestre/EditorDeArma';
+import { EditorDeArmadura } from '@/components/mestre/EditorDeArmadura';
+import { EditorDeEmblema } from '@/components/mestre/EditorDeEmblema';
+import { armaduraDadosDePeca, type ArmaduraDados } from '@/rules/armaduraConteudo';
+import { emblemaDadosDeTipo, type EmblemaDados } from '@/rules/emblemaConteudo';
 import { armaDadosDeBase, type ArmaDados } from '@/rules/armaConteudo';
-import { armaOriginal } from '@/rules/catalogoAoVivo';
+import { armaOriginal, emblemaOriginal, pecaOriginal } from '@/rules/catalogoAoVivo';
 import { situacaoDoConteudo, descreverVersao, sugerirIdentificador } from '@/lib/conteudoTela';
 import { dataDoLog } from '@/lib/mestreTela';
 import type { ConteudoDocumento, ResumoConteudo, ResumoVersao } from '@/server/persistencia/tipos';
@@ -28,6 +32,11 @@ function resumoDosDados(tipo: TipoDeConteudo, dados: unknown): string {
     const m = dados as MapaDados;
     return `${m.largura} × ${m.altura} tiles de ${m.tamanhoDoTile} px · ${m.tilesets.length} tileset(s)`;
   }
+  if (tipo === 'armadura') {
+    const a = dados as ArmaduraDados;
+    return `${a.raridade} · ${a.receita.ouro.toLocaleString('pt-BR')} de ouro${a.ativo ? '' : ' · FORA DE USO'}`;
+  }
+  if (tipo === 'emblema') return (dados as EmblemaDados).nome;
   if (tipo === 'arma') {
     const a = dados as ArmaDados;
     return `${a.raridade} · ${a.receita.ouro.toLocaleString('pt-BR')} de ouro${a.ativo ? '' : ' · FORA DE USO'}`;
@@ -51,11 +60,13 @@ function useEstilos() {
   };
 }
 
-const PLURAL: Record<TipoDeConteudo, string> = { mapa: 'Mapas', tileset: 'Tilesets', monstro: 'Monstros', arma: 'Armas' };
+const PLURAL: Record<TipoDeConteudo, string> = { mapa: 'Mapas', tileset: 'Tilesets', monstro: 'Monstros', arma: 'Armas', armadura: 'Armaduras', emblema: 'Emblemas' };
 const EXPLICACAO: Record<TipoDeConteudo, string> = {
   mapa: 'Cada mapa tem um rascunho e versões publicadas. O jogo só vê a versão publicada; voltar atrás republica uma versão antiga.',
   tileset: 'Os tilesets são as imagens cortadas em tiles que os mapas usam. Publique o tileset antes do mapa que o usa.',
   monstro: 'Monstros do banco. Com o mesmo identificador de um monstro do código, o publicado substitui os números dele; com identificador novo, é um monstro novo. Desmarcar "Ativo" tira o monstro de uso.',
+  armadura: 'Peças de armadura do catálogo. O publicado substitui nome, raridade e receita da peça do código; desmarcar "Ativo" impede fabricar.',
+  emblema: 'Emblemas da Provação do Guerreiro. O publicado substitui nome, lore, atributos e textos das habilidades; o efeito no combate continua o do código.',
   arma: 'Armas do catálogo da Forja. O publicado substitui nomes, raridade e receita da arma do código; desmarcar "Ativo" impede fabricar.',
 };
 
@@ -70,7 +81,7 @@ export function ConteudoPainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel
   return (
     <div className="flex flex-col gap-3">
       <div role="tablist" aria-label="Tipo de conteúdo" className="flex gap-1">
-        {(['mapa', 'tileset', 'monstro', 'arma'] as const).map((t) => (
+        {(['mapa', 'tileset', 'monstro', 'arma', 'armadura', 'emblema'] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -116,6 +127,8 @@ function Lista({ tipo, sessao, tokenFresco, abrir }: { tipo: TipoDeConteudo; ses
   return (
     <div className="flex flex-col gap-3">
       {podeEditar && tipo === 'mapa' && <NovoMapa tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
+      {podeEditar && tipo === 'armadura' && <NovoItemDoCatalogo tipo="armadura" tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
+      {podeEditar && tipo === 'emblema' && <NovoItemDoCatalogo tipo="emblema" tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
       {podeEditar && tipo === 'arma' && <NovaArma tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
       {podeEditar && tipo === 'monstro' && <NovoMonstro tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
       {podeEditar && tipo === 'tileset' && <ImportarTileset tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
@@ -166,6 +179,58 @@ function monstroEmBranco(): MonstroDados {
     atributos: { vigor: 1, sorte: 0, forca: 1, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 1 },
     xpConcedido: 10, ouroConcedido: { min: 1, max: 5 }, modificadoresElementais: {}, elementoAtaque: null, efeitosAplicados: [], imunidadesStatus: [], enfurecido: false, ativo: true,
   };
+}
+
+/** Cria o rascunho de uma peça de armadura ou de um emblema a partir do que está no código. */
+function NovoItemDoCatalogo({ tipo, tokenFresco, criado }: { tipo: 'armadura' | 'emblema'; tokenFresco: Token; criado: (id: string) => void }) {
+  const { colors, campo, estiloCampo, botao, estiloBotao } = useEstilos();
+  const [lista, setLista] = useState<{ id: string; rotulo: string }[]>([]);
+  const [escolhido, setEscolhido] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+
+  useEffect(() => {
+    if (tipo === 'armadura') {
+      void import('@/rules/armadurasCatalogo').then(({ PECAS_ARMADURA }) => setLista(PECAS_ARMADURA.map((p) => ({ id: p.id, rotulo: `${p.estrela}★ · ${p.nome} (${p.id})` }))));
+    } else {
+      void import('@/rules/emblemasCatalogo').then(({ TIPOS_EMBLEMA }) => setLista(TIPOS_EMBLEMA.map((t) => ({ id: t.id, rotulo: `${t.nome} (${t.id})` }))));
+    }
+  }, [tipo]);
+
+  return (
+    <Cartao titulo={tipo === 'armadura' ? 'Editar uma peça de armadura do catálogo' : 'Editar um emblema do catálogo'}>
+      <form
+        className="grid gap-2 grid-cols-1 md:grid-cols-[1fr_auto] items-end"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const peca = tipo === 'armadura' ? pecaOriginal(escolhido) : undefined;
+          const emblema = tipo === 'emblema' ? emblemaOriginal(escolhido) : undefined;
+          if (!peca && !emblema) return setErro('Escolha um item.');
+          setOcupado(true);
+          setErro(null);
+          const corpo = peca
+            ? { tipo, id: peca.id, nome: peca.nome, dados: armaduraDadosDePeca(peca) }
+            : { tipo, id: emblema!.id, nome: emblema!.nome, dados: emblemaDadosDeTipo(emblema!) };
+          const r = await chamar(tokenFresco, '/api/mestre/conteudo', { method: 'POST', body: JSON.stringify(corpo) });
+          setOcupado(false);
+          if (r.ok) criado(corpo.id);
+          else setErro(String(r.dados.error ?? 'Não foi possível criar o rascunho.'));
+        }}
+      >
+        <label className="text-[11px] flex flex-col gap-0.5">{tipo === 'armadura' ? 'Peça' : 'Emblema'}
+          <select value={escolhido} onChange={(e) => setEscolhido(e.target.value)} className={campo} style={estiloCampo} required>
+            <option value="">Escolha...</option>
+            {lista.map((i) => <option key={i.id} value={i.id}>{i.rotulo}</option>)}
+          </select>
+        </label>
+        <button type="submit" disabled={ocupado} className={`${botao} inline-flex items-center gap-1 justify-center`} style={estiloBotao}>
+          <Plus className="w-3.5 h-3.5" /> Criar rascunho
+        </button>
+      </form>
+      <p className="text-[11px]" style={{ color: colors.text.secondary }}>O rascunho nasce com os valores atuais e o mesmo identificador; ao publicar, substitui os do código.</p>
+      {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
+    </Cartao>
+  );
 }
 
 function NovaArma({ tokenFresco, criado }: { tokenFresco: Token; criado: (id: string) => void }) {
@@ -412,6 +477,40 @@ function Detalhe({ tipo, id, sessao, tokenFresco, voltar }: { tipo: TipoDeConteu
         {aviso && <p role="status" className="text-[12px] font-semibold" style={{ color: COR_DA_SITUACAO['no-ar'] }}>{aviso}</p>}
         {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
       </Cartao>
+
+      {tipo === 'armadura' && (
+        <EditorDeArmadura
+          key={conteudo.revisao}
+          inicial={conteudo.rascunho as ArmaduraDados}
+          podeEditar={podeEditar}
+          salvar={async (dados) => {
+            const r = await chamar(tokenFresco, base, { method: 'PUT', body: JSON.stringify({ dados, revisao: conteudo.revisao, nome: dados.nome }) });
+            if (!r.ok) {
+              if (r.status === 409) void carregar();
+              return String(r.dados.error ?? 'Não foi possível salvar.');
+            }
+            await carregar();
+            return null;
+          }}
+        />
+      )}
+
+      {tipo === 'emblema' && (
+        <EditorDeEmblema
+          key={conteudo.revisao}
+          inicial={conteudo.rascunho as EmblemaDados}
+          podeEditar={podeEditar}
+          salvar={async (dados) => {
+            const r = await chamar(tokenFresco, base, { method: 'PUT', body: JSON.stringify({ dados, revisao: conteudo.revisao, nome: dados.nome }) });
+            if (!r.ok) {
+              if (r.status === 409) void carregar();
+              return String(r.dados.error ?? 'Não foi possível salvar.');
+            }
+            await carregar();
+            return null;
+          }}
+        />
+      )}
 
       {tipo === 'arma' && (
         <EditorDeArma
