@@ -1,4 +1,7 @@
 import { createHash } from 'node:crypto';
+import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
+import { CHEFES_ESPECIAIS_MAP } from '@/rules/chefesEspeciais';
+import { MONSTERS_MAP } from '@/rules/monsters';
 import {
   chaveDoConteudo,
   ehTipoDeConteudo,
@@ -67,9 +70,10 @@ function dadosValidos(tipo: TipoDeConteudo, bruto: unknown): unknown {
  */
 async function conferirReferencias(tipo: TipoDeConteudo, dados: unknown, exigirPublicadas: boolean): Promise<void> {
   for (const ref of referenciasDoConteudo(tipo, dados)) {
+    if (ref.podeSerDoCodigo && ref.tipo === 'monstro' && (MONSTROS_CACADA_MAP[ref.id] || MONSTERS_MAP[ref.id] || CHEFES_ESPECIAIS_MAP[ref.id])) continue;
     const doc = await repositorio.lerConteudo(chaveDoConteudo(ref.tipo, ref.id));
     if (!doc) throw new ErroMestre(400, `${NOME_DO_TIPO[ref.tipo]} "${ref.id}" não existe.`);
-    if (exigirPublicadas && doc.versaoPublicada === null) {
+    if (exigirPublicadas && !ref.soExistir && doc.versaoPublicada === null) {
       throw new ErroMestre(400, `Publique antes o ${NOME_DO_TIPO[ref.tipo].toLowerCase()} "${ref.id}": o jogo só usa o que está publicado.`);
     }
   }

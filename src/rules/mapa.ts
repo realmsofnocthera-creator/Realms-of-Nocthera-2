@@ -1,8 +1,11 @@
+import { validarObjetos, type ObjetoDoMapa } from '@/rules/objetosDoMapa';
+
 /**
  * Formato do mapa 2D (3.5.6.5), versão 1. O mesmo validador roda no servidor (antes de salvar ou publicar) e na tela.
  * Cada camada é uma lista com largura × altura posições, linha por linha (da esquerda para a direita, de cima para baixo).
  * Nas camadas de chão e de objetos, 0 é vazio e os outros números apontam para um tile (ver valorDoTile); na de
- * colisão, 1 bloqueia. As referências a monstros, NPCs e itens entram com as salas (3.5.6.3).
+ * colisão, 1 bloqueia. Os objetos interativos (início, NPC, placa, baú, porta e área de monstros) ficam na lista
+ * `objetos` (ver objetosDoMapa.ts); mapas antigos sem ela valem como "sem objetos".
  */
 export const FORMATO_DO_MAPA = 1;
 export const LADO_MINIMO_DO_MAPA = 4;
@@ -43,6 +46,7 @@ export interface MapaDados {
   tamanhoDoTile: number;
   tilesets: string[];
   camadas: Record<CamadaDoMapa, number[]>;
+  objetos: ObjetoDoMapa[];
 }
 
 export type ResultadoValidacao<T> = { ok: true; dados: T } | { ok: false; erros: string[] };
@@ -59,6 +63,7 @@ export function mapaVazio(largura: number, altura: number, tamanhoDoTile: number
     tamanhoDoTile,
     tilesets: [],
     camadas: { chao: new Array(n).fill(0), objetos: new Array(n).fill(0), colisao: new Array(n).fill(0) },
+    objetos: [],
   };
 }
 
@@ -82,7 +87,7 @@ export function validarMapa(bruto: unknown): ResultadoValidacao<MapaDados> {
   const erros: string[] = [];
   if (!ehObjeto(bruto)) return { ok: false, erros: ['O mapa precisa ser um objeto.'] };
 
-  const extras = chavesExtras(bruto, ['formato', 'largura', 'altura', 'tamanhoDoTile', 'tilesets', 'camadas']);
+  const extras = chavesExtras(bruto, ['formato', 'largura', 'altura', 'tamanhoDoTile', 'tilesets', 'camadas', 'objetos']);
   if (extras.length) erros.push(`Campos desconhecidos no mapa: ${extras.join(', ')}.`);
   if (bruto.formato !== FORMATO_DO_MAPA) erros.push(`Formato do mapa não suportado (esperado ${FORMATO_DO_MAPA}).`);
 
@@ -127,6 +132,8 @@ export function validarMapa(bruto: unknown): ResultadoValidacao<MapaDados> {
     }
   }
 
+  const objetos = ladoOk(largura) && ladoOk(altura) ? validarObjetos(bruto.objetos, largura as number, altura as number, erros) : [];
+
   if (erros.length) return { ok: false, erros };
   const cam = camadas as Record<CamadaDoMapa, number[]>;
   return {
@@ -138,6 +145,7 @@ export function validarMapa(bruto: unknown): ResultadoValidacao<MapaDados> {
       tamanhoDoTile: tamanhoDoTile as number,
       tilesets: [...(tilesets as string[])],
       camadas: { chao: [...cam.chao], objetos: [...cam.objetos], colisao: [...cam.colisao] },
+      objetos,
     },
   };
 }
