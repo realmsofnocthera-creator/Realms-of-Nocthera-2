@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { TIPOS_DO_CATALOGO } from '@/rules/conteudo';
+import { TIPO_DOS_ANUNCIOS, TIPOS_DO_CATALOGO } from '@/rules/conteudo';
+import { anunciosVigentes, validarAnuncio, type AnuncioDados } from '@/rules/anuncio';
 import { verifyAuthToken } from '@/server/auth';
 import { lerPublicadosComCache } from '@/server/catalogoItens';
 import { descreverErro, registrarLog } from '@/server/log';
@@ -17,6 +18,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ tipo
     if (limiteConta) return limiteConta;
 
     const { tipo } = await params;
+    if (tipo === TIPO_DOS_ANUNCIOS) {
+      // só os anúncios que aparecem agora (ativos, começados e não terminados); dado inválido é ignorado
+      const validos = (await lerPublicadosComCache(TIPO_DOS_ANUNCIOS)).flatMap((i) => {
+        const v = validarAnuncio(i.dados);
+        return v.ok ? [{ id: i.id, nome: i.nome, versao: i.versao, dados: v.dados as AnuncioDados }] : [];
+      });
+      return NextResponse.json({ itens: anunciosVigentes(validos, new Date()) });
+    }
     if (!(TIPOS_DO_CATALOGO as readonly string[]).includes(tipo)) {
       return NextResponse.json({ error: 'Tipo de catálogo desconhecido.' }, { status: 404 });
     }

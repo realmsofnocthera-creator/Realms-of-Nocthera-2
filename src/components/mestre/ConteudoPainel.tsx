@@ -11,6 +11,9 @@ import { EditorDeMonstro } from '@/components/mestre/EditorDeMonstro';
 import { EditorDeArma } from '@/components/mestre/EditorDeArma';
 import { EditorDeArmadura } from '@/components/mestre/EditorDeArmadura';
 import { EditorDeEmblema } from '@/components/mestre/EditorDeEmblema';
+import { EditorDeAnuncio } from '@/components/mestre/EditorDeAnuncio';
+import { anuncioEmBranco, NOME_DO_TIPO_DE_ANUNCIO, type AnuncioDados } from '@/rules/anuncio';
+import { descreverJanela } from '@/lib/anunciosTela';
 import { armaduraDadosDePeca, type ArmaduraDados } from '@/rules/armaduraConteudo';
 import { emblemaDadosDeTipo, type EmblemaDados } from '@/rules/emblemaConteudo';
 import { armaDadosDeBase, type ArmaDados } from '@/rules/armaConteudo';
@@ -31,6 +34,10 @@ function resumoDosDados(tipo: TipoDeConteudo, dados: unknown): string {
   if (tipo === 'mapa') {
     const m = dados as MapaDados;
     return `${m.largura} × ${m.altura} tiles de ${m.tamanhoDoTile} px · ${m.tilesets.length} tileset(s)`;
+  }
+  if (tipo === 'anuncio') {
+    const a = dados as AnuncioDados;
+    return `${NOME_DO_TIPO_DE_ANUNCIO[a.tipo]} · ${descreverJanela(a)}${a.ativo ? '' : ' · FORA DO AR'}`;
   }
   if (tipo === 'armadura') {
     const a = dados as ArmaduraDados;
@@ -60,11 +67,12 @@ function useEstilos() {
   };
 }
 
-const PLURAL: Record<TipoDeConteudo, string> = { mapa: 'Mapas', tileset: 'Tilesets', monstro: 'Monstros', arma: 'Armas', armadura: 'Armaduras', emblema: 'Emblemas' };
+const PLURAL: Record<TipoDeConteudo, string> = { mapa: 'Mapas', tileset: 'Tilesets', monstro: 'Monstros', arma: 'Armas', armadura: 'Armaduras', emblema: 'Emblemas', anuncio: 'Anúncios' };
 const EXPLICACAO: Record<TipoDeConteudo, string> = {
   mapa: 'Cada mapa tem um rascunho e versões publicadas. O jogo só vê a versão publicada; voltar atrás republica uma versão antiga.',
   tileset: 'Os tilesets são as imagens cortadas em tiles que os mapas usam. Publique o tileset antes do mapa que o usa.',
   monstro: 'Monstros do banco. Com o mesmo identificador de um monstro do código, o publicado substitui os números dele; com identificador novo, é um monstro novo. Desmarcar "Ativo" tira o monstro de uso.',
+  anuncio: 'Avisos que aparecem no card Anúncios do Menu, com janela de datas. Um evento agendado é um anúncio do tipo Evento: só avisa, não muda regras do jogo.',
   armadura: 'Peças de armadura do catálogo. O publicado substitui nome, raridade e receita da peça do código; desmarcar "Ativo" impede fabricar.',
   emblema: 'Emblemas da Provação do Guerreiro. O publicado substitui nome, lore, atributos e textos das habilidades; o efeito no combate continua o do código.',
   arma: 'Armas do catálogo da Forja. O publicado substitui nomes, raridade e receita da arma do código; desmarcar "Ativo" impede fabricar.',
@@ -81,7 +89,7 @@ export function ConteudoPainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel
   return (
     <div className="flex flex-col gap-3">
       <div role="tablist" aria-label="Tipo de conteúdo" className="flex gap-1">
-        {(['mapa', 'tileset', 'monstro', 'arma', 'armadura', 'emblema'] as const).map((t) => (
+        {(['mapa', 'tileset', 'monstro', 'arma', 'armadura', 'emblema', 'anuncio'] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -127,6 +135,7 @@ function Lista({ tipo, sessao, tokenFresco, abrir }: { tipo: TipoDeConteudo; ses
   return (
     <div className="flex flex-col gap-3">
       {podeEditar && tipo === 'mapa' && <NovoMapa tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
+      {podeEditar && tipo === 'anuncio' && <NovoAnuncio tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
       {podeEditar && tipo === 'armadura' && <NovoItemDoCatalogo tipo="armadura" tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
       {podeEditar && tipo === 'emblema' && <NovoItemDoCatalogo tipo="emblema" tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
       {podeEditar && tipo === 'arma' && <NovaArma tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
@@ -179,6 +188,44 @@ function monstroEmBranco(): MonstroDados {
     atributos: { vigor: 1, sorte: 0, forca: 1, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 1 },
     xpConcedido: 10, ouroConcedido: { min: 1, max: 5 }, modificadoresElementais: {}, elementoAtaque: null, efeitosAplicados: [], imunidadesStatus: [], enfurecido: false, ativo: true,
   };
+}
+
+function NovoAnuncio({ tokenFresco, criado }: { tokenFresco: Token; criado: (id: string) => void }) {
+  const { colors, campo, estiloCampo, botao, estiloBotao } = useEstilos();
+  const [titulo, setTitulo] = useState('');
+  const [id, setId] = useState('');
+  const [idEditado, setIdEditado] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+
+  return (
+    <Cartao titulo="Novo anúncio">
+      <form
+        className="grid gap-2 grid-cols-1 md:grid-cols-[1.4fr_1.2fr_auto] items-end"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setOcupado(true);
+          setErro(null);
+          const r = await chamar(tokenFresco, '/api/mestre/conteudo', { method: 'POST', body: JSON.stringify({ tipo: 'anuncio', id, nome: titulo, dados: anuncioEmBranco(titulo) }) });
+          setOcupado(false);
+          if (r.ok) criado(id);
+          else setErro(String(r.dados.error ?? 'Não foi possível criar o anúncio.'));
+        }}
+      >
+        <label className="text-[11px] flex flex-col gap-0.5">Título
+          <input value={titulo} onChange={(e) => { setTitulo(e.target.value); if (!idEditado) setId(sugerirIdentificador(e.target.value)); }} className={campo} style={estiloCampo} required />
+        </label>
+        <label className="text-[11px] flex flex-col gap-0.5">Identificador (fixo)
+          <input value={id} onChange={(e) => { setId(e.target.value); setIdEditado(true); }} className={campo} style={estiloCampo} autoComplete="off" required />
+        </label>
+        <button type="submit" disabled={ocupado} className={`${botao} inline-flex items-center gap-1 justify-center`} style={estiloBotao}>
+          <Plus className="w-3.5 h-3.5" /> Criar
+        </button>
+      </form>
+      <p className="text-[11px]" style={{ color: colors.text.secondary }}>O anúncio nasce como rascunho, com texto provisório e desativado. Escreva o texto, marque "Ativo", salve e publique.</p>
+      {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
+    </Cartao>
+  );
 }
 
 /** Cria o rascunho de uma peça de armadura ou de um emblema a partir do que está no código. */
@@ -477,6 +524,23 @@ function Detalhe({ tipo, id, sessao, tokenFresco, voltar }: { tipo: TipoDeConteu
         {aviso && <p role="status" className="text-[12px] font-semibold" style={{ color: COR_DA_SITUACAO['no-ar'] }}>{aviso}</p>}
         {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
       </Cartao>
+
+      {tipo === 'anuncio' && (
+        <EditorDeAnuncio
+          key={conteudo.revisao}
+          inicial={conteudo.rascunho as AnuncioDados}
+          podeEditar={podeEditar}
+          salvar={async (dados) => {
+            const r = await chamar(tokenFresco, base, { method: 'PUT', body: JSON.stringify({ dados, revisao: conteudo.revisao, nome: dados.titulo }) });
+            if (!r.ok) {
+              if (r.status === 409) void carregar();
+              return String(r.dados.error ?? 'Não foi possível salvar.');
+            }
+            await carregar();
+            return null;
+          }}
+        />
+      )}
 
       {tipo === 'armadura' && (
         <EditorDeArmadura

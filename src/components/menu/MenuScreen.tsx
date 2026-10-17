@@ -144,9 +144,10 @@ export function MenuScreen({ personagem }: MenuScreenProps) {
                 key={item.id}
                 aria-label={item.nome}
                 onClick={() => {
-                  // Telas que já existem: a Mochila mostra os materiais da Caçada; Produção leva ao Ferreiro
+                  // Telas que já existem: a Mochila mostra os materiais da Caçada; Produção leva ao Ferreiro; Anúncios mostra o que o painel publicou
                   if (item.id === 'mochila') router.push('/mochila');
                   if (item.id === 'producao') router.push('/ferreiro');
+                  if (item.id === 'anuncios') router.push('/anuncios');
                 }}
                 style={{
                   gridArea: item.id,
