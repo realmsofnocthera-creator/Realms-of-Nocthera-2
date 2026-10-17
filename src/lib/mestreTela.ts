@@ -69,6 +69,9 @@ export function descreverAcao(e: Pick<EntradaLogAdmin, 'acao' | 'alvo' | 'antes'
     case 'jogador.desbanir':
       texto = `Levantou a sanção de ${alvo}`;
       break;
+    case 'tileset.imagem':
+      texto = `Enviou uma imagem de tileset (${alvo})`;
+      break;
     case 'conteudo.criar':
       texto = `Criou ${alvo} (rascunho)`;
       break;

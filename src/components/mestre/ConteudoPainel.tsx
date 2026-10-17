@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Gamepad2, History, PencilRuler, Plus, Upload } from 'lucide-react';
 import { LADO_MAXIMO_DO_MAPA, LADO_MINIMO_DO_MAPA, mapaVazio, TAMANHOS_DE_TILE, TILE_PADRAO, type MapaDados } from '@/rules/mapa';
-import type { TilesetDados } from '@/rules/tileset';
+import { origemDaImagem, type TilesetDados } from '@/rules/tileset';
 import { NOME_DO_TIPO, PERMISSAO_DE_EDICAO, type TipoDeConteudo } from '@/rules/conteudo';
 import { monstroDadosDeDefinicao, type MonstroDados } from '@/rules/monstroConteudo';
 import { EditorDeMonstro } from '@/components/mestre/EditorDeMonstro';
@@ -571,7 +571,7 @@ function Detalhe({ tipo, id, sessao, tokenFresco, voltar }: { tipo: TipoDeConteu
         )}
         {tipo === 'tileset' && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={(conteudo.rascunho as TilesetDados).imagem} alt={`Tileset ${conteudo.nome}`} className="max-h-64 self-start rounded-sm border object-contain" style={{ imageRendering: 'pixelated', borderColor: `${OURO}33` }} />
+          <img src={origemDaImagem(conteudo.rascunho as TilesetDados)} alt={`Tileset ${conteudo.nome}`} className="max-h-64 self-start rounded-sm border object-contain" style={{ imageRendering: 'pixelated', borderColor: `${OURO}33` }} />
         )}
         {aviso && <p role="status" className="text-[12px] font-semibold" style={{ color: COR_DA_SITUACAO['no-ar'] }}>{aviso}</p>}
         {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}

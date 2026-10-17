@@ -9,16 +9,22 @@ export const FORMATO_DO_TILESET = 1;
 export const TILE_MINIMO_DO_TILESET = 8;
 export const TILE_MAXIMO_DO_TILESET = 128;
 export const LADO_MAXIMO_DA_IMAGEM = 4096;
-/** O PNG cabe num documento do banco junto com o resto (base64 ocupa 4/3 do tamanho). */
+/** O PNG em texto cabe num documento do banco junto com o resto (base64 ocupa 4/3 do tamanho). Só tilesets antigos. */
 export const BYTES_MAXIMOS_DO_PNG = 420_000;
+/** Imagem guardada no armazenamento de arquivos (R2): o documento guarda só o endereço, então o teto é maior. */
+export const BYTES_MAXIMOS_DO_PNG_NO_ARMAZENAMENTO = 1_048_576;
+/** Onde a imagem fica no armazenamento: o nome é o SHA-256 do arquivo (mesma imagem, mesmo nome, nunca muda). */
+export const CHAVE_DA_IMAGEM_DO_TILESET = /^tilesets\/[0-9a-f]{64}\.png$/;
 export const MARGEM_MAXIMA = 32;
 /** Cada tileset tem até 4095 tiles: o número do tile no mapa reserva 4096 posições por tileset (ver mapa.ts). */
 export const TILES_POR_TILESET = 4095;
 
 export interface TilesetDados {
   formato: typeof FORMATO_DO_TILESET;
-  /** data:image/png;base64,... */
-  imagem: string;
+  /** data:image/png;base64,... (tilesets antigos). Exatamente um entre `imagem` e `imagemUrl`. */
+  imagem?: string;
+  /** Endereço público da imagem no armazenamento de arquivos (R2). */
+  imagemUrl?: string;
   larguraImagem: number;
   alturaImagem: number;
   tamanhoDoTile: number;
@@ -29,6 +35,17 @@ export interface TilesetDados {
 }
 
 const PREFIXO = 'data:image/png;base64,';
+
+/** A chave "tilesets/<hash>.png" no fim do endereço, ou null se o endereço não for de uma imagem do jogo. */
+export function chaveDaImagemNoEndereco(endereco: string): string | null {
+  const m = /^https:\/\/[^\s?#]+?\/(tilesets\/[0-9a-f]{64}\.png)$/.exec(endereco);
+  return m ? m[1] : null;
+}
+
+/** A imagem do tileset: o endereço no armazenamento, ou o PNG em texto dos tilesets antigos. */
+export function origemDaImagem(t: Pick<TilesetDados, 'imagem' | 'imagemUrl'>): string {
+  return t.imagemUrl ?? t.imagem ?? '';
+}
 const ASSINATURA_PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 /** Quantas colunas e linhas de tiles cabem na imagem com essa grade. */
@@ -71,13 +88,24 @@ export function validarTileset(bruto: unknown): ResultadoValidacao<TilesetDados>
   if (typeof bruto !== 'object' || bruto === null || Array.isArray(bruto)) return { ok: false, erros: ['O tileset precisa ser um objeto.'] };
   const b = bruto as Record<string, unknown>;
   const erros: string[] = [];
-  const permitidos = ['formato', 'imagem', 'larguraImagem', 'alturaImagem', 'tamanhoDoTile', 'margem', 'espacamento', 'colunas', 'linhas'];
+  const permitidos = ['formato', 'imagem', 'imagemUrl', 'larguraImagem', 'alturaImagem', 'tamanhoDoTile', 'margem', 'espacamento', 'colunas', 'linhas'];
   const extras = Object.keys(b).filter((k) => !permitidos.includes(k));
   if (extras.length) erros.push(`Campos desconhecidos no tileset: ${extras.join(', ')}.`);
   if (b.formato !== FORMATO_DO_TILESET) erros.push(`Formato do tileset não suportado (esperado ${FORMATO_DO_TILESET}).`);
 
   let dimensoes: { largura: number; altura: number } | null = null;
-  if (typeof b.imagem !== 'string' || !b.imagem.startsWith(PREFIXO)) {
+  if (b.imagem !== undefined && b.imagemUrl !== undefined) {
+    erros.push('Use a imagem em texto ou o endereço dela, não os dois.');
+  } else if (b.imagemUrl !== undefined) {
+    // a imagem está no armazenamento: o servidor confere lá que as dimensões batem (ver conteudo.ts)
+    if (typeof b.imagemUrl !== 'string' || !chaveDaImagemNoEndereco(b.imagemUrl)) {
+      erros.push('O endereço da imagem não é de uma imagem enviada pelo painel.');
+    } else if (!inteiroEntre(b.larguraImagem, 1, LADO_MAXIMO_DA_IMAGEM) || !inteiroEntre(b.alturaImagem, 1, LADO_MAXIMO_DA_IMAGEM)) {
+      erros.push(`A imagem vai de 1 a ${LADO_MAXIMO_DA_IMAGEM} pixels de lado.`);
+    } else {
+      dimensoes = { largura: b.larguraImagem, altura: b.alturaImagem };
+    }
+  } else if (typeof b.imagem !== 'string' || !b.imagem.startsWith(PREFIXO)) {
     erros.push('A imagem precisa ser um PNG (a tela converte qualquer imagem antes de enviar).');
   } else {
     const bytes = base64ParaBytes(b.imagem.slice(PREFIXO.length));
@@ -113,7 +141,7 @@ export function validarTileset(bruto: unknown): ResultadoValidacao<TilesetDados>
     ok: true,
     dados: {
       formato: FORMATO_DO_TILESET,
-      imagem: b.imagem as string,
+      ...(b.imagemUrl !== undefined ? { imagemUrl: b.imagemUrl as string } : { imagem: b.imagem as string }),
       larguraImagem: b.larguraImagem as number,
       alturaImagem: b.alturaImagem as number,
       tamanhoDoTile: b.tamanhoDoTile as number,
