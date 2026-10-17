@@ -2,6 +2,7 @@ import { configuracaoPadrao, ehSistema, MENSAGEM_MAXIMA, NOME_DO_SISTEMA, type C
 import { comRegistro, ErroMestre, exigir, motivoValido, type SessaoMestre } from '@/server/mestre';
 import { repositorio } from '@/server/persistencia';
 import { guardarConfiguracaoNoCache, lerConfiguracaoDeSistemas } from '@/server/sistemasLeitura';
+import { lerMapaPublicado } from '@/server/campanha';
 
 /**
  * Lado de escrita dos sistemas (3.5.5.2), só para o Dono. Cada mudança entra no log antes de acontecer, com motivo.
@@ -54,6 +55,25 @@ export async function definirSistema(sessao: SessaoMestre, pedido: PedidoDeSiste
     sessao,
     { acao: alvo === 'manutencao' ? 'sistema.manutencao' : 'sistema.definir', alvo: alvo === 'manutencao' ? 'manutencao' : `${alvo}:${NOME_DO_SISTEMA[alvo as SistemaId]}`, antes, depois, motivo, ip },
     () => repositorio.gravarConfiguracaoDeSistemas(proxima)
+  );
+  guardarConfiguracaoNoCache(proxima);
+  return proxima;
+}
+
+/** Define o mapa onde a Campanha começa (precisa estar publicado e válido); vazio desfaz e a Campanha volta a "ainda não começou". */
+export async function definirMapaInicial(sessao: SessaoMestre, pedido: { mapa: unknown; motivo: unknown }, ip?: string): Promise<ConfiguracaoDeSistemas> {
+  exigir(sessao, 'sistemas.gerir');
+  const motivo = motivoValido(pedido.motivo);
+  const mapa = typeof pedido.mapa === 'string' ? pedido.mapa.trim() : null;
+  if (mapa === null) throw new ErroMestre(400, 'Escolha o mapa inicial (ou deixe vazio para desfazer).');
+  if (mapa !== '' && !(await lerMapaPublicado(mapa))) throw new ErroMestre(400, `O mapa "${mapa}" não está publicado. Publique o mapa antes de torná-lo o início da Campanha.`);
+  const atual = await lerConfiguracaoDeSistemas();
+  const proxima: ConfiguracaoDeSistemas = structuredClone(atual);
+  proxima.campanha = { mapaInicial: mapa };
+  proxima.atualizadoEm = new Date().toISOString();
+  proxima.atualizadoPor = sessao.uid;
+  await comRegistro(sessao, { acao: 'campanha.mapa-inicial', alvo: 'campanha', antes: { mapaInicial: atual.campanha.mapaInicial }, depois: { mapaInicial: mapa }, motivo, ip }, () =>
+    repositorio.gravarConfiguracaoDeSistemas(proxima)
   );
   guardarConfiguracaoNoCache(proxima);
   return proxima;

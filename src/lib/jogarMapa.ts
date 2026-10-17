@@ -1,4 +1,5 @@
 import type { MapaDados } from '@/rules/mapa';
+import { dentroDoMapa as dentro, tileLivre } from '@/rules/passagem';
 import { NOME_DO_OBJETO, objetoCobre, type ObjetoDoMapa } from '@/rules/objetosDoMapa';
 
 /**
@@ -37,22 +38,8 @@ export type EventoDeJogo =
   | { tipo: 'luta'; objetoId: string; monstroId: string }
   | { tipo: 'nada'; motivo: string };
 
-const OBJETOS_SOLIDOS = new Set(['npc', 'placa', 'bau']);
-
-function dentro(mapa: Pick<MapaDados, 'largura' | 'altura'>, x: number, y: number): boolean {
-  return x >= 0 && y >= 0 && x < mapa.largura && y < mapa.altura;
-}
-
 function objetoDeUmTile(mapa: MapaDados, x: number, y: number): ObjetoDoMapa | undefined {
   return mapa.objetos.find((o) => o.tipo !== 'cacada' && o.x === x && o.y === y);
-}
-
-/** O tile pode ser pisado: dentro do mapa, sem colisão e sem NPC, placa ou baú. */
-export function tileLivre(mapa: MapaDados, x: number, y: number): boolean {
-  if (!dentro(mapa, x, y)) return false;
-  if (mapa.camadas.colisao[y * mapa.largura + x] === 1) return false;
-  const o = objetoDeUmTile(mapa, x, y);
-  return !(o && OBJETOS_SOLIDOS.has(o.tipo));
 }
 
 /** O primeiro tile livre, da esquerda para a direita e de cima para baixo (ou null se não houver). */
@@ -116,3 +103,5 @@ export function interagir(estado: EstadoDeJogo): { estado: EstadoDeJogo; eventos
       return { estado, eventos: [{ tipo: 'nada', motivo: `${NOME_DO_OBJETO[alvo.tipo]}: nada para interagir.` }] };
   }
 }
+
+export { tileLivre };

@@ -11,6 +11,7 @@ import type { CharacterDocument, TransactionDocument } from '@/server/characterS
 import { descreverErro, registrarLog } from '@/server/log';
 import { ehPapelMestre } from '@/rules/mestre';
 import { ehTipoDeConteudo } from '@/rules/conteudo';
+import type { ProgressoDaCampanha } from '@/game/campanha';
 import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
 import { MAXIMO_DE_ADVERTENCIAS, sancaoDocumentoVazio, type Advertencia, type SancaoDocumento } from '@/rules/sancoes';
 import {
@@ -27,6 +28,22 @@ import {
 } from './tipos';
 
 const texto = (v: unknown) => (typeof v === 'string' ? v : '');
+/** O progresso da Campanha lido do banco, com tolerância: dado estranho vira "sem progresso" (volta ao início). */
+function campanhaDoDocumento(bruto: unknown): { campanha?: ProgressoDaCampanha } {
+  if (typeof bruto !== 'object' || bruto === null) return {};
+  const c = bruto as Record<string, unknown>;
+  if (typeof c.mapaId !== 'string' || !Number.isInteger(c.x) || !Number.isInteger(c.y)) return {};
+  return {
+    campanha: {
+      mapaId: c.mapaId,
+      x: c.x as number,
+      y: c.y as number,
+      baus: Array.isArray(c.baus) ? (c.baus as unknown[]).filter((b): b is string => typeof b === 'string').slice(0, 1000) : [],
+      atualizadoEm: typeof c.atualizadoEm === 'string' ? c.atualizadoEm : '',
+    },
+  };
+}
+
 function sancaoDoDocumento(uid: string, data: DocumentData | undefined): SancaoDocumento | null {
   if (!data) return null;
   const base = sancaoDocumentoVazio(uid);
@@ -258,6 +275,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
       : {}),
     ...emblemasDoDocumento(data),
     ...(typeof data.torreAndar === 'number' && data.torreAndar > 0 ? { torreAndar: Math.floor(data.torreAndar) } : {}),
+    ...campanhaDoDocumento(data.campanha),
     ...(Array.isArray(data.batalhaSangrentaVencidas)
       ? { batalhaSangrentaVencidas: (data.batalhaSangrentaVencidas as unknown[]).filter((v): v is string => typeof v === 'string') }
       : {}),
@@ -307,6 +325,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.batalhaSangrenta ? { batalhaSangrenta: char.batalhaSangrenta } : {}),
     ...(char.batalhaSangrentaVencidas ? { batalhaSangrentaVencidas: char.batalhaSangrentaVencidas } : {}),
     ...(char.torreAndar ? { torreAndar: char.torreAndar } : {}),
+    ...(char.campanha ? { campanha: char.campanha } : {}),
     ...(char.guerreiroTentativas ? { guerreiroTentativas: char.guerreiroTentativas } : {}),
     ...(char.guerreiroVencidas ? { guerreiroVencidas: char.guerreiroVencidas } : {}),
     ...(char.emblemasItens && char.emblemasItens.length > 0 ? { emblemasItens: char.emblemasItens } : {}),

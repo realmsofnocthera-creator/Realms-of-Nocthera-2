@@ -10,6 +10,8 @@ import { MONSTERS_MAP } from '@/rules/monsters';
 import { monstroEfetivo } from '@/server/monstros';
 import { sincronizarCatalogoDeItens } from '@/server/catalogoItens';
 import { exigirSistemaLigado } from '@/server/sistemasLeitura';
+import { ErroDaCampanha, lerMapaPublicado, mapaInicialDaCampanha, type MapaPublicado } from '@/server/campanha';
+import { planejarBau, planejarPorta, planejarPosicao, progressoInicial, type ProgressoDaCampanha } from '@/game/campanha';
 import {
   DropSorteado,
   MENSAGEM_BLOQUEIO_CACADA,
@@ -174,6 +176,8 @@ export interface CharacterDocument {
   batalhaSangrentaVencidas?: string[];
   /** Torre Celestial: o andar mais alto já vencido (o personagem enfrenta o seguinte). */
   torreAndar?: number;
+  /** Campanha (5.5): mapa, posição e baús abertos. Sem o campo, o jogador ainda não entrou no mundo. */
+  campanha?: ProgressoDaCampanha;
   /** Provação do Guerreiro: o dia (em Brasília) da última tentativa em cada dificuldade (1 tentativa por dia por chefe). */
   guerreiroTentativas?: Record<string, string>;
   /** Provação do Guerreiro: dificuldades cujo chefe já foi vencido (cada uma abre ao vencer a anterior). */
@@ -380,6 +384,7 @@ function mesclarPersonagem(
     ...((updates.batalhaSangrenta ?? current.batalhaSangrenta) ? { batalhaSangrenta: updates.batalhaSangrenta ?? current.batalhaSangrenta } : {}),
     ...((updates.batalhaSangrentaVencidas ?? current.batalhaSangrentaVencidas) ? { batalhaSangrentaVencidas: updates.batalhaSangrentaVencidas ?? current.batalhaSangrentaVencidas } : {}),
     ...((updates.torreAndar ?? current.torreAndar) !== undefined ? { torreAndar: updates.torreAndar ?? current.torreAndar } : {}),
+    ...((updates.campanha ?? current.campanha) ? { campanha: updates.campanha ?? current.campanha } : {}),
     ...((updates.guerreiroTentativas ?? current.guerreiroTentativas) ? { guerreiroTentativas: updates.guerreiroTentativas ?? current.guerreiroTentativas } : {}),
     ...((updates.guerreiroVencidas ?? current.guerreiroVencidas) ? { guerreiroVencidas: updates.guerreiroVencidas ?? current.guerreiroVencidas } : {}),
     ...((updates.emblemasItens ?? current.emblemasItens) ? { emblemasItens: updates.emblemasItens ?? current.emblemasItens } : {}),
@@ -2312,4 +2317,104 @@ export function equiparArmaduraDoPersonagem(uid: string, armaduraId: unknown): P
 
 export function desequiparEspacoDoPersonagem(uid: string, espaco: unknown): Promise<RespostaEquipamento> {
   return gravarEquipamento('desequiparEspaco', uid, (c) => desequiparEspaco(equipamentoDe(c), espaco));
+}
+
+// ---------------------------------------------------------------------------
+// Campanha (5.5-3 e 5.5-8): estado, checkpoints de posição, baús e portas
+// ---------------------------------------------------------------------------
+
+export interface EstadoDaCampanha {
+  /** Há um mapa inicial publicado: o jogador pode entrar no mundo. */
+  iniciada: boolean;
+  mensagem?: string;
+  progresso?: ProgressoDaCampanha;
+  mapa?: MapaPublicado;
+}
+
+interface MundoDoJogador {
+  progresso: ProgressoDaCampanha;
+  mapa: MapaPublicado;
+  /** O jogador ainda não tinha progresso gravado: este é o ponto de partida. */
+  novo: boolean;
+}
+
+/** O progresso do jogador e o mapa publicado em que ele está; volta ao mapa inicial se o atual deixou de estar publicado. */
+async function mundoDoJogador(char: CharacterDocument, agora: string): Promise<MundoDoJogador | null> {
+  const inicialId = await mapaInicialDaCampanha();
+  if (char.campanha) {
+    const atual = await lerMapaPublicado(char.campanha.mapaId);
+    if (atual) return { progresso: char.campanha, mapa: atual, novo: false };
+  }
+  if (!inicialId) return null;
+  const inicial = await lerMapaPublicado(inicialId);
+  if (!inicial) return null;
+  return { progresso: { ...progressoInicial(inicialId, inicial.dados, agora), baus: char.campanha?.baus ?? [] }, mapa: inicial, novo: true };
+}
+
+/** Onde o jogador está no mundo e o mapa publicado, sem gravar nada. */
+export async function campanhaEstado(uid: string): Promise<EstadoDaCampanha> {
+  await exigirSistemaLigado(uid, 'campanha');
+  const char = await getCharacterByUid(uid);
+  if (!char) throw new Error('Personagem não encontrado.');
+  const mundo = await mundoDoJogador(char, new Date().toISOString());
+  if (!mundo) return { iniciada: false, mensagem: 'A Campanha ainda não começou.' };
+  return { iniciada: true, progresso: mundo.progresso, mapa: mundo.mapa };
+}
+
+/**
+ * Roda uma ação da Campanha numa transação: lê o mundo publicado ANTES (fora da transação), confere que o jogador
+ * continua onde estava quando a transação começa, planeja, grava o progresso (e o que mais a ação mudar).
+ */
+async function agirNaCampanha<T extends { progresso: ProgressoDaCampanha }>(
+  uid: string,
+  operacao: string,
+  planejar: (mundo: MundoDoJogador, agora: string) => Promise<{ ok: true } & T | { ok: false; erro: string }>,
+  extra: (plano: T, atual: CharacterDocument) => Partial<CharacterDocument> = () => ({})
+): Promise<{ plano: T; personagem: CharacterDocument }> {
+  await exigirSistemaLigado(uid, 'campanha');
+  const previo = await getCharacterByUid(uid);
+  if (!previo) throw new Error('Personagem não encontrado.');
+  const agora = new Date().toISOString();
+  const mundo = await mundoDoJogador(previo, agora);
+  if (!mundo) throw new ErroDaCampanha('A Campanha ainda não começou.');
+  const plano = await planejar(mundo, agora);
+  if (!plano.ok) throw new ErroDaCampanha(plano.erro);
+
+  return repositorio.executarTransacao(operacao, async (ctx) => {
+    const atual = await carregarPersonagem(ctx, uid);
+    const posAntes = previo.campanha;
+    const posAgora = atual.campanha;
+    if (posAntes?.mapaId !== posAgora?.mapaId || posAntes?.atualizadoEm !== posAgora?.atualizadoEm) {
+      throw new ErroDaCampanha('Seu progresso mudou enquanto isso. Tente de novo.');
+    }
+    const personagem = salvarPersonagem(ctx, atual, { campanha: plano.progresso, ...extra(plano, atual) });
+    return { plano, personagem };
+  });
+}
+
+/** Checkpoint de posição (ao parar de andar, ao agir, ao sair da tela). */
+export async function campanhaSalvarPosicao(uid: string, pedido: { mapaId: unknown; x: unknown; y: unknown }): Promise<EstadoDaCampanha> {
+  const r = await agirNaCampanha(uid, 'campanhaPosicao', async (m, agora) => planejarPosicao(m.progresso, m.mapa.dados, pedido, agora));
+  return { iniciada: true, progresso: r.personagem.campanha, mapa: (await lerMapaPublicado(r.personagem.campanha!.mapaId)) ?? undefined };
+}
+
+/** Abre um baú do mapa em que o jogador está: o item vai para a mochila e o baú não abre de novo. */
+export async function campanhaAbrirBau(uid: string, objetoId: unknown): Promise<{ item: { id: string; qtd: number }; character: CharacterDocument }> {
+  const r = await agirNaCampanha(
+    uid,
+    'campanhaBau',
+    async (m, agora) => planejarBau(m.progresso, m.mapa.dados, objetoId, agora),
+    (plano, atual) => ({ inventario: { ...(atual.inventario ?? {}), [plano.item.id]: ((atual.inventario ?? {})[plano.item.id] ?? 0) + plano.item.qtd } })
+  );
+  return { item: r.plano.item, character: r.personagem };
+}
+
+/** Atravessa uma porta: o jogador passa para o mapa de destino (publicado), na posição indicada. */
+export async function campanhaAtravessarPorta(uid: string, objetoId: unknown): Promise<EstadoDaCampanha> {
+  const r = await agirNaCampanha(uid, 'campanhaPorta', async (m, agora) => {
+    const porta = typeof objetoId === 'string' ? m.mapa.dados.objetos.find((o) => o.id === objetoId && o.tipo === 'porta') : undefined;
+    const destino = porta?.destino ? await lerMapaPublicado(porta.destino.mapa) : null;
+    return planejarPorta(m.progresso, m.mapa.dados, objetoId, destino?.dados ?? null, agora);
+  });
+  return { iniciada: true, progresso: r.personagem.campanha, mapa: (await lerMapaPublicado(r.personagem.campanha!.mapaId)) ?? undefined };
 }

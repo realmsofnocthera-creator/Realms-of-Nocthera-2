@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
 import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
+import { validarMapa, type MapaDados } from '@/rules/mapa';
+import { verificarMapa, type ProblemaDoMapa } from '@/rules/verificarMapa';
 import { CHEFES_ESPECIAIS_MAP } from '@/rules/chefesEspeciais';
 import { MONSTERS_MAP } from '@/rules/monsters';
 import {
@@ -77,6 +79,29 @@ async function conferirReferencias(tipo: TipoDeConteudo, dados: unknown, exigirP
       throw new ErroMestre(400, `Publique antes o ${NOME_DO_TIPO[ref.tipo].toLowerCase()} "${ref.id}": o jogo só usa o que está publicado.`);
     }
   }
+}
+
+/** Os outros mapas (rascunhos mais recentes e válidos), por id, para conferir destinos de portas e ligações. */
+async function outrosMapas(exceto: string): Promise<Record<string, MapaDados>> {
+  const resultado: Record<string, MapaDados> = {};
+  for (const resumo of await repositorio.listarConteudos('mapa')) {
+    if (resumo.id === exceto) continue;
+    const doc = await repositorio.lerConteudo(resumo.chave);
+    const v = doc ? validarMapa(doc.rascunho) : null;
+    if (v?.ok) resultado[resumo.id] = v.dados;
+  }
+  return resultado;
+}
+
+/** Problemas do mapa para o painel: erros (impedem publicar) e avisos. */
+export async function verificarMapaDoPainel(sessao: SessaoMestre, tipoBruto: unknown, idBruto: unknown): Promise<ProblemaDoMapa[]> {
+  exigir(sessao, 'conteudo.ler');
+  if (tipoValido(tipoBruto) !== 'mapa') throw new ErroMestre(400, 'A verificação vale só para mapas.');
+  const id = idValido(idBruto);
+  const doc = await lerOuFalhar('mapa', id);
+  const v = validarMapa(doc.rascunho);
+  if (!v.ok) throw new ErroMestre(400, `Mapa inválido: ${v.erros.join(' ')}`);
+  return verificarMapa(id, v.dados, await outrosMapas(id));
 }
 
 async function lerOuFalhar(tipo: TipoDeConteudo, id: string): Promise<ConteudoDocumento> {
@@ -235,6 +260,10 @@ export async function publicarConteudo(
   if (atual.hashPublicado === atual.hashRascunho) throw new ErroMestre(400, 'O rascunho é igual ao que já está no ar.');
   const dados = dadosValidos(tipo, atual.rascunho);
   await conferirReferencias(tipo, dados, true);
+  if (tipo === 'mapa') {
+    const erros = verificarMapa(atual.id, dados as MapaDados, await outrosMapas(atual.id)).filter((p) => p.nivel === 'erro');
+    if (erros.length) throw new ErroMestre(400, `O mapa tem problemas que impedem a publicação: ${erros.map((e) => e.texto).join(' ')}`);
+  }
   const hash = hashDe(dados);
   return publicar(sessao, atual, { revisao }, { dados, hash, motivo, origem: 'publicacao', revertidaDe: null }, 'conteudo.publicar', ip);
 }
