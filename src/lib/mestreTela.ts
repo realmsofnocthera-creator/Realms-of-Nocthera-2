@@ -48,6 +48,12 @@ export function descreverAcao(e: Pick<EntradaLogAdmin, 'acao' | 'alvo' | 'antes'
     case 'jogador.ajustar':
       texto = `Ajustou ${alvo}: ${resumoDoAjuste(e.depois)}`;
       break;
+    case 'sistema.manutencao':
+      texto = `${(e.depois as { ativa?: boolean } | null | undefined)?.ativa ? 'Fechou o jogo para manutenção' : 'Reabriu o jogo'}`;
+      break;
+    case 'sistema.definir':
+      texto = `${(e.depois as { ativo?: boolean } | null | undefined)?.ativo ? 'Ligou' : 'Desligou'} o sistema ${alvo.split(':')[1] ?? alvo}`;
+      break;
     case 'jogador.exportar':
       texto = `Exportou os dados de ${alvo}`;
       break;

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Layers, Lock, ScrollText, ShieldCheck, UserSearch, Users } from 'lucide-react';
+import { ArrowLeft, Layers, Lock, Power, ScrollText, ShieldCheck, UserSearch, Users } from 'lucide-react';
 import { NOME_DA_PERMISSAO, NOME_DO_PAPEL, PAPEIS_MESTRE, type PapelMestre, type PermissaoMestre } from '@/rules/mestre';
 import { dataDoLog, descreverAcao } from '@/lib/mestreTela';
 import type { EntradaLogAdmin } from '@/server/persistencia';
@@ -11,6 +11,7 @@ import { NOCTHERA_THEME } from '@/theme/theme';
 import { Cartao, chamar, OURO, VERMELHO } from '@/components/mestre/comum';
 import { ConteudoPainel } from '@/components/mestre/ConteudoPainel';
 import { JogadoresPainel } from '@/components/mestre/JogadoresPainel';
+import { SistemasPainel } from '@/components/mestre/SistemasPainel';
 
 export interface SessaoDoPainel {
   uid: string;
@@ -22,13 +23,11 @@ export interface SessaoDoPainel {
   permissoes: PermissaoMestre[];
 }
 
-type Aba = 'geral' | 'conteudo' | 'jogadores' | 'papeis' | 'log';
+type Aba = 'geral' | 'conteudo' | 'jogadores' | 'sistemas' | 'papeis' | 'log';
 
 const MODULOS_EM_BREVE = [
   'Salas, conexões, objetos e gatilhos dos mapas; jogar o mapa',
-  'Monstros, itens e tabelas de drop',
-  'Jogadores: ajustar ouro, Diamantes, XP e itens; exclusão de conta e exportação de dados',
-  'Feature flags e modo manutenção',
+  'Lojas e tabelas de drop; simulador de lutas; dashboard',
 ];
 
 /** Casca do Painel do Mestre: visão geral, papéis e log administrativo. Tudo o que muda passa pelo servidor. */
@@ -43,6 +42,7 @@ export function MestrePainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel; 
     { id: 'geral', nome: 'Visão geral', icone: <ShieldCheck className="w-3.5 h-3.5" /> },
     ...(podeConteudo ? [{ id: 'conteudo' as const, nome: 'Mapas', icone: <Layers className="w-3.5 h-3.5" /> }] : []),
     ...(podeJogadores ? [{ id: 'jogadores' as const, nome: 'Jogadores', icone: <UserSearch className="w-3.5 h-3.5" /> }] : []),
+    { id: 'sistemas' as const, nome: 'Sistemas', icone: <Power className="w-3.5 h-3.5" /> },
     ...(podePapeis ? [{ id: 'papeis' as const, nome: 'Papéis', icone: <Users className="w-3.5 h-3.5" /> }] : []),
     ...(podeLog ? [{ id: 'log' as const, nome: 'Log', icone: <ScrollText className="w-3.5 h-3.5" /> }] : []),
   ];
@@ -83,6 +83,7 @@ export function MestrePainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel; 
         {aba === 'geral' && <VisaoGeral sessao={sessao} />}
         {aba === 'conteudo' && podeConteudo && <ConteudoPainel sessao={sessao} tokenFresco={tokenFresco} />}
         {aba === 'jogadores' && podeJogadores && <JogadoresPainel sessao={sessao} tokenFresco={tokenFresco} />}
+        {aba === 'sistemas' && <SistemasPainel sessao={sessao} tokenFresco={tokenFresco} />}
         {aba === 'papeis' && podePapeis && <Papeis sessao={sessao} tokenFresco={tokenFresco} />}
         {aba === 'log' && podeLog && <Log tokenFresco={tokenFresco} />}
       </div>

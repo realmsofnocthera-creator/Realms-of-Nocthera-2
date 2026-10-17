@@ -2,6 +2,7 @@ import type { CharacterDocument, TransactionDocument } from '@/server/characterS
 import type { PapelMestre } from '@/rules/mestre';
 import type { TipoDeConteudo } from '@/rules/conteudo';
 import type { SancaoDocumento } from '@/rules/sancoes';
+import type { ConfiguracaoDeSistemas } from '@/rules/sistemas';
 
 /**
  * Registro de um combate resolvido (0.5-B1/B3): guarda a semente e a entrada para
@@ -213,6 +214,9 @@ export interface Repositorio {
   gravarSancao(doc: SancaoDocumento): Promise<void>;
   /** As transações de moeda do jogador, da mais recente para a mais antiga (3.5.4.1). */
   listarTransacoes(uid: string, limite: number): Promise<TransactionDocument[]>;
+  /** Sistemas desligados e modo manutenção (3.5.5.2), ou null se nunca foi configurado (tudo ligado). */
+  lerConfiguracaoDeSistemas(): Promise<ConfiguracaoDeSistemas | null>;
+  gravarConfiguracaoDeSistemas(config: ConfiguracaoDeSistemas): Promise<void>;
   /** Os combates registrados do jogador, do mais recente para o mais antigo (exportação de dados, 3.5.4.4). */
   listarCombatesDoJogador(uid: string, limite: number): Promise<RegistroCombate[]>;
   /**

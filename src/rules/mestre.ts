@@ -29,6 +29,7 @@ export const PERMISSOES_MESTRE = [
   'jogadores.ajustar',
   'jogadores.sancionar',
   'jogadores.dados',
+  'sistemas.gerir',
   'papeis.gerir',
   'log.ler',
 ] as const;
@@ -44,6 +45,7 @@ export const NOME_DA_PERMISSAO: Readonly<Record<PermissaoMestre, string>> = {
   'jogadores.ajustar': 'Ajustar ouro, Diamantes, XP e itens',
   'jogadores.sancionar': 'Aplicar sanções',
   'jogadores.dados': 'Exportar, zerar e excluir dados de jogadores',
+  'sistemas.gerir': 'Ligar e desligar sistemas e o modo manutenção',
   'papeis.gerir': 'Gerir papéis',
   'log.ler': 'Ler o log administrativo',
 };
