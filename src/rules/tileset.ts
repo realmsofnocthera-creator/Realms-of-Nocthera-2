@@ -19,6 +19,20 @@ export const MARGEM_MAXIMA = 32;
 /** Cada tileset tem até 4095 tiles: o número do tile no mapa reserva 4096 posições por tileset (ver mapa.ts). */
 export const TILES_POR_TILESET = 4095;
 
+/**
+ * De onde vieram os tiles de um tileset "só com os escolhidos": a folha original (guardada no armazenamento) e quais
+ * tiles dela foram escolhidos, na ordem. O tile número i do tileset é o tile `tiles[i]` da folha, então para pegar
+ * mais tiles depois basta acrescentar no fim: os números dos tiles que os mapas já usam nunca mudam.
+ */
+export interface OrigemDoTileset {
+  folhaUrl: string;
+  larguraFolha: number;
+  alturaFolha: number;
+  margem: number;
+  espacamento: number;
+  tiles: number[];
+}
+
 export interface TilesetDados {
   formato: typeof FORMATO_DO_TILESET;
   /** data:image/png;base64,... (tilesets antigos). Exatamente um entre `imagem` e `imagemUrl`. */
@@ -32,6 +46,8 @@ export interface TilesetDados {
   espacamento: number;
   colunas: number;
   linhas: number;
+  /** Só tileset montado a partir de tiles escolhidos de uma folha. Exige `imagemUrl`. */
+  origem?: OrigemDoTileset;
 }
 
 const PREFIXO = 'data:image/png;base64,';
@@ -84,11 +100,54 @@ export function dimensoesDoPng(bytes: Uint8Array): { largura: number; altura: nu
 
 const inteiroEntre = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
 
+function validarOrigem(
+  bruto: unknown,
+  temImagemUrl: boolean,
+  tamanhoDoTile: unknown,
+  colunas: unknown,
+  linhas: unknown
+): { erro?: string; origem?: OrigemDoTileset } {
+  if (typeof bruto !== 'object' || bruto === null || Array.isArray(bruto)) return { erro: 'A origem do tileset precisa ser um objeto.' };
+  const o = bruto as Record<string, unknown>;
+  const extras = Object.keys(o).filter((k) => !['folhaUrl', 'larguraFolha', 'alturaFolha', 'margem', 'espacamento', 'tiles'].includes(k));
+  if (extras.length) return { erro: `Campos desconhecidos na origem: ${extras.join(', ')}.` };
+  if (!temImagemUrl) return { erro: 'A origem só vale para tileset com a imagem no armazenamento.' };
+  if (typeof o.folhaUrl !== 'string' || !chaveDaImagemNoEndereco(o.folhaUrl)) return { erro: 'O endereço da folha de origem não é de uma imagem enviada pelo painel.' };
+  if (!inteiroEntre(o.larguraFolha, 1, LADO_MAXIMO_DA_IMAGEM) || !inteiroEntre(o.alturaFolha, 1, LADO_MAXIMO_DA_IMAGEM)) {
+    return { erro: `A folha de origem vai de 1 a ${LADO_MAXIMO_DA_IMAGEM} pixels de lado.` };
+  }
+  if (!inteiroEntre(o.margem, 0, MARGEM_MAXIMA) || !inteiroEntre(o.espacamento, 0, MARGEM_MAXIMA)) {
+    return { erro: `Margem e espaçamento da folha vão de 0 a ${MARGEM_MAXIMA} pixels.` };
+  }
+  if (!Array.isArray(o.tiles) || o.tiles.length < 1 || o.tiles.length > TILES_POR_TILESET) {
+    return { erro: `A origem lista de 1 a ${TILES_POR_TILESET} tiles.` };
+  }
+  const grade = gradeDoTileset(o.larguraFolha, o.alturaFolha, tamanhoDoTile as number, o.margem, o.espacamento);
+  const total = grade.colunas * grade.linhas;
+  const vistos = new Set<number>();
+  for (const t of o.tiles) {
+    if (!inteiroEntre(t, 0, Math.max(0, total - 1)) || total === 0) return { erro: 'A origem cita um tile que não existe na folha.' };
+    if (vistos.has(t)) return { erro: 'A origem repete um tile.' };
+    vistos.add(t);
+  }
+  if (o.tiles.length > (colunas as number) * (linhas as number)) return { erro: 'A origem lista mais tiles do que o tileset tem.' };
+  return {
+    origem: {
+      folhaUrl: o.folhaUrl,
+      larguraFolha: o.larguraFolha,
+      alturaFolha: o.alturaFolha,
+      margem: o.margem,
+      espacamento: o.espacamento,
+      tiles: [...(o.tiles as number[])],
+    },
+  };
+}
+
 export function validarTileset(bruto: unknown): ResultadoValidacao<TilesetDados> {
   if (typeof bruto !== 'object' || bruto === null || Array.isArray(bruto)) return { ok: false, erros: ['O tileset precisa ser um objeto.'] };
   const b = bruto as Record<string, unknown>;
   const erros: string[] = [];
-  const permitidos = ['formato', 'imagem', 'imagemUrl', 'larguraImagem', 'alturaImagem', 'tamanhoDoTile', 'margem', 'espacamento', 'colunas', 'linhas'];
+  const permitidos = ['formato', 'imagem', 'imagemUrl', 'larguraImagem', 'alturaImagem', 'tamanhoDoTile', 'margem', 'espacamento', 'colunas', 'linhas', 'origem'];
   const extras = Object.keys(b).filter((k) => !permitidos.includes(k));
   if (extras.length) erros.push(`Campos desconhecidos no tileset: ${extras.join(', ')}.`);
   if (b.formato !== FORMATO_DO_TILESET) erros.push(`Formato do tileset não suportado (esperado ${FORMATO_DO_TILESET}).`);
@@ -136,6 +195,13 @@ export function validarTileset(bruto: unknown): ResultadoValidacao<TilesetDados>
     else if (grade.colunas * grade.linhas > TILES_POR_TILESET) erros.push(`O tileset passa de ${TILES_POR_TILESET} tiles: use um tile maior ou divida a imagem.`);
   }
 
+  let origem: OrigemDoTileset | undefined;
+  if (b.origem !== undefined) {
+    const r = validarOrigem(b.origem, b.imagemUrl !== undefined, b.tamanhoDoTile, b.colunas, b.linhas);
+    if (r.erro) erros.push(r.erro);
+    else origem = r.origem;
+  }
+
   if (erros.length) return { ok: false, erros };
   return {
     ok: true,
@@ -149,6 +215,7 @@ export function validarTileset(bruto: unknown): ResultadoValidacao<TilesetDados>
       espacamento: b.espacamento as number,
       colunas: b.colunas as number,
       linhas: b.linhas as number,
+      ...(origem ? { origem } : {}),
     },
   };
 }

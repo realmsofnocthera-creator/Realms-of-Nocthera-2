@@ -83,4 +83,32 @@ describe('Tileset importado (formato 1)', () => {
       expect(origemDaImagem({ imagemUrl: 'https://x' })).toBe('https://x');
     });
   });
+
+  describe('origem (tiles escolhidos de uma folha)', () => {
+    const HASH2 = 'a'.repeat(64);
+    const FOLHA_URL = `https://arquivos.exemplo.test/tilesets/${'b'.repeat(64)}.png`;
+    const base = () => {
+      const { imagem: _imagem, ...resto } = tilesetDeTeste(32, 16, 16); // 2 colunas x 1 linha
+      return { ...resto, imagemUrl: `https://arquivos.exemplo.test/tilesets/${HASH2}.png` };
+    };
+    const origem = (extra: Record<string, unknown> = {}) => ({ folhaUrl: FOLHA_URL, larguraFolha: 64, alturaFolha: 32, margem: 0, espacamento: 0, tiles: [7, 0], ...extra });
+
+    it('aceita a origem e devolve igual', () => {
+      const r = validarTileset({ ...base(), origem: origem() });
+      expect(r.ok && r.dados.origem).toEqual(origem());
+    });
+
+    it('recusa origem sem imagemUrl, tile fora da folha, repetido, lista grande demais e campos desconhecidos', () => {
+      expect(erros({ ...tilesetDeTeste(), origem: origem() })).toMatch(/só vale para tileset com a imagem no armazenamento/);
+      expect(erros({ ...base(), origem: origem({ tiles: [8, 0] }) })).toMatch(/tile que não existe na folha/); // a folha 64x32 tem 4x2 = 8 tiles (0 a 7)
+      expect(erros({ ...base(), origem: origem({ tiles: [-1] }) })).toMatch(/não existe na folha/);
+      expect(erros({ ...base(), origem: origem({ tiles: [1, 1] }) })).toMatch(/repete um tile/);
+      expect(erros({ ...base(), origem: origem({ tiles: [0, 1, 2] }) })).toMatch(/mais tiles do que o tileset tem/);
+      expect(erros({ ...base(), origem: origem({ tiles: [] }) })).toMatch(/de 1 a 4095 tiles/);
+      expect(erros({ ...base(), origem: origem({ extra: 1 }) })).toMatch(/Campos desconhecidos na origem/);
+      expect(erros({ ...base(), origem: origem({ folhaUrl: 'https://x.dev/outro.png' }) })).toMatch(/endereço da folha de origem/);
+      expect(erros({ ...base(), origem: origem({ larguraFolha: 5000 }) })).toMatch(/1 a 4096/);
+      expect(erros({ ...base(), origem: 'x' })).toMatch(/precisa ser um objeto/);
+    });
+  });
 });
