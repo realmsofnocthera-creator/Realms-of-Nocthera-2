@@ -179,6 +179,54 @@ describe('Campanha: progresso no servidor (5.5-3 e 5.5-8)', () => {
       await expect(campanhaAtravessarPorta('j1', 'porta-2')).rejects.toMatchObject({ message: expect.stringMatching(/fechada/) });
     });
 
+    it('o estado traz os tilesets publicados do mapa; salvar a posição devolve só o progresso', async () => {
+      const { tilesetDeTeste } = await import('@/test/pngDeTeste');
+      await criarConteudo(mestre, { tipo: 'tileset', id: 'grama', nome: 'Grama', dados: tilesetDeTeste() });
+      await publicarConteudo(mestre, 'tileset', 'grama', { revisao: 1, motivo: 'publicado no teste' });
+      const { vila, floresta } = MUNDO();
+      vila.tilesets = ['grama'];
+      await criarConteudo(mestre, { tipo: 'mapa', id: 'floresta', nome: 'Floresta', dados: mapa([]) });
+      await publicar('vila', vila);
+      await salvarRascunho(mestre, 'mapa', 'floresta', { revisao: 1, dados: floresta });
+      await publicarConteudo(mestre, 'mapa', 'floresta', { revisao: 2, motivo: 'publicado no teste' });
+      limparCacheDoConteudo();
+      await definirMapaInicial(dono, { mapa: 'vila', motivo: M });
+      const e = await campanhaEstado('j1');
+      expect(e.tilesets).toHaveLength(1);
+      expect(e.tilesets?.[0]).toMatchObject({ id: 'grama', dados: { formato: 1 } });
+      // um tileset que não está publicado vira null (o jogo desenha sem ele)
+      const { tilesetsDoMapa } = await import('@/server/campanha');
+      expect(await tilesetsDoMapa({ id: 'x', nome: 'X', versao: 1, dados: { ...vila, tilesets: ['grama', 'nao-existe'] } })).toEqual([expect.objectContaining({ id: 'grama' }), null]);
+      const salvo = await campanhaSalvarPosicao('j1', { mapaId: 'vila', x: 2, y: 1 });
+      expect(salvo.progresso).toMatchObject({ x: 2, y: 1 });
+      expect(salvo.mapa).toBeUndefined();
+      expect(salvo.tilesets).toBeUndefined();
+    });
+
+    it('baú e porta aceitam a posição junto: uma gravação só, sem checkpoint antes', async () => {
+      await prepararMundo();
+      // o jogador nasce em (1,1); anda até perto do baú e abre, sem ter salvado a posição antes
+      const r = await campanhaAbrirBau('j1', 'bau-1', { mapaId: 'vila', x: 4, y: 2 });
+      expect(r.item.qtd).toBe(3);
+      const c = (await getCharacterByUid('j1'))!;
+      expect(c.campanha).toMatchObject({ x: 4, y: 2, baus: ['vila:bau-1'] });
+
+      // a porta, em (6,1): o jogador está em (5,1) e manda a posição com o pedido
+      const dentro = await campanhaAtravessarPorta('j1', 'porta-1', { mapaId: 'vila', x: 5, y: 1 });
+      expect(dentro.progresso).toMatchObject({ mapaId: 'floresta', x: 2, y: 2 });
+      expect(dentro.mapa?.id).toBe('floresta');
+      expect(dentro.tilesets).toEqual([]);
+    });
+
+    it('a posição enviada com a ação é conferida: parede, outro mapa, formato ruim ou longe demais da ação', async () => {
+      await prepararMundo();
+      await expect(campanhaAbrirBau('j1', 'bau-1', { mapaId: 'floresta', x: 4, y: 2 })).rejects.toMatchObject({ name: 'ErroDaCampanha' });
+      await expect(campanhaAbrirBau('j1', 'bau-1', { mapaId: 'vila', x: 99, y: 2 })).rejects.toMatchObject({ name: 'ErroDaCampanha' });
+      await expect(campanhaAbrirBau('j1', 'bau-1', 'aqui')).rejects.toMatchObject({ name: 'ErroDaCampanha' });
+      await expect(campanhaAbrirBau('j1', 'bau-1', { mapaId: 'vila', x: 9, y: 7 })).rejects.toMatchObject({ message: expect.stringMatching(/mais perto/) });
+      expect((await getCharacterByUid('j1'))!.campanha).toBeUndefined(); // nada foi gravado
+    });
+
     it('rotas: posição, baú e porta; erro de regra vira 400; sem login, 401', async () => {
       await prepararMundo();
       expect((await posicaoRota(req('/api/campanha/posicao', 'j1', { mapaId: 'vila', x: 2, y: 1 }))).status).toBe(200);

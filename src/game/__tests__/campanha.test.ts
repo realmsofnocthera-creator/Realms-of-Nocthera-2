@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { chaveDoBau, planejarBau, planejarPorta, planejarPosicao, posicaoInicialDoMapa, progressoInicial, MAXIMO_DE_BAUS_GUARDADOS, type ProgressoDaCampanha } from '@/game/campanha';
+import { aplicarPosicaoDaAcao, chaveDoBau, planejarBau, planejarPorta, planejarPosicao, posicaoInicialDoMapa, progressoInicial, MAXIMO_DE_BAUS_GUARDADOS, type ProgressoDaCampanha } from '@/game/campanha';
 import { mapaVazio, type MapaDados } from '@/rules/mapa';
 import { objetoNovo, type ObjetoDoMapa } from '@/rules/objetosDoMapa';
 
@@ -94,6 +94,23 @@ describe('Campanha: regras do progresso (5.5-3 e 5.5-8)', () => {
       expect(planejarPorta(prog(), origem, 'perto', null, AGORA)).toMatchObject({ ok: false, erro: expect.stringMatching(/fechada/) });
       expect(planejarPorta(prog(), origem, 'fora', mapa([]), AGORA).ok).toBe(false);
       expect(planejarPorta(prog(), origem, 'perto', mapa([], [[2, 2]]), AGORA).ok).toBe(false);
+    });
+  });
+
+  describe('posição enviada junto com a ação (uma gravação só)', () => {
+    it('sem posição, a ação usa a posição já salva', () => {
+      const atual = prog();
+      expect(aplicarPosicaoDaAcao(atual, mapa([]), undefined, AGORA)).toEqual({ ok: true, progresso: atual });
+      expect(aplicarPosicaoDaAcao(atual, mapa([]), null, AGORA)).toEqual({ ok: true, progresso: atual });
+    });
+
+    it('com posição, vale como checkpoint nas mesmas regras (livre, no mesmo mapa, com caminho)', () => {
+      const m = mapa([], [[5, 0], [5, 1], [5, 2], [5, 3], [5, 4], [5, 5], [5, 6], [5, 7]]);
+      expect(aplicarPosicaoDaAcao(prog(), m, { mapaId: 'vila', x: 4, y: 4 }, AGORA)).toMatchObject({ ok: true, progresso: { x: 4, y: 4, atualizadoEm: AGORA } });
+      expect(aplicarPosicaoDaAcao(prog(), m, { mapaId: 'vila', x: 8, y: 4 }, AGORA)).toMatchObject({ ok: false, erro: expect.stringMatching(/caminho livre/) });
+      expect(aplicarPosicaoDaAcao(prog(), m, { mapaId: 'floresta', x: 4, y: 4 }, AGORA).ok).toBe(false);
+      expect(aplicarPosicaoDaAcao(prog(), m, 'aqui', AGORA).ok).toBe(false);
+      expect(aplicarPosicaoDaAcao(prog(), m, [1, 2], AGORA).ok).toBe(false);
     });
   });
 });

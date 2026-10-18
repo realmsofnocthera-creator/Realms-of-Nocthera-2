@@ -6,7 +6,7 @@ import { descreverErro, registrarLog } from '@/server/log';
 import { limitarPorConta, limitarPorIp } from '@/server/rateLimit';
 import { respostaErroPersistencia } from '@/server/respostaErro';
 
-/** Atravessa uma porta do mapa atual: { objetoId }. A porta precisa estar perto da posição salva e o destino publicado e livre. */
+/** Atravessa uma porta do mapa atual: { objetoId, posicao? }. A posição (mapaId, x, y) vale como checkpoint junto com a ação. A porta precisa estar perto da posição salva e o destino publicado e livre. */
 export async function POST(req: NextRequest) {
   try {
     const limiteIp = limitarPorIp(req, 'combate');
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const limiteConta = limitarPorConta(user.uid, 'combate');
     if (limiteConta) return limiteConta;
     const b = (await req.json().catch(() => ({}))) ?? {};
-    return NextResponse.json(await campanhaAtravessarPorta(user.uid, b.objetoId));
+    return NextResponse.json(await campanhaAtravessarPorta(user.uid, b.objetoId, b.posicao));
   } catch (error) {
     const resposta = respostaErroPersistencia(error);
     if (resposta) return resposta;

@@ -34,7 +34,7 @@ export type EventoDeJogo =
   | { tipo: 'texto'; titulo: string; texto: string }
   | { tipo: 'item'; objetoId: string; item: { id: string; qtd: number } }
   | { tipo: 'bau-vazio' }
-  | { tipo: 'porta'; destino: { mapa: string; x: number; y: number } }
+  | { tipo: 'porta'; objetoId: string; destino: { mapa: string; x: number; y: number } }
   | { tipo: 'luta'; objetoId: string; monstroId: string }
   | { tipo: 'nada'; motivo: string };
 
@@ -71,7 +71,7 @@ export function andar(estado: EstadoDeJogo, dir: Direcao): { estado: EstadoDeJog
   const eventos: EventoDeJogo[] = [];
   const porta = objetoDeUmTile(estado.mapa, nx, ny);
   if (porta?.tipo === 'porta' && porta.gatilho === 'pisar' && porta.destino) {
-    eventos.push({ tipo: 'porta', destino: { ...porta.destino } });
+    eventos.push({ tipo: 'porta', objetoId: porta.id, destino: { ...porta.destino } });
     return { estado: novo, eventos };
   }
   const antes = new Set(areasDeMonstros(estado.mapa, estado.x, estado.y).map((o) => o.id));
@@ -97,7 +97,7 @@ export function interagir(estado: EstadoDeJogo): { estado: EstadoDeJogo; eventos
       if (estado.abertos.includes(alvo.id)) return { estado, eventos: [{ tipo: 'bau-vazio' }] };
       return { estado: { ...estado, abertos: [...estado.abertos, alvo.id] }, eventos: alvo.item ? [{ tipo: 'item', objetoId: alvo.id, item: { ...alvo.item } }] : [{ tipo: 'bau-vazio' }] };
     case 'porta':
-      if (alvo.gatilho === 'interagir' && alvo.destino) return { estado, eventos: [{ tipo: 'porta', destino: { ...alvo.destino } }] };
+      if (alvo.gatilho === 'interagir' && alvo.destino) return { estado, eventos: [{ tipo: 'porta', objetoId: alvo.id, destino: { ...alvo.destino } }] };
       return { estado, eventos: [{ tipo: 'nada', motivo: 'Esta porta abre ao pisar nela.' }] };
     default:
       return { estado, eventos: [{ tipo: 'nada', motivo: `${NOME_DO_OBJETO[alvo.tipo]}: nada para interagir.` }] };
