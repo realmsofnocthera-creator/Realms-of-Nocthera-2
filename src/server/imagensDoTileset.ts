@@ -39,17 +39,27 @@ export async function enviarImagemDeTileset(sessao: SessaoMestre, bytes: Uint8Ar
   return { url: urlPublicaDe(chave), chave, largura: dimensoes.largura, altura: dimensoes.altura, bytes: bytes.length };
 }
 
-/** Ao salvar um tileset com `imagemUrl`: o endereço é do nosso armazenamento, o arquivo existe e tem as dimensões informadas. */
-export async function conferirImagemDoTileset(dados: { imagemUrl?: string; larguraImagem: number; alturaImagem: number }): Promise<void> {
-  if (dados.imagemUrl === undefined) return;
-  const chave = chaveDaUrlPublica(dados.imagemUrl);
-  if (!chave || chave !== chaveDaImagemNoEndereco(dados.imagemUrl)) {
-    throw new ErroMestre(400, 'A imagem não veio do armazenamento do jogo: envie a imagem pelo painel.');
+async function conferirArquivo(url: string, largura: number, altura: number, nome: string): Promise<void> {
+  const chave = chaveDaUrlPublica(url);
+  if (!chave || chave !== chaveDaImagemNoEndereco(url)) {
+    throw new ErroMestre(400, `${nome} não veio do armazenamento do jogo: envie a imagem pelo painel.`);
   }
   const inicio = await lerInicioDoArquivo(chave, 24);
-  if (!inicio) throw new ErroMestre(400, 'A imagem não foi encontrada no armazenamento: envie de novo.');
+  if (!inicio) throw new ErroMestre(400, `${nome} não foi encontrada no armazenamento: envie de novo.`);
   const dimensoes = dimensoesDoPng(inicio);
-  if (!dimensoes || dimensoes.largura !== dados.larguraImagem || dimensoes.altura !== dados.alturaImagem) {
-    throw new ErroMestre(400, 'As dimensões informadas não batem com a imagem guardada.');
+  if (!dimensoes || dimensoes.largura !== largura || dimensoes.altura !== altura) {
+    throw new ErroMestre(400, `As dimensões informadas não batem com ${nome.toLowerCase()} guardada.`);
   }
+}
+
+/** Ao salvar um tileset com `imagemUrl`: a imagem (e a folha de origem, se houver) são do nosso armazenamento, existem e têm as dimensões informadas. */
+export async function conferirImagemDoTileset(dados: {
+  imagemUrl?: string;
+  larguraImagem: number;
+  alturaImagem: number;
+  origem?: { folhaUrl: string; larguraFolha: number; alturaFolha: number };
+}): Promise<void> {
+  if (dados.imagemUrl === undefined) return;
+  await conferirArquivo(dados.imagemUrl, dados.larguraImagem, dados.alturaImagem, 'A imagem');
+  if (dados.origem) await conferirArquivo(dados.origem.folhaUrl, dados.origem.larguraFolha, dados.origem.alturaFolha, 'A folha de origem');
 }

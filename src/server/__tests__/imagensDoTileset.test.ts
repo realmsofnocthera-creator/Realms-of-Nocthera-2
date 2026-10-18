@@ -111,6 +111,23 @@ describe('Imagens de tileset no armazenamento (R2)', () => {
       await expect(criarConteudo(mestre, { tipo: 'tileset', id: 'quebrada', nome: 'Quebrada', dados })).rejects.toMatchObject({ status: 400 });
     });
 
+    it('tileset só com os escolhidos: confere a folha de origem no armazenamento (existe e as dimensões batem)', async () => {
+      const compacto = await enviarImagemDeTileset(mestre, png(32, 16));
+      const folha = await enviarImagemDeTileset(mestre, png(64, 32));
+      const { imagem: _imagem, ...resto } = tilesetDeTeste(32, 16, 16);
+      const dados = { ...resto, imagemUrl: compacto.url, origem: { folhaUrl: folha.url, larguraFolha: 64, alturaFolha: 32, margem: 0, espacamento: 0, tiles: [7, 0] } };
+      await expect(criarConteudo(mestre, { tipo: 'tileset', id: 'escolhidos', nome: 'Escolhidos', dados })).resolves.toMatchObject({ id: 'escolhidos' });
+      const doc = await repositorio.lerConteudo(chaveDoConteudo('tileset', 'escolhidos'));
+      expect(doc?.rascunho).toMatchObject({ origem: { tiles: [7, 0] } });
+
+      const outraFolha = { ...dados, origem: { ...dados.origem, folhaUrl: urlPublicaDe(`tilesets/${'e'.repeat(64)}.png`) } };
+      await expect(criarConteudo(mestre, { tipo: 'tileset', id: 'sem-folha', nome: 'Sem folha', dados: outraFolha })).rejects.toMatchObject({ status: 400, message: expect.stringMatching(/folha de origem não foi encontrada/) });
+      const dimensoesErradas = { ...dados, origem: { ...dados.origem, larguraFolha: 128 } };
+      await expect(criarConteudo(mestre, { tipo: 'tileset', id: 'dim-errada', nome: 'Dim errada', dados: dimensoesErradas })).rejects.toMatchObject({ status: 400, message: expect.stringMatching(/não batem com a folha de origem guardada/) });
+      const deFora = { ...dados, origem: { ...dados.origem, folhaUrl: `https://outro.exemplo.test/tilesets/${'e'.repeat(64)}.png` } };
+      await expect(criarConteudo(mestre, { tipo: 'tileset', id: 'de-fora', nome: 'De fora', dados: deFora })).rejects.toMatchObject({ status: 400, message: expect.stringMatching(/folha de origem não veio do armazenamento/) });
+    });
+
     it('tilesets antigos com PNG em texto continuam valendo', async () => {
       await expect(criarConteudo(mestre, { tipo: 'tileset', id: 'antigo', nome: 'Antigo', dados: tilesetDeTeste() })).resolves.toMatchObject({ id: 'antigo' });
     });

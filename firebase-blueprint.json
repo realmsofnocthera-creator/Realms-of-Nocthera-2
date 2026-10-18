@@ -273,7 +273,7 @@
     },
     "conteudo": {
       "title": "Conteúdo editável do Painel do Mestre",
-      "description": "Um item (mapa, tileset, monstro, arma, armadura, emblema ou anuncio) com o rascunho atual e a versão publicada. A chave é <tipo>__<id>. O jogo só lê a versão publicada. O tileset guarda a imagem no armazenamento de arquivos (R2, até 1 MB) e só o endereço dela aqui; tilesets antigos têm o PNG em base64 (até 420 KB).",
+      "description": "Um item (mapa, tileset, monstro, arma, armadura, emblema ou anuncio) com o rascunho atual e a versão publicada. A chave é <tipo>__<id>. O jogo só lê a versão publicada. O tileset guarda a imagem no armazenamento de arquivos (R2, até 1 MB) e só o endereço dela aqui; tilesets antigos têm o PNG em base64 (até 420 KB). Um tileset montado com tiles escolhidos de uma folha traz também a origem (endereço da folha original e quais tiles dela foram escolhidos, na ordem).",
       "type": "object",
       "properties": {
         "tipo": {
