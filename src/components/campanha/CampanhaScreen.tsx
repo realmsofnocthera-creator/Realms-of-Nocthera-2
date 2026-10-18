@@ -37,6 +37,7 @@ const VERIFICA_O_SALVAMENTO_A_CADA_MS = 5_000;
 const RENOVA_O_TOKEN_A_CADA_MS = 4 * 60_000;
 
 const nomeDoItem = (id: string) => id.replace(/-/g, ' ');
+const novoCombateId = () => `camp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 const abertosDoMapa = (p: ProgressoDaCampanha) => p.baus.filter((b) => b.startsWith(`${p.mapaId}:`)).map((b) => b.slice(p.mapaId.length + 1));
 
 async function abrirMundo(r: RespostaDoMundo): Promise<MundoAberto | null> {
@@ -67,6 +68,7 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
   const [erro, setErro] = useState<string | null>(null);
   const [dialogo, setDialogo] = useState<{ titulo: string; texto: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
   const caixaRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [tamanho, setTamanho] = useState({ largura: 320, altura: 320 });
@@ -77,6 +79,8 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
   const ultimoPassoRef = useRef(0);
   const ultimoSalvamentoRef = useRef(0);
   const tokenRef = useRef<{ valor: string; em: number } | null>(null);
+  /** Áreas de monstros descansando: "mapa:objeto" e até quando (ms). O servidor é quem manda; isto só evita perguntar à toa. */
+  const descansosRef = useRef<Record<string, number>>({});
 
   const token = useCallback(async () => {
     const agora = Date.now();
@@ -112,6 +116,7 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
     const novo = { ...estado, abertos: abertosDoMapa(r.progresso) };
     jogoRef.current = novo;
     salvaRef.current = { mapaId: aberto.id, x: r.progresso.x, y: r.progresso.y };
+    descansosRef.current = { ...(r.progresso.descansos ?? {}) };
     ultimoSalvamentoRef.current = Date.now();
     ultimoPassoRef.current = Date.now();
     setMundo(aberto);
@@ -133,6 +138,12 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
       cancelado = true;
     };
   }, [chamar, entrar]);
+
+  useEffect(() => {
+    if (!aviso) return;
+    const t = window.setTimeout(() => setAviso(null), 3000);
+    return () => window.clearTimeout(t);
+  }, [aviso]);
 
   // ---- salvamento econômico ----
 
@@ -212,7 +223,40 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
         } else if (e.tipo === 'nada') {
           setDialogo({ titulo: 'Nada aqui', texto: e.motivo });
         } else if (e.tipo === 'luta') {
-          setDialogo({ titulo: 'Área de monstros', texto: 'Algo se move por aqui... (as lutas da Campanha chegam em breve.)' });
+          const chave = `${depois.mapaId}:${e.objetoId}`;
+          if ((descansosRef.current[chave] ?? 0) > Date.now()) {
+            setAviso('Esta área está calma por enquanto.');
+            continue;
+          }
+          setOcupado(true);
+          const combateId = novoCombateId();
+          let r = await chamar('/api/campanha/lutar', { objetoId: e.objetoId, posicao, combateId });
+          if (r.status === 0) r = await chamar('/api/campanha/lutar', { objetoId: e.objetoId, posicao, combateId }); // sem conexão: tenta de novo com o mesmo id (não paga duas vezes)
+          setOcupado(false);
+          if (!r.ok) {
+            if (typeof r.dados.descansaAte === 'number') {
+              descansosRef.current[chave] = r.dados.descansaAte;
+              setAviso(String(r.dados.error));
+            } else {
+              setDialogo({ titulo: 'Luta', texto: String(r.dados.error ?? 'Não foi possível lutar agora.') });
+            }
+            continue;
+          }
+          const c = r.dados.campanha as { vencedor: 'personagem' | 'monstro'; monstroNome: string; xpGanho: number; ouroGanho: number; progresso: ProgressoDaCampanha; descansaAte: number };
+          const mensagens = (r.dados.mensagens as string[] | undefined) ?? [];
+          descansosRef.current = { ...(c.progresso.descansos ?? {}) };
+          salvaRef.current = { mapaId: c.progresso.mapaId, x: c.progresso.x, y: c.progresso.y };
+          ultimoSalvamentoRef.current = Date.now();
+          if (c.vencedor === 'monstro') {
+            // derrota: volta ao último ponto salvo, sem perder nada
+            const volta = { ...depois, x: c.progresso.x, y: c.progresso.y };
+            jogoRef.current = volta;
+            setJogo(volta);
+            setDialogo({ titulo: `Luta: ${c.monstroNome}`, texto: `Você foi derrotado por ${c.monstroNome}.\nNada foi perdido: você voltou ao último ponto salvo. A área descansa por alguns minutos.` });
+          } else {
+            const subiu = mensagens.filter((m) => m.includes('SUBIU DE NÍVEL'));
+            setDialogo({ titulo: `Luta: ${c.monstroNome}`, texto: [`Vitória! +${c.xpGanho} XP e +${c.ouroGanho} de ouro.`, ...subiu].join('\n') });
+          }
         } else if (e.tipo === 'item') {
           setOcupado(true);
           const r = await chamar('/api/campanha/bau', { objetoId: e.objetoId, posicao });
@@ -301,6 +345,9 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
           <p className="p-4 text-[13px]" style={{ color: colors.text.secondary }}>{mensagem}</p>
         ) : (
           <p className="p-4 text-[13px]" style={{ color: colors.text.secondary }}>Abrindo o mundo...</p>
+        )}
+        {aviso && !dialogo && (
+          <p role="status" className="absolute left-2 right-2 top-2 rounded-sm border px-2 py-1 text-[12px]" style={{ backgroundColor: colors.background.secondary, borderColor: OURO }}>{aviso}</p>
         )}
         {dialogo && (
           <div role="dialog" aria-label={dialogo.titulo} className="absolute left-2 right-2 bottom-2 rounded-sm border-2 p-3 flex flex-col gap-1.5" style={{ backgroundColor: colors.background.secondary, borderColor: OURO }}>

@@ -6,12 +6,12 @@ import { getAvatarById } from '@/rules/avatars';
 import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import { SUBCLASSES } from '@/rules/subclasses';
 import { custoDoTier } from '@/rules/subclasseTiers';
-import { MONSTERS_MAP } from '@/rules/monsters';
-import { monstroEfetivo } from '@/server/monstros';
+import { MONSTERS_MAP, type MonsterDefinition } from '@/rules/monsters';
+import { ErroMonstroIndisponivel, monstroEfetivo } from '@/server/monstros';
 import { sincronizarCatalogoDeItens } from '@/server/catalogoItens';
 import { exigirSistemaLigado } from '@/server/sistemasLeitura';
 import { ErroDaCampanha, lerMapaPublicado, mapaInicialDaCampanha, tilesetsDoMapa, type MapaPublicado, type TilesetPublicado } from '@/server/campanha';
-import { aplicarPosicaoDaAcao, planejarBau, planejarPorta, planejarPosicao, progressoInicial, type ProgressoDaCampanha } from '@/game/campanha';
+import { aplicarPosicaoDaAcao, planejarBau, planejarLuta, planejarPorta, planejarPosicao, progressoInicial, type ProgressoDaCampanha } from '@/game/campanha';
 import {
   DropSorteado,
   MENSAGEM_BLOQUEIO_CACADA,
@@ -1679,6 +1679,134 @@ export async function executarCacada(
     ctx.gravarCombate(registro);
 
     return { ...pos, character, mensagens, resultado, combateId, repetido: false, cacada };
+  });
+}
+
+export interface RespostaCampanhaLuta extends RespostaCombate {
+  campanha: {
+    vencedor: 'personagem' | 'monstro';
+    monstroNome: string;
+    xpGanho: number;
+    ouroGanho: number;
+    /** O progresso depois da luta: quem vence fica onde está; quem perde volta ao ponto salvo. */
+    progresso: ProgressoDaCampanha;
+    /** Até quando a área de monstros descansa (ms desde 1970). */
+    descansaAte: number;
+  };
+}
+
+/**
+ * Luta numa área de monstros da Campanha (5.5-3 e 5.5-10), com as decisões do Yuri de 18/10/2026: a recompensa é só XP
+ * e ouro (sem materiais); quem perde NÃO perde nada e volta ao último ponto salvo; e a área descansa um tempo depois
+ * de cada luta, vença quem vencer. A área precisa estar no mapa publicado e o jogador dentro dela (a posição enviada
+ * vale como checkpoint). A semente é do servidor e o reenvio com o mesmo combateId devolve o resultado gravado.
+ */
+export async function campanhaLutar(
+  uid: string,
+  objetoId: unknown,
+  opcoes: { seed: number; combateId?: string; posicao?: unknown; agora?: Date }
+): Promise<RespostaCampanhaLuta> {
+  await exigirSistemaLigado(uid, 'campanha');
+  const combateId = opcoes.combateId ?? `camp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const idRegistro = idDoRegistroCombate(uid, combateId);
+  const agora = opcoes.agora ?? new Date();
+
+  // o mundo publicado e o monstro são lidos ANTES da transação (leituras com cache); um erro aqui só vale se não for um reenvio
+  const previo = await getCharacterByUid(uid);
+  if (!previo) throw new Error('Personagem não encontrado.');
+  let preparo: { mundo: MundoDoJogador; monstro: MonsterDefinition | null } | { erro: unknown };
+  try {
+    const mundo = await mundoDoJogador(previo, agora.toISOString());
+    if (!mundo) throw new ErroDaCampanha('A Campanha ainda não começou.');
+    const area = typeof objetoId === 'string' ? mundo.mapa.dados.objetos.find((o) => o.id === objetoId && o.tipo === 'cacada') : undefined;
+    const base = area?.monstroId;
+    const monstro = base ? await monstroEfetivo(base, MONSTERS_MAP[base] ?? MONSTROS_CACADA_MAP[base] ?? CHEFES_ESPECIAIS_MAP[base]) : null;
+    preparo = { mundo, monstro };
+  } catch (erro) {
+    preparo = { erro: erro instanceof ErroMonstroIndisponivel ? new ErroDaCampanha(erro.message) : erro };
+  }
+
+  return repositorio.executarTransacao('campanhaLuta', async (ctx) => {
+    const anterior = await ctx.lerCombate(idRegistro);
+    const current = await carregarPersonagem(ctx, uid);
+
+    if (anterior) {
+      const c = anterior.resposta.campanha;
+      if (!c) throw new Error('Identificador de combate já usado fora da Campanha.');
+      return {
+        character: current,
+        levelUps: anterior.resposta.levelUps,
+        transaction: anterior.resposta.transaction,
+        mensagens: anterior.resposta.mensagens,
+        resultado: anterior.resposta.resultado as ResultadoCombate,
+        combateId,
+        repetido: true,
+        campanha: {
+          vencedor: anterior.vencedor as 'personagem' | 'monstro',
+          monstroNome: c.monstroNome,
+          xpGanho: anterior.xpGanho,
+          ouroGanho: anterior.ouroGanho,
+          progresso: c.progresso,
+          descansaAte: c.descansaAte,
+        },
+      };
+    }
+
+    if ('erro' in preparo) throw preparo.erro;
+    const { mundo, monstro } = preparo;
+    if (previo.campanha?.mapaId !== current.campanha?.mapaId || previo.campanha?.atualizadoEm !== current.campanha?.atualizadoEm) {
+      throw new ErroDaCampanha('Seu progresso mudou enquanto isso. Tente de novo.');
+    }
+    const r = planejarLuta(mundo.progresso, mundo.mapa.dados, objetoId, opcoes.posicao, agora.toISOString(), agora.getTime());
+    if (!r.ok) throw new ErroDaCampanha(r.erro, 'descansaAte' in r ? r.descansaAte : undefined);
+    if (!monstro) throw new ErroDaCampanha('O monstro desta área ainda não existe no jogo.');
+    const { plano } = r;
+
+    const combatente = combatenteDoPersonagem(current);
+    const entrada = structuredClone(combatente);
+    const resultado = resolverCombate(combatente, monstro, opcoes.seed);
+    const venceu = resultado.vencedor === 'personagem';
+
+    let pos: ResultadoPosCombate;
+    if (venceu) {
+      // só XP e ouro, sem a trava da Caçada (o descanso da área faz esse papel); a passiva racial de XP entra por cima
+      resultado.xpGanho = calcularXpComBonusRacial(monstro.xpConcedido, current.racaId);
+      pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome);
+    } else {
+      // derrota sem penalidade: nada de ouro perdido; a vida volta ao máximo na próxima luta, como sempre
+      resultado.xpGanho = 0;
+      resultado.ouroGanho = 0;
+      resultado.ouroPerdido = 0;
+      resultado.personagemFinal.ouro = current.ouro;
+      resultado.mensagens = resultado.mensagens.filter((m) => !m.includes('A morte cobra seu preço'));
+      resultado.mensagens.push(`${current.nome} sucumbiu perante ${monstro.nome}... Nada foi perdido: você volta ao último ponto salvo.`);
+      pos = { character: current, levelUps: 0, mensagens: [...resultado.mensagens] };
+    }
+
+    const progresso = venceu ? plano.progressoVitoria : plano.progressoDerrota;
+    const character = salvarPersonagem(ctx, pos.character, { campanha: progresso });
+    const campanha = { vencedor: resultado.vencedor, monstroNome: monstro.nome, xpGanho: resultado.xpGanho, ouroGanho: resultado.ouroGanho, progresso, descansaAte: plano.descansaAte };
+    const registro: RegistroCombate = {
+      id: idRegistro,
+      uid,
+      monstroId: monstro.id,
+      seed: opcoes.seed,
+      vencedor: resultado.vencedor,
+      xpGanho: resultado.xpGanho,
+      ouroGanho: resultado.ouroGanho,
+      criadoEm: agora.toISOString(),
+      entrada: { combatente: entrada, monstroId: monstro.id, seed: opcoes.seed, modo: 'campanha' },
+      resposta: {
+        resultado,
+        levelUps: pos.levelUps,
+        transaction: pos.transaction,
+        mensagens: pos.mensagens,
+        campanha: { objetoId: plano.objetoId, mapaId: progresso.mapaId, monstroNome: monstro.nome, descansaAte: plano.descansaAte, progresso },
+      },
+    };
+    ctx.gravarCombate(registro);
+
+    return { ...pos, character, resultado, combateId, repetido: false, campanha };
   });
 }
 

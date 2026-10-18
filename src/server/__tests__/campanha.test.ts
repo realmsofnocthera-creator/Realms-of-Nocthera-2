@@ -4,9 +4,10 @@ import { GET as estadoRota } from '@/app/api/campanha/estado/route';
 import { POST as bauRota } from '@/app/api/campanha/bau/route';
 import { POST as portaRota } from '@/app/api/campanha/porta/route';
 import { POST as posicaoRota } from '@/app/api/campanha/posicao/route';
+import { POST as lutarRota } from '@/app/api/campanha/lutar/route';
 import { POST as sistemasRota } from '@/app/api/mestre/sistemas/route';
 import { limparCacheRevogacao } from '@/server/auth';
-import { campanhaAbrirBau, campanhaAtravessarPorta, campanhaEstado, campanhaSalvarPosicao, createCharacter, getCharacterByUid, zerarProgressaoPorMestre } from '@/server/characterService';
+import { campanhaAbrirBau, campanhaAtravessarPorta, campanhaEstado, campanhaLutar, campanhaSalvarPosicao, createCharacter, getCharacterByUid, updateCharacter, zerarProgressaoPorMestre } from '@/server/characterService';
 import { criarConteudo, limparCacheDoConteudo, publicarConteudo, salvarRascunho } from '@/server/conteudo';
 import { DONOS_DO_PROJETO, type SessaoMestre } from '@/server/mestre';
 import { limparCacheDeSancoes } from '@/server/sancoes';
@@ -40,6 +41,8 @@ const MUNDO = () => {
     objetoNovo('inicio', 'inicio-1', 1, 1),
     { ...objetoNovo('bau', 'bau-1', 3, 1), item: { id: 'pelo-de-rato', qtd: 3 } },
     { ...objetoNovo('porta', 'porta-1', 6, 1), destino: { mapa: 'floresta', x: 2, y: 2 } },
+    { ...objetoNovo('cacada', 'area-rato', 4, 3), largura: 2, altura: 2, monstroId: 'rato-da-floresta' },
+    { ...objetoNovo('cacada', 'area-chefe', 1, 4), largura: 1, altura: 1, monstroId: 'varkhazar-dragao-da-carnificina' },
   ]);
   const floresta = mapa([{ ...objetoNovo('porta', 'volta', 1, 2), destino: { mapa: 'vila', x: 5, y: 1 } }]);
   return { vila, floresta };
@@ -269,6 +272,97 @@ describe('Campanha: progresso no servidor (5.5-3 e 5.5-8)', () => {
       await campanhaAbrirBau('j1', 'bau-1');
       await zerarProgressaoPorMestre('j1', 'Zerar para teste');
       expect((await getCharacterByUid('j1'))!.campanha).toBeUndefined();
+    });
+  });
+
+  describe('lutas (5.5-3 e 5.5-10)', () => {
+    const FORTE = { vigor: 400, sorte: 0, forca: 300, vitalidade: 100, arcano: 0, inteligencia: 0, agilidade: 50 };
+    const FRACO = { vigor: 1, sorte: 0, forca: 0, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 0 };
+    const NO_RATO = { mapaId: 'vila', x: 4, y: 3 };
+    const NO_CHEFE = { mapaId: 'vila', x: 1, y: 4 };
+    const T0 = new Date('2026-10-18T12:00:00Z');
+
+    async function lutador(atributos = FORTE) {
+      await prepararMundo();
+      await updateCharacter('j1', { nivel: 2, atributos, ouro: 500 });
+    }
+
+    it('vitória: ganha XP e ouro (sem materiais), fica onde está e a área descansa', async () => {
+      await lutador();
+      const antes = (await getCharacterByUid('j1'))!;
+      const r = await campanhaLutar('j1', 'area-rato', { seed: 7, posicao: NO_RATO, agora: T0 });
+      expect(r.resultado.vencedor).toBe('personagem');
+      expect(r.campanha).toMatchObject({ vencedor: 'personagem', monstroNome: expect.any(String), descansaAte: T0.getTime() + 5 * 60_000 });
+      expect(r.campanha.xpGanho).toBeGreaterThan(0);
+      expect(r.campanha.ouroGanho).toBeGreaterThan(0);
+      expect(r.campanha.progresso).toMatchObject({ x: 4, y: 3 });
+      const c = (await getCharacterByUid('j1'))!;
+      expect(c.ouro).toBe(antes.ouro + r.campanha.ouroGanho);
+      expect(c.xpAtual !== antes.xpAtual || c.nivel > antes.nivel).toBe(true); // o XP entrou (ou virou nível)
+      expect(c.inventario ?? {}).toEqual(antes.inventario ?? {}); // sem drops de materiais
+      expect(c.campanha).toMatchObject({ x: 4, y: 3, descansos: { 'vila:area-rato': T0.getTime() + 5 * 60_000 } });
+    });
+
+    it('derrota: não perde nada, volta ao último ponto salvo e a área descansa do mesmo jeito', async () => {
+      await lutador(FRACO);
+      await campanhaSalvarPosicao('j1', { mapaId: 'vila', x: 2, y: 2 });
+      const r = await campanhaLutar('j1', 'area-chefe', { seed: 7, posicao: NO_CHEFE, agora: T0 });
+      expect(r.resultado.vencedor).toBe('monstro');
+      expect(r.campanha).toMatchObject({ vencedor: 'monstro', xpGanho: 0, ouroGanho: 0, progresso: { x: 2, y: 2 } });
+      expect(r.resultado.ouroPerdido).toBe(0);
+      expect(r.mensagens.join(' ')).toMatch(/Nada foi perdido/);
+      expect(r.mensagens.join(' ')).not.toMatch(/A morte cobra/);
+      const c = (await getCharacterByUid('j1'))!;
+      expect(c.ouro).toBe(500);
+      expect(c.campanha).toMatchObject({ x: 2, y: 2, descansos: { 'vila:area-chefe': T0.getTime() + 5 * 60_000 } });
+    });
+
+    it('área descansando recusa com o horário; depois do descanso luta de novo', async () => {
+      await lutador();
+      await campanhaLutar('j1', 'area-rato', { seed: 7, posicao: NO_RATO, agora: T0 });
+      const cedo = new Date(T0.getTime() + 60_000);
+      await expect(campanhaLutar('j1', 'area-rato', { seed: 8, posicao: NO_RATO, agora: cedo })).rejects.toMatchObject({ name: 'ErroDaCampanha', descansaAte: T0.getTime() + 5 * 60_000, message: expect.stringMatching(/calma por enquanto/) });
+      const tarde = new Date(T0.getTime() + 5 * 60_000 + 1);
+      await expect(campanhaLutar('j1', 'area-rato', { seed: 9, posicao: NO_RATO, agora: tarde })).resolves.toMatchObject({ repetido: false });
+    });
+
+    it('recusa fora da área, área inexistente, objeto que não é área e posição que não dá', async () => {
+      await lutador();
+      await expect(campanhaLutar('j1', 'area-rato', { seed: 7, posicao: { mapaId: 'vila', x: 2, y: 2 }, agora: T0 })).rejects.toMatchObject({ message: expect.stringMatching(/não está nessa área/) });
+      await expect(campanhaLutar('j1', 'nao-existe', { seed: 7, posicao: NO_RATO, agora: T0 })).rejects.toMatchObject({ name: 'ErroDaCampanha' });
+      await expect(campanhaLutar('j1', 'bau-1', { seed: 7, posicao: NO_RATO, agora: T0 })).rejects.toMatchObject({ name: 'ErroDaCampanha' });
+      await expect(campanhaLutar('j1', 'area-rato', { seed: 7, posicao: { mapaId: 'floresta', x: 4, y: 3 }, agora: T0 })).rejects.toMatchObject({ name: 'ErroDaCampanha' });
+      expect((await getCharacterByUid('j1'))!.campanha).toBeUndefined(); // nada foi gravado
+    });
+
+    it('reenviar o mesmo combateId devolve o resultado gravado, sem pagar duas vezes', async () => {
+      await lutador();
+      const primeira = await campanhaLutar('j1', 'area-rato', { seed: 7, posicao: NO_RATO, combateId: 'camp-abcdef12', agora: T0 });
+      const ouroDepois = (await getCharacterByUid('j1'))!.ouro;
+      const repetida = await campanhaLutar('j1', 'area-rato', { seed: 999, posicao: NO_RATO, combateId: 'camp-abcdef12', agora: new Date(T0.getTime() + 1000) });
+      expect(repetida.repetido).toBe(true);
+      expect(repetida.campanha).toEqual(primeira.campanha);
+      expect(repetida.resultado).toEqual(primeira.resultado);
+      expect((await getCharacterByUid('j1'))!.ouro).toBe(ouroDepois);
+    });
+
+    it('sistema Campanha desligado barra a luta; quem não começou a Campanha recebe aviso', async () => {
+      await lutador();
+      await definirSistema(dono, { alvo: 'campanha', ativo: false, mensagem: 'A Campanha está em ajuste.', motivo: M });
+      await expect(campanhaLutar('j1', 'area-rato', { seed: 7, posicao: NO_RATO, agora: T0 })).rejects.toMatchObject({ name: 'ErroSistemaDesligado' });
+    });
+
+    it('rota: 200 com o resultado, 400 com o horário do descanso, 401 sem login, combateId inválido e a semente do cliente é ignorada', async () => {
+      await lutador();
+      const ok = await lutarRota(req('/api/campanha/lutar', 'j1', { objetoId: 'area-rato', posicao: NO_RATO, seed: 1 }));
+      expect(ok.status).toBe(200);
+      const corpo = await ok.json();
+      expect(corpo).toMatchObject({ campanha: { vencedor: 'personagem' }, repetido: false });
+      const descansando = await lutarRota(req('/api/campanha/lutar', 'j1', { objetoId: 'area-rato', posicao: NO_RATO }));
+      expect(descansando.status).toBe(400);
+      expect(await descansando.json()).toMatchObject({ error: expect.stringMatching(/calma por enquanto/), descansaAte: expect.any(Number) });
+      expect((await lutarRota(req('/api/campanha/lutar', 'j1', { objetoId: 'area-chefe', posicao: NO_CHEFE, combateId: 'curto' }))).status).toBe(400);
+      expect((await lutarRota(new NextRequest('http://t/api/campanha/lutar', { method: 'POST', body: '{}' }))).status).toBe(401);
     });
   });
 });

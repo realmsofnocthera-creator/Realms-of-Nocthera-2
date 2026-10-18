@@ -15,6 +15,8 @@ export interface ProgressoDaCampanha {
   y: number;
   /** Baús já abertos, como "mapa:objeto" (cada baú abre uma vez por personagem). */
   baus: string[];
+  /** Áreas de monstros que estão descansando: chave "mapa:objeto" e até quando (ms desde 1970). */
+  descansos?: Record<string, number>;
   atualizadoEm: string;
 }
 
@@ -23,9 +25,15 @@ export const MAXIMO_DE_BAUS_GUARDADOS = 1000;
 /** Distância máxima (em tiles, nos dois eixos) entre a posição salva e o objeto para agir; dá folga para o atraso do celular. */
 export const DISTANCIA_DE_INTERACAO = 2;
 
+/** Depois de cada luta, a área de monstros descansa este tempo (decisão do Yuri de 18/10/2026; o valor é sugestão a confirmar). */
+export const DESCANSO_DA_AREA_MS = 5 * 60_000;
+/** Quantas áreas descansando guardamos por personagem (as que já terminaram são descartadas antes). */
+export const MAXIMO_DE_DESCANSOS = 200;
+
 export type ResultadoDaCampanha<T> = ({ ok: true } & T) | { ok: false; erro: string };
 
 export const chaveDoBau = (mapaId: string, objetoId: string) => `${mapaId}:${objetoId}`;
+export const chaveDaArea = chaveDoBau;
 
 /** Onde o jogador nasce no mapa: o início do jogador ou, sem ele, o primeiro tile livre. */
 export function posicaoInicialDoMapa(mapa: MapaDados): { x: number; y: number } {
@@ -102,4 +110,65 @@ export function planejarPorta(
 /** A posição está dentro de uma área de monstros do mapa? (para as lutas, parte seguinte da Campanha) */
 export function areaDeMonstrosNaPosicao(mapa: MapaDados, x: number, y: number, objetoId: unknown) {
   return mapa.objetos.find((o) => o.id === objetoId && o.tipo === 'cacada' && objetoCobre(o, x, y));
+}
+
+/** Os descansos que ainda valem, mais o desta área a partir de agora. Passando do teto, ficam os que terminam por último. */
+export function descansosComA(atual: ProgressoDaCampanha, chave: string, agoraMs: number): Record<string, number> {
+  const vivos = Object.entries(atual.descansos ?? {}).filter(([, ate]) => ate > agoraMs);
+  vivos.push([chave, agoraMs + DESCANSO_DA_AREA_MS]);
+  const unicos = new Map(vivos);
+  return Object.fromEntries([...unicos.entries()].sort((a, b) => b[1] - a[1]).slice(0, MAXIMO_DE_DESCANSOS));
+}
+
+export interface PlanoDeLuta {
+  /** A área e o monstro dela, como estão no mapa publicado. */
+  objetoId: string;
+  monstroId: string;
+  chave: string;
+  /** Até quando a área descansa depois desta luta (ms desde 1970). */
+  descansaAte: number;
+  /** Se o jogador vencer: a posição enviada passa a valer e a área descansa. */
+  progressoVitoria: ProgressoDaCampanha;
+  /** Se perder: volta ao ponto salvo (a posição enviada NÃO vale) e a área descansa do mesmo jeito. */
+  progressoDerrota: ProgressoDaCampanha;
+}
+
+export function mensagemDoDescanso(descansaAte: number, agoraMs: number): string {
+  const minutos = Math.max(1, Math.ceil((descansaAte - agoraMs) / 60_000));
+  return `Esta área está calma por enquanto. Volte em cerca de ${minutos} minuto${minutos > 1 ? 's' : ''}.`;
+}
+
+/**
+ * A luta numa área de monstros: a área precisa existir no mapa PUBLICADO, o jogador precisa estar DENTRO dela (a
+ * posição que o celular manda junto vale como checkpoint, nas regras de `planejarPosicao`) e a área não pode estar
+ * descansando. Quem vence fica onde está; quem perde volta ao último ponto salvo e não perde nada.
+ */
+export function planejarLuta(
+  atual: ProgressoDaCampanha,
+  mapa: MapaDados,
+  objetoId: unknown,
+  posicao: unknown,
+  agoraIso: string,
+  agoraMs: number
+): ResultadoDaCampanha<{ plano: PlanoDeLuta }> | { ok: false; erro: string; descansaAte: number } {
+  const area = typeof objetoId === 'string' ? mapa.objetos.find((o) => o.id === objetoId && o.tipo === 'cacada') : undefined;
+  if (!area || !area.monstroId) return { ok: false, erro: 'Não há área de monstros aí.' };
+  const ponto = aplicarPosicaoDaAcao(atual, mapa, posicao, agoraIso);
+  if (!ponto.ok) return ponto;
+  if (!objetoCobre(area, ponto.progresso.x, ponto.progresso.y)) return { ok: false, erro: 'Você não está nessa área.' };
+  const chave = chaveDaArea(atual.mapaId, area.id);
+  const ate = atual.descansos?.[chave];
+  if (ate !== undefined && ate > agoraMs) return { ok: false, erro: mensagemDoDescanso(ate, agoraMs), descansaAte: ate };
+  const descansos = descansosComA(atual, chave, agoraMs);
+  return {
+    ok: true,
+    plano: {
+      objetoId: area.id,
+      monstroId: area.monstroId,
+      chave,
+      descansaAte: descansos[chave],
+      progressoVitoria: { ...ponto.progresso, descansos },
+      progressoDerrota: { ...atual, descansos, atualizadoEm: agoraIso },
+    },
+  };
 }
