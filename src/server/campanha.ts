@@ -10,7 +10,8 @@ import { lerConfiguracaoDeSistemas } from '@/server/sistemasLeitura';
 export class ErroDaCampanha extends Error {
   readonly status = 400;
 
-  constructor(mensagem: string) {
+  /** Só quando a área de monstros está descansando: até quando (ms desde 1970), para o celular não perguntar de novo. */
+  constructor(mensagem: string, readonly descansaAte?: number) {
     super(mensagem);
     this.name = 'ErroDaCampanha';
   }

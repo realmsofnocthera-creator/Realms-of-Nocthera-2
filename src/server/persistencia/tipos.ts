@@ -1,3 +1,4 @@
+import type { ProgressoDaCampanha } from '@/game/campanha';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import type { PapelMestre } from '@/rules/mestre';
 import type { TipoDeConteudo } from '@/rules/conteudo';
@@ -8,6 +9,14 @@ import type { ConfiguracaoDeSistemas } from '@/rules/sistemas';
  * Registro de um combate resolvido (0.5-B1/B3): guarda a semente e a entrada para
  * auditoria e replay, e a resposta para devolver o mesmo resultado em reenvios.
  */
+export interface ResumoCampanhaRegistro {
+  objetoId: string;
+  mapaId: string;
+  monstroNome: string;
+  descansaAte: number;
+  progresso: ProgressoDaCampanha;
+}
+
 export interface RegistroCombate {
   id: string;
   uid: string;
@@ -27,6 +36,8 @@ export interface RegistroCombate {
     cacada?: ResultadoCacadaRegistro;
     /** Batalha Sangrenta: resumo das ondas, recompensa e tentativas restantes (sem o log das lutas). */
     batalhaSangrenta?: ResumoBatalhaSangrentaRegistro;
+    /** Campanha: a área de monstros, até quando ela descansa e o progresso depois da luta (para o reenvio devolver o mesmo). */
+    campanha?: ResumoCampanhaRegistro;
     /** Torre Celestial: o andar, o monstro e o que a vitória deu. */
     torre?: ResumoTorreRegistro;
     /** Provação do Guerreiro: o chefe, o resultado e os emblemas. */
