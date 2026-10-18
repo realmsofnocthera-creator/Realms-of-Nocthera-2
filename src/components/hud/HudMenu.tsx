@@ -11,6 +11,7 @@ export interface HudMenuProps {
   onNavigateCombate: () => void;
   onNavigateProvacoes?: () => void;
   onNavigateMenu?: () => void;
+  onNavigateHistoria?: () => void;
 }
 
 export function HudMenu({
@@ -18,6 +19,7 @@ export function HudMenu({
   onNavigateCombate,
   onNavigateProvacoes,
   onNavigateMenu,
+  onNavigateHistoria,
 }: HudMenuProps) {
   const router = useRouter();
   const { colors } = NOCTHERA_THEME;
@@ -27,6 +29,14 @@ export function HudMenu({
       onNavigateProvacoes();
     } else {
       router.push('/provacoes');
+    }
+  };
+
+  const handleHistoriaClick = () => {
+    if (onNavigateHistoria) {
+      onNavigateHistoria();
+    } else {
+      router.push('/campanha');
     }
   };
 
@@ -43,7 +53,8 @@ export function HudMenu({
       id: 'historia',
       label: 'História',
       iconSrc: HUD_ICONS.menuHistoria,
-      enabled: false,
+      enabled: true,
+      onClick: handleHistoriaClick,
       accentBorder: '#C8A656',
       bgGradient: 'linear-gradient(135deg, rgba(20,26,48,0.92) 0%, rgba(42,36,78,0.88) 100%)',
     },

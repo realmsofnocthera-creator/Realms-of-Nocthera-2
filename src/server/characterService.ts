@@ -10,8 +10,8 @@ import { MONSTERS_MAP } from '@/rules/monsters';
 import { monstroEfetivo } from '@/server/monstros';
 import { sincronizarCatalogoDeItens } from '@/server/catalogoItens';
 import { exigirSistemaLigado } from '@/server/sistemasLeitura';
-import { ErroDaCampanha, lerMapaPublicado, mapaInicialDaCampanha, type MapaPublicado } from '@/server/campanha';
-import { planejarBau, planejarPorta, planejarPosicao, progressoInicial, type ProgressoDaCampanha } from '@/game/campanha';
+import { ErroDaCampanha, lerMapaPublicado, mapaInicialDaCampanha, tilesetsDoMapa, type MapaPublicado, type TilesetPublicado } from '@/server/campanha';
+import { aplicarPosicaoDaAcao, planejarBau, planejarPorta, planejarPosicao, progressoInicial, type ProgressoDaCampanha } from '@/game/campanha';
 import {
   DropSorteado,
   MENSAGEM_BLOQUEIO_CACADA,
@@ -2329,6 +2329,8 @@ export interface EstadoDaCampanha {
   mensagem?: string;
   progresso?: ProgressoDaCampanha;
   mapa?: MapaPublicado;
+  /** Os tilesets publicados do mapa, na ordem de `mapa.dados.tilesets` (null: não publicado). */
+  tilesets?: (TilesetPublicado | null)[];
 }
 
 interface MundoDoJogador {
@@ -2358,7 +2360,7 @@ export async function campanhaEstado(uid: string): Promise<EstadoDaCampanha> {
   if (!char) throw new Error('Personagem não encontrado.');
   const mundo = await mundoDoJogador(char, new Date().toISOString());
   if (!mundo) return { iniciada: false, mensagem: 'A Campanha ainda não começou.' };
-  return { iniciada: true, progresso: mundo.progresso, mapa: mundo.mapa };
+  return { iniciada: true, progresso: mundo.progresso, mapa: mundo.mapa, tilesets: await tilesetsDoMapa(mundo.mapa) };
 }
 
 /**
@@ -2392,29 +2394,37 @@ async function agirNaCampanha<T extends { progresso: ProgressoDaCampanha }>(
   });
 }
 
-/** Checkpoint de posição (ao parar de andar, ao agir, ao sair da tela). */
+/**
+ * Checkpoint de posição (ao parar de andar por um tempo e ao sair da tela; o celular decide quando, ver
+ * `lib/salvamentoCampanha`). Devolve só o progresso: o celular já tem o mapa, então não gastamos leituras à toa.
+ */
 export async function campanhaSalvarPosicao(uid: string, pedido: { mapaId: unknown; x: unknown; y: unknown }): Promise<EstadoDaCampanha> {
   const r = await agirNaCampanha(uid, 'campanhaPosicao', async (m, agora) => planejarPosicao(m.progresso, m.mapa.dados, pedido, agora));
-  return { iniciada: true, progresso: r.personagem.campanha, mapa: (await lerMapaPublicado(r.personagem.campanha!.mapaId)) ?? undefined };
+  return { iniciada: true, progresso: r.personagem.campanha };
 }
 
 /** Abre um baú do mapa em que o jogador está: o item vai para a mochila e o baú não abre de novo. */
-export async function campanhaAbrirBau(uid: string, objetoId: unknown): Promise<{ item: { id: string; qtd: number }; character: CharacterDocument }> {
+export async function campanhaAbrirBau(uid: string, objetoId: unknown, posicao?: unknown): Promise<{ item: { id: string; qtd: number }; character: CharacterDocument }> {
   const r = await agirNaCampanha(
     uid,
     'campanhaBau',
-    async (m, agora) => planejarBau(m.progresso, m.mapa.dados, objetoId, agora),
+    async (m, agora) => {
+      const ponto = aplicarPosicaoDaAcao(m.progresso, m.mapa.dados, posicao, agora);
+      return ponto.ok ? planejarBau(ponto.progresso, m.mapa.dados, objetoId, agora) : ponto;
+    },
     (plano, atual) => ({ inventario: { ...(atual.inventario ?? {}), [plano.item.id]: ((atual.inventario ?? {})[plano.item.id] ?? 0) + plano.item.qtd } })
   );
   return { item: r.plano.item, character: r.personagem };
 }
 
 /** Atravessa uma porta: o jogador passa para o mapa de destino (publicado), na posição indicada. */
-export async function campanhaAtravessarPorta(uid: string, objetoId: unknown): Promise<EstadoDaCampanha> {
+export async function campanhaAtravessarPorta(uid: string, objetoId: unknown, posicao?: unknown): Promise<EstadoDaCampanha> {
   const r = await agirNaCampanha(uid, 'campanhaPorta', async (m, agora) => {
     const porta = typeof objetoId === 'string' ? m.mapa.dados.objetos.find((o) => o.id === objetoId && o.tipo === 'porta') : undefined;
     const destino = porta?.destino ? await lerMapaPublicado(porta.destino.mapa) : null;
-    return planejarPorta(m.progresso, m.mapa.dados, objetoId, destino?.dados ?? null, agora);
+    const ponto = aplicarPosicaoDaAcao(m.progresso, m.mapa.dados, posicao, agora);
+    return ponto.ok ? planejarPorta(ponto.progresso, m.mapa.dados, objetoId, destino?.dados ?? null, agora) : ponto;
   });
-  return { iniciada: true, progresso: r.personagem.campanha, mapa: (await lerMapaPublicado(r.personagem.campanha!.mapaId)) ?? undefined };
+  const novoMapa = (await lerMapaPublicado(r.personagem.campanha!.mapaId)) ?? undefined;
+  return { iniciada: true, progresso: r.personagem.campanha, mapa: novoMapa, tilesets: novoMapa ? await tilesetsDoMapa(novoMapa) : undefined };
 }

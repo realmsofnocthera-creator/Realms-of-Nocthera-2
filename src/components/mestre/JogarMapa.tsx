@@ -3,14 +3,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Hand, RotateCcw } from 'lucide-react';
-import { tileDoValor, type MapaDados } from '@/rules/mapa';
-import { recorteDoTile } from '@/rules/tileset';
+import type { MapaDados } from '@/rules/mapa';
 import { LETRA_DO_OBJETO, NOME_DO_OBJETO } from '@/rules/objetosDoMapa';
 import { andar, iniciarJogo, interagir, tileLivre, type Direcao, type EstadoDeJogo, type EventoDeJogo } from '@/lib/jogarMapa';
 import type { ConteudoDocumento } from '@/server/persistencia/tipos';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { chamar, OURO } from '@/components/mestre/comum';
 import { COR_DO_OBJETO } from '@/components/mestre/PainelDeObjetos';
+import { desenharMapaDeJogo } from '@/components/mestre/desenharMapaDeJogo';
 import { carregarTileset, type TilesetCarregado } from '@/components/mestre/carregarTileset';
 
 type Token = () => Promise<string>;
@@ -35,75 +35,6 @@ const TECLAS: Readonly<Record<string, Direcao>> = {
   ArrowUp: 'cima', ArrowDown: 'baixo', ArrowLeft: 'esquerda', ArrowRight: 'direita',
   w: 'cima', s: 'baixo', a: 'esquerda', d: 'direita',
 };
-
-function desenhar(ctx: CanvasRenderingContext2D, aberto: MapaAberto, jogo: EstadoDeJogo, largura: number, altura: number, lado: number) {
-  const { mapa, tilesets } = aberto;
-  ctx.fillStyle = '#0B0A09';
-  ctx.fillRect(0, 0, largura, altura);
-  // câmera centrada no jogador, sem sair do mapa quando o mapa é maior que a tela
-  const ox = mapa.largura * lado <= largura ? -(largura - mapa.largura * lado) / 2 : Math.min(Math.max((jogo.x + 0.5) * lado - largura / 2, 0), mapa.largura * lado - largura);
-  const oy = mapa.altura * lado <= altura ? -(altura - mapa.altura * lado) / 2 : Math.min(Math.max((jogo.y + 0.5) * lado - altura / 2, 0), mapa.altura * lado - altura);
-  ctx.fillStyle = '#1A1612';
-  ctx.fillRect(-ox, -oy, mapa.largura * lado, mapa.altura * lado);
-  ctx.imageSmoothingEnabled = false;
-
-  for (const c of ['chao', 'objetos'] as const) {
-    for (let y = 0; y < mapa.altura; y++) {
-      for (let x = 0; x < mapa.largura; x++) {
-        const valor = mapa.camadas[c][y * mapa.largura + x];
-        if (!valor) continue;
-        const t = tileDoValor(valor);
-        const ts = t ? tilesets[t.tileset] : undefined;
-        if (!t || !ts || t.tile >= ts.dados.colunas * ts.dados.linhas) continue;
-        const r = recorteDoTile(ts.dados, t.tile);
-        ctx.drawImage(ts.imagem, r.x, r.y, r.lado, r.lado, x * lado - ox, y * lado - oy, lado, lado);
-      }
-    }
-  }
-  // colisão em vermelho fraco, para o teste mostrar onde não dá para passar
-  ctx.fillStyle = 'rgba(229, 115, 107, 0.28)';
-  for (let y = 0; y < mapa.altura; y++) for (let x = 0; x < mapa.largura; x++) if (mapa.camadas.colisao[y * mapa.largura + x]) ctx.fillRect(x * lado - ox, y * lado - oy, lado, lado);
-
-  for (const o of mapa.objetos) {
-    const cor = COR_DO_OBJETO[o.tipo];
-    const x = o.x * lado - ox;
-    const y = o.y * lado - oy;
-    if (o.tipo === 'inicio') continue;
-    if (o.tipo === 'cacada') {
-      ctx.fillStyle = `${cor}26`;
-      ctx.fillRect(x, y, (o.largura ?? 1) * lado, (o.altura ?? 1) * lado);
-      ctx.strokeStyle = cor;
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([5, 4]);
-      ctx.strokeRect(x + 0.5, y + 0.5, (o.largura ?? 1) * lado - 1, (o.altura ?? 1) * lado - 1);
-      ctx.setLineDash([]);
-      continue;
-    }
-    ctx.fillStyle = o.tipo === 'bau' && jogo.abertos.includes(o.id) ? `${cor}66` : `${cor}DD`;
-    ctx.fillRect(x + 3, y + 3, lado - 6, lado - 6);
-    ctx.fillStyle = '#0D0D0D';
-    ctx.font = `bold ${Math.max(10, Math.floor(lado * 0.45))}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(LETRA_DO_OBJETO[o.tipo], x + lado / 2, y + lado / 2);
-  }
-
-  // jogador: círculo dourado com uma ponta para onde olha
-  const px = jogo.x * lado - ox + lado / 2;
-  const py = jogo.y * lado - oy + lado / 2;
-  ctx.fillStyle = '#F5E3B3';
-  ctx.strokeStyle = '#0D0D0D';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(px, py, lado * 0.32, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  const d = { cima: [0, -1], baixo: [0, 1], esquerda: [-1, 0], direita: [1, 0] }[jogo.olhando];
-  ctx.fillStyle = '#C8A656';
-  ctx.beginPath();
-  ctx.arc(px + d[0] * lado * 0.3, py + d[1] * lado * 0.3, lado * 0.1, 0, Math.PI * 2);
-  ctx.fill();
-}
 
 /**
  * Jogar o mapa (3.5.6.6): o Mestre anda pelo RASCUNHO do mapa, tile a tile (setas, WASD ou os botões da tela), para
@@ -169,7 +100,7 @@ export function JogarMapa({ id, tokenFresco }: { id: string; tokenFresco: Token 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    desenhar(ctx, aberto, jogo, tamanho.largura, tamanho.altura, lado);
+    desenharMapaDeJogo(ctx, aberto, jogo, tamanho.largura, tamanho.altura, lado, { mostrarColisao: true });
   }, [aberto, jogo, tamanho, lado]);
 
   const tratar = useCallback(

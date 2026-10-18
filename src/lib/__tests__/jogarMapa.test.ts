@@ -45,7 +45,7 @@ describe('Jogar o mapa (3.5.6.6)', () => {
 
   it('porta "pisar" leva ao destino ao entrar', () => {
     const e = comecar([{ ...objetoNovo('porta', 'porta-1', 3, 2), destino: { mapa: 'floresta', x: 4, y: 5 } }]);
-    expect(andar(e, 'direita').eventos).toEqual([{ tipo: 'porta', destino: { mapa: 'floresta', x: 4, y: 5 } }]);
+    expect(andar(e, 'direita').eventos).toEqual([{ tipo: 'porta', objetoId: 'porta-1', destino: { mapa: 'floresta', x: 4, y: 5 } }]);
   });
 
   it('porta "interagir" abre olhando para ela ou parado em cima; "pisar" avisa que abre ao pisar', () => {
@@ -53,7 +53,7 @@ describe('Jogar o mapa (3.5.6.6)', () => {
     const e = comecar([porta]);
     const olhando = ir(e, 'direita'); // não anda: a porta é pisável, então anda para cima dela
     expect(olhando.x).toBe(3);
-    expect(interagir(olhando).eventos).toEqual([{ tipo: 'porta', destino: { mapa: 'floresta', x: 1, y: 1 } }]);
+    expect(interagir(olhando).eventos).toEqual([{ tipo: 'porta', objetoId: 'porta-1', destino: { mapa: 'floresta', x: 1, y: 1 } }]);
     const pisar = comecar([{ ...porta, gatilho: 'pisar' }]);
     const de = andar(pisar, 'direita').estado;
     expect(interagir(de).eventos[0]).toMatchObject({ tipo: 'nada', motivo: expect.stringMatching(/ao pisar/) });

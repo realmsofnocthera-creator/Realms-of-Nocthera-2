@@ -55,6 +55,18 @@ export function planejarPosicao(atual: ProgressoDaCampanha, mapa: MapaDados, par
   return { ok: true, progresso: { ...atual, x: para.x, y: para.y, atualizadoEm: agora } };
 }
 
+/**
+ * A posição que o celular manda junto com uma ação (baú, porta): vale como checkpoint, nas mesmas regras de
+ * `planejarPosicao`. Assim a ação grava uma vez só, em vez de um checkpoint e depois a ação. Sem posição, a ação usa
+ * a posição já salva.
+ */
+export function aplicarPosicaoDaAcao(atual: ProgressoDaCampanha, mapa: MapaDados, posicao: unknown, agora: string): ResultadoDaCampanha<{ progresso: ProgressoDaCampanha }> {
+  if (posicao === undefined || posicao === null) return { ok: true, progresso: atual };
+  if (typeof posicao !== 'object' || Array.isArray(posicao)) return { ok: false, erro: 'Posição inválida.' };
+  const p = posicao as Record<string, unknown>;
+  return planejarPosicao(atual, mapa, { mapaId: p.mapaId, x: p.x, y: p.y }, agora);
+}
+
 /** Abre um baú: o baú precisa estar no mapa, perto da posição salva e ainda fechado. */
 export function planejarBau(atual: ProgressoDaCampanha, mapa: MapaDados, objetoId: unknown, agora: string): ResultadoDaCampanha<{ progresso: ProgressoDaCampanha; item: { id: string; qtd: number } }> {
   const bau = typeof objetoId === 'string' ? mapa.objetos.find((o) => o.id === objetoId && o.tipo === 'bau') : undefined;
