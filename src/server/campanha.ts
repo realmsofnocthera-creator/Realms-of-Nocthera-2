@@ -1,4 +1,5 @@
 import { validarMapa, type MapaDados } from '@/rules/mapa';
+import { validarCena, type CenaDados } from '@/rules/cena';
 import { validarTileset, type TilesetDados } from '@/rules/tileset';
 import { lerConteudoPublicado } from '@/server/conteudo';
 import { lerConfiguracaoDeSistemas } from '@/server/sistemasLeitura';
@@ -34,6 +35,25 @@ export async function lerMapaPublicado(id: string): Promise<MapaPublicado | null
 /** O mapa onde a Campanha começa (configurado pelo Dono no painel); '' se ainda não há. */
 export async function mapaInicialDaCampanha(): Promise<string> {
   return (await lerConfiguracaoDeSistemas()).campanha.mapaInicial;
+}
+
+/** A cena de abertura configurada pelo Dono; '' se não há. */
+export async function aberturaDaCampanha(): Promise<string> {
+  return (await lerConfiguracaoDeSistemas()).campanha.aberturaCenaId;
+}
+
+export interface CenaPublicada {
+  id: string;
+  nome: string;
+  dados: CenaDados;
+}
+
+/** Uma cena PUBLICADA e válida (cena corrompida conta como inexistente, para não quebrar a tela do jogador). */
+export async function lerCenaPublicada(id: string): Promise<CenaPublicada | null> {
+  const c = await lerConteudoPublicado('cena', id);
+  if (!c) return null;
+  const v = validarCena(c.dados);
+  return v.ok ? { id: c.id, nome: c.nome, dados: v.dados } : null;
 }
 
 export interface TilesetPublicado {

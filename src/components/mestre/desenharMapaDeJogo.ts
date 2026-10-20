@@ -1,6 +1,6 @@
 import { tileDoValor, type MapaDados } from '@/rules/mapa';
 import { recorteDoTile, type TilesetDados } from '@/rules/tileset';
-import { LETRA_DO_OBJETO } from '@/rules/objetosDoMapa';
+import { ehObjetoDeArea, LETRA_DO_OBJETO } from '@/rules/objetosDoMapa';
 import type { EstadoDeJogo } from '@/lib/jogarMapa';
 import { COR_DO_OBJETO } from '@/components/mestre/PainelDeObjetos';
 
@@ -57,7 +57,7 @@ export function desenharMapaDeJogo(
     const x = o.x * lado - ox;
     const y = o.y * lado - oy;
     if (o.tipo === 'inicio') continue;
-    if (o.tipo === 'cacada') {
+    if (ehObjetoDeArea(o.tipo)) {
       ctx.fillStyle = `${cor}26`;
       ctx.fillRect(x, y, (o.largura ?? 1) * lado, (o.altura ?? 1) * lado);
       ctx.strokeStyle = cor;

@@ -20,14 +20,34 @@ describe('Objetos interativos do mapa (3.5.6.3)', () => {
     const lista = TIPOS_DE_OBJETO.map((t, i) => objetoNovo(t, `${t}-1`, i, 0));
     lista.forEach((o) => {
       if (o.tipo === 'porta') o.destino = { mapa: 'vila-inicial', x: 2, y: 3 };
+      if (o.tipo === 'cena') o.cenaId = 'abertura';
     });
     expect(erros(lista)).toEqual([]);
     const v = validarMapa(mapaCom(lista));
     expect(v.ok).toBe(true);
     if (v.ok) {
-      expect(v.dados.objetos).toHaveLength(6);
+      expect(v.dados.objetos).toHaveLength(TIPOS_DE_OBJETO.length);
       expect(v.dados.objetos).not.toBe(lista);
     }
+  });
+
+  it('ativador de cena: área, cena obrigatória, "uma vez só" padrão e sem disputar tile; NPC aceita cena opcional', () => {
+    const novo = objetoNovo('cena', 'cena-1', 1, 1);
+    expect(novo).toMatchObject({ gatilho: 'entrar', largura: 1, altura: 1, unica: true, cenaId: '' });
+    expect(erros([novo])[0]).toMatch(/escolha a cena/);
+    expect(erros([{ ...novo, cenaId: 'abertura' }])).toEqual([]);
+    expect(erros([{ ...novo, cenaId: 'Cena Ruim' }])[0]).toMatch(/escolha a cena/);
+    expect(erros([{ ...novo, cenaId: 'abertura', unica: 'sim' }])[0]).toMatch(/sim ou não/);
+    expect(erros([{ ...novo, cenaId: 'abertura', largura: 3, altura: 3 }, objetoNovo('npc', 'npc-1', 2, 2)])).toEqual([]);
+    expect(erros([{ ...novo, cenaId: 'abertura', largura: 5, altura: 5, x: 8, y: 6 }])[0]).toMatch(/passa da borda/);
+    expect(erros([{ ...novo, cenaId: 'abertura', monstroId: 'rato' }])[0]).toMatch(/campos que este tipo não tem/);
+    const e: string[] = [];
+    const lista = validarObjetos([{ ...objetoNovo('npc', 'npc-1', 3, 3), cenaId: 'dialogo-chefe' }, { ...objetoNovo('npc', 'npc-2', 4, 3), cenaId: '' }], 10, 8, e);
+    expect(e).toEqual([]);
+    expect(lista[0].cenaId).toBe('dialogo-chefe');
+    expect(lista[1]).not.toHaveProperty('cenaId');
+    expect(erros([{ ...objetoNovo('npc', 'npc-1', 3, 3), cenaId: 'Ruim Demais' }])[0]).toMatch(/escolha a cena do diálogo/);
+    expect(objetoCobre({ ...novo, largura: 2, altura: 2 }, 2, 2)).toBe(true);
   });
 
   it('cada tipo tem o gatilho certo e a ação fica por conta do tipo', () => {

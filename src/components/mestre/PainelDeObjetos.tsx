@@ -18,7 +18,7 @@ import {
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { OURO, VERMELHO } from '@/components/mestre/comum';
 
-export const COR_DO_OBJETO: Readonly<Record<TipoDeObjeto, string>> = { inicio: '#7BC47F', npc: '#5AA7F0', placa: '#E6C775', bau: '#C27BF0', porta: '#F3873C', cacada: '#E5736B' };
+export const COR_DO_OBJETO: Readonly<Record<TipoDeObjeto, string>> = { inicio: '#7BC47F', npc: '#5AA7F0', placa: '#E6C775', bau: '#C27BF0', porta: '#F3873C', cacada: '#E5736B', cena: '#4FC3C3' };
 
 const CAMPO = 'rounded-sm border px-1.5 py-1 text-[11px] w-full disabled:opacity-60';
 
@@ -45,6 +45,7 @@ export function PainelDeObjetos({
   erros,
   mapas,
   monstros,
+  cenas,
   materiais,
 }: {
   tipo: TipoDeObjeto;
@@ -61,6 +62,7 @@ export function PainelDeObjetos({
   erros: string[];
   mapas: Opcao[];
   monstros: Opcao[];
+  cenas: Opcao[];
   materiais: Opcao[];
 }) {
   const { colors } = NOCTHERA_THEME;
@@ -92,6 +94,13 @@ export function PainelDeObjetos({
           {o.tipo === 'npc' && (
             <>
               <Campo rotulo="Nome do NPC"><input aria-label="Nome do NPC" value={o.nome ?? ''} disabled={!podeEditar} maxLength={60} onChange={(e) => mudar('nome', (x) => void (x.nome = e.target.value))} className={CAMPO} style={estilo} /></Campo>
+              <Campo rotulo="Cena de diálogo (opcional; no lugar da fala)">
+                <select aria-label="Cena do diálogo" value={o.cenaId ?? ''} disabled={!podeEditar} onChange={(e) => mudar('cenaId', (x) => { if (e.target.value) x.cenaId = e.target.value; else delete x.cenaId; })} className={CAMPO} style={estilo}>
+                  <option value="">Sem cena (usa a fala)</option>
+                  {o.cenaId && !cenas.some((c) => c.id === o.cenaId) && <option value={o.cenaId}>{o.cenaId}</option>}
+                  {cenas.map((c) => <option key={c.id} value={c.id}>{c.nome} ({c.id})</option>)}
+                </select>
+              </Campo>
               <Campo rotulo="Fala"><textarea aria-label="Fala" value={o.texto ?? ''} rows={4} disabled={!podeEditar} maxLength={TEXTO_MAXIMO_DO_OBJETO} onChange={(e) => mudar('texto', (x) => void (x.texto = e.target.value))} className={CAMPO} style={estilo} /></Campo>
             </>
           )}
@@ -124,14 +133,31 @@ export function PainelDeObjetos({
               </Campo>
             </>
           )}
-          {o.tipo === 'cacada' && (
+          {o.tipo === 'cena' && (
             <>
+              <Campo rotulo="Cena">
+                <select aria-label="Cena" value={o.cenaId ?? ''} disabled={!podeEditar} onChange={(e) => mudar('cenaId', (x) => void (x.cenaId = e.target.value))} className={CAMPO} style={estilo}>
+                  <option value="">Escolha...</option>
+                  {o.cenaId && !cenas.some((c) => c.id === o.cenaId) && <option value={o.cenaId}>{o.cenaId}</option>}
+                  {cenas.map((c) => <option key={c.id} value={c.id}>{c.nome} ({c.id})</option>)}
+                </select>
+              </Campo>
+              <label className="text-[11px] flex items-center gap-1.5">
+                <input type="checkbox" aria-label="Toca uma vez só" checked={o.unica !== false} disabled={!podeEditar} onChange={(e) => mudar('unica', (x) => void (x.unica = e.target.checked))} />
+                Toca uma vez só por personagem
+              </label>
+            </>
+          )}
+          {(o.tipo === 'cacada' || o.tipo === 'cena') && (
+            <>
+              {o.tipo === 'cacada' && (
               <Campo rotulo="Monstro">
                 <select aria-label="Monstro" value={o.monstroId ?? ''} disabled={!podeEditar} onChange={(e) => mudar('monstroId', (x) => void (x.monstroId = e.target.value))} className={CAMPO} style={estilo}>
                   {!monstros.some((m) => m.id === o.monstroId) && <option value={o.monstroId ?? ''}>{o.monstroId || 'Escolha...'}</option>}
                   {monstros.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
                 </select>
               </Campo>
+              )}
               <div className="grid grid-cols-2 gap-1.5">
                 <Campo rotulo="Largura (tiles)"><input aria-label="Largura da área" type="number" min={1} max={LADO_MAXIMO_DA_AREA} value={o.largura ?? 1} disabled={!podeEditar} onChange={(e) => mudar('largura', (x) => void (x.largura = num(e.target.value)))} className={CAMPO} style={estilo} /></Campo>
                 <Campo rotulo="Altura (tiles)"><input aria-label="Altura da área" type="number" min={1} max={LADO_MAXIMO_DA_AREA} value={o.altura ?? 1} disabled={!podeEditar} onChange={(e) => mudar('altura', (x) => void (x.altura = num(e.target.value)))} className={CAMPO} style={estilo} /></Campo>

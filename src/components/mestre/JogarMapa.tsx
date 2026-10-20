@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Hand, RotateCcw } from 'lucide-react';
 import type { MapaDados } from '@/rules/mapa';
 import { LETRA_DO_OBJETO, NOME_DO_OBJETO } from '@/rules/objetosDoMapa';
+import type { CenaDados } from '@/rules/cena';
+import { CenaPlayer } from '@/components/cena/CenaPlayer';
 import { andar, iniciarJogo, interagir, tileLivre, type Direcao, type EstadoDeJogo, type EventoDeJogo } from '@/lib/jogarMapa';
 import type { ConteudoDocumento } from '@/server/persistencia/tipos';
 import { NOCTHERA_THEME } from '@/theme/theme';
@@ -47,6 +49,7 @@ export function JogarMapa({ id, tokenFresco }: { id: string; tokenFresco: Token 
   const [jogo, setJogo] = useState<EstadoDeJogo | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [dialogo, setDialogo] = useState<{ titulo: string; texto: string } | null>(null);
+  const [cenaTocando, setCenaTocando] = useState<CenaDados | null>(null);
   const [registro, setRegistro] = useState<string[]>([]);
   const caixaRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -117,6 +120,14 @@ export function JogarMapa({ id, tokenFresco }: { id: string; tokenFresco: Token 
         } else if (e.tipo === 'luta') {
           setDialogo({ titulo: 'Área de monstros', texto: `Aqui começaria a luta contra ${e.monstroId}. (Teste: a luta não acontece.)` });
           anotar(`Entrou na área de monstros: luta contra ${e.monstroId}.`);
+        } else if (e.tipo === 'cena') {
+          const r = await chamar(tokenFresco, `/api/mestre/conteudo/cena/${e.cenaId}`);
+          if (r.ok) {
+            setCenaTocando((r.dados.conteudo as ConteudoDocumento).rascunho as CenaDados);
+            anotar(`Cena "${e.cenaId}" (${e.unica ? 'uma vez só' : 'toda vez'}); no teste toca o rascunho.`);
+          } else {
+            setDialogo({ titulo: 'Cena', texto: `A cena "${e.cenaId}" não foi encontrada.` });
+          }
         } else if (e.tipo === 'porta') {
           anotar(`Porta: indo para ${e.destino.mapa} (${e.destino.x}, ${e.destino.y}).`);
           await entrarNoMapa(e.destino.mapa, { x: e.destino.x, y: e.destino.y });
@@ -125,7 +136,7 @@ export function JogarMapa({ id, tokenFresco }: { id: string; tokenFresco: Token 
         }
       }
     },
-    [anotar, entrarNoMapa]
+    [anotar, entrarNoMapa, tokenFresco]
   );
 
   const passo = useCallback(
@@ -211,6 +222,8 @@ export function JogarMapa({ id, tokenFresco }: { id: string; tokenFresco: Token 
           <Hand className="w-6 h-6" /> {dialogo ? 'Continuar' : 'Interagir'}
         </button>
       </div>
+
+      {cenaTocando && <CenaPlayer cena={cenaTocando} jogador={{ nome: 'Seu personagem' }} aoTerminar={() => setCenaTocando(null)} />}
 
       <section aria-label="Registro do teste" className="h-24 overflow-auto px-3 py-1.5 border-t text-[11px]" style={{ borderColor: `${OURO}22`, backgroundColor: colors.background.secondary }}>
         {registro.length === 0 ? (

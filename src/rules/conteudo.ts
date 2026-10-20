@@ -94,6 +94,10 @@ export function referenciasDoConteudo(tipo: TipoDeConteudo, dados: unknown): Ref
       vistos.add(`mapa:${o.destino.mapa}`);
       refs.push({ tipo: 'mapa', id: o.destino.mapa, soExistir: true });
     }
+    if ((o.tipo === 'cena' || o.tipo === 'npc') && o.cenaId && !vistos.has(`cena:${o.cenaId}`)) {
+      vistos.add(`cena:${o.cenaId}`);
+      refs.push({ tipo: 'cena', id: o.cenaId });
+    }
     if (o.tipo === 'cacada' && o.monstroId && !vistos.has(`monstro:${o.monstroId}`)) {
       vistos.add(`monstro:${o.monstroId}`);
       refs.push({ tipo: 'monstro', id: o.monstroId, podeSerDoCodigo: true });

@@ -68,6 +68,7 @@ export function SistemasPainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel
       </Cartao>
 
       <MapaInicial pode={pode} config={config} tokenFresco={tokenFresco} aplicar={aplicar} />
+      <CenaDeAbertura pode={pode} config={config} tokenFresco={tokenFresco} aplicar={aplicar} />
 
       {SISTEMAS.map((s) => {
         const e = config.sistemas[s.id as SistemaId];
@@ -134,6 +135,59 @@ function MapaInicial({ pode, config, tokenFresco, aplicar }: { pode: boolean; co
             <select value={escolhido} onChange={(e) => setEscolhido(e.target.value)} className={campo} style={estilo}>
               <option value="">Nenhum (a Campanha ainda não começou)</option>
               {mapas.map((m) => <option key={m.id} value={m.id}>{m.nome} ({m.id})</option>)}
+            </select>
+          </label>
+          <label className="text-[11px] flex flex-col gap-0.5">Motivo (vai para o log)
+            <input value={motivo} onChange={(e) => setMotivo(e.target.value)} className={campo} style={estilo} required minLength={5} maxLength={300} />
+          </label>
+          <button type="submit" disabled={ocupado} className="self-start px-3 py-1.5 rounded font-cinzel font-bold text-xs disabled:opacity-50" style={{ backgroundColor: colors.accent.primary, color: colors.background.secondary }}>Definir</button>
+          {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
+        </form>
+      )}
+    </Cartao>
+  );
+}
+
+/** A cena de abertura da Campanha (5.5-4): toca uma vez para cada personagem, antes do primeiro mapa. Escolhida entre as cenas publicadas. */
+function CenaDeAbertura({ pode, config, tokenFresco, aplicar }: { pode: boolean; config: ConfiguracaoDeSistemas; tokenFresco: Token; aplicar: (corpo: Record<string, unknown>) => Promise<string | null> }) {
+  const { colors } = NOCTHERA_THEME;
+  const [cenas, setCenas] = useState<ResumoConteudo[]>([]);
+  const [escolhida, setEscolhida] = useState(config.campanha.aberturaCenaId);
+  const [motivo, setMotivo] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const campo = 'rounded-sm border px-2 py-1 text-[12px] w-full';
+  const estilo = { backgroundColor: colors.background.primary, borderColor: `${OURO}66`, color: colors.text.primary };
+
+  useEffect(() => {
+    void chamar(tokenFresco, '/api/mestre/conteudo?tipo=cena').then((r) => {
+      if (r.ok) setCenas((r.dados.itens as ResumoConteudo[]).filter((c) => c.versaoPublicada !== null));
+    });
+  }, [tokenFresco]);
+
+  return (
+    <Cartao titulo="Campanha: cena de abertura">
+      <p className="text-[11px]" style={{ color: colors.text.secondary }}>
+        A cena (publicada) que toca uma vez para cada personagem quando ele abre a Campanha pela primeira vez, antes do primeiro mapa. Sem ela, o jogador entra direto no mapa.
+      </p>
+      <p className="text-[12px] font-semibold">Agora: {config.campanha.aberturaCenaId || 'nenhuma'}</p>
+      {pode && (
+        <form
+          className="flex flex-col gap-2"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setOcupado(true);
+            setErro(null);
+            const falha = await aplicar({ alvo: 'campanha-cena-abertura', cena: escolhida, motivo });
+            setOcupado(false);
+            if (falha) setErro(falha);
+            else setMotivo('');
+          }}
+        >
+          <label className="text-[11px] flex flex-col gap-0.5">Cena de abertura
+            <select value={escolhida} onChange={(e) => setEscolhida(e.target.value)} className={campo} style={estilo}>
+              <option value="">Nenhuma</option>
+              {cenas.map((c) => <option key={c.id} value={c.id}>{c.nome} ({c.id})</option>)}
             </select>
           </label>
           <label className="text-[11px] flex flex-col gap-0.5">Motivo (vai para o log)

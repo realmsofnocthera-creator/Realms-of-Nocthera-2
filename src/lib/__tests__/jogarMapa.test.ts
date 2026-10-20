@@ -97,4 +97,15 @@ describe('Jogar o mapa (3.5.6.6)', () => {
     expect(iniciarJogo('vila', m, { x: 5, y: 5 })).toMatchObject({ x: 5, y: 5 });
     expect(iniciarJogo('vila', m, { x: 50, y: 5 })).toMatchObject({ x: 0, y: 0 });
   });
+
+  it('ativador de cena dispara ao ENTRAR na área (uma vez por entrada) e NPC com cena toca o diálogo', () => {
+    const e = comecar([{ ...objetoNovo('cena', 'cena-1', 4, 2), largura: 2, altura: 1, cenaId: 'abertura', unica: false }]);
+    const r1 = andar(ir(e, 'direita'), 'direita');
+    expect(r1.eventos).toEqual([{ tipo: 'cena', objetoId: 'cena-1', cenaId: 'abertura', unica: false, titulo: 'cena-1' }]);
+    expect(andar(r1.estado, 'direita').eventos).toEqual([]); // andar dentro da área não repete
+    expect(andar(e, 'cima').eventos).toEqual([]);
+    const d = comecar([{ ...objetoNovo('npc', 'npc-1', 3, 2), nome: 'Chefe', cenaId: 'dialogo' }]);
+    const virado = andar(d, 'direita').estado;
+    expect(interagir(virado).eventos).toEqual([{ tipo: 'cena', objetoId: 'npc-1', cenaId: 'dialogo', unica: false, titulo: 'Chefe' }]);
+  });
 });

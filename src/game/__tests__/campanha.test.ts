@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { aplicarPosicaoDaAcao, chaveDaArea, chaveDoBau, DESCANSO_DA_AREA_MS, descansosComA, MAXIMO_DE_DESCANSOS, planejarLuta, planejarBau, planejarPorta, planejarPosicao, posicaoInicialDoMapa, progressoInicial, MAXIMO_DE_BAUS_GUARDADOS, type ProgressoDaCampanha } from '@/game/campanha';
+import { CHAVE_DA_ABERTURA, MAXIMO_DE_CENAS_VISTAS, planejarCenaVista, aplicarPosicaoDaAcao, chaveDaArea, chaveDoBau, DESCANSO_DA_AREA_MS, descansosComA, MAXIMO_DE_DESCANSOS, planejarLuta, planejarBau, planejarPorta, planejarPosicao, posicaoInicialDoMapa, progressoInicial, MAXIMO_DE_BAUS_GUARDADOS, type ProgressoDaCampanha } from '@/game/campanha';
 import { mapaVazio, type MapaDados } from '@/rules/mapa';
 import { objetoNovo, type ObjetoDoMapa } from '@/rules/objetosDoMapa';
 
@@ -154,6 +154,32 @@ describe('Campanha: regras do progresso (5.5-3 e 5.5-8)', () => {
       expect(Object.keys(todos)).toHaveLength(MAXIMO_DE_DESCANSOS);
       expect(todos['vila:nova']).toBe(AGORA_MS + DESCANSO_DA_AREA_MS);
       expect(todos).not.toHaveProperty('vila:acabou');
+    });
+  });
+
+  describe('cenas vistas', () => {
+    const ativador = (id: string, unica: boolean): ObjetoDoMapa => ({ ...objetoNovo('cena', id, 3, 3), cenaId: 'chegada', unica });
+    const m = mapa([ativador('c1', true), ativador('c2', false), objetoNovo('inicio', 'i', 1, 1)]);
+
+    it('abertura: só vale se configurada; marca uma vez', () => {
+      expect(planejarCenaVista(prog(), m, { abertura: true }, false, AGORA)).toEqual({ ok: false, erro: 'Não há cena de abertura.' });
+      const r = planejarCenaVista(prog(), m, { abertura: true }, true, AGORA);
+      expect(r).toMatchObject({ ok: true, progresso: { cenas: [CHAVE_DA_ABERTURA], atualizadoEm: AGORA } });
+      if (r.ok) expect(planejarCenaVista(r.progresso, m, { abertura: true }, true, 'depois')).toEqual({ ok: true, progresso: r.progresso });
+    });
+
+    it('ativador "uma vez só" marca mapa:objeto; "toda vez" não grava; objeto errado dá erro', () => {
+      expect(planejarCenaVista(prog(), m, { objetoId: 'c1' }, false, AGORA)).toMatchObject({ ok: true, progresso: { cenas: ['vila:c1'] } });
+      const sem = prog();
+      expect(planejarCenaVista(sem, m, { objetoId: 'c2' }, false, AGORA)).toEqual({ ok: true, progresso: sem });
+      expect(planejarCenaVista(prog(), m, { objetoId: 'i' }, false, AGORA).ok).toBe(false);
+      expect(planejarCenaVista(prog(), m, { objetoId: 7 }, false, AGORA).ok).toBe(false);
+    });
+
+    it('para de registrar no teto', () => {
+      const cheio = prog({ cenas: Array.from({ length: MAXIMO_DE_CENAS_VISTAS }, (_, i) => `x:${i}`) });
+      expect(planejarCenaVista(cheio, m, { objetoId: 'c1' }, false, AGORA).ok).toBe(false);
+      expect(planejarCenaVista(cheio, m, { abertura: true }, true, AGORA).ok).toBe(false);
     });
   });
 });

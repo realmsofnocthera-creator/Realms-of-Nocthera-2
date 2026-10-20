@@ -2,7 +2,7 @@ import { configuracaoPadrao, ehSistema, MENSAGEM_MAXIMA, NOME_DO_SISTEMA, type C
 import { comRegistro, ErroMestre, exigir, motivoValido, type SessaoMestre } from '@/server/mestre';
 import { repositorio } from '@/server/persistencia';
 import { guardarConfiguracaoNoCache, lerConfiguracaoDeSistemas } from '@/server/sistemasLeitura';
-import { lerMapaPublicado } from '@/server/campanha';
+import { lerCenaPublicada, lerMapaPublicado } from '@/server/campanha';
 
 /**
  * Lado de escrita dos sistemas (3.5.5.2), só para o Dono. Cada mudança entra no log antes de acontecer, com motivo.
@@ -69,10 +69,29 @@ export async function definirMapaInicial(sessao: SessaoMestre, pedido: { mapa: u
   if (mapa !== '' && !(await lerMapaPublicado(mapa))) throw new ErroMestre(400, `O mapa "${mapa}" não está publicado. Publique o mapa antes de torná-lo o início da Campanha.`);
   const atual = await lerConfiguracaoDeSistemas();
   const proxima: ConfiguracaoDeSistemas = structuredClone(atual);
-  proxima.campanha = { mapaInicial: mapa };
+  proxima.campanha = { ...proxima.campanha, mapaInicial: mapa };
   proxima.atualizadoEm = new Date().toISOString();
   proxima.atualizadoPor = sessao.uid;
   await comRegistro(sessao, { acao: 'campanha.mapa-inicial', alvo: 'campanha', antes: { mapaInicial: atual.campanha.mapaInicial }, depois: { mapaInicial: mapa }, motivo, ip }, () =>
+    repositorio.gravarConfiguracaoDeSistemas(proxima)
+  );
+  guardarConfiguracaoNoCache(proxima);
+  return proxima;
+}
+
+/** Define a cena de abertura da Campanha (tocada uma vez, antes do primeiro mapa; precisa estar publicada); vazio desfaz. */
+export async function definirCenaDeAbertura(sessao: SessaoMestre, pedido: { cena: unknown; motivo: unknown }, ip?: string): Promise<ConfiguracaoDeSistemas> {
+  exigir(sessao, 'sistemas.gerir');
+  const motivo = motivoValido(pedido.motivo);
+  const cena = typeof pedido.cena === 'string' ? pedido.cena.trim() : null;
+  if (cena === null) throw new ErroMestre(400, 'Escolha a cena de abertura (ou deixe vazio para desfazer).');
+  if (cena !== '' && !(await lerCenaPublicada(cena))) throw new ErroMestre(400, `A cena "${cena}" não está publicada. Publique a cena antes de torná-la a abertura da Campanha.`);
+  const atual = await lerConfiguracaoDeSistemas();
+  const proxima: ConfiguracaoDeSistemas = structuredClone(atual);
+  proxima.campanha = { ...proxima.campanha, aberturaCenaId: cena };
+  proxima.atualizadoEm = new Date().toISOString();
+  proxima.atualizadoPor = sessao.uid;
+  await comRegistro(sessao, { acao: 'campanha.cena-abertura', alvo: 'campanha', antes: { aberturaCenaId: atual.campanha.aberturaCenaId }, depois: { aberturaCenaId: cena }, motivo, ip }, () =>
     repositorio.gravarConfiguracaoDeSistemas(proxima)
   );
   guardarConfiguracaoNoCache(proxima);

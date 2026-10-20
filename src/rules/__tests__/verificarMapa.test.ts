@@ -89,4 +89,10 @@ describe('Verificação do mapa antes de publicar (3.5.6.6)', () => {
     expect(tileLivre(m, 2, 0)).toBe(true);
     expect(tileLivre(m, 3, 0)).toBe(false);
   });
+
+  it('ativador de cena é uma área: alcançável se algum tile dela é; não avisa de colisão', () => {
+    const m = mapa([objetoNovo('inicio', 'i', 0, 0), { ...objetoNovo('cena', 'c', 3, 3), largura: 2, altura: 2, cenaId: 'chegada' }], [[3, 3]]);
+    const problemas = verificarMapa('vila', m, {});
+    expect(problemas.some((p) => p.objetoId === 'c')).toBe(false);
+  });
 });

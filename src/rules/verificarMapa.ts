@@ -1,5 +1,5 @@
 import type { MapaDados } from '@/rules/mapa';
-import { NOME_DO_OBJETO, type ObjetoDoMapa } from '@/rules/objetosDoMapa';
+import { ehObjetoDeArea, NOME_DO_OBJETO, type ObjetoDoMapa } from '@/rules/objetosDoMapa';
 import { dentroDoMapa, tileLivre } from '@/rules/passagem';
 
 /**
@@ -47,7 +47,7 @@ export function tilesAlcancaveis(mapa: MapaDados, x0: number, y0: number): Set<n
 
 function alcancado(mapa: MapaDados, o: ObjetoDoMapa, visto: Set<number>): boolean {
   const tem = (x: number, y: number) => dentroDoMapa(mapa, x, y) && visto.has(y * mapa.largura + x);
-  if (o.tipo === 'cacada') {
+  if (ehObjetoDeArea(o.tipo)) {
     for (let y = o.y; y < o.y + (o.altura ?? 1); y++) for (let x = o.x; x < o.x + (o.largura ?? 1); x++) if (tem(x, y)) return true;
     return false;
   }
@@ -110,7 +110,7 @@ export function verificarMapa(id: string, mapa: MapaDados, outros: Readonly<Reco
 
   // objetos sobre colisão (inútil ou enganoso)
   for (const o of mapa.objetos) {
-    if (o.tipo === 'cacada' || o.tipo === 'inicio') continue;
+    if (ehObjetoDeArea(o.tipo) || o.tipo === 'inicio') continue;
     if (mapa.camadas.colisao[o.y * mapa.largura + o.x] === 1) problemas.push({ nivel: 'aviso', texto: `${nome(o)} está sobre um tile com colisão.`, objetoId: o.id });
   }
   return problemas;
