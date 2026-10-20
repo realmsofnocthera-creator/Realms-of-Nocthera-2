@@ -9,7 +9,7 @@ const img = (c: string, ext = 'png') => `https://pub.exemplo.test/cenas/${c.repe
 const cena: CenaDados = {
   formato: 1,
   titulo: 'Abertura',
-  personagens: [{ id: 'chefe', nome: 'Comandante', retrato: img('a', 'webp') }],
+  personagens: [{ id: 'chefe', nome: 'Comandante', retrato: img('a', 'webp'), voz: 'masculina-grave' }],
   telas: [
     { tipo: 'narracao', texto: 'O mundo está em guerra.', fundo: img('b', 'jpg') },
     { tipo: 'fala', personagem: 'chefe', texto: 'Bem-vindo.' },
@@ -26,6 +26,9 @@ describe('Cenas (renderização)', () => {
     expect(edita).toContain('Fala: Jogador');
     expect(edita).toContain('Salvar rascunho');
     expect(edita).toContain('Ver a cena');
+    expect(edita).toContain('Vozes (bipes');
+    expect(edita).toContain('Masculina grave');
+    expect(edita).toContain('Ouvir: Voz de Comandante');
     const le = renderToStaticMarkup(<EditorDeCena inicial={cena} podeEditar={false} salvar={async () => null} enviarImagem={async () => ''} />);
     expect(le).not.toContain('Salvar rascunho');
     expect(le).not.toContain('+ Tela');
@@ -45,6 +48,6 @@ describe('Cenas (renderização)', () => {
     expect(html).toContain('Comandante');
     expect(html.indexOf('cena-retrato')).toBeGreaterThan(-1);
     expect(html.indexOf('cena-retrato')).toBeLessThan(html.indexOf('cena-texto'));
-    expect(html).toContain('Toque para fechar');
+    expect(html).toContain('Toque para ver tudo');
   });
 });

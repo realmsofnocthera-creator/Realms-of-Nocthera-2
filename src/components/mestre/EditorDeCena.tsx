@@ -13,6 +13,8 @@ import {
   type CenaDados,
   type TelaDaCena,
 } from '@/rules/cena';
+import { IDS_DE_VOZ, SEM_VOZ, VOZES, type IdDaVoz } from '@/rules/voz';
+import { ouvirVoz } from '@/lib/vozBip';
 import { prepararImagemDeCena, type PapelDaImagem } from '@/lib/imagemDeCena';
 import { sugerirIdentificador } from '@/lib/conteudoTela';
 import { CenaPlayer } from '@/components/cena/CenaPlayer';
@@ -20,6 +22,21 @@ import { NOCTHERA_THEME } from '@/theme/theme';
 import { Cartao, OURO, VERMELHO } from '@/components/mestre/comum';
 
 const CAMPO = 'rounded-sm border px-2 py-1 text-[12px] w-full disabled:opacity-60';
+
+/** Escolha de voz "bip", com botão para ouvir a amostra. */
+function EscolhaDeVoz({ rotulo, valor, podeEditar, mudar, estilo }: { rotulo: string; valor: IdDaVoz | undefined; podeEditar: boolean; mudar: (v: IdDaVoz | undefined) => void; estilo: React.CSSProperties }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <select aria-label={rotulo} value={valor ?? SEM_VOZ} disabled={!podeEditar} onChange={(e) => mudar(e.target.value === SEM_VOZ ? undefined : (e.target.value as IdDaVoz))} className={`${CAMPO} max-w-[11rem]`} style={estilo}>
+        <option value={SEM_VOZ}>Sem voz</option>
+        {IDS_DE_VOZ.map((id) => <option key={id} value={id}>{VOZES[id].nome}</option>)}
+      </select>
+      <button type="button" aria-label={`Ouvir: ${rotulo}`} disabled={!valor} onClick={() => valor && ouvirVoz(VOZES[valor])} className="rounded border px-2 py-1 text-[11px] disabled:opacity-40" style={{ borderColor: `${OURO}66` }}>
+        ▶ Ouvir
+      </button>
+    </span>
+  );
+}
 
 /**
  * Edita uma cena (cutscene ou diálogo): personagens (nome + retrato) e telas (narração ou fala, com fundo opcional).
@@ -114,6 +131,13 @@ export function EditorDeCena({
                   className={`${CAMPO} max-w-[12rem]`}
                   style={estilo}
                 />
+                <EscolhaDeVoz
+                  rotulo={`Voz de ${p.nome || `personagem ${i + 1}`}`}
+                  valor={p.voz}
+                  podeEditar={podeEditar}
+                  estilo={estilo}
+                  mudar={(voz) => setD({ ...d, personagens: d.personagens.map((q, j) => { if (j !== i) return q; const { voz: _v, ...resto } = q; return voz ? { ...resto, voz } : resto; }) })}
+                />
                 <label className="text-[11px]">
                   <span className="rounded border px-2 py-1" style={{ borderColor: `${OURO}66`, cursor: podeEditar ? 'pointer' : 'default' }}>
                     {enviando === `p${i}` ? 'Enviando…' : p.retrato ? 'Trocar foto' : 'Colocar foto'}
@@ -160,6 +184,19 @@ export function EditorDeCena({
                 + Personagem
               </button>
             )}
+          </fieldset>
+
+          <fieldset className="flex flex-col gap-2 rounded-sm border p-2" style={{ borderColor: `${OURO}33` }}>
+            <legend className="px-1 text-[11px] font-bold">Vozes (bipes enquanto o texto aparece)</legend>
+            <div className="flex flex-wrap items-center gap-2 text-[11px]">
+              <span className="w-20">Jogador</span>
+              <EscolhaDeVoz rotulo="Voz do jogador" valor={d.vozDoJogador} podeEditar={podeEditar} estilo={estilo} mudar={(v) => { const { vozDoJogador: _v, ...resto } = d; setD(v ? { ...resto, vozDoJogador: v } : resto); }} />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-[11px]">
+              <span className="w-20">Narração</span>
+              <EscolhaDeVoz rotulo="Voz da narração" valor={d.vozDaNarracao} podeEditar={podeEditar} estilo={estilo} mudar={(v) => { const { vozDaNarracao: _v, ...resto } = d; setD(v ? { ...resto, vozDaNarracao: v } : resto); }} />
+            </div>
+            <p className="text-[11px]" style={{ color: colors.text.secondary }}>A voz de cada personagem fica ao lado do nome dele, acima.</p>
           </fieldset>
 
           <fieldset className="flex flex-col gap-2 rounded-sm border p-2" style={{ borderColor: `${OURO}33` }}>
