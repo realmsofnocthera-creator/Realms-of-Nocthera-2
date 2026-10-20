@@ -1,4 +1,5 @@
 import type { ResultadoValidacao } from '@/rules/mapa';
+import { ehIdDeVoz, SEM_VOZ, VOZES, type IdDaVoz, type Voz } from '@/rules/voz';
 
 /**
  * Cena (Campanha, 5.5-4): uma sequência de telas com texto, usada para cutscenes e diálogos. Cada tela é uma NARRAÇÃO
@@ -25,6 +26,8 @@ export interface PersonagemDaCena {
   nome: string;
   /** Endereço do retrato, mostrado acima da caixa de diálogo quando o personagem fala. */
   retrato?: string;
+  /** Voz "bip" das falas dele (sem o campo: o texto aparece em silêncio). */
+  voz?: IdDaVoz;
 }
 
 export type TelaDaCena =
@@ -36,6 +39,10 @@ export interface CenaDados {
   titulo: string;
   personagens: PersonagemDaCena[];
   telas: TelaDaCena[];
+  /** Voz das falas do "Jogador" nesta cena (sem o campo: silêncio). */
+  vozDoJogador?: IdDaVoz;
+  /** Voz das narrações (sem o campo: silêncio). */
+  vozDaNarracao?: IdDaVoz;
 }
 
 /** A chave "cenas/<hash>.<ext>" no fim do endereço, ou null se o endereço não é de uma imagem de cena. */
@@ -66,10 +73,17 @@ function imagemValida(v: unknown, rotulo: string, erros: string[]): string | und
 export function validarCena(bruto: unknown): ResultadoValidacao<CenaDados> {
   if (!eObjeto(bruto)) return { ok: false, erros: ['A cena precisa ser um objeto.'] };
   const erros: string[] = [];
-  const extras = Object.keys(bruto).filter((k) => !['formato', 'titulo', 'personagens', 'telas'].includes(k));
+  const extras = Object.keys(bruto).filter((k) => !['formato', 'titulo', 'personagens', 'telas', 'vozDoJogador', 'vozDaNarracao'].includes(k));
   if (extras.length) erros.push(`Campos desconhecidos na cena: ${extras.join(', ')}.`);
   if (bruto.formato !== FORMATO_DA_CENA) erros.push(`Formato da cena não suportado (esperado ${FORMATO_DA_CENA}).`);
   const titulo = typeof bruto.titulo === 'string' ? bruto.titulo.trim() : '';
+  const vozOpcional = (v: unknown, rotulo: string): IdDaVoz | undefined => {
+    if (v === undefined || v === SEM_VOZ) return undefined;
+    if (!ehIdDeVoz(v)) erros.push(`${rotulo}: voz desconhecida.`);
+    return ehIdDeVoz(v) ? v : undefined;
+  };
+  const vozDoJogador = vozOpcional(bruto.vozDoJogador, 'Voz do jogador');
+  const vozDaNarracao = vozOpcional(bruto.vozDaNarracao, 'Voz da narração');
   if (titulo.length < 2 || titulo.length > TITULO_DA_CENA_MAXIMO) erros.push(`Título: de 2 a ${TITULO_DA_CENA_MAXIMO} caracteres.`);
 
   const personagens: PersonagemDaCena[] = [];
@@ -80,7 +94,7 @@ export function validarCena(bruto: unknown): ResultadoValidacao<CenaDados> {
     bruto.personagens.forEach((p, i) => {
       const rotulo = `Personagem ${i + 1}`;
       if (!eObjeto(p)) return void erros.push(`${rotulo}: formato inválido.`);
-      const extra = Object.keys(p).filter((k) => !['id', 'nome', 'retrato'].includes(k));
+      const extra = Object.keys(p).filter((k) => !['id', 'nome', 'retrato', 'voz'].includes(k));
       if (extra.length) erros.push(`${rotulo}: campos desconhecidos (${extra.join(', ')}).`);
       const id = typeof p.id === 'string' ? p.id : '';
       if (!ID_DE_PERSONAGEM.test(id) || id === ID_DO_JOGADOR) erros.push(`${rotulo}: identificador inválido (minúsculas, números e hífen; "${ID_DO_JOGADOR}" é reservado).`);
@@ -89,7 +103,8 @@ export function validarCena(bruto: unknown): ResultadoValidacao<CenaDados> {
       const nome = typeof p.nome === 'string' ? p.nome.trim() : '';
       if (nome.length < 1 || nome.length > NOME_DO_PERSONAGEM_MAXIMO) erros.push(`${rotulo}: o nome vai de 1 a ${NOME_DO_PERSONAGEM_MAXIMO} caracteres.`);
       const retrato = imagemValida(p.retrato, `${rotulo} (retrato)`, erros);
-      personagens.push({ id, nome, ...(retrato ? { retrato } : {}) });
+      const voz = vozOpcional(p.voz, `${rotulo} (voz)`);
+      personagens.push({ id, nome, ...(retrato ? { retrato } : {}), ...(voz ? { voz } : {}) });
     });
   }
 
@@ -122,7 +137,7 @@ export function validarCena(bruto: unknown): ResultadoValidacao<CenaDados> {
   }
 
   if (erros.length) return { ok: false, erros };
-  return { ok: true, dados: { formato: FORMATO_DA_CENA, titulo, personagens, telas } };
+  return { ok: true, dados: { formato: FORMATO_DA_CENA, titulo, personagens, telas, ...(vozDoJogador ? { vozDoJogador } : {}), ...(vozDaNarracao ? { vozDaNarracao } : {}) } };
 }
 
 /** Rascunho novo: uma narração com texto provisório (satisfaz o schema). */
@@ -146,4 +161,10 @@ export function fundoDaTela(cena: Pick<CenaDados, 'telas'>, indice: number): str
     if (f !== undefined) fundo = f;
   }
   return fundo;
+}
+
+/** A voz da tela: a do personagem que fala, a do jogador ou a da narração; null = silêncio. */
+export function vozDaTela(cena: Pick<CenaDados, 'personagens' | 'vozDoJogador' | 'vozDaNarracao'>, tela: TelaDaCena): Voz | null {
+  const id = tela.tipo === 'narracao' ? cena.vozDaNarracao : tela.personagem === ID_DO_JOGADOR ? cena.vozDoJogador : cena.personagens.find((p) => p.id === tela.personagem)?.voz;
+  return id ? VOZES[id] : null;
 }
