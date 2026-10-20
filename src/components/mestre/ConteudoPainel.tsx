@@ -12,6 +12,8 @@ import { EditorDeArma } from '@/components/mestre/EditorDeArma';
 import { EditorDeArmadura } from '@/components/mestre/EditorDeArmadura';
 import { EditorDeEmblema } from '@/components/mestre/EditorDeEmblema';
 import { EditorDeAnuncio } from '@/components/mestre/EditorDeAnuncio';
+import { cenaEmBranco, type CenaDados } from '@/rules/cena';
+import { EditorDeCena } from '@/components/mestre/EditorDeCena';
 import { anuncioEmBranco, NOME_DO_TIPO_DE_ANUNCIO, type AnuncioDados } from '@/rules/anuncio';
 import { descreverJanela } from '@/lib/anunciosTela';
 import type { ProblemaDoMapa } from '@/rules/verificarMapa';
@@ -35,6 +37,10 @@ function resumoDosDados(tipo: TipoDeConteudo, dados: unknown): string {
   if (tipo === 'mapa') {
     const m = dados as MapaDados;
     return `${m.largura} × ${m.altura} tiles de ${m.tamanhoDoTile} px · ${m.tilesets.length} tileset(s)`;
+  }
+  if (tipo === 'cena') {
+    const c = dados as CenaDados;
+    return `${c.telas.length} tela(s) · ${c.personagens.length} personagem(ns)`;
   }
   if (tipo === 'anuncio') {
     const a = dados as AnuncioDados;
@@ -68,11 +74,12 @@ function useEstilos() {
   };
 }
 
-const PLURAL: Record<TipoDeConteudo, string> = { mapa: 'Mapas', tileset: 'Tilesets', monstro: 'Monstros', arma: 'Armas', armadura: 'Armaduras', emblema: 'Emblemas', anuncio: 'Anúncios' };
+const PLURAL: Record<TipoDeConteudo, string> = { mapa: 'Mapas', tileset: 'Tilesets', monstro: 'Monstros', arma: 'Armas', armadura: 'Armaduras', emblema: 'Emblemas', anuncio: 'Anúncios', cena: 'Cenas' };
 const EXPLICACAO: Record<TipoDeConteudo, string> = {
   mapa: 'Cada mapa tem um rascunho e versões publicadas. O jogo só vê a versão publicada; voltar atrás republica uma versão antiga.',
   tileset: 'Os tilesets são as imagens cortadas em tiles que os mapas usam. Publique o tileset antes do mapa que o usa.',
   monstro: 'Monstros do banco. Com o mesmo identificador de um monstro do código, o publicado substitui os números dele; com identificador novo, é um monstro novo. Desmarcar "Ativo" tira o monstro de uso.',
+  cena: 'Cutscenes e diálogos: telas de texto (narração ou fala) com fundo e retrato de quem fala. Publique a cena antes de ligá-la a um mapa ou NPC.',
   anuncio: 'Avisos que aparecem no card Anúncios do Menu, com janela de datas. Um evento agendado é um anúncio do tipo Evento: só avisa, não muda regras do jogo.',
   armadura: 'Peças de armadura do catálogo. O publicado substitui nome, raridade e receita da peça do código; desmarcar "Ativo" impede fabricar.',
   emblema: 'Emblemas da Provação do Guerreiro. O publicado substitui nome, lore, atributos e textos das habilidades; o efeito no combate continua o do código.',
@@ -90,7 +97,7 @@ export function ConteudoPainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel
   return (
     <div className="flex flex-col gap-3">
       <div role="tablist" aria-label="Tipo de conteúdo" className="flex gap-1">
-        {(['mapa', 'tileset', 'monstro', 'arma', 'armadura', 'emblema', 'anuncio'] as const).map((t) => (
+        {(['mapa', 'tileset', 'monstro', 'arma', 'armadura', 'emblema', 'anuncio', 'cena'] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -136,6 +143,7 @@ function Lista({ tipo, sessao, tokenFresco, abrir }: { tipo: TipoDeConteudo; ses
   return (
     <div className="flex flex-col gap-3">
       {podeEditar && tipo === 'mapa' && <NovoMapa tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
+      {podeEditar && tipo === 'cena' && <NovaCena tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
       {podeEditar && tipo === 'anuncio' && <NovoAnuncio tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
       {podeEditar && tipo === 'armadura' && <NovoItemDoCatalogo tipo="armadura" tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
       {podeEditar && tipo === 'emblema' && <NovoItemDoCatalogo tipo="emblema" tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
@@ -233,6 +241,44 @@ export function VerificacaoDoMapa({ base, tokenFresco }: { base: string; tokenFr
       <button type="button" disabled={ocupado} onClick={() => void verificar()} className="self-start px-3 py-1.5 rounded border text-[11px] font-bold disabled:opacity-50" style={{ borderColor: `${OURO}88` }}>
         {ocupado ? 'Verificando...' : 'Verificar de novo'}
       </button>
+    </Cartao>
+  );
+}
+
+function NovaCena({ tokenFresco, criado }: { tokenFresco: Token; criado: (id: string) => void }) {
+  const { colors, campo, estiloCampo, botao, estiloBotao } = useEstilos();
+  const [titulo, setTitulo] = useState('');
+  const [id, setId] = useState('');
+  const [idEditado, setIdEditado] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+
+  return (
+    <Cartao titulo="Nova cena">
+      <form
+        className="grid gap-2 grid-cols-1 md:grid-cols-[1.4fr_1.2fr_auto] items-end"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setOcupado(true);
+          setErro(null);
+          const r = await chamar(tokenFresco, '/api/mestre/conteudo', { method: 'POST', body: JSON.stringify({ tipo: 'cena', id, nome: titulo, dados: cenaEmBranco(titulo) }) });
+          setOcupado(false);
+          if (r.ok) criado(id);
+          else setErro(String(r.dados.error ?? 'Não foi possível criar a cena.'));
+        }}
+      >
+        <label className="text-[11px] flex flex-col gap-0.5">Título
+          <input value={titulo} onChange={(e) => { setTitulo(e.target.value); if (!idEditado) setId(sugerirIdentificador(e.target.value)); }} className={campo} style={estiloCampo} required />
+        </label>
+        <label className="text-[11px] flex flex-col gap-0.5">Identificador (fixo)
+          <input value={id} onChange={(e) => { setId(e.target.value); setIdEditado(true); }} className={campo} style={estiloCampo} autoComplete="off" required />
+        </label>
+        <button type="submit" disabled={ocupado} className={`${botao} inline-flex items-center gap-1 justify-center`} style={estiloBotao}>
+          <Plus className="w-3.5 h-3.5" /> Criar
+        </button>
+      </form>
+      <p className="text-[11px]" style={{ color: colors.text.secondary }}>A cena nasce como rascunho, com uma tela provisória. Adicione personagens, fotos, fundos e telas, salve e publique.</p>
+      {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
     </Cartao>
   );
 }
@@ -578,6 +624,28 @@ function Detalhe({ tipo, id, sessao, tokenFresco, voltar }: { tipo: TipoDeConteu
       </Cartao>
 
       {tipo === 'mapa' && <VerificacaoDoMapa key={conteudo.revisao} base={base} tokenFresco={tokenFresco} />}
+
+      {tipo === 'cena' && (
+        <EditorDeCena
+          key={conteudo.revisao}
+          inicial={conteudo.rascunho as CenaDados}
+          podeEditar={podeEditar}
+          enviarImagem={async (imagem) => {
+            const r = await chamar(tokenFresco, '/api/mestre/cenas/imagem', { method: 'POST', body: imagem, headers: { 'Content-Type': imagem.type || 'application/octet-stream' } });
+            if (!r.ok) throw new Error(String(r.dados.error ?? 'Não foi possível enviar a imagem.'));
+            return String((r.dados.imagem as { url: string }).url);
+          }}
+          salvar={async (dados) => {
+            const r = await chamar(tokenFresco, base, { method: 'PUT', body: JSON.stringify({ dados, revisao: conteudo.revisao, nome: dados.titulo }) });
+            if (!r.ok) {
+              if (r.status === 409) void carregar();
+              return String(r.dados.error ?? 'Não foi possível salvar.');
+            }
+            await carregar();
+            return null;
+          }}
+        />
+      )}
 
       {tipo === 'anuncio' && (
         <EditorDeAnuncio

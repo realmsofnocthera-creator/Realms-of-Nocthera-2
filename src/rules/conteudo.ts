@@ -6,13 +6,14 @@ import { validarArma } from '@/rules/armaConteudo';
 import { validarArmadura } from '@/rules/armaduraConteudo';
 import { validarEmblema } from '@/rules/emblemaConteudo';
 import { validarAnuncio } from '@/rules/anuncio';
+import { validarCena } from '@/rules/cena';
 
 /**
  * Conteúdo editável pelo Painel do Mestre (3.5.2.2): cada item tem um rascunho e versões publicadas numeradas.
  * Publicar cria uma versão nova; voltar atrás publica de novo uma versão antiga como versão nova (o histórico só cresce).
  * O jogo lê apenas a versão publicada.
  */
-export const TIPOS_DE_CONTEUDO = ['mapa', 'tileset', 'monstro', 'arma', 'armadura', 'emblema', 'anuncio'] as const;
+export const TIPOS_DE_CONTEUDO = ['mapa', 'tileset', 'monstro', 'arma', 'armadura', 'emblema', 'anuncio', 'cena'] as const;
 export type TipoDeConteudo = (typeof TIPOS_DE_CONTEUDO)[number];
 
 export const NOME_DO_TIPO: Readonly<Record<TipoDeConteudo, string>> = {
@@ -23,6 +24,7 @@ export const NOME_DO_TIPO: Readonly<Record<TipoDeConteudo, string>> = {
   armadura: 'Armadura',
   emblema: 'Emblema',
   anuncio: 'Anúncio',
+  cena: 'Cena',
 };
 
 /** Permissão para criar e editar o rascunho de cada tipo; publicar e voltar atrás pedem 'conteudo.publicar'. */
@@ -34,6 +36,7 @@ export const PERMISSAO_DE_EDICAO: Readonly<Record<TipoDeConteudo, PermissaoMestr
   armadura: 'conteudo.editar',
   emblema: 'conteudo.editar',
   anuncio: 'conteudo.editar',
+  cena: 'mapas.editar',
 };
 
 /** Identificador do item: minúsculas, números e hífen (ex.: "vila-inicial"). Fica fixo depois de criado. */
@@ -65,6 +68,7 @@ const VALIDADORES: Readonly<Record<TipoDeConteudo, (bruto: unknown) => Resultado
   armadura: validarArmadura,
   emblema: validarEmblema,
   anuncio: validarAnuncio,
+  cena: validarCena,
 };
 
 /** Um conteúdo que outro usa. `soExistir`: basta existir (não precisa estar publicado). `podeSerDoCodigo`: o monstro pode ser do código. */

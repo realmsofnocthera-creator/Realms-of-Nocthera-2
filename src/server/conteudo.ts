@@ -16,6 +16,7 @@ import {
   validarConteudo,
   type TipoDeConteudo,
 } from '@/rules/conteudo';
+import { conferirImagensDaCena } from '@/server/imagensDeCena';
 import { conferirImagemDoTileset } from '@/server/imagensDoTileset';
 import { comRegistro, ErroMestre, exigir, motivoValido, type SessaoMestre } from '@/server/mestre';
 import { repositorio } from '@/server/persistencia';
@@ -73,6 +74,7 @@ function dadosValidos(tipo: TipoDeConteudo, bruto: unknown): unknown {
  */
 async function conferirReferencias(tipo: TipoDeConteudo, dados: unknown, exigirPublicadas: boolean): Promise<void> {
   if (tipo === 'tileset') await conferirImagemDoTileset(dados as Parameters<typeof conferirImagemDoTileset>[0]);
+  if (tipo === 'cena') await conferirImagensDaCena(dados as Parameters<typeof conferirImagensDaCena>[0]);
   for (const ref of referenciasDoConteudo(tipo, dados)) {
     if (ref.podeSerDoCodigo && ref.tipo === 'monstro' && (MONSTROS_CACADA_MAP[ref.id] || MONSTERS_MAP[ref.id] || CHEFES_ESPECIAIS_MAP[ref.id])) continue;
     const doc = await repositorio.lerConteudo(chaveDoConteudo(ref.tipo, ref.id));
