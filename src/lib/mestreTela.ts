@@ -72,6 +72,9 @@ export function descreverAcao(e: Pick<EntradaLogAdmin, 'acao' | 'alvo' | 'antes'
     case 'tileset.imagem':
       texto = `Enviou uma imagem de tileset (${alvo})`;
       break;
+    case 'cena.imagem':
+      texto = `Enviou uma imagem de cena (${alvo})`;
+      break;
     case 'conteudo.criar':
       texto = `Criou ${alvo} (rascunho)`;
       break;
