@@ -15,13 +15,25 @@ const base = {
   erros: [] as string[],
   mapas: [{ id: 'vila', nome: 'Vila' }],
   monstros: [{ id: 'lobo-cinzento', nome: 'Lobo Cinzento' }],
+  cenas: [{ id: 'abertura', nome: 'Abertura' }],
   materiais: [{ id: 'pelo-de-rato', nome: 'Pelo de Rato' }],
 };
 const render = (objetos: ObjetoDoMapa[], selecionado: string | null, podeEditar = true, erros: string[] = []) =>
   renderToStaticMarkup(<PainelDeObjetos {...base} objetos={objetos} selecionado={selecionado} podeEditar={podeEditar} erros={erros} />);
 
 describe('PainelDeObjetos (renderização)', () => {
-  it('quem edita vê os seis tipos para colocar; quem só vê, não', () => {
+  it('ativador de cena: escolhe a cena, "uma vez só" e o tamanho da área; NPC pode ter cena de diálogo', () => {
+    const ativador = render([{ id: 'cena-1', tipo: 'cena', x: 1, y: 1, gatilho: 'entrar', largura: 2, altura: 2, cenaId: 'abertura', unica: true }], 'cena-1');
+    expect(ativador).toContain('Ativador de cena');
+    expect(ativador).toContain('Abertura (abertura)');
+    expect(ativador).toContain('Toca uma vez só por personagem');
+    expect(ativador).toContain('Largura da área');
+    expect(ativador).not.toContain('aria-label="Monstro"');
+    const npc = render([{ id: 'npc-1', tipo: 'npc', x: 1, y: 1, gatilho: 'interagir', nome: 'Chefe', texto: '' }], 'npc-1');
+    expect(npc).toContain('Cena de diálogo');
+  });
+
+  it('quem edita vê os tipos para colocar; quem só vê, não', () => {
     const html = render([], null);
     for (const t of TIPOS_DE_OBJETO) expect(html).toContain(`aria-label="Tipo de objeto"`);
     expect(html).toContain('Início do jogador');

@@ -1,12 +1,12 @@
 import type { MapaDados } from '@/rules/mapa';
 import { dentroDoMapa as dentro, tileLivre } from '@/rules/passagem';
-import { NOME_DO_OBJETO, objetoCobre, type ObjetoDoMapa } from '@/rules/objetosDoMapa';
+import { ehObjetoDeArea, NOME_DO_OBJETO, objetoCobre, type ObjetoDoMapa } from '@/rules/objetosDoMapa';
 
 /**
  * "Jogar o mapa" (3.5.6.6), sem React: o Mestre anda pelo mapa tile a tile para testá-lo antes de publicar.
  * É só um teste dentro do painel: nada é gravado e as lutas, itens e viagens apenas aparecem como aviso.
  * Regras: a colisão do mapa e NPCs, placas e baús bloqueiam o passo; início e portas se pisam; as portas "pisar"
- * levam ao destino ao entrar; a área de monstros dispara ao ENTRAR nela (não ao andar dentro dela); o resto
+ * levam ao destino ao entrar; a área de monstros e o ativador de cena disparam ao ENTRAR neles (não ao andar dentro dela); o resto
  * (NPC, placa, baú e portas "interagir") é acionado com o botão de interagir, olhando para o objeto.
  */
 export type Direcao = 'cima' | 'baixo' | 'esquerda' | 'direita';
@@ -36,10 +36,11 @@ export type EventoDeJogo =
   | { tipo: 'bau-vazio' }
   | { tipo: 'porta'; objetoId: string; destino: { mapa: string; x: number; y: number } }
   | { tipo: 'luta'; objetoId: string; monstroId: string }
+  | { tipo: 'cena'; objetoId: string; cenaId: string; unica: boolean; titulo: string }
   | { tipo: 'nada'; motivo: string };
 
 function objetoDeUmTile(mapa: MapaDados, x: number, y: number): ObjetoDoMapa | undefined {
-  return mapa.objetos.find((o) => o.tipo !== 'cacada' && o.x === x && o.y === y);
+  return mapa.objetos.find((o) => !ehObjetoDeArea(o.tipo) && o.x === x && o.y === y);
 }
 
 /** O primeiro tile livre, da esquerda para a direita e de cima para baixo (ou null se não houver). */
@@ -56,8 +57,8 @@ export function iniciarJogo(mapaId: string, mapa: MapaDados, aberto?: { x: numbe
   return { mapaId, mapa, x: posicao.x, y: posicao.y, olhando: 'baixo', abertos: [], semInicio: !inicio };
 }
 
-function areasDeMonstros(mapa: MapaDados, x: number, y: number): ObjetoDoMapa[] {
-  return mapa.objetos.filter((o) => o.tipo === 'cacada' && objetoCobre(o, x, y));
+function areasDe(tipo: 'cacada' | 'cena', mapa: MapaDados, x: number, y: number): ObjetoDoMapa[] {
+  return mapa.objetos.filter((o) => o.tipo === tipo && objetoCobre(o, x, y));
 }
 
 /** Um passo na direção. Sempre vira o jogador; só anda se o tile estiver livre. Devolve o estado novo e o que aconteceu. */
@@ -74,9 +75,12 @@ export function andar(estado: EstadoDeJogo, dir: Direcao): { estado: EstadoDeJog
     eventos.push({ tipo: 'porta', objetoId: porta.id, destino: { ...porta.destino } });
     return { estado: novo, eventos };
   }
-  const antes = new Set(areasDeMonstros(estado.mapa, estado.x, estado.y).map((o) => o.id));
-  const entrou = areasDeMonstros(estado.mapa, nx, ny).find((o) => !antes.has(o.id));
+  const antes = new Set(areasDe('cacada', estado.mapa, estado.x, estado.y).map((o) => o.id));
+  const entrou = areasDe('cacada', estado.mapa, nx, ny).find((o) => !antes.has(o.id));
   if (entrou) eventos.push({ tipo: 'luta', objetoId: entrou.id, monstroId: entrou.monstroId ?? '' });
+  const antesCena = new Set(areasDe('cena', estado.mapa, estado.x, estado.y).map((o) => o.id));
+  const ativou = areasDe('cena', estado.mapa, nx, ny).find((o) => !antesCena.has(o.id));
+  if (ativou?.cenaId) eventos.push({ tipo: 'cena', objetoId: ativou.id, cenaId: ativou.cenaId, unica: ativou.unica !== false, titulo: ativou.id });
   return { estado: novo, eventos };
 }
 
@@ -90,6 +94,7 @@ export function interagir(estado: EstadoDeJogo): { estado: EstadoDeJogo; eventos
 
   switch (alvo.tipo) {
     case 'npc':
+      if (alvo.cenaId) return { estado, eventos: [{ tipo: 'cena', objetoId: alvo.id, cenaId: alvo.cenaId, unica: false, titulo: alvo.nome || 'NPC' }] };
       return { estado, eventos: [{ tipo: 'texto', titulo: alvo.nome || 'NPC', texto: alvo.texto?.trim() || '(o NPC ainda não tem fala escrita)' }] };
     case 'placa':
       return { estado, eventos: [{ tipo: 'texto', titulo: 'Placa', texto: alvo.texto?.trim() || '(a placa ainda não tem texto)' }] };

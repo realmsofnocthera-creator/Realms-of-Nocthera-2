@@ -6,6 +6,8 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Hand } from 'lucide-react';
 import type { MapaDados } from '@/rules/mapa';
 import { origemDaImagem, type TilesetDados } from '@/rules/tileset';
 import type { ProgressoDaCampanha } from '@/game/campanha';
+import type { CenaDados } from '@/rules/cena';
+import { CenaPlayer } from '@/components/cena/CenaPlayer';
 import { andar, iniciarJogo, interagir, type Direcao, type EstadoDeJogo, type EventoDeJogo } from '@/lib/jogarMapa';
 import { deveSalvarPosicao, type PontoDaCampanha } from '@/lib/salvamentoCampanha';
 import { NOCTHERA_THEME } from '@/theme/theme';
@@ -21,6 +23,8 @@ interface RespostaDoMundo {
   progresso?: ProgressoDaCampanha;
   mapa?: { id: string; nome: string; dados: MapaDados };
   tilesets?: ({ id: string; dados: TilesetDados } | null)[];
+  abertura?: string;
+  jogador?: { nome: string };
 }
 
 interface MundoAberto extends MapaParaDesenhar {
@@ -69,6 +73,11 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
   const [dialogo, setDialogo] = useState<{ titulo: string; texto: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [cena, setCena] = useState<{ dados: CenaDados; fim: () => void } | null>(null);
+  const cenaAbertaRef = useRef(false);
+  const nomeDoJogadorRef = useRef('Aventureiro');
+  /** Cenas já vistas (abertura e ativadores "uma vez só"): "abertura" e "mapa:objeto". */
+  const cenasVistasRef = useRef<Set<string>>(new Set());
   const caixaRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [tamanho, setTamanho] = useState({ largura: 320, altura: 320 });
@@ -108,6 +117,29 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
     [token]
   );
 
+  /** Busca a cena publicada e a toca por cima do mapa; termina quando o jogador fecha (ou na hora, se a cena não está disponível). */
+  const tocarCena = useCallback(
+    async (cenaId: string): Promise<boolean> => {
+      if (cenaAbertaRef.current) return false;
+      const r = await chamar(`/api/campanha/cena?id=${encodeURIComponent(cenaId)}`);
+      const dados = (r.dados.cena as { dados?: CenaDados } | undefined)?.dados;
+      if (!r.ok || !dados) return false;
+      cenaAbertaRef.current = true;
+      await new Promise<void>((resolve) =>
+        setCena({
+          dados,
+          fim: () => {
+            cenaAbertaRef.current = false;
+            setCena(null);
+            resolve();
+          },
+        })
+      );
+      return true;
+    },
+    [chamar]
+  );
+
   /** Coloca o jogador no mapa que o servidor mandou, no ponto salvo. */
   const entrar = useCallback(async (r: RespostaDoMundo) => {
     const aberto = await abrirMundo(r);
@@ -117,6 +149,8 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
     jogoRef.current = novo;
     salvaRef.current = { mapaId: aberto.id, x: r.progresso.x, y: r.progresso.y };
     descansosRef.current = { ...(r.progresso.descansos ?? {}) };
+    cenasVistasRef.current = new Set(r.progresso.cenas ?? []);
+    if (r.jogador?.nome) nomeDoJogadorRef.current = r.jogador.nome;
     ultimoSalvamentoRef.current = Date.now();
     ultimoPassoRef.current = Date.now();
     setMundo(aberto);
@@ -132,12 +166,20 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
       if (!r.ok) return setErro(String(r.dados.error ?? 'Não foi possível abrir a Campanha agora.'));
       const estado = r.dados as unknown as RespostaDoMundo;
       if (!estado.iniciada) return setMensagem(estado.mensagem ?? 'A Campanha ainda não começou.');
-      if (!(await entrar(estado)) && !cancelado) setErro('O mapa da Campanha não pôde ser aberto.');
+      if (!(await entrar(estado))) {
+        if (!cancelado) setErro('O mapa da Campanha não pôde ser aberto.');
+        return;
+      }
+      if (estado.abertura && !cancelado) {
+        await tocarCena(estado.abertura);
+        cenasVistasRef.current.add('abertura');
+        void chamar('/api/campanha/cena/vista', { abertura: true });
+      }
     })();
     return () => {
       cancelado = true;
     };
-  }, [chamar, entrar]);
+  }, [chamar, entrar, tocarCena]);
 
   useEffect(() => {
     if (!aviso) return;
@@ -222,6 +264,13 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
           setDialogo({ titulo: 'Baú', texto: 'O baú está vazio.' });
         } else if (e.tipo === 'nada') {
           setDialogo({ titulo: 'Nada aqui', texto: e.motivo });
+        } else if (e.tipo === 'cena') {
+          const chave = `${depois.mapaId}:${e.objetoId}`;
+          if (e.unica && cenasVistasRef.current.has(chave)) continue;
+          if (await tocarCena(e.cenaId) && e.unica) {
+            cenasVistasRef.current.add(chave);
+            void chamar('/api/campanha/cena/vista', { objetoId: e.objetoId });
+          }
         } else if (e.tipo === 'luta') {
           const chave = `${depois.mapaId}:${e.objetoId}`;
           if ((descansosRef.current[chave] ?? 0) > Date.now()) {
@@ -282,32 +331,32 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
         }
       }
     },
-    [chamar, entrar]
+    [chamar, entrar, tocarCena]
   );
 
   const passo = useCallback(
     (dir: Direcao) => {
       const atual = jogoRef.current;
-      if (!atual || dialogo || ocupado) return;
+      if (!atual || dialogo || ocupado || cena) return;
       const r = andar(atual, dir);
       jogoRef.current = r.estado;
       setJogo(r.estado);
       if (r.estado.x !== atual.x || r.estado.y !== atual.y) ultimoPassoRef.current = Date.now();
       if (r.eventos.length) void tratar(r.eventos, atual, r.estado);
     },
-    [dialogo, ocupado, tratar]
+    [dialogo, ocupado, cena, tratar]
   );
 
   const acao = useCallback(() => {
     const atual = jogoRef.current;
-    if (!atual || ocupado) return;
+    if (!atual || ocupado || cena) return;
     if (dialogo) return setDialogo(null);
     const r = interagir(atual);
     jogoRef.current = r.estado;
     setJogo(r.estado);
     ultimoPassoRef.current = Date.now();
     if (r.eventos.length) void tratar(r.eventos, atual, r.estado);
-  }, [dialogo, ocupado, tratar]);
+  }, [dialogo, ocupado, cena, tratar]);
 
   useEffect(() => {
     const teclas = (e: KeyboardEvent) => {
@@ -371,6 +420,7 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
           <Hand className="w-6 h-6" /> {dialogo ? 'Continuar' : 'Interagir'}
         </button>
       </div>
+      {cena && <CenaPlayer cena={cena.dados} jogador={{ nome: nomeDoJogadorRef.current }} aoTerminar={cena.fim} />}
     </main>
   );
 }

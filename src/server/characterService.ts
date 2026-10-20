@@ -10,8 +10,8 @@ import { MONSTERS_MAP, type MonsterDefinition } from '@/rules/monsters';
 import { ErroMonstroIndisponivel, monstroEfetivo } from '@/server/monstros';
 import { sincronizarCatalogoDeItens } from '@/server/catalogoItens';
 import { exigirSistemaLigado } from '@/server/sistemasLeitura';
-import { ErroDaCampanha, lerMapaPublicado, mapaInicialDaCampanha, tilesetsDoMapa, type MapaPublicado, type TilesetPublicado } from '@/server/campanha';
-import { aplicarPosicaoDaAcao, planejarBau, planejarLuta, planejarPorta, planejarPosicao, progressoInicial, type ProgressoDaCampanha } from '@/game/campanha';
+import { aberturaDaCampanha, ErroDaCampanha, lerCenaPublicada, lerMapaPublicado, mapaInicialDaCampanha, tilesetsDoMapa, type MapaPublicado, type TilesetPublicado } from '@/server/campanha';
+import { CHAVE_DA_ABERTURA, aplicarPosicaoDaAcao, planejarBau, planejarCenaVista, planejarLuta, planejarPorta, planejarPosicao, progressoInicial, type ProgressoDaCampanha } from '@/game/campanha';
 import {
   DropSorteado,
   MENSAGEM_BLOQUEIO_CACADA,
@@ -2459,6 +2459,10 @@ export interface EstadoDaCampanha {
   mapa?: MapaPublicado;
   /** Os tilesets publicados do mapa, na ordem de `mapa.dados.tilesets` (null: não publicado). */
   tilesets?: (TilesetPublicado | null)[];
+  /** A cena de abertura que este jogador ainda não viu (publicada), para tocar antes do mapa. */
+  abertura?: string;
+  /** Quem está jogando (nome da ficha), para a fala "Jogador" das cenas. */
+  jogador?: { nome: string };
 }
 
 interface MundoDoJogador {
@@ -2488,7 +2492,24 @@ export async function campanhaEstado(uid: string): Promise<EstadoDaCampanha> {
   if (!char) throw new Error('Personagem não encontrado.');
   const mundo = await mundoDoJogador(char, new Date().toISOString());
   if (!mundo) return { iniciada: false, mensagem: 'A Campanha ainda não começou.' };
-  return { iniciada: true, progresso: mundo.progresso, mapa: mundo.mapa, tilesets: await tilesetsDoMapa(mundo.mapa) };
+  const aberturaId = mundo.progresso.cenas?.includes(CHAVE_DA_ABERTURA) ? '' : await aberturaDaCampanha();
+  const abertura = aberturaId && (await lerCenaPublicada(aberturaId)) ? aberturaId : undefined;
+  return { iniciada: true, progresso: mundo.progresso, mapa: mundo.mapa, tilesets: await tilesetsDoMapa(mundo.mapa), jogador: { nome: char.nome }, ...(abertura ? { abertura } : {}) };
+}
+
+/** Uma cena publicada para tocar na Campanha (diálogo de NPC, ativador ou abertura). Só leitura, sem gravar nada. */
+export async function campanhaCena(uid: string, cenaId: unknown) {
+  await exigirSistemaLigado(uid, 'campanha');
+  const cena = typeof cenaId === 'string' && /^[a-z0-9][a-z0-9-]{1,47}$/.test(cenaId) ? await lerCenaPublicada(cenaId) : null;
+  if (!cena) throw new ErroDaCampanha('Esta cena não está disponível.');
+  return { id: cena.id, titulo: cena.nome, dados: cena.dados };
+}
+
+/** Marca a abertura ou um ativador "uma vez só" como visto: a cena não toca de novo para este personagem. */
+export async function campanhaCenaVista(uid: string, pedido: { abertura?: unknown; objetoId?: unknown }): Promise<EstadoDaCampanha> {
+  const aberturaConfigurada = Boolean(await aberturaDaCampanha());
+  const r = await agirNaCampanha(uid, 'campanhaCena', async (m, agora) => planejarCenaVista(m.progresso, m.mapa.dados, pedido, aberturaConfigurada, agora));
+  return { iniciada: true, progresso: r.personagem.campanha };
 }
 
 /**

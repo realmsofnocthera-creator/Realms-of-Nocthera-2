@@ -2,17 +2,19 @@ import { MATERIAIS_MAP } from '@/rules/materiais';
 import { MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
 
 /**
- * Objetos interativos do mapa (3.5.6.3), parte do formato do mapa. Seis tipos, cada um com um gatilho e uma ação
+ * Objetos interativos do mapa (3.5.6.3), parte do formato do mapa. Sete tipos, cada um com um gatilho e uma ação
  * fixos (decididos com o Yuri em 16/10/2026):
  *  - início: onde o jogador nasce no mapa (no máximo um);
  *  - NPC: ao interagir, mostra a fala;
  *  - placa: ao interagir, mostra o texto;
  *  - baú: ao interagir, dá um item;
  *  - porta: ao pisar (ou interagir), leva a outro mapa, numa posição;
- *  - área de monstros: ao entrar na área, inicia uma luta contra o monstro.
+ *  - área de monstros: ao entrar na área, inicia uma luta contra o monstro;
+ *  - ativador de cena: ao entrar na área, toca uma cena (cutscene ou diálogo, 5.5-4), uma vez por personagem ou sempre.
+ * O NPC também pode apontar para uma cena: ao interagir, toca o diálogo em vez de mostrar a fala.
  * Os textos são do Yuri; o painel só guarda o que ele escrever.
  */
-export const TIPOS_DE_OBJETO = ['inicio', 'npc', 'placa', 'bau', 'porta', 'cacada'] as const;
+export const TIPOS_DE_OBJETO = ['inicio', 'npc', 'placa', 'bau', 'porta', 'cacada', 'cena'] as const;
 export type TipoDeObjeto = (typeof TIPOS_DE_OBJETO)[number];
 
 export const NOME_DO_OBJETO: Readonly<Record<TipoDeObjeto, string>> = {
@@ -22,9 +24,10 @@ export const NOME_DO_OBJETO: Readonly<Record<TipoDeObjeto, string>> = {
   bau: 'Baú',
   porta: 'Porta ou passagem',
   cacada: 'Área de monstros',
+  cena: 'Ativador de cena',
 };
 
-export const LETRA_DO_OBJETO: Readonly<Record<TipoDeObjeto, string>> = { inicio: 'I', npc: 'N', placa: 'P', bau: 'B', porta: 'D', cacada: 'M' };
+export const LETRA_DO_OBJETO: Readonly<Record<TipoDeObjeto, string>> = { inicio: 'I', npc: 'N', placa: 'P', bau: 'B', porta: 'D', cacada: 'M', cena: 'C' };
 
 export type Gatilho = 'pisar' | 'interagir' | 'entrar';
 export const NOME_DO_GATILHO: Readonly<Record<Gatilho, string>> = { pisar: 'Pisar no tile', interagir: 'Interagir', entrar: 'Entrar na área' };
@@ -37,6 +40,7 @@ export const GATILHOS_DO_OBJETO: Readonly<Record<TipoDeObjeto, readonly Gatilho[
   bau: ['interagir'],
   porta: ['pisar', 'interagir'],
   cacada: ['entrar'],
+  cena: ['entrar'],
 };
 
 export const NOME_DA_ACAO: Readonly<Record<TipoDeObjeto, string>> = {
@@ -46,6 +50,7 @@ export const NOME_DA_ACAO: Readonly<Record<TipoDeObjeto, string>> = {
   bau: 'Dá o item',
   porta: 'Vai para outro mapa',
   cacada: 'Inicia a luta',
+  cena: 'Toca a cena',
 };
 
 export const MAXIMO_DE_OBJETOS = 200;
@@ -62,7 +67,7 @@ export interface ObjetoDoMapa {
   x: number;
   y: number;
   gatilho: Gatilho;
-  /** Só área de monstros: tamanho da área, em tiles, a partir de (x, y). */
+  /** Área de monstros e ativador de cena: tamanho da área, em tiles, a partir de (x, y). */
   largura?: number;
   altura?: number;
   /** Só NPC. */
@@ -71,6 +76,10 @@ export interface ObjetoDoMapa {
   texto?: string;
   /** Só área de monstros: o monstro que aparece. */
   monstroId?: string;
+  /** Ativador de cena (obrigatório) e NPC (opcional, diálogo no lugar da fala): a cena publicada que toca. */
+  cenaId?: string;
+  /** Só ativador de cena: toca uma única vez por personagem (padrão) ou toda vez que entrar na área. */
+  unica?: boolean;
   /** Só baú. */
   item?: { id: string; qtd: number };
   /** Só porta. */
@@ -79,12 +88,17 @@ export interface ObjetoDoMapa {
 
 const CAMPOS_DO_TIPO: Readonly<Record<TipoDeObjeto, readonly string[]>> = {
   inicio: [],
-  npc: ['nome', 'texto'],
+  npc: ['nome', 'texto', 'cenaId'],
   placa: ['texto'],
   bau: ['item'],
   porta: ['destino'],
   cacada: ['largura', 'altura', 'monstroId'],
+  cena: ['largura', 'altura', 'cenaId', 'unica'],
 };
+/** Tipos que ocupam uma área (largura × altura) em vez de um tile, e por isso não bloqueiam nem disputam tile. */
+export const TIPOS_COM_AREA: readonly TipoDeObjeto[] = ['cacada', 'cena'];
+export const ehObjetoDeArea = (tipo: TipoDeObjeto) => TIPOS_COM_AREA.includes(tipo);
+export const ID_DA_CENA = /^[a-z0-9][a-z0-9-]{1,47}$/;
 const CAMPOS_BASE = ['id', 'tipo', 'x', 'y', 'gatilho'] as const;
 
 function ehObjeto(v: unknown): v is Record<string, unknown> {
@@ -112,6 +126,8 @@ export function objetoNovo(tipo: TipoDeObjeto, id: string, x: number, y: number)
       return { ...base, destino: { mapa: '', x: 0, y: 0 } };
     case 'cacada':
       return { ...base, largura: 3, altura: 3, monstroId: 'rato-da-floresta' };
+    case 'cena':
+      return { ...base, largura: 1, altura: 1, cenaId: '', unica: true };
     default:
       return base;
   }
@@ -128,8 +144,8 @@ export function proximoIdDeObjeto(objetos: readonly ObjetoDoMapa[], tipo: TipoDe
 
 /** O tile (x, y) está dentro da área do objeto? Os de um tile só ocupam a própria posição. */
 export function objetoCobre(o: ObjetoDoMapa, x: number, y: number): boolean {
-  const l = o.tipo === 'cacada' ? (o.largura ?? 1) : 1;
-  const a = o.tipo === 'cacada' ? (o.altura ?? 1) : 1;
+  const l = ehObjetoDeArea(o.tipo) ? (o.largura ?? 1) : 1;
+  const a = ehObjetoDeArea(o.tipo) ? (o.altura ?? 1) : 1;
   return x >= o.x && y >= o.y && x < o.x + l && y < o.y + a;
 }
 
@@ -179,6 +195,10 @@ export function validarObjetos(bruto: unknown, largura: number, altura: number, 
       if (n.length < 1 || n.length > NOME_MAXIMO_DO_NPC) erros.push(`${nome}: o nome vai de 1 a ${NOME_MAXIMO_DO_NPC} caracteres.`);
       limpo.nome = n;
     }
+    if (tipo === 'npc' && o.cenaId !== undefined && o.cenaId !== '') {
+      if (typeof o.cenaId !== 'string' || !ID_DA_CENA.test(o.cenaId)) erros.push(`${nome}: escolha a cena do diálogo (ou deixe sem).`);
+      else limpo.cenaId = o.cenaId;
+    }
     if (tipo === 'npc' || tipo === 'placa') {
       const t = typeof o.texto === 'string' ? o.texto.trim() : null;
       if (t === null || t.length > TEXTO_MAXIMO_DO_OBJETO) erros.push(`${nome}: o texto vai até ${TEXTO_MAXIMO_DO_OBJETO} caracteres.`);
@@ -202,7 +222,7 @@ export function validarObjetos(bruto: unknown, largura: number, altura: number, 
         limpo.destino = { mapa: d.mapa, x: d.x, y: d.y };
       }
     }
-    if (tipo === 'cacada') {
+    if (tipo === 'cacada' || tipo === 'cena') {
       if (!inteiro(o.largura, 1, LADO_MAXIMO_DA_AREA) || !inteiro(o.altura, 1, LADO_MAXIMO_DA_AREA)) {
         erros.push(`${nome}: a área vai de 1 a ${LADO_MAXIMO_DA_AREA} tiles por lado.`);
       } else if (o.x + o.largura > largura || o.y + o.altura > altura) {
@@ -211,11 +231,18 @@ export function validarObjetos(bruto: unknown, largura: number, altura: number, 
         limpo.largura = o.largura;
         limpo.altura = o.altura;
       }
-      if (typeof o.monstroId !== 'string' || !/^[a-z0-9][a-z0-9-]{1,47}$/.test(o.monstroId)) erros.push(`${nome}: escolha o monstro.`);
-      else limpo.monstroId = o.monstroId;
+      if (tipo === 'cacada') {
+        if (typeof o.monstroId !== 'string' || !/^[a-z0-9][a-z0-9-]{1,47}$/.test(o.monstroId)) erros.push(`${nome}: escolha o monstro.`);
+        else limpo.monstroId = o.monstroId;
+      } else {
+        if (typeof o.cenaId !== 'string' || !ID_DA_CENA.test(o.cenaId)) erros.push(`${nome}: escolha a cena.`);
+        else limpo.cenaId = o.cenaId;
+        if (o.unica !== undefined && typeof o.unica !== 'boolean') erros.push(`${nome}: "uma vez só" precisa ser sim ou não.`);
+        else limpo.unica = o.unica !== false;
+      }
     }
 
-    if (tipo !== 'cacada') {
+    if (!ehObjetoDeArea(tipo)) {
       const chave = `${o.x},${o.y}`;
       const outro = ocupados.get(chave);
       if (outro) erros.push(`${nome}: o tile (${o.x}, ${o.y}) já tem ${outro}.`);

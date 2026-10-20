@@ -256,7 +256,7 @@ describe('Campanha: progresso no servidor (5.5-3 e 5.5-8)', () => {
       await prepararMundo();
       await campanhaSalvarPosicao('j1', { mapaId: 'vila', x: 2, y: 1 });
       await campanhaAbrirBau('j1', 'bau-1');
-      await repositorio.gravarConfiguracaoDeSistemas({ ...(await repositorio.lerConfiguracaoDeSistemas())!, campanha: { mapaInicial: 'vila' } });
+      await repositorio.gravarConfiguracaoDeSistemas({ ...(await repositorio.lerConfiguracaoDeSistemas())!, campanha: { mapaInicial: 'vila', aberturaCenaId: '' } });
       const c = (await getCharacterByUid('j1'))!;
       await repositorio.executarTransacao('teste', async (ctx) => {
         ctx.gravarPersonagem({ ...c, campanha: { ...c.campanha!, mapaId: 'mapa-apagado', x: 0, y: 0 } });

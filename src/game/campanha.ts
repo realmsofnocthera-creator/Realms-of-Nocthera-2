@@ -17,6 +17,8 @@ export interface ProgressoDaCampanha {
   baus: string[];
   /** Áreas de monstros que estão descansando: chave "mapa:objeto" e até quando (ms desde 1970). */
   descansos?: Record<string, number>;
+  /** Cenas já vistas: "abertura" e, para ativadores "uma vez só", "mapa:objeto". */
+  cenas?: string[];
   atualizadoEm: string;
 }
 
@@ -30,10 +32,15 @@ export const DESCANSO_DA_AREA_MS = 5 * 60_000;
 /** Quantas áreas descansando guardamos por personagem (as que já terminaram são descartadas antes). */
 export const MAXIMO_DE_DESCANSOS = 200;
 
+/** Quantas cenas vistas guardamos por personagem. */
+export const MAXIMO_DE_CENAS_VISTAS = 500;
+export const CHAVE_DA_ABERTURA = 'abertura';
+
 export type ResultadoDaCampanha<T> = ({ ok: true } & T) | { ok: false; erro: string };
 
 export const chaveDoBau = (mapaId: string, objetoId: string) => `${mapaId}:${objetoId}`;
 export const chaveDaArea = chaveDoBau;
+export const chaveDaCena = chaveDoBau;
 
 /** Onde o jogador nasce no mapa: o início do jogador ou, sem ele, o primeiro tile livre. */
 export function posicaoInicialDoMapa(mapa: MapaDados): { x: number; y: number } {
@@ -171,4 +178,31 @@ export function planejarLuta(
       progressoDerrota: { ...atual, descansos, atualizadoEm: agoraIso },
     },
   };
+}
+
+/**
+ * Marca uma cena como vista (a abertura, ou um ativador "uma vez só" do mapa em que o jogador está). Marcar de novo
+ * não muda nada. A posição não conta: ver a cena não mexe no lugar salvo.
+ */
+export function planejarCenaVista(
+  atual: ProgressoDaCampanha,
+  mapa: MapaDados,
+  pedido: { abertura?: unknown; objetoId?: unknown },
+  aberturaConfigurada: boolean,
+  agora: string
+): ResultadoDaCampanha<{ progresso: ProgressoDaCampanha }> {
+  let chave: string;
+  if (pedido.abertura === true) {
+    if (!aberturaConfigurada) return { ok: false, erro: 'Não há cena de abertura.' };
+    chave = CHAVE_DA_ABERTURA;
+  } else {
+    const ativador = typeof pedido.objetoId === 'string' ? mapa.objetos.find((o) => o.id === pedido.objetoId && o.tipo === 'cena') : undefined;
+    if (!ativador) return { ok: false, erro: 'Não há cena aí.' };
+    if (ativador.unica === false) return { ok: true, progresso: atual };
+    chave = chaveDaCena(atual.mapaId, ativador.id);
+  }
+  const vistas = atual.cenas ?? [];
+  if (vistas.includes(chave)) return { ok: true, progresso: atual };
+  if (vistas.length >= MAXIMO_DE_CENAS_VISTAS) return { ok: false, erro: 'Não foi possível registrar a cena agora.' };
+  return { ok: true, progresso: { ...atual, cenas: [...vistas, chave], atualizadoEm: agora } };
 }
