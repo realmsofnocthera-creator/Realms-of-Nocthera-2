@@ -210,8 +210,8 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
     ctx.fillStyle = '#1A1612';
     ctx.fillRect(-ox, -oy, mapa.largura * lado, mapa.altura * lado);
 
-    for (const c of ['chao', 'objetos'] as const) {
-      const lista = mapa.camadas[c];
+    for (const c of ['chao', 'objetos', 'acima'] as const) {
+      const lista = mapa.camadas[c] ?? [];
       for (let y = y0; y <= y1; y++) {
         for (let x = x0; x <= x1; x++) {
           const valor = lista[y * mapa.largura + x];

@@ -169,7 +169,7 @@ export function copiarMapa(mapa: MapaDados): MapaDados {
   return {
     ...mapa,
     tilesets: [...mapa.tilesets],
-    camadas: { chao: [...mapa.camadas.chao], objetos: [...mapa.camadas.objetos], colisao: [...mapa.camadas.colisao] },
+    camadas: { chao: [...mapa.camadas.chao], objetos: [...mapa.camadas.objetos], acima: [...(mapa.camadas.acima ?? mapa.camadas.chao.map(() => 0))], colisao: [...mapa.camadas.colisao] },
     objetos: structuredClone(mapa.objetos ?? []),
   };
 }
