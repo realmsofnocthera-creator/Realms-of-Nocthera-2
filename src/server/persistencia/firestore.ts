@@ -15,6 +15,7 @@ import type { ProgressoDaCampanha } from '@/game/campanha';
 import { comprimirMapa, descomprimirMapa } from '@/rules/mapaComprimido';
 import type { MissoesDoJogador } from '@/game/missoes';
 import { chaveDeBusca, type CampoDoRanking, type CriterioDeRanking, type RankingGuardado, type ResumoDePersonagem } from '@/rules/social';
+import { chaveDoNomeDaGuilda, guildaDoDocumento, type GuildaDocumento } from '@/rules/guilda';
 import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
 import { MAXIMO_DE_ADVERTENCIAS, sancaoDocumentoVazio, type Advertencia, type SancaoDocumento } from '@/rules/sancoes';
 import {
@@ -55,6 +56,8 @@ function resumoPublicoDoDocumento(data: DocumentData, campo?: CampoDoRanking): R
     ...(data.escondidoNaBusca === true ? { escondidoNaBusca: true } : {}),
   };
 }
+
+const idsDeGuilda = (v: unknown) => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && /^g_[a-z0-9]{6,32}$/.test(x)))].slice(0, 10) : []);
 
 function rankingDoDocumento(criterio: CriterioDeRanking, data: DocumentData | undefined): RankingGuardado | null {
   if (!data || typeof data.atualizadoEm !== 'string' || !Array.isArray(data.entradas)) return null;
@@ -353,6 +356,9 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
       : {}),
     ...(data.escondidoNoRanking === true ? { escondidoNoRanking: true } : {}),
     ...(data.escondidoNaBusca === true ? { escondidoNaBusca: true } : {}),
+    ...(typeof data.guildaId === 'string' && data.guildaId ? { guildaId: data.guildaId, guildaNome: texto(data.guildaNome) } : {}),
+    ...(idsDeGuilda(data.convitesDeGuilda).length ? { convitesDeGuilda: idsDeGuilda(data.convitesDeGuilda) } : {}),
+    ...(idsDeGuilda(data.pedidosDeGuilda).length ? { pedidosDeGuilda: idsDeGuilda(data.pedidosDeGuilda) } : {}),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
       ? { bonusSubclasseAplicado: lerAtributos(data.bonusSubclasseAplicado, ZEROS_ATRIBUTOS) }
       : {}),
@@ -404,6 +410,9 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.perfilEquipamentos ? { perfilEquipamentos: char.perfilEquipamentos } : {}),
     ...(char.escondidoNoRanking ? { escondidoNoRanking: true } : {}),
     ...(char.escondidoNaBusca ? { escondidoNaBusca: true } : {}),
+    ...(char.guildaId ? { guildaId: char.guildaId, guildaNome: char.guildaNome ?? '' } : {}),
+    ...(char.convitesDeGuilda?.length ? { convitesDeGuilda: char.convitesDeGuilda } : {}),
+    ...(char.pedidosDeGuilda?.length ? { pedidosDeGuilda: char.pedidosDeGuilda } : {}),
     // campos derivados, só para o banco poder ordenar e buscar (7.1): o nome em minúsculas e os contadores das provações
     nomeBusca: chaveDeBusca(char.nome),
     ...(char.batalhaSangrentaVencidas?.length ? { vitoriasBatalha: char.batalhaSangrentaVencidas.length } : {}),
@@ -431,11 +440,19 @@ function semUndefined<T>(valor: T): T {
   return JSON.parse(JSON.stringify(valor)) as T;
 }
 
+/** A guilda como vai para o banco (com a quantidade de membros guardada para a lista das maiores). */
+export function guildaParaFirestore(g: GuildaDocumento): DocumentData {
+  return semUndefined({ ...g, nomeBusca: chaveDoNomeDaGuilda(g.nome), quantidadeMembros: g.membros.length });
+}
+
 class ContextoFirestore implements ContextoTransacao {
   private personagens = new Map<string, CharacterDocument>();
   private nomes = new Map<string, { uid: string; nome: string }>();
   private transacoes: TransactionDocument[] = [];
   private combates = new Map<string, RegistroCombate>();
+  /** null = apagar. */
+  private guildas = new Map<string, GuildaDocumento | null>();
+  private nomesDeGuilda = new Map<string, { guildaId: string; nome: string } | null>();
 
   constructor(
     private readonly db: Firestore,
@@ -481,6 +498,38 @@ class ContextoFirestore implements ContextoTransacao {
     this.combates.set(registro.id, structuredClone(registro));
   }
 
+  async lerGuilda(id: string): Promise<GuildaDocumento | null> {
+    if (this.guildas.has(id)) {
+      const pendente = this.guildas.get(id);
+      return pendente ? structuredClone(pendente) : null;
+    }
+    const snap = await this.tx.get(this.db.collection('guildas').doc(id));
+    return snap.exists ? guildaDoDocumento(id, snap.data()) : null;
+  }
+
+  gravarGuilda(guilda: GuildaDocumento): void {
+    this.guildas.set(guilda.id, structuredClone(guilda));
+  }
+
+  apagarGuilda(id: string): void {
+    this.guildas.set(id, null);
+  }
+
+  async lerDonoDoNomeDeGuilda(chave: string): Promise<string | null> {
+    if (this.nomesDeGuilda.has(chave)) return this.nomesDeGuilda.get(chave)?.guildaId ?? null;
+    const snap = await this.tx.get(this.db.collection('nomesDeGuilda').doc(chave));
+    const id = snap.exists ? snap.data()?.guildaId : null;
+    return typeof id === 'string' ? id : null;
+  }
+
+  reservarNomeDeGuilda(chave: string, guildaId: string, nome: string): void {
+    this.nomesDeGuilda.set(chave, { guildaId, nome });
+  }
+
+  liberarNomeDeGuilda(chave: string): void {
+    this.nomesDeGuilda.set(chave, null);
+  }
+
   /** Aplica todas as gravações pendentes na transação (depois de todas as leituras). */
   aplicar(): void {
     for (const [uid, personagem] of this.personagens) {
@@ -499,6 +548,16 @@ class ContextoFirestore implements ContextoTransacao {
     }
     for (const [id, registro] of this.combates) {
       this.tx.create(this.db.collection('combates').doc(id), semUndefined(registro));
+    }
+    for (const [id, guilda] of this.guildas) {
+      const ref = this.db.collection('guildas').doc(id);
+      if (guilda) this.tx.set(ref, guildaParaFirestore(guilda));
+      else this.tx.delete(ref);
+    }
+    for (const [chave, dono] of this.nomesDeGuilda) {
+      const ref = this.db.collection('nomesDeGuilda').doc(chave);
+      if (dono) this.tx.set(ref, { guildaId: dono.guildaId, nome: dono.nome, criadoEm: new Date().toISOString() });
+      else this.tx.delete(ref);
     }
   }
 }
@@ -574,6 +633,27 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
         const snap = await db.collection('characters').doc(uid).get();
         const data = snap.exists ? snap.data() : undefined;
         return data ? personagemDoFirestore(uid, data) : null;
+      });
+    },
+
+    async lerGuilda(id: string) {
+      return lerComRetry(`lerGuilda:${id}`, async () => {
+        const snap = await db.collection('guildas').doc(id).get();
+        return snap.exists ? guildaDoDocumento(id, snap.data()) : null;
+      });
+    },
+
+    async listarGuildas(limite: number) {
+      return lerComRetry('listarGuildas', async () => {
+        const snap = await db.collection('guildas').orderBy('quantidadeMembros', 'desc').limit(limite).get();
+        return snap.docs.flatMap((d) => guildaDoDocumento(d.id, d.data()) ?? []);
+      });
+    },
+
+    async buscarGuildasPorPrefixo(prefixo: string, limite: number) {
+      return lerComRetry(`buscarGuildas:${prefixo}`, async () => {
+        const snap = await db.collection('guildas').where('nomeBusca', '>=', prefixo).where('nomeBusca', '<', `${prefixo}\uf8ff`).orderBy('nomeBusca').limit(limite).get();
+        return snap.docs.flatMap((d) => guildaDoDocumento(d.id, d.data()) ?? []);
       });
     },
 

@@ -9,6 +9,7 @@ import type { CharacterDocument, TransactionDocument } from '@/server/characterS
 import type { SancaoDocumento } from '@/rules/sancoes';
 import { chaveDeBusca, type CampoDoRanking, type CriterioDeRanking, type RankingGuardado, type ResumoDePersonagem } from '@/rules/social';
 import type { ConfiguracaoDeSistemas } from '@/rules/sistemas';
+import { chaveDoNomeDaGuilda, type GuildaDocumento } from '@/rules/guilda';
 import type {
   ConteudoDocumento,
   ContextoTransacao,
@@ -36,6 +37,8 @@ interface Estado {
   sancoes: Map<string, SancaoDocumento>;
   configuracaoDeSistemas: ConfiguracaoDeSistemas | null;
   rankings: Map<string, RankingGuardado>;
+  guildas: Map<string, GuildaDocumento>;
+  nomesDeGuilda: Map<string, { guildaId: string; nome: string }>;
 }
 
 const estado: Estado = {
@@ -51,6 +54,8 @@ const estado: Estado = {
   sancoes: new Map(),
   configuracaoDeSistemas: null,
   rankings: new Map(),
+  guildas: new Map(),
+  nomesDeGuilda: new Map(),
 };
 
 function valorDoCampo(c: CharacterDocument, campo: CampoDoRanking): number {
@@ -102,6 +107,8 @@ class ContextoMemoria implements ContextoTransacao {
   nomes = new Map<string, { uid: string; nome: string }>();
   transacoes: TransactionDocument[] = [];
   combates = new Map<string, RegistroCombate>();
+  guildas = new Map<string, GuildaDocumento | null>();
+  nomesDeGuilda = new Map<string, { guildaId: string; nome: string } | null>();
 
   async lerPersonagem(uid: string) {
     const valor = this.personagens.get(uid) ?? estado.personagens.get(uid);
@@ -129,6 +136,25 @@ class ContextoMemoria implements ContextoTransacao {
     }
     this.combates.set(registro.id, structuredClone(registro));
   }
+  async lerGuilda(id: string) {
+    const valor = this.guildas.has(id) ? this.guildas.get(id) : estado.guildas.get(id);
+    return valor ? structuredClone(valor) : null;
+  }
+  gravarGuilda(guilda: GuildaDocumento) {
+    this.guildas.set(guilda.id, structuredClone({ ...guilda, nomeBusca: chaveDoNomeDaGuilda(guilda.nome), quantidadeMembros: guilda.membros.length }));
+  }
+  apagarGuilda(id: string) {
+    this.guildas.set(id, null);
+  }
+  async lerDonoDoNomeDeGuilda(chave: string) {
+    return (this.nomesDeGuilda.has(chave) ? this.nomesDeGuilda.get(chave) : estado.nomesDeGuilda.get(chave))?.guildaId ?? null;
+  }
+  reservarNomeDeGuilda(chave: string, guildaId: string, nome: string) {
+    this.nomesDeGuilda.set(chave, { guildaId, nome });
+  }
+  liberarNomeDeGuilda(chave: string) {
+    this.nomesDeGuilda.set(chave, null);
+  }
 }
 
 export const repositorio: Repositorio = {
@@ -149,6 +175,8 @@ export const repositorio: Repositorio = {
         for (const [uid, p] of ctx.personagens) estado.personagens.set(uid, p);
         for (const [chave, dono] of ctx.nomes) estado.nomes.set(chave, dono);
         for (const [id, c] of ctx.combates) estado.combates.set(id, c);
+        for (const [id, g] of ctx.guildas) (g ? estado.guildas.set(id, g) : estado.guildas.delete(id));
+        for (const [chave, n] of ctx.nomesDeGuilda) (n ? estado.nomesDeGuilda.set(chave, n) : estado.nomesDeGuilda.delete(chave));
         estado.transacoes.push(...ctx.transacoes);
         return valor;
       })
@@ -318,6 +346,23 @@ export const repositorio: Repositorio = {
     estado.revogacoes.delete(uid);
   },
 
+  async lerGuilda(id: string) {
+    const g = estado.guildas.get(id);
+    return g ? structuredClone(g) : null;
+  },
+
+  async listarGuildas(limite: number) {
+    return [...estado.guildas.values()].sort((a, b) => b.membros.length - a.membros.length).slice(0, limite).map((g) => structuredClone(g));
+  },
+
+  async buscarGuildasPorPrefixo(prefixo: string, limite: number) {
+    return [...estado.guildas.values()]
+      .filter((g) => g.nomeBusca.startsWith(prefixo))
+      .sort((a, b) => a.nomeBusca.localeCompare(b.nomeBusca))
+      .slice(0, limite)
+      .map((g) => structuredClone(g));
+  },
+
   async lerVersaoConteudo(chave: string, versao: number) {
     const v = estado.versoes.get(chave)?.find((x) => x.versao === versao);
     return v ? structuredClone(v) : null;
@@ -343,6 +388,8 @@ export function resetCharacterStore(): void {
   estado.sancoes.clear();
   estado.configuracaoDeSistemas = null;
   estado.rankings.clear();
+  estado.guildas.clear();
+  estado.nomesDeGuilda.clear();
   falhaNaConfiguracao = null;
   falhaNoLogAdmin = null;
   falhaAoGravar = null;

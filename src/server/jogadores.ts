@@ -1,3 +1,4 @@
+import { tirarDaGuildaAntesDeExcluir } from '@/server/guildas';
 import {
   ehAcaoDeSancao,
   DIAS_MAXIMOS_DE_SUSPENSAO,
@@ -360,6 +361,8 @@ async function alvoDestrutivo(sessao: SessaoMestre, uidAlvo: unknown, pedido: Pe
 /** Volta o personagem ao nível 1 sem moedas, mochila, equipamento nem progresso, mantendo nome, raça e classe. */
 export async function zerarProgressaoDoJogador(sessao: SessaoMestre, uidAlvo: unknown, pedido: PedidoDestrutivo, ip?: string): Promise<FichaDoJogador> {
   const { uid, personagem, motivo } = await alvoDestrutivo(sessao, uidAlvo, pedido);
+  // Antes de apagar: sai da guilda (a liderança passa adiante) e dos convites e pedidos (7.3)
+  await tirarDaGuildaAntesDeExcluir(uid);
   await comRegistro(
     sessao,
     {

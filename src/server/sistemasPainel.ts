@@ -1,3 +1,4 @@
+import { LIMITES_DAS_REGRAS_DE_GUILDA, regrasDeGuildaValidas } from '@/rules/guilda';
 import { configuracaoPadrao, ehSistema, MENSAGEM_MAXIMA, NOME_DO_SISTEMA, type ConfiguracaoDeSistemas, type SistemaId } from '@/rules/sistemas';
 import { comRegistro, ErroMestre, exigir, motivoValido, type SessaoMestre } from '@/server/mestre';
 import { repositorio } from '@/server/persistencia';
@@ -94,6 +95,25 @@ export async function definirCenaDeAbertura(sessao: SessaoMestre, pedido: { cena
   await comRegistro(sessao, { acao: 'campanha.cena-abertura', alvo: 'campanha', antes: { aberturaCenaId: atual.campanha.aberturaCenaId }, depois: { aberturaCenaId: cena }, motivo, ip }, () =>
     repositorio.gravarConfiguracaoDeSistemas(proxima)
   );
+  guardarConfiguracaoNoCache(proxima);
+  return proxima;
+}
+
+/** Regras das Guildas (7.3): nível e ouro para criar e o máximo de membros. Vale para as próximas criações e entradas. */
+export async function definirRegrasDeGuilda(sessao: SessaoMestre, pedido: { regras: unknown; motivo: unknown }, ip?: string): Promise<ConfiguracaoDeSistemas> {
+  exigir(sessao, 'sistemas.gerir');
+  const motivo = motivoValido(pedido.motivo);
+  const regras = regrasDeGuildaValidas(pedido.regras);
+  if (!regras) {
+    const [n, c, m] = [LIMITES_DAS_REGRAS_DE_GUILDA.nivelMinimo, LIMITES_DAS_REGRAS_DE_GUILDA.custoOuro, LIMITES_DAS_REGRAS_DE_GUILDA.maxMembros];
+    throw new ErroMestre(400, `Regras inválidas: nível de ${n[0]} a ${n[1]}, ouro de ${c[0]} a ${c[1]} e membros de ${m[0]} a ${m[1]} (números inteiros).`);
+  }
+  const atual = await lerConfiguracaoDeSistemas();
+  const proxima: ConfiguracaoDeSistemas = structuredClone(atual);
+  proxima.guildas = regras;
+  proxima.atualizadoEm = new Date().toISOString();
+  proxima.atualizadoPor = sessao.uid;
+  await comRegistro(sessao, { acao: 'guildas.regras', alvo: 'guildas', antes: atual.guildas, depois: regras, motivo, ip }, () => repositorio.gravarConfiguracaoDeSistemas(proxima));
   guardarConfiguracaoNoCache(proxima);
   return proxima;
 }

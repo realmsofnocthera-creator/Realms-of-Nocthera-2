@@ -5,6 +5,7 @@ import type { PapelMestre } from '@/rules/mestre';
 import type { TipoDeConteudo } from '@/rules/conteudo';
 import type { SancaoDocumento } from '@/rules/sancoes';
 import type { ConfiguracaoDeSistemas } from '@/rules/sistemas';
+import { chaveDoNomeDaGuilda, type GuildaDocumento } from '@/rules/guilda';
 
 /**
  * Registro de um combate resolvido (0.5-B1/B3): guarda a semente e a entrada para
@@ -107,6 +108,14 @@ export interface ContextoTransacao {
   registrarTransacao(transacao: TransactionDocument): void;
   lerCombate(id: string): Promise<RegistroCombate | null>;
   gravarCombate(registro: RegistroCombate): void;
+  /** Guildas (7.3): o documento com membros, convites e pedidos. */
+  lerGuilda(id: string): Promise<GuildaDocumento | null>;
+  gravarGuilda(guilda: GuildaDocumento): void;
+  apagarGuilda(id: string): void;
+  /** nomesDeGuilda/{chave}: garante que dois jogadores não criem guildas com o mesmo nome. */
+  lerDonoDoNomeDeGuilda(chave: string): Promise<string | null>;
+  reservarNomeDeGuilda(chave: string, guildaId: string, nome: string): void;
+  liberarNomeDeGuilda(chave: string): void;
 }
 
 /** Papel de Mestre concedido pelo painel (o Dono vem do ambiente e não é gravado aqui). */
@@ -243,6 +252,11 @@ export interface Repositorio {
   /** O retrato guardado de um ranking, ou null se ainda não foi montado. */
   lerRanking(criterio: CriterioDeRanking): Promise<RankingGuardado | null>;
   gravarRanking(ranking: RankingGuardado): Promise<void>;
+  lerGuilda(id: string): Promise<GuildaDocumento | null>;
+  /** As guildas com mais membros (7.3). */
+  listarGuildas(limite: number): Promise<GuildaDocumento[]>;
+  /** Guildas cujo nome começa com o texto (já em minúsculas), em ordem alfabética. */
+  buscarGuildasPorPrefixo(prefixo: string, limite: number): Promise<GuildaDocumento[]>;
 }
 
 /**
@@ -259,6 +273,11 @@ export class ErroPersistencia extends Error {
     super('Não foi possível salvar seu progresso agora. Tente novamente em instantes.');
     this.name = 'ErroPersistencia';
   }
+}
+
+/** Chave do documento-índice nomesDeGuilda/{chave} (7.3): o nome normalizado da guilda, seguro como ID do Firestore. */
+export function chaveDoNomeDeGuilda(nome: string): string {
+  return `g_${Buffer.from(chaveDoNomeDaGuilda(nome), 'utf8').toString('base64url')}`;
 }
 
 /** Chave do documento-índice nomes/{chave} (0.5-C3): nome normalizado, seguro como ID do Firestore. */
