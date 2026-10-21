@@ -1,3 +1,6 @@
+import { incursaoDoDocumento, type IncursaoDaGuilda } from './incursao';
+import { pesquisaDoDocumento, type PesquisaDaGuilda } from './pesquisa';
+
 /**
  * Guildas (7.3). Uma guilda é um documento só (guildas/{id}) com os membros, os convites e os pedidos dentro:
  * abrir a tela da guilda custa 1 leitura no Firestore. O personagem guarda só o id e o nome da guilda (para o
@@ -144,6 +147,10 @@ export interface GuildaDocumento {
   quantidadeMembros: number;
   /** XP total da guilda (o nível sai dele). */
   xp: number;
+  /** Incursões (nível Reconhecida): o chefe atual, a vida global e quem lutou. */
+  incursao?: IncursaoDaGuilda;
+  /** Pesquisa (nível Respeitada): o nível e as doações de cada ramo. */
+  pesquisa?: PesquisaDaGuilda;
 }
 
 /** O que qualquer jogador vê de uma guilda (lista, busca, página da guilda). */
@@ -215,5 +222,8 @@ export function guildaDoDocumento(id: string, bruto: unknown): GuildaDocumento |
   const pedidos = lista(d.pedidos).flatMap((p) =>
     typeof p.uid === 'string' && p.uid && typeof p.nome === 'string' ? [{ uid: p.uid, nome: p.nome, nivel: typeof p.nivel === 'number' ? p.nivel : 0, classeId: texto(p.classeId), em: texto(p.em) }] : []
   );
-  return { id, nome: d.nome, nomeBusca: chaveDoNomeDaGuilda(d.nome), descricao: texto(d.descricao), criadaEm: texto(d.criadaEm), membros, convites, pedidos, quantidadeMembros: membros.length, xp: typeof d.xp === 'number' && Number.isFinite(d.xp) && d.xp > 0 ? Math.floor(d.xp) : 0 };
+  return { id, nome: d.nome, nomeBusca: chaveDoNomeDaGuilda(d.nome), descricao: texto(d.descricao), criadaEm: texto(d.criadaEm), membros, convites, pedidos, quantidadeMembros: membros.length, xp: typeof d.xp === 'number' && Number.isFinite(d.xp) && d.xp > 0 ? Math.floor(d.xp) : 0,
+    ...(incursaoDoDocumento(d.incursao) ? { incursao: incursaoDoDocumento(d.incursao) } : {}),
+    ...(Object.keys(pesquisaDoDocumento(d.pesquisa)).length ? { pesquisa: pesquisaDoDocumento(d.pesquisa) } : {}),
+  };
 }

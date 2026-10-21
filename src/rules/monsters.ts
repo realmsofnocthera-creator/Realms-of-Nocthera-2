@@ -79,6 +79,8 @@ export interface MonsterDefinition {
   mecanica?: MecanicaChefeId;
   /** Status a que o monstro é imune (além dos de chefe). Ex.: Esqueleto imune a Sangramento e Veneno. */
   imunidadesStatus?: EfeitoStatus[];
+  /** Sobreescudo do início da luta, quando não sai do HP (Incursões: a vida é a global, o escudo é o de uma luta). */
+  sobreescudoInicial?: number;
 }
 
 export const MONSTERS: readonly MonsterDefinition[] = [

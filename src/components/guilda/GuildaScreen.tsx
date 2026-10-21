@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { CLASSES_MAP } from '@/rules/classes';
 import { DESCRICAO_MAXIMA_DA_GUILDA, NIVEIS_DA_GUILDA, nivelDaGuilda, NOME_DO_CARGO, NOME_MAXIMO_DA_GUILDA, podeExpulsar, administraEntrada, type CargoDaGuilda, type ResumoDaGuilda } from '@/rules/guilda';
-import type { ContratoNaTela, EstadoDaGuilda, GuildaPublica, MinhaGuilda } from '@/server/guildas';
+import type { ContratoNaTela, EstadoDaGuilda, GuildaPublica, IncursaoNaTela, MinhaGuilda, PesquisaNaTela } from '@/server/guildas';
+import { PONTOS_POR_RARIDADE } from '@/rules/pesquisa';
+import type { RaridadeMaterial } from '@/rules/raridades';
 import { NOCTHERA_THEME } from '@/theme/theme';
 
 type Token = () => Promise<string | null>;
@@ -81,6 +83,8 @@ export function GuildaScreen({ tokenFresco }: { tokenFresco: Token }) {
           <>
             <NivelDaGuildaCartao guilda={estado.minha} />
             <QuadroDeContratos contratos={estado.contratos} agir={agir} ocupado={ocupado} />
+            <IncursaoCartao incursao={estado.minha.incursao} agir={agir} ocupado={ocupado} />
+            <PesquisaCartao pesquisa={estado.minha.pesquisa} eu={estado.eu} agir={agir} ocupado={ocupado} />
             <MinhaGuildaPainel guilda={estado.minha} agir={agir} ocupado={ocupado} />
           </>
         ) : (
@@ -151,6 +155,110 @@ function QuadroDeContratos({ contratos, agir, ocupado }: { contratos: ContratoNa
               <span className="text-xs font-semibold" style={{ color: VERDE }}>Entregue</span>
             ) : (
               <span><Botao disabled={ocupado || !c.pronto} onClick={() => void agir('entregarContrato', { contratoId: c.id })}>{c.pronto ? 'Entregar' : 'Em andamento'}</Botao></span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </Cartao>
+  );
+}
+
+function Barra({ valor, maximo, rotulo, cor = 'linear-gradient(90deg, #D97706, #F5E3B3)' }: { valor: number; maximo: number; rotulo: string; cor?: string }) {
+  const pct = maximo > 0 ? Math.min(100, Math.round((valor / maximo) * 100)) : 100;
+  return (
+    <div className="h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: '#2A2214' }} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={rotulo}>
+      <div className="h-full" style={{ width: `${pct}%`, background: cor }} />
+    </div>
+  );
+}
+
+/** Incursão: o chefe atual, a vida global, quem lutou e o botão de lutar (3 por dia). */
+function IncursaoCartao({ incursao: inc, agir, ocupado }: { incursao: IncursaoNaTela; agir: Agir; ocupado: boolean }) {
+  const { colors } = NOCTHERA_THEME;
+  if (!inc.liberada) {
+    return (
+      <Cartao titulo="Incursões">
+        <p className="text-xs" style={{ color: colors.text.secondary }}>Abrem quando a guilda chega ao nível {NIVEIS_DA_GUILDA[inc.nivelDaGuildaParaLiberar - 1].nome}.</p>
+      </Cartao>
+    );
+  }
+  const restantes = inc.lutasPorDia - inc.minhasLutasHoje;
+  return (
+    <Cartao titulo="Incursões">
+      <p className="text-sm"><strong>{inc.chefe}</strong></p>
+      <p className="text-xs" style={{ color: colors.text.secondary }}>Nível {inc.nivel} de 100 · {inc.dificuldade}</p>
+      <Barra valor={inc.hp} maximo={inc.hpMax} rotulo="Vida do chefe" cor="linear-gradient(90deg, #7F1D1D, #E5484D)" />
+      <p className="text-xs" style={{ color: colors.text.secondary }}>Vida: {inc.hp} / {inc.hpMax}. Todo dano soma; o chefe não se cura entre as lutas.</p>
+      {inc.ultima && <p className="text-xs" style={{ color: VERDE }}>Última vitória: {inc.ultima.chefe} ({inc.ultima.dificuldade}).</p>}
+      <div className="flex items-center gap-2">
+        <Botao disabled={ocupado || restantes <= 0} onClick={() => void agir('lutarIncursao')}>{restantes > 0 ? 'Lutar' : 'Sem lutas hoje'}</Botao>
+        <span className="text-xs" style={{ color: colors.text.secondary }}>Lutas de hoje: {restantes} de {inc.lutasPorDia}</span>
+      </div>
+      {inc.participantes.length > 0 && (
+        <>
+          <h3 className="text-sm font-bold mt-1">Dano causado</h3>
+          <ol className="text-xs flex flex-col gap-0.5">
+            {inc.participantes.map((p, i) => (
+              <li key={p.nome} className="flex justify-between gap-2"><span>{i + 1}º {p.nome}</span><span style={{ color: colors.text.secondary }}>{p.dano} ({p.lutas} {p.lutas === 1 ? 'luta' : 'lutas'})</span></li>
+            ))}
+          </ol>
+        </>
+      )}
+      <p className="text-[11px]" style={{ color: colors.text.secondary }}>Quando o chefe cai, quem lutou recebe ouro, XP, diamantes e um material raro (mais para quem causou mais dano), e a guilda ganha XP.</p>
+    </Cartao>
+  );
+}
+
+/** Pesquisa: os ramos com o nível, o bônus e as duas barras (ouro e materiais); cada membro doa no ramo que quiser. */
+function PesquisaCartao({ pesquisa, eu, agir, ocupado }: { pesquisa: PesquisaNaTela; eu: EstadoDaGuilda['eu']; agir: Agir; ocupado: boolean }) {
+  const { colors } = NOCTHERA_THEME;
+  const [aberto, setAberto] = useState<string | null>(null);
+  const [ouro, setOuro] = useState('');
+  const [material, setMaterial] = useState('');
+  const [qtd, setQtd] = useState('');
+  if (!pesquisa.liberada) {
+    return (
+      <Cartao titulo="Pesquisa da guilda">
+        <p className="text-xs" style={{ color: colors.text.secondary }}>Abre quando a guilda chega ao nível {NIVEIS_DA_GUILDA[pesquisa.nivelDaGuildaParaLiberar - 1].nome}.</p>
+      </Cartao>
+    );
+  }
+  return (
+    <Cartao titulo="Pesquisa da guilda">
+      <p className="text-xs" style={{ color: colors.text.secondary }}>Doe ouro e materiais. Quando as duas barras de um ramo enchem, ele sobe de nível e o bônus vale para todos os membros. Materiais valem pontos pela raridade (comum 1, raro 3, muito raro 8, épico 20, lendário 50).</p>
+      <ul className="flex flex-col gap-1.5">
+        {pesquisa.ramos.map((r) => (
+          <li key={r.id} className="rounded-sm border px-2 py-1.5 flex flex-col gap-1" style={{ borderColor: BORDA }}>
+            <button type="button" onClick={() => setAberto(aberto === r.id ? null : r.id)} className="text-left flex justify-between gap-2">
+              <span className="text-sm font-bold">{r.nome} <span className="text-[11px] font-normal" style={{ color: colors.text.secondary }}>· nível {r.nivel}/{r.nivelMaximo}</span></span>
+              <span className="text-xs" style={{ color: r.bonus ? VERDE : colors.text.secondary }}>+{r.bonus}{r.unidade}</span>
+            </button>
+            <span className="text-[11px]" style={{ color: colors.text.secondary }}>{r.descricao}</span>
+            {r.custo ? (
+              <>
+                <Barra valor={r.ouro} maximo={r.custo.ouro} rotulo={`Ouro de ${r.nome}`} />
+                <span className="text-[11px]" style={{ color: colors.text.secondary }}>Ouro: {r.ouro} / {r.custo.ouro}</span>
+                <Barra valor={r.materiais} maximo={r.custo.materiais} rotulo={`Materiais de ${r.nome}`} cor="linear-gradient(90deg, #1D4ED8, #5AA7F0)" />
+                <span className="text-[11px]" style={{ color: colors.text.secondary }}>Materiais: {r.materiais} / {r.custo.materiais} pontos</span>
+              </>
+            ) : (
+              <span className="text-xs font-semibold" style={{ color: VERDE }}>Nível máximo</span>
+            )}
+            {aberto === r.id && r.custo && (
+              <div className="flex flex-col gap-1.5 mt-1">
+                <div className="flex gap-2">
+                  <input type="number" min={1} value={ouro} onChange={(e) => setOuro(e.target.value)} placeholder={`Ouro (você tem ${eu.ouro})`} aria-label={`Ouro para ${r.nome}`} className={campo} style={{ borderColor: OURO }} />
+                  <Botao disabled={ocupado || !(Number(ouro) > 0)} onClick={async () => { if (await agir('doarPesquisa', { ramo: r.id, ouro: Number(ouro) })) setOuro(''); }}>Doar ouro</Botao>
+                </div>
+                <div className="flex gap-2">
+                  <select value={material} onChange={(e) => setMaterial(e.target.value)} aria-label={`Material para ${r.nome}`} className={campo} style={{ borderColor: OURO, backgroundColor: colors.background.secondary }}>
+                    <option value="">Material</option>
+                    {eu.materiais.map((m) => <option key={m.id} value={m.id}>{m.nome} ×{m.qtd} ({PONTOS_POR_RARIDADE[m.raridade as RaridadeMaterial] ?? 0} pt)</option>)}
+                  </select>
+                  <input type="number" min={1} value={qtd} onChange={(e) => setQtd(e.target.value)} placeholder="Qtd" aria-label="Quantidade do material" className="w-16 rounded-sm border-2 px-2 py-1.5 text-sm bg-transparent" style={{ borderColor: OURO }} />
+                  <Botao disabled={ocupado || !material || !(Number(qtd) > 0)} onClick={async () => { if (await agir('doarPesquisa', { ramo: r.id, materiais: { [material]: Number(qtd) } })) setQtd(''); }}>Doar</Botao>
+                </div>
+              </div>
             )}
           </li>
         ))}

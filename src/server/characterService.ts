@@ -1,3 +1,4 @@
+import type { BonusDeGuilda } from '@/rules/pesquisa';
 import { contarVitorias, type ContratosDoDia } from '@/game/contratos';
 import { ATTRIBUTES, AttributeName, Attributes } from '@/rules/attributes';
 import { GAME_CONFIG } from '@/rules/config';
@@ -208,6 +209,10 @@ export interface CharacterDocument {
   pedidosDeGuilda?: string[];
   /** Quadro de contratos (7.3): os 3 contratos do dia e o progresso. */
   contratos?: ContratosDoDia;
+  /** Incursões (7.3): lutas usadas no dia (até 3). */
+  incursaoTentativas?: { dia: string; usadas: number };
+  /** Bônus da Pesquisa da guilda (XP, ouro e chance de materiais), copiado da guilda para as lutas lerem sem ler a guilda. */
+  bonusDeGuilda?: BonusDeGuilda;
   /** Quanto o equipamento soma em cada atributo (pontos e % de Agilidade). Derivado, não é gravado. */
   bonusEquipamento?: Attributes;
   /** Mitigação física e mágica das peças de Defesa, com a % de Defesa da arma. Derivado, não é gravado. */
@@ -855,6 +860,21 @@ async function alterarMoeda(
   });
 }
 
+/** Soma XP ao personagem com a subida de nível (como no combate). Devolve os campos que mudam e quantos níveis subiu. */
+export function ganharXp(char: CharacterDocument, xp: number): { xpAtual: number; nivel: number; pontosDisponiveis: number; levelUps: number } {
+  let xpAtual = char.xpAtual + Math.max(0, Math.floor(xp));
+  let nivel = char.nivel;
+  let pontosDisponiveis = char.pontosDisponiveis;
+  let levelUps = 0;
+  while (nivel < GAME_CONFIG.NIVEL_MAXIMO_GRAU_1 && xpAtual >= xpParaProximoNivel(nivel)) {
+    xpAtual -= xpParaProximoNivel(nivel);
+    nivel += 1;
+    pontosDisponiveis += GAME_CONFIG.PONTOS_POR_NIVEL;
+    levelUps += 1;
+  }
+  return { xpAtual, nivel, pontosDisponiveis, levelUps };
+}
+
 /** Ajustes do Painel do Mestre (3.5.4.2): variações (deltas) por campo; cada moeda gera uma transação. */
 export interface AjusteDoMestre {
   moedas: Partial<Record<Moeda, number>>;
@@ -1326,6 +1346,15 @@ function aplicarResultadoCombateEm(
   const mensagens: string[] = [...resultado.mensagens];
   let transaction: TransactionDocument | undefined;
 
+  if (resultado.vencedor === 'personagem' && current.bonusDeGuilda) {
+    // Pesquisa da guilda (7.3): +% de XP e de ouro em todas as lutas
+    const xpExtra = Math.floor((resultado.xpGanho * current.bonusDeGuilda.xp) / 100);
+    const ouroExtra = Math.floor((resultado.ouroGanho * current.bonusDeGuilda.ouro) / 100);
+    resultado.xpGanho += xpExtra;
+    resultado.ouroGanho += ouroExtra;
+    if (xpExtra || ouroExtra) mensagens.push(`Pesquisa da guilda: +${xpExtra} XP e +${ouroExtra} de ouro.`);
+  }
+
   if (resultado.vencedor === 'personagem') {
     // 1. Soma XP e processa Level Up
     let novoXp = current.xpAtual + resultado.xpGanho;
@@ -1440,7 +1469,7 @@ function temPercentuais(ficha: ReturnType<typeof calcularFichaEquipamento>): boo
 }
 
 /** Monta o personagem para o combate: HP cheio, Sobreescudo e atributos com o Reforço de Habilidade e o equipamento. */
-function combatenteDoPersonagem(current: CharacterDocument): Combatente {
+export function combatenteDoPersonagem(current: CharacterDocument): Combatente {
   // A ficha de combate do equipamento: o motor só lê o que está aqui (arma: dano, tipo, elemento e status)
   const ficha = calcularFichaEquipamento(current.equipamento, current.armas, current.armaduras, emblemasEquipadosDe(current));
   const arma = ficha.arma;
@@ -1644,14 +1673,14 @@ export async function executarCacada(
       );
       const sorteio = sorteioDeDrops(opcoes.seed);
       drops = [
-        ...sortearDrops(dados.drops, sorteio, current.bonusChanceDrop ?? 0),
+        ...sortearDrops(dados.drops, sorteio, (current.bonusChanceDrop ?? 0) + (current.bonusDeGuilda?.materiais ?? 0)),
         ...sortearDropsExtras(
           dados.drops,
           dados.estrela,
           sorteio,
           bonusDiversoDeArmadura(combatentePersonagem.equipamento?.habilidadesArmadura)
         ),
-        ...sortearOrbesDaCacada(dados.drops, sorteio, current.bonusChanceDrop ?? 0),
+        ...sortearOrbesDaCacada(dados.drops, sorteio, (current.bonusChanceDrop ?? 0) + (current.bonusDeGuilda?.materiais ?? 0)),
       ];
       if (dados.chave && !(current.cacadaChavesVencidas ?? []).includes(dados.estrela)) {
         chaveVencida = dados.estrela;
@@ -1965,6 +1994,8 @@ export async function executarBatalhaSangrenta(
     if (recompensa.fragmentosAlma > 0) {
       character = alterarSaldoEm(ctx, character, 'fragmentosAlma', recompensa.fragmentosAlma, motivo).character;
     }
+    // Pesquisa da guilda (7.3): +% de ouro também na Batalha Sangrenta
+    if (recompensa.ouro > 0 && current.bonusDeGuilda?.ouro) recompensa.ouro += Math.floor((recompensa.ouro * current.bonusDeGuilda.ouro) / 100);
     if (recompensa.ouro > 0) {
       character = alterarSaldoEm(ctx, character, 'ouro', recompensa.ouro, `${motivo}: ${venceuTudo ? 'vitória' : 'derrota'}`).character;
     }
