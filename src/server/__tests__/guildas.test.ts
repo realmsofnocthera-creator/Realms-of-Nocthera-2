@@ -5,9 +5,10 @@ import { GET as guildasGet } from '@/app/api/guildas/route';
 import { GET as guildaPublicaGet } from '@/app/api/guildas/[id]/route';
 import { limparCacheRevogacao } from '@/server/auth';
 import { createCharacter, executarCacada, getCharacterByUid, getPublicCharacterByName, updateCharacter } from '@/server/characterService';
-import { agirNaGuilda, ErroDeGuilda, estadoDaGuilda, limparCacheDasGuildas, listarGuildasParaJogador, tirarDaGuildaAntesDeExcluir, verGuilda } from '@/server/guildas';
+import { agirNaGuilda, ErroDeGuilda, estadoDaGuilda, lutarIncursao, limparCacheDasGuildas, listarGuildasParaJogador, tirarDaGuildaAntesDeExcluir, verGuilda } from '@/server/guildas';
 import { limparCacheDeSistemas } from '@/server/sistemasLeitura';
 import { configuracaoPadrao } from '@/rules/sistemas';
+import { REGRAS_PADRAO_DE_GUILDA } from '@/rules/guilda';
 import { repositorio } from '@/server/persistencia';
 import { resetCharacterStore } from '@/test/repositorioMemoria';
 import { tokenDeTeste } from '@/test/firebaseAdminMock';
@@ -368,5 +369,106 @@ describe('Níveis e Quadro de contratos (7.3)', () => {
     const c = (await getCharacterByUid('u1'))!.contratos!;
     await updateCharacter('u1', { contratos: { ...c, dia: '2000-01-01' } });
     expect((await erro(agir('u1', 'entregarContrato', { contratoId: 'c3' })))?.message).toMatch(/já venceram/);
+  });
+});
+
+describe('Incursões e Pesquisa (7.3)', () => {
+  const MEDIO = { vigor: 30, sorte: 3, forca: 26, vitalidade: 3, arcano: 0, inteligencia: 0, agilidade: 1 };
+  const FORTE = { vigor: 400, sorte: 0, forca: 300, vitalidade: 100, arcano: 0, inteligencia: 0, agilidade: 50 };
+  beforeEach(async () => {
+    (process.env as Record<string, string | undefined>).NODE_ENV = 'test';
+    resetCharacterStore();
+    limparCacheRevogacao();
+    limparCacheDeSistemas();
+    limparCacheDasGuildas();
+    for (const [uid, nome] of Object.entries(NOMES)) {
+      await createCharacter(uid, { nome, racaId: 'elfo', classeId: 'cavaleiro', pontos: PONTOS });
+      await updateCharacter(uid, { nivel: 12, ouro: 300000, atributos: MEDIO });
+    }
+  });
+  const darXp = async (id: string, xp: number, extra: Record<string, unknown> = {}) => {
+    const g = (await repositorio.lerGuilda(id))!;
+    await repositorio.executarTransacao('t', async (ctx) => ctx.gravarGuilda({ ...g, xp, ...extra }));
+  };
+
+  it('Incursões só abrem em Reconhecida', async () => {
+    const id = await criarGuilda();
+    expect((await erro(lutarIncursao('u1', REGRAS_PADRAO_DE_GUILDA, 1)))?.message).toMatch(/Reconhecida/);
+    expect((await estadoDaGuilda('u1')).minha!.incursao.liberada).toBe(false);
+    await darXp(id, 2500);
+    expect((await estadoDaGuilda('u1')).minha!.incursao).toMatchObject({ liberada: true, nivel: 1, dificuldade: 'Iniciante', minhasLutasHoje: 0 });
+  });
+
+  it('o dano entra na vida global, sem cura entre lutas, e são 3 lutas por dia', async () => {
+    const id = await criarGuilda();
+    await entrar(id, 'u2');
+    await darXp(id, 2500);
+    await lutarIncursao('u1', REGRAS_PADRAO_DE_GUILDA, 11);
+    const a = (await repositorio.lerGuilda(id))!.incursao!;
+    expect(a.hp).toBeLessThan(a.hpMax);
+    await lutarIncursao('u2', REGRAS_PADRAO_DE_GUILDA, 12);
+    const b = (await repositorio.lerGuilda(id))!.incursao!;
+    expect(b.hp).toBeLessThan(a.hp);
+    expect(b.participantes.map((p) => [p.nome, p.lutas])).toEqual([['Aragorn', 1], ['Boromir', 1]]);
+    await lutarIncursao('u1', REGRAS_PADRAO_DE_GUILDA, 13);
+    await lutarIncursao('u1', REGRAS_PADRAO_DE_GUILDA, 14);
+    expect((await erro(lutarIncursao('u1', REGRAS_PADRAO_DE_GUILDA, 15)))?.message).toMatch(/3 lutas/);
+    const e = (await estadoDaGuilda('u1')).minha!.incursao;
+    expect(e.minhasLutasHoje).toBe(3);
+    expect(e.participantes[0].lutas + e.participantes[1].lutas).toBe(4);
+  });
+
+  it('chefe derrotado: quem lutou e ainda está na guilda recebe; a guilda ganha XP e passa ao próximo nível', async () => {
+    const id = await criarGuilda();
+    await entrar(id, 'u2');
+    await darXp(id, 2500, { incursao: { nivel: 1, hpMax: 999999, hp: 1, participantes: [{ uid: 'u2', nome: 'Boromir', dano: 500, lutas: 1 }, { uid: 'u5', nome: 'Elrond', dano: 100, lutas: 1 }] } });
+    const antes1 = (await getCharacterByUid('u1'))!;
+    const antes2 = (await getCharacterByUid('u2'))!;
+    const antes5 = (await getCharacterByUid('u5'))!;
+    const { mensagem } = await lutarIncursao('u1', REGRAS_PADRAO_DE_GUILDA, 21);
+    expect(mensagem).toMatch(/foi derrotado/);
+    const g = (await repositorio.lerGuilda(id))!;
+    expect(g.xp).toBe(2600);
+    expect(g.incursao).toMatchObject({ nivel: 2, participantes: [], ultima: { nivel: 1, dificuldade: 'Iniciante' } });
+    expect(g.incursao!.hp).toBe(g.incursao!.hpMax);
+    const depois1 = (await getCharacterByUid('u1'))!;
+    const depois2 = (await getCharacterByUid('u2'))!;
+    expect(depois1.ouro).toBeGreaterThan(antes1.ouro);
+    expect(depois2.ouro - antes2.ouro).toBeGreaterThan(depois1.ouro - antes1.ouro);
+    expect(depois2.diamantes).toBe((antes2.diamantes ?? 0) + 2);
+    expect(depois2.xpAtual + depois2.nivel * 1e6).toBeGreaterThan(antes2.xpAtual + antes2.nivel * 1e6);
+    expect(Object.values(depois2.inventario ?? {}).reduce((a, b) => a + b, 0)).toBe(1);
+    expect((await getCharacterByUid('u5'))!.ouro).toBe(antes5.ouro);
+  });
+
+  it('Pesquisa: abre em Respeitada; doações enchem as barras e o ramo sobe; o bônus vai para todos os membros', async () => {
+    const id = await criarGuilda();
+    await entrar(id, 'u2');
+    expect((await erro(agir('u1', 'doarPesquisa', { ramo: 'xp', ouro: 100 })))?.message).toMatch(/Respeitada/);
+    await darXp(id, 7500);
+    await agir('u1', 'doarPesquisa', { ramo: 'xp', ouro: 5000 });
+    let ramo = (await estadoDaGuilda('u1')).minha!.pesquisa.ramos.find((r) => r.id === 'xp')!;
+    expect(ramo).toMatchObject({ nivel: 0, ouro: 2000, materiais: 0, custo: { ouro: 2000, materiais: 30 } });
+    expect((await getCharacterByUid('u1'))!.ouro).toBe(300000 - 5000 - 2000);
+    expect((await erro(agir('u1', 'doarPesquisa', { ramo: 'xp', ouro: 10 })))?.message).toMatch(/barra já está cheia/);
+    expect((await erro(agir('u2', 'doarPesquisa', { ramo: 'xp', materiais: { 'pelo-de-rato': 5 } })))?.message).toMatch(/não tem/);
+    await updateCharacter('u2', { inventario: { 'pelo-de-rato': 40 } });
+    const { mensagem } = await agir('u2', 'doarPesquisa', { ramo: 'xp', materiais: { 'pelo-de-rato': 40 } });
+    expect(mensagem).toMatch(/subiu para o nível 1/);
+    expect((await getCharacterByUid('u2'))!.inventario?.['pelo-de-rato']).toBe(10);
+    ramo = (await estadoDaGuilda('u1')).minha!.pesquisa.ramos.find((r) => r.id === 'xp')!;
+    expect(ramo).toMatchObject({ nivel: 1, bonus: 1, ouro: 0, materiais: 0 });
+    for (const uid of ['u1', 'u2']) expect((await getCharacterByUid(uid))!.bonusDeGuilda).toEqual({ xp: 1, ouro: 0, materiais: 0 });
+    await entrar(id, 'u3');
+    expect((await getCharacterByUid('u3'))!.bonusDeGuilda).toEqual({ xp: 1, ouro: 0, materiais: 0 });
+    await agir('u3', 'sair');
+    expect((await getCharacterByUid('u3'))!.bonusDeGuilda).toBeUndefined();
+  });
+
+  it('o bônus da Pesquisa entra nas lutas', async () => {
+    await updateCharacter('u1', { atributos: FORTE, bonusDeGuilda: { xp: 10, ouro: 10, materiais: 0 } });
+    const r = await executarCacada('u1', 'rato-da-floresta', { seed: 3, combateId: 'pesquisa-bonus-1' });
+    expect(r.resultado.vencedor).toBe('personagem');
+    expect(r.resultado.mensagens.join(' ') + r.mensagens.join(' ')).toMatch(/Pesquisa da guilda/);
   });
 });

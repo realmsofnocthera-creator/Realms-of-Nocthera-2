@@ -616,6 +616,8 @@ export interface ResultadoCombate {
     hpMax: number;
     ouro: number;
   };
+  /** Vida do monstro no fim (as Incursões somam o dano causado numa vida compartilhada). */
+  monstroFinal?: { hp: number; hpMax: number };
 }
 
 /**
@@ -4067,7 +4069,7 @@ export function resolverCombate(
     nome: monstro.nome,
     hp: monstro.hp,
     hpMax: monstro.hp,
-    sobreescudo: sobreescudoInicialDoMonstro(monstro.hp),
+    sobreescudo: monstro.sobreescudoInicial ?? sobreescudoInicialDoMonstro(monstro.hp),
     atributos: { ...monstro.atributos },
     ouro: 0,
     // DEF do monstro (como a mitigação de um personagem): 0 até a fórmula ser definida
@@ -4776,6 +4778,7 @@ export function resolverCombate(
       xpGanho,
       ouroGanho,
       ouroPerdido: 0,
+      monstroFinal: { hp: Math.max(0, m.hp), hpMax: m.hpMax },
       personagemFinal: {
         hp: p.hp,
         hpMax: p.hpMax,
@@ -4807,6 +4810,7 @@ export function resolverCombate(
       xpGanho: 0,
       ouroGanho: 0,
       ouroPerdido,
+      monstroFinal: { hp: Math.max(0, m.hp), hpMax: m.hpMax },
       personagemFinal: {
         hp: hpMaximo,
         hpMax: hpMaximo,
