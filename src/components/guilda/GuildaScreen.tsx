@@ -4,8 +4,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { CLASSES_MAP } from '@/rules/classes';
-import { DESCRICAO_MAXIMA_DA_GUILDA, NOME_DO_CARGO, NOME_MAXIMO_DA_GUILDA, podeExpulsar, administraEntrada, type CargoDaGuilda, type ResumoDaGuilda } from '@/rules/guilda';
-import type { EstadoDaGuilda, GuildaPublica, MinhaGuilda } from '@/server/guildas';
+import { DESCRICAO_MAXIMA_DA_GUILDA, NIVEIS_DA_GUILDA, nivelDaGuilda, NOME_DO_CARGO, NOME_MAXIMO_DA_GUILDA, podeExpulsar, administraEntrada, type CargoDaGuilda, type ResumoDaGuilda } from '@/rules/guilda';
+import type { ContratoNaTela, EstadoDaGuilda, GuildaPublica, MinhaGuilda } from '@/server/guildas';
 import { NOCTHERA_THEME } from '@/theme/theme';
 
 type Token = () => Promise<string | null>;
@@ -78,7 +78,11 @@ export function GuildaScreen({ tokenFresco }: { tokenFresco: Token }) {
         ) : !estado ? (
           <p className="text-sm" style={{ color: colors.text.secondary }}>Carregando...</p>
         ) : estado.minha ? (
-          <MinhaGuildaPainel guilda={estado.minha} agir={agir} ocupado={ocupado} />
+          <>
+            <NivelDaGuildaCartao guilda={estado.minha} />
+            <QuadroDeContratos contratos={estado.contratos} agir={agir} ocupado={ocupado} />
+            <MinhaGuildaPainel guilda={estado.minha} agir={agir} ocupado={ocupado} />
+          </>
         ) : (
           <SemGuilda estado={estado} agir={agir} ocupado={ocupado} tokenFresco={tokenFresco} />
         )}
@@ -104,6 +108,54 @@ function Botao({ children, onClick, disabled, perigo }: { children: React.ReactN
     <button type="button" onClick={onClick} disabled={disabled} className="rounded-sm border px-2 py-1 text-xs font-bold disabled:opacity-50" style={{ borderColor: perigo ? VERMELHO : OURO, backgroundColor: '#3A2F18', color: perigo ? VERMELHO : '#F5E3B3' }}>
       {children}
     </button>
+  );
+}
+
+/** O nível da guilda, a barra de XP e o que o próximo nível desbloqueia. */
+function NivelDaGuildaCartao({ guilda }: { guilda: MinhaGuilda }) {
+  const { colors } = NOCTHERA_THEME;
+  const { nivel } = guilda;
+  const proximo = NIVEIS_DA_GUILDA[nivel.nivel];
+  const pct = nivel.xpDoNivel ? Math.min(100, Math.round((nivel.xpNoNivel / nivel.xpDoNivel) * 100)) : 100;
+  return (
+    <section aria-label="Nível da guilda" className="rounded-sm border-2 p-3 flex flex-col gap-1.5" style={{ borderColor: OURO, backgroundColor: colors.background.secondary }}>
+      <p className="text-sm">
+        <span className="font-cinzel font-bold text-base" style={{ color: '#F5E3B3' }}>{nivel.nome}</span> · nível {nivel.nivel} de {NIVEIS_DA_GUILDA.length}
+      </p>
+      <div className="h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: '#2A2214' }} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="XP da guilda">
+        <div className="h-full" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #D97706, #F5E3B3)' }} />
+      </div>
+      <p className="text-xs" style={{ color: colors.text.secondary }}>
+        {nivel.xpDoNivel ? `${nivel.xpNoNivel} / ${nivel.xpDoNivel} XP para ${proximo.nome}${proximo.desbloqueia ? ` (desbloqueia: ${proximo.desbloqueia})` : ''}` : 'Nível máximo alcançado.'}
+      </p>
+    </section>
+  );
+}
+
+const NOME_DO_TIPO_DE_CONTRATO = { derrotar: 'Derrote', entregar: 'Entregue' } as const;
+
+/** Quadro de contratos: os 3 contratos do dia do jogador. As vitórias contam em qualquer luta contra monstros. */
+function QuadroDeContratos({ contratos, agir, ocupado }: { contratos: ContratoNaTela[]; agir: Agir; ocupado: boolean }) {
+  const { colors } = NOCTHERA_THEME;
+  return (
+    <Cartao titulo="Quadro de contratos">
+      <p className="text-xs" style={{ color: colors.text.secondary }}>Três contratos por dia (renovam à meia-noite de Brasília). As vitórias contam em qualquer luta contra monstros.</p>
+      <ul className="flex flex-col gap-1.5">
+        {contratos.map((c) => (
+          <li key={c.id} className="rounded-sm border px-2 py-1.5 flex flex-col gap-1" style={{ borderColor: c.pronto ? VERDE : BORDA, opacity: c.entregue ? 0.6 : 1 }}>
+            <span className="text-sm font-bold">{c.tipo === 'vencer' ? `Vença ${c.quantidade} lutas contra monstros` : `${NOME_DO_TIPO_DE_CONTRATO[c.tipo]} ${c.quantidade}× ${c.nomeAlvo}`}</span>
+            <span className="text-[11px]" style={{ color: colors.text.secondary }}>
+              {c.feito}/{c.quantidade} · Recompensa: {c.recompensa.ouro} de ouro, {c.recompensa.xpGuilda} XP de guilda{c.recompensa.materiais.length ? ', material raro' : ''}
+            </span>
+            {c.entregue ? (
+              <span className="text-xs font-semibold" style={{ color: VERDE }}>Entregue</span>
+            ) : (
+              <span><Botao disabled={ocupado || !c.pronto} onClick={() => void agir('entregarContrato', { contratoId: c.id })}>{c.pronto ? 'Entregar' : 'Em andamento'}</Botao></span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </Cartao>
   );
 }
 
@@ -165,6 +217,9 @@ function MinhaGuildaPainel({ guilda, agir, ocupado }: { guilda: MinhaGuilda; agi
               <span className="flex items-center justify-between gap-2">
                 <span className="font-bold truncate">{m.nome}</span>
                 <span className="text-[11px] uppercase tracking-wide" style={{ color: m.cargo === 'lider' ? '#F5E3B3' : colors.text.secondary }}>{NOME_DO_CARGO[m.cargo]}</span>
+              </span>
+              <span className="text-[11px]" style={{ color: colors.text.secondary }}>
+                Contribuiu com {m.xpContribuido ?? 0} XP
               </span>
               {acoesDoMembro(m.uid, m.nome, m.cargo).length > 0 && <span className="flex flex-wrap gap-1.5">{acoesDoMembro(m.uid, m.nome, m.cargo)}</span>}
             </li>
@@ -288,7 +343,7 @@ function SemGuilda({ estado, agir, ocupado, tokenFresco }: { estado: EstadoDaGui
           <ul className="flex flex-col gap-1.5">
             {estado.convites.map((g) => (
               <li key={g.id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="truncate">{g.nome} <span className="text-[11px]" style={{ color: colors.text.secondary }}>· {g.quantidadeMembros}/{regras.maxMembros}</span></span>
+                <span className="truncate">{g.nome} <span className="text-[11px]" style={{ color: colors.text.secondary }}>· {nivelDaGuilda(g.xp, regras).nome} · {g.quantidadeMembros} membros</span></span>
                 <span className="flex gap-1.5 shrink-0">
                   <Botao disabled={ocupado} onClick={() => void agir('aceitarConvite', { guildaId: g.id })}>Aceitar</Botao>
                   <Botao perigo disabled={ocupado} onClick={() => void agir('recusarConvite', { guildaId: g.id })}>Recusar</Botao>
@@ -332,7 +387,7 @@ function SemGuilda({ estado, agir, ocupado, tokenFresco }: { estado: EstadoDaGui
               <li key={g.id}>
                 <button type="button" onClick={() => void abrir(g.id)} className="w-full text-left rounded-sm border px-2 py-1.5 flex flex-col" style={{ borderColor: BORDA }}>
                   <span className="font-bold">{g.nome}</span>
-                  <span className="text-[11px]" style={{ color: colors.text.secondary }}>Líder: {g.lider} · {g.quantidadeMembros}/{regras.maxMembros} membros</span>
+                  <span className="text-[11px]" style={{ color: colors.text.secondary }}>{nivelDaGuilda(g.xp, regras).nome} · Líder: {g.lider} · {g.quantidadeMembros}/{nivelDaGuilda(g.xp, regras).maxMembros} membros</span>
                 </button>
               </li>
             ))}
@@ -342,7 +397,7 @@ function SemGuilda({ estado, agir, ocupado, tokenFresco }: { estado: EstadoDaGui
           <section aria-label={`Guilda ${aberta.nome}`} className="rounded-sm border-2 p-2.5 flex flex-col gap-1.5" style={{ borderColor: OURO }}>
             <h3 className="font-cinzel font-bold">{aberta.nome}</h3>
             {aberta.descricao && <p className="text-sm whitespace-pre-wrap" style={{ color: colors.text.secondary }}>{aberta.descricao}</p>}
-            <p className="text-xs">{aberta.quantidadeMembros}/{aberta.maxMembros} membros</p>
+            <p className="text-xs">{aberta.nivel.nome} · {aberta.quantidadeMembros}/{aberta.maxMembros} membros</p>
             <ul className="text-xs flex flex-col gap-0.5">
               {aberta.membros.map((m) => <li key={m.nome}>{m.nome} <span style={{ color: colors.text.secondary }}>· {NOME_DO_CARGO[m.cargo]}</span></li>)}
             </ul>

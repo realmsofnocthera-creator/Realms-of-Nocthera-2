@@ -15,6 +15,7 @@ import type { ProgressoDaCampanha } from '@/game/campanha';
 import { comprimirMapa, descomprimirMapa } from '@/rules/mapaComprimido';
 import type { MissoesDoJogador } from '@/game/missoes';
 import { chaveDeBusca, type CampoDoRanking, type CriterioDeRanking, type RankingGuardado, type ResumoDePersonagem } from '@/rules/social';
+import { contratosDoDocumento } from '@/game/contratos';
 import { chaveDoNomeDaGuilda, guildaDoDocumento, type GuildaDocumento } from '@/rules/guilda';
 import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
 import { MAXIMO_DE_ADVERTENCIAS, sancaoDocumentoVazio, type Advertencia, type SancaoDocumento } from '@/rules/sancoes';
@@ -359,6 +360,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(typeof data.guildaId === 'string' && data.guildaId ? { guildaId: data.guildaId, guildaNome: texto(data.guildaNome) } : {}),
     ...(idsDeGuilda(data.convitesDeGuilda).length ? { convitesDeGuilda: idsDeGuilda(data.convitesDeGuilda) } : {}),
     ...(idsDeGuilda(data.pedidosDeGuilda).length ? { pedidosDeGuilda: idsDeGuilda(data.pedidosDeGuilda) } : {}),
+    ...(contratosDoDocumento(data.contratos) ? { contratos: contratosDoDocumento(data.contratos) } : {}),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
       ? { bonusSubclasseAplicado: lerAtributos(data.bonusSubclasseAplicado, ZEROS_ATRIBUTOS) }
       : {}),
@@ -413,6 +415,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.guildaId ? { guildaId: char.guildaId, guildaNome: char.guildaNome ?? '' } : {}),
     ...(char.convitesDeGuilda?.length ? { convitesDeGuilda: char.convitesDeGuilda } : {}),
     ...(char.pedidosDeGuilda?.length ? { pedidosDeGuilda: char.pedidosDeGuilda } : {}),
+    ...(char.contratos ? { contratos: semUndefined(char.contratos) } : {}),
     // campos derivados, só para o banco poder ordenar e buscar (7.1): o nome em minúsculas e os contadores das provações
     nomeBusca: chaveDeBusca(char.nome),
     ...(char.batalhaSangrentaVencidas?.length ? { vitoriasBatalha: char.batalhaSangrentaVencidas.length } : {}),

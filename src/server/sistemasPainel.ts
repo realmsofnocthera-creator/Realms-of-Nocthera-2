@@ -105,8 +105,11 @@ export async function definirRegrasDeGuilda(sessao: SessaoMestre, pedido: { regr
   const motivo = motivoValido(pedido.motivo);
   const regras = regrasDeGuildaValidas(pedido.regras);
   if (!regras) {
-    const [n, c, m] = [LIMITES_DAS_REGRAS_DE_GUILDA.nivelMinimo, LIMITES_DAS_REGRAS_DE_GUILDA.custoOuro, LIMITES_DAS_REGRAS_DE_GUILDA.maxMembros];
-    throw new ErroMestre(400, `Regras inválidas: nível de ${n[0]} a ${n[1]}, ouro de ${c[0]} a ${c[1]} e membros de ${m[0]} a ${m[1]} (números inteiros).`);
+    const { nivelMinimo: n, custoOuro: c, xpPorNivel: x, membrosPorNivel: m } = LIMITES_DAS_REGRAS_DE_GUILDA;
+    throw new ErroMestre(
+      400,
+      `Regras inválidas: nível de ${n[0]} a ${n[1]}, ouro de ${c[0]} a ${c[1]}, 7 valores de XP (${x[0]} a ${x[1]}) e 8 de membros (${m[0]} a ${m[1]}, sem diminuir de um nível para o outro), todos inteiros.`
+    );
   }
   const atual = await lerConfiguracaoDeSistemas();
   const proxima: ConfiguracaoDeSistemas = structuredClone(atual);

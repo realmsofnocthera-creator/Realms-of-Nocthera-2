@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { NIVEIS_DA_GUILDA, type RegrasDeGuilda } from '@/rules/guilda';
 import { MENSAGEM_MAXIMA, mensagemDaManutencao, mensagemDoSistema, SISTEMAS, type ConfiguracaoDeSistemas, type SistemaId } from '@/rules/sistemas';
 import { dataDoLog } from '@/lib/mestreTela';
 import { NOCTHERA_THEME } from '@/theme/theme';
@@ -202,48 +203,71 @@ function CenaDeAbertura({ pode, config, tokenFresco, aplicar }: { pode: boolean;
   );
 }
 
-/** Regras das Guildas (7.3): o nível e o ouro para criar uma guilda e o máximo de membros. */
+/** Regras das Guildas (7.3): nível e ouro para criar e, por nível da guilda, o XP para subir e o máximo de membros. */
 function RegrasDasGuildas({ pode, config, aplicar }: { pode: boolean; config: ConfiguracaoDeSistemas; aplicar: (corpo: Record<string, unknown>) => Promise<string | null> }) {
   const { colors } = NOCTHERA_THEME;
-  const [regras, setRegras] = useState(config.guildas);
+  const [regras, setRegras] = useState<RegrasDeGuilda>(config.guildas);
   const [motivo, setMotivo] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const campo = 'rounded-sm border px-2 py-1 text-[12px] w-full';
   const estilo = { backgroundColor: colors.background.primary, borderColor: `${OURO}66`, color: colors.text.primary };
-  const ROTULOS: [keyof typeof regras, string][] = [['nivelMinimo', 'Nível mínimo para criar'], ['custoOuro', 'Ouro para criar'], ['maxMembros', 'Máximo de membros']];
+  const mudarLista = (chave: 'xpPorNivel' | 'membrosPorNivel', i: number, valor: number) => setRegras({ ...regras, [chave]: regras[chave].map((v, k) => (k === i ? valor : v)) });
 
   return (
-    <Cartao titulo="Guildas: regras">
+    <Cartao titulo="Guildas: regras e níveis">
       <p className="text-[11px]" style={{ color: colors.text.secondary }}>
-        Valem para as próximas criações e entradas. Uma guilda que já passou do novo máximo de membros continua com eles, mas não aceita ninguém novo.
+        Valem na hora. O XP é o que falta para subir do nível anterior. Uma guilda acima do máximo de membros continua com eles, mas não aceita ninguém novo.
       </p>
-      <p className="text-[12px] font-semibold">Agora: nível {config.guildas.nivelMinimo}, {config.guildas.custoOuro} de ouro, até {config.guildas.maxMembros} membros</p>
-      {pode && (
-        <form
-          className="flex flex-col gap-2"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            setOcupado(true);
-            setErro(null);
-            const falha = await aplicar({ alvo: 'guildas-regras', regras, motivo });
-            setOcupado(false);
-            if (falha) setErro(falha);
-            else setMotivo('');
-          }}
-        >
-          {ROTULOS.map(([chave, rotulo]) => (
-            <label key={chave} className="text-[11px] flex flex-col gap-0.5">{rotulo}
-              <input type="number" value={regras[chave]} onChange={(e) => setRegras({ ...regras, [chave]: Number(e.target.value) })} className={campo} style={estilo} required />
-            </label>
-          ))}
-          <label className="text-[11px] flex flex-col gap-0.5">Motivo (vai para o log)
-            <input value={motivo} onChange={(e) => setMotivo(e.target.value)} className={campo} style={estilo} required minLength={5} maxLength={300} />
+      <p className="text-[12px] font-semibold">Agora: criar pede nível {config.guildas.nivelMinimo} e {config.guildas.custoOuro} de ouro</p>
+      <form
+        className="flex flex-col gap-2"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setOcupado(true);
+          setErro(null);
+          const falha = await aplicar({ alvo: 'guildas-regras', regras, motivo });
+          setOcupado(false);
+          if (falha) setErro(falha);
+          else setMotivo('');
+        }}
+      >
+        <div className="grid grid-cols-2 gap-2">
+          <label className="text-[11px] flex flex-col gap-0.5">Nível para criar
+            <input type="number" disabled={!pode} value={regras.nivelMinimo} onChange={(e) => setRegras({ ...regras, nivelMinimo: Number(e.target.value) })} className={campo} style={estilo} required />
           </label>
-          <button type="submit" disabled={ocupado} className="self-start px-3 py-1.5 rounded font-cinzel font-bold text-xs disabled:opacity-50" style={{ backgroundColor: colors.accent.primary, color: colors.background.secondary }}>Definir</button>
-          {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
-        </form>
-      )}
+          <label className="text-[11px] flex flex-col gap-0.5">Ouro para criar
+            <input type="number" disabled={!pode} value={regras.custoOuro} onChange={(e) => setRegras({ ...regras, custoOuro: Number(e.target.value) })} className={campo} style={estilo} required />
+          </label>
+        </div>
+        <table className="text-[11px] w-full">
+          <thead>
+            <tr style={{ color: colors.text.secondary }}><th className="text-left font-semibold">Nível</th><th className="text-left font-semibold">XP para subir</th><th className="text-left font-semibold">Membros</th></tr>
+          </thead>
+          <tbody>
+            {NIVEIS_DA_GUILDA.map((n, i) => (
+              <tr key={n.nivel}>
+                <td className="pr-1">{n.nivel}. {n.nome}</td>
+                <td className="pr-1">
+                  {i === 0 ? '—' : <input type="number" aria-label={`XP para ${n.nome}`} disabled={!pode} value={regras.xpPorNivel[i - 1]} onChange={(e) => mudarLista('xpPorNivel', i - 1, Number(e.target.value))} className={campo} style={estilo} required />}
+                </td>
+                <td>
+                  <input type="number" aria-label={`Membros em ${n.nome}`} disabled={!pode} value={regras.membrosPorNivel[i]} onChange={(e) => mudarLista('membrosPorNivel', i, Number(e.target.value))} className={campo} style={estilo} required />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {pode && (
+          <>
+            <label className="text-[11px] flex flex-col gap-0.5">Motivo (vai para o log)
+              <input value={motivo} onChange={(e) => setMotivo(e.target.value)} className={campo} style={estilo} required minLength={5} maxLength={300} />
+            </label>
+            <button type="submit" disabled={ocupado} className="self-start px-3 py-1.5 rounded font-cinzel font-bold text-xs disabled:opacity-50" style={{ backgroundColor: colors.accent.primary, color: colors.background.secondary }}>Definir</button>
+          </>
+        )}
+        {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
+      </form>
     </Cartao>
   );
 }
