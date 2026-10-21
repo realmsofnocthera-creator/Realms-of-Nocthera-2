@@ -111,4 +111,20 @@ describe('Tileset importado (formato 1)', () => {
       expect(erros({ ...base(), origem: 'x' })).toMatch(/precisa ser um objeto/);
     });
   });
+
+  it('regras de borda automática: aceita 16 tiles do tileset e devolve a cópia limpa; recusa o resto', () => {
+    const base = tilesetDeTeste(); // 64 × 32, tiles de 16: 8 tiles
+    const regra = { id: 'grama', nome: ' Grama ', tiles: Array.from({ length: 16 }, (_, i) => i % 8) };
+    const v = validarTileset({ ...base, bordas: [regra] });
+    expect(v.ok && v.dados.bordas).toEqual([{ id: 'grama', nome: 'Grama', tiles: regra.tiles }]);
+    expect(validarTileset(base).ok && (validarTileset(base) as { dados: object }).dados).not.toHaveProperty('bordas');
+    expect(erros({ ...base, bordas: [{ ...regra, tiles: regra.tiles.slice(1) }] })).toMatch(/16 tiles/);
+    expect(erros({ ...base, bordas: [{ ...regra, tiles: [...regra.tiles.slice(1), 8] }] })).toMatch(/16 tiles que existam/);
+    expect(erros({ ...base, bordas: [{ ...regra, id: 'Grama Ruim' }] })).toMatch(/identificador inválido/);
+    expect(erros({ ...base, bordas: [regra, regra] })).toMatch(/repetido/);
+    expect(erros({ ...base, bordas: [{ ...regra, nome: '' }] })).toMatch(/nome/);
+    expect(erros({ ...base, bordas: [{ ...regra, extra: 1 }] })).toMatch(/campos desconhecidos/);
+    expect(erros({ ...base, bordas: 'x' })).toMatch(/lista de até 8/);
+    expect(erros({ ...base, bordas: Array.from({ length: 9 }, (_, i) => ({ ...regra, id: `r${i}` })) })).toMatch(/lista de até 8/);
+  });
 });

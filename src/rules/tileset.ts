@@ -33,6 +33,27 @@ export interface OrigemDoTileset {
   tiles: number[];
 }
 
+/**
+ * Regra de borda automática (auto-tile) de um terreno (grama, água, caminho): 16 tiles, um para cada combinação de
+ * vizinhos do MESMO terreno. O número da posição na lista é a soma: 1 se o vizinho de cima é do mesmo terreno, 2 se o
+ * da direita, 4 se o de baixo, 8 se o da esquerda. Assim a posição 0 é o tile sozinho (sem vizinhos) e a 15 é o do
+ * miolo (os quatro vizinhos). Ao pintar com um tile da regra, o editor escolhe sozinho o tile certo de cada célula.
+ * Os números são tiles do próprio tileset (a partir de 0) e podem se repetir (quem não tem todas as variações reusa).
+ */
+export interface RegraDeBorda {
+  id: string;
+  nome: string;
+  tiles: number[];
+}
+export const MAXIMO_DE_BORDAS = 8;
+export const NOME_MAXIMO_DA_BORDA = 40;
+export const ID_DE_BORDA = /^[a-z0-9][a-z0-9-]{0,23}$/;
+/** Bits da posição na lista da regra. */
+export const BORDA_CIMA = 1;
+export const BORDA_DIREITA = 2;
+export const BORDA_BAIXO = 4;
+export const BORDA_ESQUERDA = 8;
+
 export interface TilesetDados {
   formato: typeof FORMATO_DO_TILESET;
   /** data:image/png;base64,... (tilesets antigos). Exatamente um entre `imagem` e `imagemUrl`. */
@@ -48,6 +69,8 @@ export interface TilesetDados {
   linhas: number;
   /** Só tileset montado a partir de tiles escolhidos de uma folha. Exige `imagemUrl`. */
   origem?: OrigemDoTileset;
+  /** Regras de borda automática dos terrenos deste tileset (opcional). */
+  bordas?: RegraDeBorda[];
 }
 
 const PREFIXO = 'data:image/png;base64,';
@@ -147,7 +170,7 @@ export function validarTileset(bruto: unknown): ResultadoValidacao<TilesetDados>
   if (typeof bruto !== 'object' || bruto === null || Array.isArray(bruto)) return { ok: false, erros: ['O tileset precisa ser um objeto.'] };
   const b = bruto as Record<string, unknown>;
   const erros: string[] = [];
-  const permitidos = ['formato', 'imagem', 'imagemUrl', 'larguraImagem', 'alturaImagem', 'tamanhoDoTile', 'margem', 'espacamento', 'colunas', 'linhas', 'origem'];
+  const permitidos = ['formato', 'imagem', 'imagemUrl', 'larguraImagem', 'alturaImagem', 'tamanhoDoTile', 'margem', 'espacamento', 'colunas', 'linhas', 'origem', 'bordas'];
   const extras = Object.keys(b).filter((k) => !permitidos.includes(k));
   if (extras.length) erros.push(`Campos desconhecidos no tileset: ${extras.join(', ')}.`);
   if (b.formato !== FORMATO_DO_TILESET) erros.push(`Formato do tileset não suportado (esperado ${FORMATO_DO_TILESET}).`);
@@ -202,6 +225,34 @@ export function validarTileset(bruto: unknown): ResultadoValidacao<TilesetDados>
     else origem = r.origem;
   }
 
+  const bordas: RegraDeBorda[] = [];
+  if (b.bordas !== undefined) {
+    const total = inteiroEntre(b.colunas, 1, TILES_POR_TILESET) && inteiroEntre(b.linhas, 1, TILES_POR_TILESET) ? b.colunas * b.linhas : 0;
+    if (!Array.isArray(b.bordas) || b.bordas.length > MAXIMO_DE_BORDAS) {
+      erros.push(`As regras de borda são uma lista de até ${MAXIMO_DE_BORDAS}.`);
+    } else {
+      const ids = new Set<string>();
+      b.bordas.forEach((r: unknown, i: number) => {
+        const rotulo = `Borda ${i + 1}`;
+        if (typeof r !== 'object' || r === null || Array.isArray(r)) return void erros.push(`${rotulo}: formato inválido.`);
+        const o = r as Record<string, unknown>;
+        const extra = Object.keys(o).filter((k) => !['id', 'nome', 'tiles'].includes(k));
+        if (extra.length) erros.push(`${rotulo}: campos desconhecidos (${extra.join(', ')}).`);
+        const id = typeof o.id === 'string' ? o.id : '';
+        if (!ID_DE_BORDA.test(id)) erros.push(`${rotulo}: identificador inválido (minúsculas, números e hífen, até 24).`);
+        else if (ids.has(id)) erros.push(`${rotulo}: identificador repetido.`);
+        ids.add(id);
+        const nome = typeof o.nome === 'string' ? o.nome.trim() : '';
+        if (nome.length < 1 || nome.length > NOME_MAXIMO_DA_BORDA) erros.push(`${rotulo}: o nome vai de 1 a ${NOME_MAXIMO_DA_BORDA} caracteres.`);
+        if (!Array.isArray(o.tiles) || o.tiles.length !== 16 || o.tiles.some((t: unknown) => !inteiroEntre(t, 0, Math.max(0, total - 1)))) {
+          erros.push(`${rotulo}: precisa de 16 tiles que existam no tileset.`);
+        } else {
+          bordas.push({ id, nome, tiles: [...(o.tiles as number[])] });
+        }
+      });
+    }
+  }
+
   if (erros.length) return { ok: false, erros };
   return {
     ok: true,
@@ -216,6 +267,7 @@ export function validarTileset(bruto: unknown): ResultadoValidacao<TilesetDados>
       colunas: b.colunas as number,
       linhas: b.linhas as number,
       ...(origem ? { origem } : {}),
+      ...(bordas.length ? { bordas } : {}),
     },
   };
 }
