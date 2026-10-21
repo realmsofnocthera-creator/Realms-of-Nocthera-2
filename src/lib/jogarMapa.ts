@@ -31,7 +31,7 @@ export interface EstadoDeJogo {
 }
 
 export type EventoDeJogo =
-  | { tipo: 'texto'; titulo: string; texto: string }
+  | { tipo: 'texto'; titulo: string; texto: string; /** Quando é a fala de um NPC: qual (a Campanha avisa o servidor, para as missões). */ npcId?: string }
   | { tipo: 'item'; objetoId: string; item: { id: string; qtd: number } }
   | { tipo: 'bau-vazio' }
   | { tipo: 'porta'; objetoId: string; destino: { mapa: string; x: number; y: number } }
@@ -95,7 +95,7 @@ export function interagir(estado: EstadoDeJogo): { estado: EstadoDeJogo; eventos
   switch (alvo.tipo) {
     case 'npc':
       if (alvo.cenaId) return { estado, eventos: [{ tipo: 'cena', objetoId: alvo.id, cenaId: alvo.cenaId, unica: false, titulo: alvo.nome || 'NPC' }] };
-      return { estado, eventos: [{ tipo: 'texto', titulo: alvo.nome || 'NPC', texto: alvo.texto?.trim() || '(o NPC ainda não tem fala escrita)' }] };
+      return { estado, eventos: [{ tipo: 'texto', titulo: alvo.nome || 'NPC', texto: alvo.texto?.trim() || '(o NPC ainda não tem fala escrita)', npcId: alvo.id }] };
     case 'placa':
       return { estado, eventos: [{ tipo: 'texto', titulo: 'Placa', texto: alvo.texto?.trim() || '(a placa ainda não tem texto)' }] };
     case 'bau':

@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { CHAVE_DA_ABERTURA, MAXIMO_DE_CENAS_VISTAS, planejarCenaVista, aplicarPosicaoDaAcao, chaveDaArea, chaveDoBau, DESCANSO_DA_AREA_MS, descansosComA, MAXIMO_DE_DESCANSOS, planejarLuta, planejarBau, planejarPorta, planejarPosicao, posicaoInicialDoMapa, progressoInicial, MAXIMO_DE_BAUS_GUARDADOS, type ProgressoDaCampanha } from '@/game/campanha';
+import { CHAVE_DA_ABERTURA, MAXIMO_DE_CENAS_VISTAS, planejarAberturaVista, planejarAcao, aplicarPosicaoDaAcao, chaveDaArea, chaveDoBau, DESCANSO_DA_AREA_MS, descansosComA, MAXIMO_DE_DESCANSOS, planejarLuta, planejarBau, planejarPorta, planejarPosicao, posicaoInicialDoMapa, progressoInicial, MAXIMO_DE_BAUS_GUARDADOS, type ProgressoDaCampanha } from '@/game/campanha';
+import type { SituacaoDoJogador } from '@/rules/condicao';
 import { mapaVazio, type MapaDados } from '@/rules/mapa';
 import { objetoNovo, type ObjetoDoMapa } from '@/rules/objetosDoMapa';
 
 const AGORA = '2026-10-17T12:00:00.000Z';
+const LIVRE: SituacaoDoJogador = { nivel: 99, inventario: { 'pelo-de-rato': 99 }, missoesAtivas: [], missoesConcluidas: [], cenasVistas: [] };
+const situacao = (parte: Partial<SituacaoDoJogador> = {}): SituacaoDoJogador => ({ ...LIVRE, nivel: 1, inventario: {}, ...parte });
 const mapa = (objetos: ObjetoDoMapa[], colisao: [number, number][] = []): MapaDados => {
   const m = mapaVazio(10, 8);
   m.objetos = objetos;
@@ -52,30 +55,30 @@ describe('Campanha: regras do progresso (5.5-3 e 5.5-8)', () => {
   describe('baú', () => {
     it('abre perto e uma vez só; guarda a chave "mapa:objeto"', () => {
       const m = mapa([bau('bau-1', 3, 1)]);
-      const r = planejarBau(prog({ x: 2, y: 1 }), m, 'bau-1', AGORA);
+      const r = planejarBau(prog({ x: 2, y: 1 }), m, 'bau-1', AGORA, LIVRE);
       expect(r).toMatchObject({ ok: true, item: { id: 'pelo-de-rato', qtd: 3 }, progresso: { baus: ['vila:bau-1'] } });
       if (!r.ok) return;
-      expect(planejarBau(r.progresso, m, 'bau-1', AGORA)).toMatchObject({ ok: false, erro: expect.stringMatching(/já foi aberto/) });
+      expect(planejarBau(r.progresso, m, 'bau-1', AGORA, LIVRE)).toMatchObject({ ok: false, erro: expect.stringMatching(/já foi aberto/) });
       expect(chaveDoBau('vila', 'bau-1')).toBe('vila:bau-1');
     });
 
     it('recusa baú longe, que não existe, que não é baú, com id inválido ou sem item', () => {
       const m = mapa([bau('bau-1', 8, 6), objetoNovo('placa', 'placa-1', 2, 1), { ...objetoNovo('bau', 'vazio', 2, 2), item: undefined }]);
-      expect(planejarBau(prog(), m, 'bau-1', AGORA)).toMatchObject({ ok: false, erro: expect.stringMatching(/mais perto/) });
-      expect(planejarBau(prog(), m, 'nao-existe', AGORA).ok).toBe(false);
-      expect(planejarBau(prog(), m, 'placa-1', AGORA).ok).toBe(false);
-      expect(planejarBau(prog(), m, 42, AGORA).ok).toBe(false);
-      expect(planejarBau(prog(), m, 'vazio', AGORA).ok).toBe(false);
+      expect(planejarBau(prog(), m, 'bau-1', AGORA, LIVRE)).toMatchObject({ ok: false, erro: expect.stringMatching(/mais perto/) });
+      expect(planejarBau(prog(), m, 'nao-existe', AGORA, LIVRE).ok).toBe(false);
+      expect(planejarBau(prog(), m, 'placa-1', AGORA, LIVRE).ok).toBe(false);
+      expect(planejarBau(prog(), m, 42, AGORA, LIVRE).ok).toBe(false);
+      expect(planejarBau(prog(), m, 'vazio', AGORA, LIVRE).ok).toBe(false);
     });
 
     it('o mesmo id de baú em outro mapa é outro baú', () => {
       const m = mapa([bau('bau-1', 3, 1)]);
-      expect(planejarBau(prog({ baus: ['floresta:bau-1'], x: 2 }), m, 'bau-1', AGORA).ok).toBe(true);
+      expect(planejarBau(prog({ baus: ['floresta:bau-1'], x: 2 }), m, 'bau-1', AGORA, LIVRE).ok).toBe(true);
     });
 
     it('recusa quando a lista de baús abertos está cheia', () => {
       const cheio = Array.from({ length: MAXIMO_DE_BAUS_GUARDADOS }, (_, i) => `x:${i}`);
-      expect(planejarBau(prog({ baus: cheio, x: 2 }), mapa([bau('bau-1', 3, 1)]), 'bau-1', AGORA).ok).toBe(false);
+      expect(planejarBau(prog({ baus: cheio, x: 2 }), mapa([bau('bau-1', 3, 1)]), 'bau-1', AGORA, LIVRE).ok).toBe(false);
     });
   });
 
@@ -83,17 +86,17 @@ describe('Campanha: regras do progresso (5.5-3 e 5.5-8)', () => {
     it('leva ao mapa e à posição de destino, conservando os baús abertos', () => {
       const origem = mapa([porta('porta-1', 2, 1)]);
       const destino = mapa([]);
-      const r = planejarPorta(prog({ baus: ['vila:bau-1'] }), origem, 'porta-1', destino, AGORA);
+      const r = planejarPorta(prog({ baus: ['vila:bau-1'] }), origem, 'porta-1', destino, AGORA, LIVRE);
       expect(r).toMatchObject({ ok: true, progresso: { mapaId: 'floresta', x: 2, y: 2, baus: ['vila:bau-1'] } });
     });
 
     it('recusa porta longe, inexistente, destino não publicado, fora do mapa ou bloqueado', () => {
       const origem = mapa([porta('porta-1', 8, 6), porta('perto', 2, 1), porta('fora', 1, 2, { mapa: 'floresta', x: 50, y: 50 })]);
-      expect(planejarPorta(prog(), origem, 'porta-1', mapa([]), AGORA)).toMatchObject({ ok: false, erro: expect.stringMatching(/mais perto/) });
-      expect(planejarPorta(prog(), origem, 'sumiu', mapa([]), AGORA).ok).toBe(false);
-      expect(planejarPorta(prog(), origem, 'perto', null, AGORA)).toMatchObject({ ok: false, erro: expect.stringMatching(/fechada/) });
-      expect(planejarPorta(prog(), origem, 'fora', mapa([]), AGORA).ok).toBe(false);
-      expect(planejarPorta(prog(), origem, 'perto', mapa([], [[2, 2]]), AGORA).ok).toBe(false);
+      expect(planejarPorta(prog(), origem, 'porta-1', mapa([]), AGORA, LIVRE)).toMatchObject({ ok: false, erro: expect.stringMatching(/mais perto/) });
+      expect(planejarPorta(prog(), origem, 'sumiu', mapa([]), AGORA, LIVRE).ok).toBe(false);
+      expect(planejarPorta(prog(), origem, 'perto', null, AGORA, LIVRE)).toMatchObject({ ok: false, erro: expect.stringMatching(/fechada/) });
+      expect(planejarPorta(prog(), origem, 'fora', mapa([]), AGORA, LIVRE).ok).toBe(false);
+      expect(planejarPorta(prog(), origem, 'perto', mapa([], [[2, 2]]), AGORA, LIVRE).ok).toBe(false);
     });
   });
 
@@ -119,7 +122,7 @@ describe('Campanha: regras do progresso (5.5-3 e 5.5-8)', () => {
     const area = (id = 'area-1', x = 4, y = 3): ObjetoDoMapa => ({ ...objetoNovo('cacada', id, x, y), largura: 2, altura: 2, monstroId: 'rato-da-floresta' });
 
     it('vale com o jogador dentro da área: vitória fica onde está, derrota volta ao ponto salvo, e a área descansa nos dois casos', () => {
-      const r = planejarLuta(prog(), mapa([area()]), 'area-1', { mapaId: 'vila', x: 5, y: 4 }, AGORA, AGORA_MS);
+      const r = planejarLuta(prog(), mapa([area()]), 'area-1', { mapaId: 'vila', x: 5, y: 4 }, AGORA, AGORA_MS, LIVRE);
       expect(r.ok).toBe(true);
       if (!r.ok) return;
       expect(r.plano).toMatchObject({ objetoId: 'area-1', monstroId: 'rato-da-floresta', chave: 'vila:area-1', descansaAte: AGORA_MS + DESCANSO_DA_AREA_MS });
@@ -128,24 +131,24 @@ describe('Campanha: regras do progresso (5.5-3 e 5.5-8)', () => {
     });
 
     it('sem posição enviada, usa a posição salva (que precisa estar dentro da área)', () => {
-      expect(planejarLuta(prog({ x: 4, y: 3 }), mapa([area()]), 'area-1', undefined, AGORA, AGORA_MS).ok).toBe(true);
-      expect(planejarLuta(prog({ x: 1, y: 1 }), mapa([area()]), 'area-1', undefined, AGORA, AGORA_MS)).toMatchObject({ ok: false, erro: expect.stringMatching(/não está nessa área/) });
+      expect(planejarLuta(prog({ x: 4, y: 3 }), mapa([area()]), 'area-1', undefined, AGORA, AGORA_MS, LIVRE).ok).toBe(true);
+      expect(planejarLuta(prog({ x: 1, y: 1 }), mapa([area()]), 'area-1', undefined, AGORA, AGORA_MS, LIVRE)).toMatchObject({ ok: false, erro: expect.stringMatching(/não está nessa área/) });
     });
 
     it('recusa fora da área, área que não existe, objeto que não é área e posição inválida', () => {
       const m = mapa([area(), bau('bau-1', 3, 1)]);
-      expect(planejarLuta(prog(), m, 'area-1', { mapaId: 'vila', x: 2, y: 2 }, AGORA, AGORA_MS)).toMatchObject({ ok: false, erro: expect.stringMatching(/não está nessa área/) });
-      expect(planejarLuta(prog(), m, 'nao-existe', { mapaId: 'vila', x: 4, y: 3 }, AGORA, AGORA_MS).ok).toBe(false);
-      expect(planejarLuta(prog(), m, 'bau-1', { mapaId: 'vila', x: 3, y: 1 }, AGORA, AGORA_MS).ok).toBe(false);
-      expect(planejarLuta(prog(), m, 42, { mapaId: 'vila', x: 4, y: 3 }, AGORA, AGORA_MS).ok).toBe(false);
-      expect(planejarLuta(prog(), m, 'area-1', { mapaId: 'floresta', x: 4, y: 3 }, AGORA, AGORA_MS).ok).toBe(false);
+      expect(planejarLuta(prog(), m, 'area-1', { mapaId: 'vila', x: 2, y: 2 }, AGORA, AGORA_MS, LIVRE)).toMatchObject({ ok: false, erro: expect.stringMatching(/não está nessa área/) });
+      expect(planejarLuta(prog(), m, 'nao-existe', { mapaId: 'vila', x: 4, y: 3 }, AGORA, AGORA_MS, LIVRE).ok).toBe(false);
+      expect(planejarLuta(prog(), m, 'bau-1', { mapaId: 'vila', x: 3, y: 1 }, AGORA, AGORA_MS, LIVRE).ok).toBe(false);
+      expect(planejarLuta(prog(), m, 42, { mapaId: 'vila', x: 4, y: 3 }, AGORA, AGORA_MS, LIVRE).ok).toBe(false);
+      expect(planejarLuta(prog(), m, 'area-1', { mapaId: 'floresta', x: 4, y: 3 }, AGORA, AGORA_MS, LIVRE).ok).toBe(false);
     });
 
     it('área descansando recusa e diz até quando; passado o descanso, vale de novo', () => {
       const descansando = prog({ descansos: { [chaveDaArea('vila', 'area-1')]: AGORA_MS + 120_000 } });
-      const r = planejarLuta(descansando, mapa([area()]), 'area-1', { mapaId: 'vila', x: 4, y: 3 }, AGORA, AGORA_MS);
+      const r = planejarLuta(descansando, mapa([area()]), 'area-1', { mapaId: 'vila', x: 4, y: 3 }, AGORA, AGORA_MS, LIVRE);
       expect(r).toMatchObject({ ok: false, erro: expect.stringMatching(/calma por enquanto.*2 minutos/), descansaAte: AGORA_MS + 120_000 });
-      expect(planejarLuta(descansando, mapa([area()]), 'area-1', { mapaId: 'vila', x: 4, y: 3 }, AGORA, AGORA_MS + 120_001).ok).toBe(true);
+      expect(planejarLuta(descansando, mapa([area()]), 'area-1', { mapaId: 'vila', x: 4, y: 3 }, AGORA, AGORA_MS + 120_001, LIVRE).ok).toBe(true);
     });
 
     it('os descansos terminados saem da lista e o teto de áreas é respeitado', () => {
@@ -157,29 +160,68 @@ describe('Campanha: regras do progresso (5.5-3 e 5.5-8)', () => {
     });
   });
 
-  describe('cenas vistas', () => {
-    const ativador = (id: string, unica: boolean): ObjetoDoMapa => ({ ...objetoNovo('cena', id, 3, 3), cenaId: 'chegada', unica });
-    const m = mapa([ativador('c1', true), ativador('c2', false), objetoNovo('inicio', 'i', 1, 1)]);
-
-    it('abertura: só vale se configurada; marca uma vez', () => {
-      expect(planejarCenaVista(prog(), m, { abertura: true }, false, AGORA)).toEqual({ ok: false, erro: 'Não há cena de abertura.' });
-      const r = planejarCenaVista(prog(), m, { abertura: true }, true, AGORA);
-      expect(r).toMatchObject({ ok: true, progresso: { cenas: [CHAVE_DA_ABERTURA], atualizadoEm: AGORA } });
-      if (r.ok) expect(planejarCenaVista(r.progresso, m, { abertura: true }, true, 'depois')).toEqual({ ok: true, progresso: r.progresso });
+  describe('condições de acesso (porta, baú e área de monstros)', () => {
+    const AGORA_MS = Date.parse(AGORA);
+    it('porta, baú e área só valem para quem cumpre a condição, com a mensagem escrita', () => {
+      const condicao = { missaoConcluida: 'primeira', mensagem: 'Trancada.' };
+      const m = mapa([{ ...porta('porta-1', 2, 1), condicao }, { ...bau('bau-1', 1, 2), condicao }, { ...objetoNovo('cacada', 'area-1', 0, 0), largura: 2, altura: 2, monstroId: 'rato-da-floresta', condicao }]);
+      const livre = situacao({ missoesConcluidas: ['primeira'] });
+      const preso = situacao();
+      expect(planejarPorta(prog({ x: 2, y: 1 }), m, 'porta-1', mapa([]), AGORA, preso)).toEqual({ ok: false, erro: 'Trancada.' });
+      expect(planejarPorta(prog({ x: 2, y: 1 }), m, 'porta-1', mapa([]), AGORA, livre).ok).toBe(true);
+      expect(planejarBau(prog({ x: 1, y: 1 }), m, 'bau-1', AGORA, preso)).toEqual({ ok: false, erro: 'Trancada.' });
+      expect(planejarBau(prog({ x: 1, y: 1 }), m, 'bau-1', AGORA, livre).ok).toBe(true);
+      expect(planejarLuta(prog({ x: 1, y: 1 }), m, 'area-1', undefined, AGORA, AGORA_MS, preso)).toEqual({ ok: false, erro: 'Trancada.' });
+      expect(planejarLuta(prog({ x: 1, y: 1 }), m, 'area-1', undefined, AGORA, AGORA_MS, livre).ok).toBe(true);
     });
+  });
 
-    it('ativador "uma vez só" marca mapa:objeto; "toda vez" não grava; objeto errado dá erro', () => {
-      expect(planejarCenaVista(prog(), m, { objetoId: 'c1' }, false, AGORA)).toMatchObject({ ok: true, progresso: { cenas: ['vila:c1'] } });
-      const sem = prog();
-      expect(planejarCenaVista(sem, m, { objetoId: 'c2' }, false, AGORA)).toEqual({ ok: true, progresso: sem });
-      expect(planejarCenaVista(prog(), m, { objetoId: 'i' }, false, AGORA).ok).toBe(false);
-      expect(planejarCenaVista(prog(), m, { objetoId: 7 }, false, AGORA).ok).toBe(false);
-    });
-
-    it('para de registrar no teto', () => {
+  describe('abertura e acionar NPCs e ativadores', () => {
+    it('abertura: só vale se configurada; marca uma vez e guarda também a cena vista', () => {
+      expect(planejarAberturaVista(prog(), '', AGORA)).toEqual({ ok: false, erro: 'Não há cena de abertura.' });
+      const r = planejarAberturaVista(prog(), 'abertura', AGORA);
+      expect(r).toMatchObject({ ok: true, progresso: { cenas: [CHAVE_DA_ABERTURA, 'cena:abertura'], atualizadoEm: AGORA } });
+      if (r.ok) expect(planejarAberturaVista(r.progresso, 'abertura', 'depois')).toEqual({ ok: true, progresso: r.progresso });
       const cheio = prog({ cenas: Array.from({ length: MAXIMO_DE_CENAS_VISTAS }, (_, i) => `x:${i}`) });
-      expect(planejarCenaVista(cheio, m, { objetoId: 'c1' }, false, AGORA).ok).toBe(false);
-      expect(planejarCenaVista(cheio, m, { abertura: true }, true, AGORA).ok).toBe(false);
+      expect(planejarAberturaVista(cheio, 'abertura', AGORA).ok).toBe(false);
+    });
+
+    const npc = (extra: Partial<ObjetoDoMapa> = {}): ObjetoDoMapa => ({ ...objetoNovo('npc', 'npc-1', 3, 1), nome: 'Chefe', ...extra });
+    const ativador = (extra: Partial<ObjetoDoMapa> = {}): ObjetoDoMapa => ({ ...objetoNovo('cena', 'cena-1', 4, 3), largura: 2, altura: 2, cenaId: 'chegada', ...extra });
+
+    it('NPC: precisa estar perto; anda "falar", toca o diálogo e pede a missão', () => {
+      const m = mapa([npc({ cenaId: 'dialogo', missaoId: 'primeira' })]);
+      expect(planejarAcao(prog({ x: 0, y: 1 }), m, 'npc-1', undefined, LIVRE, AGORA)).toEqual({ ok: false, erro: 'Chegue mais perto.' });
+      const r = planejarAcao(prog({ x: 2, y: 1 }), m, 'npc-1', undefined, LIVRE, AGORA);
+      expect(r).toMatchObject({ ok: true, plano: { cenaId: 'dialogo', iniciar: ['primeira'], eventos: [{ tipo: 'falar', mapa: 'vila', objeto: 'npc-1' }, { tipo: 'cena', cenaId: 'dialogo' }], progresso: { cenas: ['cena:dialogo'] } } });
+      // diálogo toca sempre; sem cena nem missão, só registra o "falar"
+      const simples = planejarAcao(prog({ x: 2, y: 1 }), mapa([npc()]), 'npc-1', undefined, LIVRE, AGORA);
+      expect(simples).toMatchObject({ ok: true, plano: { iniciar: [], eventos: [{ tipo: 'falar' }] } });
+      expect(simples.ok && simples.plano).not.toHaveProperty('cenaId');
+      expect(planejarAcao(prog({ x: 2, y: 1 }), m, 'sumiu', undefined, LIVRE, AGORA).ok).toBe(false);
+      expect(planejarAcao(prog({ x: 2, y: 1 }), m, 42, undefined, LIVRE, AGORA).ok).toBe(false);
+      expect(planejarAcao(prog({ x: 2, y: 1 }), m, 'npc-1', { mapaId: 'floresta', x: 2, y: 1 }, LIVRE, AGORA).ok).toBe(false);
+    });
+
+    it('ativador: precisa estar na área; toca uma vez só (ou sempre), começa missão e respeita a condição', () => {
+      const m = mapa([ativador({ missaoId: 'primeira' })]);
+      expect(planejarAcao(prog({ x: 1, y: 1 }), m, 'cena-1', undefined, LIVRE, AGORA)).toMatchObject({ ok: false, erro: expect.stringMatching(/não está nessa área/) });
+      const r = planejarAcao(prog({ x: 4, y: 3 }), m, 'cena-1', undefined, LIVRE, AGORA);
+      expect(r).toMatchObject({ ok: true, plano: { cenaId: 'chegada', iniciar: ['primeira'], eventos: [{ tipo: 'cena', cenaId: 'chegada' }], progresso: { cenas: ['vila:cena-1', 'cena:chegada'] } } });
+      // já viu: nada acontece
+      const depois = planejarAcao(r.ok ? r.plano.progresso : prog(), m, 'cena-1', undefined, LIVRE, AGORA);
+      expect(depois).toMatchObject({ ok: true, plano: { iniciar: [], eventos: [] } });
+      expect(depois.ok && depois.plano).not.toHaveProperty('cenaId');
+      // "toda vez": toca de novo e não guarda a chave do ativador
+      const sempre = mapa([ativador({ unica: false })]);
+      const a = planejarAcao(prog({ x: 4, y: 3 }), sempre, 'cena-1', undefined, LIVRE, AGORA);
+      const b = planejarAcao(a.ok ? a.plano.progresso : prog(), sempre, 'cena-1', undefined, LIVRE, AGORA);
+      expect(b).toMatchObject({ ok: true, plano: { cenaId: 'chegada' } });
+      expect(a.ok && a.plano.progresso.cenas).toEqual(['cena:chegada']);
+      // condição não atendida: nada toca, nada é marcado
+      const preso = planejarAcao(prog({ x: 4, y: 3 }), mapa([ativador({ condicao: { missaoConcluida: 'primeira', mensagem: 'Ainda não.' } })]), 'cena-1', undefined, situacao(), AGORA);
+      expect(preso).toMatchObject({ ok: true, plano: { bloqueio: 'Ainda não.', iniciar: [], eventos: [] } });
+      expect(preso.ok && preso.plano.progresso.cenas).toBeUndefined();
     });
   });
 });

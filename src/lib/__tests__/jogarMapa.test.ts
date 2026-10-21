@@ -62,7 +62,7 @@ describe('Jogar o mapa (3.5.6.6)', () => {
   it('NPC e placa mostram o texto; sem texto, avisam que ainda não foi escrito', () => {
     const e = comecar([{ ...objetoNovo('npc', 'npc-1', 3, 2), nome: 'Aldric', texto: 'Cuidado.' }, { ...objetoNovo('placa', 'placa-1', 2, 3), texto: '' }]);
     const aoNpc = andar(e, 'direita').estado;
-    expect(interagir(aoNpc).eventos).toEqual([{ tipo: 'texto', titulo: 'Aldric', texto: 'Cuidado.' }]);
+    expect(interagir(aoNpc).eventos).toEqual([{ tipo: 'texto', titulo: 'Aldric', texto: 'Cuidado.', npcId: expect.any(String) }]);
     const aPlaca = andar(e, 'baixo').estado;
     expect(interagir(aPlaca).eventos[0]).toMatchObject({ tipo: 'texto', titulo: 'Placa', texto: expect.stringMatching(/ainda não tem texto/) });
   });

@@ -3,9 +3,10 @@ import { NextRequest } from 'next/server';
 import { GET as estadoRota } from '@/app/api/campanha/estado/route';
 import { GET as cenaRota } from '@/app/api/campanha/cena/route';
 import { POST as vistaRota } from '@/app/api/campanha/cena/vista/route';
+import { POST as acionarRota } from '@/app/api/campanha/acionar/route';
 import { POST as sistemasRota } from '@/app/api/mestre/sistemas/route';
 import { limparCacheRevogacao } from '@/server/auth';
-import { campanhaCena, campanhaCenaVista, campanhaEstado, createCharacter, getCharacterByUid } from '@/server/characterService';
+import { campanhaAberturaVista, campanhaAcionar, campanhaCena, campanhaEstado, createCharacter, getCharacterByUid } from '@/server/characterService';
 import { criarConteudo, limparCacheDoConteudo, publicarConteudo } from '@/server/conteudo';
 import { DONOS_DO_PROJETO, type SessaoMestre } from '@/server/mestre';
 import { limparCacheDeSancoes } from '@/server/sancoes';
@@ -93,20 +94,20 @@ describe('Campanha: cenas (abertura, ativadores e diálogos)', () => {
       expect((await campanhaEstado('j1')).abertura).toBeUndefined();
       await definirCenaDeAbertura(dono, { cena: 'abertura', motivo: M });
       expect(await campanhaEstado('j1')).toMatchObject({ abertura: 'abertura', jogador: { nome: 'Heroi_j1' } });
-      const r = await campanhaCenaVista('j1', { abertura: true });
-      expect(r.progresso?.cenas).toEqual(['abertura']);
+      const r = await campanhaAberturaVista('j1');
+      expect(r.progresso?.cenas).toEqual(['abertura', 'cena:abertura']);
       expect((await campanhaEstado('j1')).abertura).toBeUndefined();
-      expect((await getCharacterByUid('j1'))!.campanha?.cenas).toEqual(['abertura']);
-      expect((await campanhaCenaVista('j1', { abertura: true })).progresso?.cenas).toEqual(['abertura']); // marcar de novo não duplica
+      expect((await getCharacterByUid('j1'))!.campanha?.cenas).toEqual(['abertura', 'cena:abertura']);
+      expect((await campanhaAberturaVista('j1')).progresso?.cenas).toEqual(['abertura', 'cena:abertura']); // marcar de novo não duplica
     });
 
     it('cada personagem vê a sua vez; sem abertura configurada não dá para marcar', async () => {
       await publicarVila([]);
-      await expect(campanhaCenaVista('j1', { abertura: true })).rejects.toMatchObject({ message: expect.stringMatching(/Não há cena de abertura/) });
+      await expect(campanhaAberturaVista('j1')).rejects.toMatchObject({ message: expect.stringMatching(/Não há cena de abertura/) });
       await publicarCena('abertura');
       await definirCenaDeAbertura(dono, { cena: 'abertura', motivo: M });
       await createCharacter('j2', { nome: 'Heroi_j2', racaId: 'elfo', classeId: 'cavaleiro', pontos: { vigor: 5, sorte: 0, forca: 5, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 0 } });
-      await campanhaCenaVista('j1', { abertura: true });
+      await campanhaAberturaVista('j1');
       expect((await campanhaEstado('j2')).abertura).toBe('abertura');
     });
 
@@ -150,20 +151,36 @@ describe('Campanha: cenas (abertura, ativadores e diálogos)', () => {
       await expect(publicarConteudo(mestre, 'mapa', 'vila', { revisao: 1, motivo: 'agora vai no teste' })).resolves.toBeDefined();
     });
 
-    it('marca "mapa:objeto" como visto; ativador "toda vez" não grava; objeto que não existe dá erro', async () => {
+    it('acionar o ativador: toca uma vez só, marca "mapa:objeto" e a cena vista; "toda vez" não grava a chave; fora da área é recusado', async () => {
       await publicarCena('chegada');
       await publicarVila([ativador(true), { ...ativador(false), id: 'cena-2', x: 6, y: 5 }]);
-      const r = await campanhaCenaVista('j1', { objetoId: 'cena-1' });
-      expect(r.progresso?.cenas).toEqual(['vila:cena-1']);
-      expect((await campanhaCenaVista('j1', { objetoId: 'cena-1' })).progresso?.cenas).toEqual(['vila:cena-1']);
-      expect((await campanhaCenaVista('j1', { objetoId: 'cena-2' })).progresso?.cenas).toEqual(['vila:cena-1']);
-      await expect(campanhaCenaVista('j1', { objetoId: 'nao-existe' })).rejects.toMatchObject({ message: expect.stringMatching(/Não há cena aí/) });
-      await expect(campanhaCenaVista('j1', { objetoId: 'inicio-1' })).rejects.toMatchObject({ status: 400 });
-      const rota = await vistaRota(req('/api/campanha/cena/vista', 'j1', { objetoId: 'cena-1' }));
+      const dentro1 = { mapaId: 'vila', x: 3, y: 3 };
+      const dentro2 = { mapaId: 'vila', x: 6, y: 5 };
+      const r = await campanhaAcionar('j1', 'cena-1', dentro1);
+      expect(r).toMatchObject({ cenaId: 'chegada', progresso: { cenas: ['vila:cena-1', 'cena:chegada'] } });
+      const de_novo = await campanhaAcionar('j1', 'cena-1', dentro1);
+      expect(de_novo.cenaId).toBeUndefined(); // já viu
+      expect((await campanhaAcionar('j1', 'cena-2', dentro2)).cenaId).toBe('chegada');
+      expect((await campanhaAcionar('j1', 'cena-2', dentro2)).cenaId).toBe('chegada'); // toda vez
+      expect((await getCharacterByUid('j1'))!.campanha?.cenas).toEqual(['vila:cena-1', 'cena:chegada']);
+      await expect(campanhaAcionar('j1', 'cena-1', { mapaId: 'vila', x: 1, y: 1 })).rejects.toMatchObject({ message: expect.stringMatching(/não está nessa área/) });
+      await expect(campanhaAcionar('j1', 'nao-existe')).rejects.toMatchObject({ status: 400 });
+      await expect(campanhaAcionar('j1', 'inicio-1')).rejects.toMatchObject({ status: 400 });
+      const rota = await acionarRota(req('/api/campanha/acionar', 'j1', { objetoId: 'cena-2', posicao: dentro2 }));
       expect(rota.status).toBe(200);
-      expect((await vistaRota(req('/api/campanha/cena/vista', 'j1', { objetoId: 'x' }))).status).toBe(400);
+      expect((await rota.json()).cenaId).toBe('chegada');
+      expect((await acionarRota(req('/api/campanha/acionar', 'j1', { objetoId: 'x' }))).status).toBe(400);
+      expect((await acionarRota(new NextRequest('http://t/api/campanha/acionar', { method: 'POST', body: '{}' }))).status).toBe(401);
+    });
+
+    it('a rota da abertura exige login e marca a abertura', async () => {
+      await publicarCena('abertura');
+      await publicarVila([]);
+      await definirCenaDeAbertura(dono, { cena: 'abertura', motivo: M });
       expect((await vistaRota(new NextRequest('http://t/api/campanha/cena/vista', { method: 'POST', body: '{}' }))).status).toBe(401);
-      expect((await (await estadoRota(req('/api/campanha/estado', 'j1'))).json()).progresso.cenas).toEqual(['vila:cena-1']);
+      const ok = await vistaRota(req('/api/campanha/cena/vista', 'j1', {}));
+      expect(ok.status).toBe(200);
+      expect((await (await estadoRota(req('/api/campanha/estado', 'j1'))).json()).progresso.cenas).toEqual(['abertura', 'cena:abertura']);
     });
   });
 });
