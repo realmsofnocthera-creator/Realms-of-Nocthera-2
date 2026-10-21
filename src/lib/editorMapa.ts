@@ -7,7 +7,7 @@ import type { ObjetoDoMapa } from '@/rules/objetosDoMapa';
  * que o histórico guarda para desfazer.
  */
 
-export type Ferramenta = 'pincel' | 'borracha' | 'balde' | 'conta-gotas' | 'mover';
+export type Ferramenta = 'pincel' | 'borracha' | 'balde' | 'conta-gotas' | 'mover' | 'retangulo' | 'linha' | 'selecionar' | 'carimbo';
 
 export interface Ponto {
   x: number;
@@ -30,10 +30,19 @@ export interface LoteDeObjetos {
   grupo?: string;
 }
 
-export type Lote = LoteDeCamada | LoteDeObjetos;
+/** Mudança em várias camadas de uma vez (o carimbo): desfazer e refazer tratam como um passo só. */
+export interface LoteVarios {
+  varios: LoteDeCamada[];
+}
+
+export type Lote = LoteDeCamada | LoteDeObjetos | LoteVarios;
 
 function ehLoteDeObjetos(l: Lote): l is LoteDeObjetos {
   return 'objetos' in l;
+}
+
+function ehLoteVarios(l: Lote): l is LoteVarios {
+  return 'varios' in l;
 }
 
 export interface Historico {
@@ -125,7 +134,7 @@ export function juntarMudancas(mudancas: Mudanca[]): Mudanca[] {
 
 /** Guarda um lote no histórico (uma ação nova apaga o que dava para refazer). */
 export function registrar(h: Historico, lote: Lote): Historico {
-  if (ehLoteDeObjetos(lote) ? JSON.stringify(lote.objetos.antes) === JSON.stringify(lote.objetos.depois) : lote.mudancas.length === 0) return h;
+  if (ehLoteVarios(lote) ? lote.varios.every((l) => l.mudancas.length === 0) : ehLoteDeObjetos(lote) ? JSON.stringify(lote.objetos.antes) === JSON.stringify(lote.objetos.depois) : lote.mudancas.length === 0) return h;
   const ultimo = h.desfazer[h.desfazer.length - 1];
   if (ultimo && ehLoteDeObjetos(lote) && lote.grupo && ehLoteDeObjetos(ultimo) && ultimo.grupo === lote.grupo) {
     const junto: LoteDeObjetos = { objetos: { antes: ultimo.objetos.antes, depois: lote.objetos.depois }, grupo: lote.grupo };
@@ -138,6 +147,10 @@ export function registrar(h: Historico, lote: Lote): Historico {
 function aplicar(mapa: MapaDados, lote: Lote, sentido: 'antes' | 'depois') {
   if (ehLoteDeObjetos(lote)) {
     mapa.objetos = structuredClone(lote.objetos[sentido]);
+    return;
+  }
+  if (ehLoteVarios(lote)) {
+    for (const parte of lote.varios) aplicar(mapa, parte, sentido);
     return;
   }
   const lista = mapa.camadas[lote.camada];
@@ -177,7 +190,7 @@ export function copiarMapa(mapa: MapaDados): MapaDados {
 /** O valor que cada ferramenta grava na camada (a colisão só tem 0 e 1). */
 export function valorDaFerramenta(ferramenta: Ferramenta, camada: CamadaDoMapa, tileEscolhido: number): number | null {
   if (ferramenta === 'borracha') return 0;
-  if (ferramenta !== 'pincel' && ferramenta !== 'balde') return null;
+  if (ferramenta !== 'pincel' && ferramenta !== 'balde' && ferramenta !== 'retangulo' && ferramenta !== 'linha') return null;
   if (camada === 'colisao') return 1;
   return tileEscolhido > 0 ? tileEscolhido : null;
 }
