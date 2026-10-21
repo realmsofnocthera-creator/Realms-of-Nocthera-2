@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Brush, Gamepad2, MapPinned, Eraser, Grid3x3, Hand, PaintBucket, Pipette, Plus, Redo2, Save, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { apagarComBorda, pintarComBorda, regraDoValor, type RegrasDoMapa } from '@/lib/autoTile';
 import { CAMADAS_DO_MAPA, MAXIMO_DE_TILESETS, NOME_DA_CAMADA, tileDoValor, valorDoTile, type CamadaDoMapa, type MapaDados } from '@/rules/mapa';
 import { recorteDoTile, type TilesetDados } from '@/rules/tileset';
 import {
@@ -94,6 +95,7 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
   const [camada, setCamada] = useState<CamadaDoMapa>('chao');
   const [ferramenta, setFerramenta] = useState<Ferramenta>(podeEditar ? 'pincel' : 'mover');
   const [tileEscolhido, setTileEscolhido] = useState(0);
+  const [bordaAuto, setBordaAuto] = useState(true);
   const [tilesetAtivo, setTilesetAtivo] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [grade, setGrade] = useState(true);
@@ -295,6 +297,19 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
     [camada]
   );
 
+  // regras de borda automática dos tilesets do mapa, na ordem da lista do mapa
+  const regras = useMemo<RegrasDoMapa>(() => tilesets.map((t) => t.dados.bordas), [tilesets]);
+  const regraEscolhida = useMemo(() => (camada === 'colisao' ? null : regraDoValor(regras, tileEscolhido)), [regras, tileEscolhido, camada]);
+
+  /** Pinta (ou apaga) pontos; com a borda automática ligada e um terreno com regra, acerta as bordas sozinho. */
+  const pintarCom = (mapa: MapaDados, pontos: Ponto[], valor: number, usar: Ferramenta): Mudanca[] => {
+    if (bordaAuto && camada !== 'colisao') {
+      if (usar === 'pincel' && regraEscolhida) return pintarComBorda(mapa, camada, pontos, regraEscolhida, regras);
+      if (usar === 'borracha') return apagarComBorda(mapa, camada, pontos, regras);
+    }
+    return pintar(mapa, camada, pontos, valor);
+  };
+
   const pontoDoEvento = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
     return { px: e.clientX - r.left + deslocamento.current.x, py: e.clientY - r.top + deslocamento.current.y, tx: e.clientX, ty: e.clientY };
@@ -387,7 +402,7 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
       redesenhar();
       return;
     }
-    traco.current = { ultimo: celula, mudancas: pintar(mapa, camada, [celula], valor) };
+    traco.current = { ultimo: celula, mudancas: pintarCom(mapa, [celula], valor, usar) };
     redesenhar();
   };
 
@@ -408,7 +423,7 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
     if (celula.x === atual.ultimo.x && celula.y === atual.ultimo.y) return;
     const valor = valorDaFerramenta(ferramenta, camada, tileEscolhido);
     if (valor === null) return;
-    atual.mudancas.push(...pintar(mapa, camada, pontosDaLinha(atual.ultimo, celula), valor));
+    atual.mudancas.push(...pintarCom(mapa, pontosDaLinha(atual.ultimo, celula), valor, ferramenta));
     atual.ultimo = celula;
     redesenhar();
   };
@@ -647,6 +662,9 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
           naoUsados={naoUsados}
           cheio={(mapa?.tilesets.length ?? 0) >= MAXIMO_DE_TILESETS}
           adicionar={(t) => void adicionarTileset(t)}
+          terreno={regraEscolhida?.regra.nome ?? null}
+          bordaAuto={bordaAuto}
+          setBordaAuto={setBordaAuto}
         />
         )}
       </div>
@@ -664,6 +682,9 @@ function Paleta({
   naoUsados,
   cheio,
   adicionar,
+  terreno,
+  bordaAuto,
+  setBordaAuto,
 }: {
   tilesets: TilesetCarregado[];
   ativo: number;
@@ -674,6 +695,10 @@ function Paleta({
   naoUsados: ResumoConteudo[];
   cheio: boolean;
   adicionar: (id: string) => void;
+  /** Nome do terreno com borda automática a que o tile escolhido pertence, se houver. */
+  terreno: string | null;
+  bordaAuto: boolean;
+  setBordaAuto: (v: boolean) => void;
 }) {
   const { colors } = NOCTHERA_THEME;
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -726,6 +751,12 @@ function Paleta({
           </select>
         )}
       </div>
+      {terreno && (
+        <label className="mx-2 mb-1 flex items-center gap-1.5 text-[11px]">
+          <input type="checkbox" aria-label="Borda automática" checked={bordaAuto} onChange={(e) => setBordaAuto(e.target.checked)} />
+          Borda automática: {terreno}
+        </label>
+      )}
       <div className="flex-1 min-h-0 overflow-auto px-2 pb-2">
         {ts ? (
           <canvas

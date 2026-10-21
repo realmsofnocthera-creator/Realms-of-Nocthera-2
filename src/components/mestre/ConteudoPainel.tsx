@@ -14,6 +14,7 @@ import { EditorDeEmblema } from '@/components/mestre/EditorDeEmblema';
 import { EditorDeAnuncio } from '@/components/mestre/EditorDeAnuncio';
 import { cenaEmBranco, type CenaDados } from '@/rules/cena';
 import { EditorDeCena } from '@/components/mestre/EditorDeCena';
+import { EditorDeBordas } from '@/components/mestre/EditorDeBordas';
 import { anuncioEmBranco, NOME_DO_TIPO_DE_ANUNCIO, type AnuncioDados } from '@/rules/anuncio';
 import { descreverJanela } from '@/lib/anunciosTela';
 import type { ProblemaDoMapa } from '@/rules/verificarMapa';
@@ -624,6 +625,26 @@ function Detalhe({ tipo, id, sessao, tokenFresco, voltar }: { tipo: TipoDeConteu
       </Cartao>
 
       {tipo === 'mapa' && <VerificacaoDoMapa key={conteudo.revisao} base={base} tokenFresco={tokenFresco} />}
+
+      {tipo === 'tileset' && (
+        <EditorDeBordas
+          key={conteudo.revisao}
+          dados={conteudo.rascunho as TilesetDados}
+          podeEditar={podeEditar}
+          salvar={async (bordas) => {
+            const atual = conteudo.rascunho as TilesetDados;
+            const dados: TilesetDados = { ...atual, ...(bordas.length ? { bordas } : {}) };
+            if (!bordas.length) delete dados.bordas;
+            const r = await chamar(tokenFresco, base, { method: 'PUT', body: JSON.stringify({ dados, revisao: conteudo.revisao, nome: conteudo.nome }) });
+            if (!r.ok) {
+              if (r.status === 409) void carregar();
+              return String(r.dados.error ?? 'Não foi possível salvar.');
+            }
+            await carregar();
+            return null;
+          }}
+        />
+      )}
 
       {tipo === 'cena' && (
         <EditorDeCena
