@@ -127,6 +127,20 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), torreAndar: -3 }).torreAndar).toBeUndefined();
   });
 
+  it('guarda a privacidade e os campos derivados do Social (7.1); documento antigo fica sem eles', () => {
+    const doc = personagemParaFirestore({ ...PERSONAGEM, nome: 'Aragorn', escondidoNoRanking: true, escondidoNaBusca: true, batalhaSangrentaVencidas: ['a', 'b'] as never, guerreiroVencidas: [1] as never });
+    expect(doc.nomeBusca).toBe('aragorn');
+    expect(doc.vitoriasBatalha).toBe(2);
+    expect(doc.vitoriasGuerreiro).toBe(1);
+    const volta = personagemDoFirestore('u1', doc);
+    expect(volta.escondidoNoRanking).toBe(true);
+    expect(volta.escondidoNaBusca).toBe(true);
+    const antigo = personagemParaFirestore(PERSONAGEM);
+    expect(antigo).not.toHaveProperty('escondidoNoRanking');
+    expect(antigo).not.toHaveProperty('vitoriasBatalha');
+    expect(personagemDoFirestore('u1', antigo).escondidoNaBusca).toBeUndefined();
+  });
+
   it('a escolha dos equipamentos do perfil vai e volta, inclusive a lista vazia, e valores ruins são ignorados', () => {
     const volta = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, perfilEquipamentos: ['w1', 'p2'] }));
     expect(volta.perfilEquipamentos).toEqual(['w1', 'p2']);

@@ -35,7 +35,7 @@ export async function GET(
       );
     }
 
-    const profile = await getPublicCharacterByName(decodedNome);
+    const profile = await getPublicCharacterByName(decodedNome, user.uid);
     if (!profile) {
       return NextResponse.json(
         { error: `Nenhum personagem encontrado com o nome "${decodedNome}".` },

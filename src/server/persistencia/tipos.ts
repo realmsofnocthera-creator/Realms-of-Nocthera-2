@@ -1,4 +1,5 @@
 import type { ProgressoDaCampanha } from '@/game/campanha';
+import type { CampoDoRanking, CriterioDeRanking, RankingGuardado, ResumoDePersonagem } from '@/rules/social';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import type { PapelMestre } from '@/rules/mestre';
 import type { TipoDeConteudo } from '@/rules/conteudo';
@@ -235,6 +236,13 @@ export interface Repositorio {
    * NÃO apaga o log administrativo nem os registros de combate (auditoria). Idempotente.
    */
   excluirDadosDoJogador(uid: string, chaveNome: string | null): Promise<void>;
+  /** Os personagens com o maior valor no campo do ranking (7.1), do maior para o menor, só com o que é público. */
+  consultarTopo(campo: CampoDoRanking, limite: number): Promise<ResumoDePersonagem[]>;
+  /** Personagens cujo nome começa com o texto (já em minúsculas), em ordem alfabética (7.1). */
+  buscarPorPrefixo(prefixo: string, limite: number): Promise<ResumoDePersonagem[]>;
+  /** O retrato guardado de um ranking, ou null se ainda não foi montado. */
+  lerRanking(criterio: CriterioDeRanking): Promise<RankingGuardado | null>;
+  gravarRanking(ranking: RankingGuardado): Promise<void>;
 }
 
 /**

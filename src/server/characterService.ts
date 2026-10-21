@@ -196,6 +196,9 @@ export interface CharacterDocument {
   equipamento?: EquipamentoPersonagem;
   /** Ids dos até 4 itens equipados que o jogador mostra no perfil público (sem o campo, a escolha é automática). */
   perfilEquipamentos?: string[];
+  /** Privacidade social (7.1): o jogador escolhe não aparecer no Ranking e/ou na Busca (sem o campo, aparece). */
+  escondidoNoRanking?: boolean;
+  escondidoNaBusca?: boolean;
   /** Quanto o equipamento soma em cada atributo (pontos e % de Agilidade). Derivado, não é gravado. */
   bonusEquipamento?: Attributes;
   /** Mitigação física e mágica das peças de Defesa, com a % de Defesa da arma. Derivado, não é gravado. */
@@ -524,7 +527,8 @@ export async function getCharacterByUid(uid: string): Promise<CharacterDocument 
  * (nunca retorna ouro, email, uid ou transações). Usa o índice nomes/{chave} (0.5-C3).
  */
 export async function getPublicCharacterByName(
-  nomeBusca: string
+  nomeBusca: string,
+  solicitanteUid?: string
 ): Promise<PublicCharacterProfile | null> {
   if (!nomeBusca || typeof nomeBusca !== 'string') {
     return null;
@@ -539,6 +543,8 @@ export async function getPublicCharacterByName(
     return null;
   }
   const char = await getCharacterByUid(dono);
+  // quem se escondeu da Busca (7.1) só é visto por si mesmo
+  if (char?.escondidoNaBusca && dono !== solicitanteUid) return null;
   return char ? toPublicCharacterProfile(char) : null;
 }
 
