@@ -108,8 +108,8 @@ function ProvacaoCard({
     );
   }
 
-  // Provações com tela própria (Caçada, Batalha Sangrenta, Torre Celestial e Guerreiro) viram link
-  const destino = provacao.id === 'cacada' ? '/cacada' : provacao.id === 'batalha-sangrenta' ? '/batalha-sangrenta' : provacao.id === 'torre-celestial' ? '/torre-celestial' : provacao.id === 'guerreiro' ? '/guerreiro' : null;
+  // Provações com tela própria (Caçada, Batalha Sangrenta, Torre Celestial, Guerreiro e Teste de Equipe) viram link
+  const destino = provacao.id === 'cacada' ? '/cacada' : provacao.id === 'batalha-sangrenta' ? '/batalha-sangrenta' : provacao.id === 'torre-celestial' ? '/torre-celestial' : provacao.id === 'guerreiro' ? '/guerreiro' : provacao.id === 'teste-equipe' ? '/teste-equipe' : null;
   const card = (
     <article
       aria-label={`${provacao.nome} - Nível ${provacao.nivelRequerido}`}

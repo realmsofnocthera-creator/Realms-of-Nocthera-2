@@ -3996,6 +3996,49 @@ function turnoDeCombateInterno(
   };
 }
 
+/** O monstro como combatente (vida, escudo, imunidades de chefe, mecânica): o mesmo objeto é usado na luta em grupo. */
+export function montarCombatenteDoMonstro(monstro: MonsterDefinition): Combatente {
+  return {
+    nome: monstro.nome,
+    hp: monstro.hp,
+    hpMax: monstro.hp,
+    sobreescudo: monstro.sobreescudoInicial ?? sobreescudoInicialDoMonstro(monstro.hp),
+    atributos: { ...monstro.atributos },
+    ouro: 0,
+    // DEF do monstro (como a mitigação de um personagem): 0 até a fórmula ser definida
+    mitigacao: monstro.mitigacao ?? 0,
+    // Categoria corporal dá fraquezas elementais (Sombrio → Sagrado); o que o monstro define explicitamente vale mais
+    modificadoresElementais: {
+      ...modificadoresElementaisDaCategoria(monstro.categoriaCorporal),
+      ...(monstro.modificadoresElementais ?? {}),
+    },
+    elementoAtaque: monstro.elementoAtaque,
+    imunidadesStatus:
+      monstro.chefe || monstro.imunidadesStatus
+        ? [...new Set([...(monstro.chefe ? imunidadesDeChefe() : []), ...(monstro.imunidadesStatus ?? [])])]
+        : undefined,
+    habilidadesMonstro: monstro.habilidades,
+    enfurecido: monstro.enfurecido,
+    ...(monstro.passivas ? { passivasMonstro: monstro.passivas } : {}),
+    ...(monstro.mecanica ? { mecanicaChefe: criarEstadoMecanica(monstro.mecanica) } : {}),
+    ...(monstro.chefe ? { chefe: true } : {}),
+    categoriaCorporal: monstro.categoriaCorporal,
+    fraquezasProprias: monstro.fraquezasProprias ? [...monstro.fraquezasProprias] : undefined,
+    resistenciasProprias: monstro.resistenciasProprias
+      ? [...monstro.resistenciasProprias]
+      : undefined,
+  };
+}
+
+/**
+ * Luta em grupo (Teste de Equipe): o chefe e os status nele são os mesmos para todos os aliados. Cada aliado tem o
+ * próprio motor, e o grupo avança uma rodada de cada aliado por vez contra o mesmo chefe.
+ */
+export interface AlvoCompartilhado {
+  m: Combatente;
+  efeitosMonstroStatus: Map<EfeitoStatus, EfeitoAtivo>;
+}
+
 /**
  * Resolve o combate completo turno a turno de forma pura e determinística.
  */
@@ -4005,6 +4048,23 @@ export function resolverCombate(
   seed: number = 42,
   opcoes?: OpcoesResolverCombate
 ): ResultadoCombate {
+  const motor = motorDeCombate(personagem, monstro, seed, opcoes);
+  let passo = motor.next();
+  while (!passo.done) passo = motor.next();
+  return passo.value;
+}
+
+/**
+ * O motor do combate: avança uma rodada a cada next() e devolve o resultado no fim. Com `compartilhado`, o monstro
+ * (e os status nele) vem de fora e é dividido com os outros aliados.
+ */
+export function* motorDeCombate(
+  personagem: Combatente,
+  monstro: MonsterDefinition,
+  seed: number = 42,
+  opcoes?: OpcoesResolverCombate,
+  compartilhado?: AlvoCompartilhado
+): Generator<void, ResultadoCombate, void> {
   // Clona instâncias para manter função 100% pura
   const p: Combatente = {
     nome: personagem.nome,
@@ -4065,36 +4125,7 @@ export function resolverCombate(
     contadorCorteDoVazio: personagem.contadorCorteDoVazio ?? 0,
   };
 
-  const m: Combatente = {
-    nome: monstro.nome,
-    hp: monstro.hp,
-    hpMax: monstro.hp,
-    sobreescudo: monstro.sobreescudoInicial ?? sobreescudoInicialDoMonstro(monstro.hp),
-    atributos: { ...monstro.atributos },
-    ouro: 0,
-    // DEF do monstro (como a mitigação de um personagem): 0 até a fórmula ser definida
-    mitigacao: monstro.mitigacao ?? 0,
-    // Categoria corporal dá fraquezas elementais (Sombrio → Sagrado); o que o monstro define explicitamente vale mais
-    modificadoresElementais: {
-      ...modificadoresElementaisDaCategoria(monstro.categoriaCorporal),
-      ...(monstro.modificadoresElementais ?? {}),
-    },
-    elementoAtaque: monstro.elementoAtaque,
-    imunidadesStatus:
-      monstro.chefe || monstro.imunidadesStatus
-        ? [...new Set([...(monstro.chefe ? imunidadesDeChefe() : []), ...(monstro.imunidadesStatus ?? [])])]
-        : undefined,
-    habilidadesMonstro: monstro.habilidades,
-    enfurecido: monstro.enfurecido,
-    ...(monstro.passivas ? { passivasMonstro: monstro.passivas } : {}),
-    ...(monstro.mecanica ? { mecanicaChefe: criarEstadoMecanica(monstro.mecanica) } : {}),
-    ...(monstro.chefe ? { chefe: true } : {}),
-    categoriaCorporal: monstro.categoriaCorporal,
-    fraquezasProprias: monstro.fraquezasProprias ? [...monstro.fraquezasProprias] : undefined,
-    resistenciasProprias: monstro.resistenciasProprias
-      ? [...monstro.resistenciasProprias]
-      : undefined,
-  };
+  const m: Combatente = compartilhado?.m ?? montarCombatenteDoMonstro(monstro);
 
   // Gerador pseudo-aleatório com seed fixa determinística (LCG)
   let s = Math.abs(Math.floor(seed)) || 1337;
@@ -4126,7 +4157,7 @@ export function resolverCombate(
   // Estado local de efeitos do personagem apenas durante a luta (nunca persistido)
   let efeitosPersonagem: Map<EfeitoStatus, EfeitoAtivo> = new Map();
   // Status no monstro (só entram por habilidades do jogador, como o Sangramento Forçado)
-  let efeitosMonstroStatus: Map<EfeitoStatus, EfeitoAtivo> = new Map();
+  let efeitosMonstroStatus: Map<EfeitoStatus, EfeitoAtivo> = compartilhado?.efeitosMonstroStatus ?? new Map();
   if ((p.equipamento?.emblemas?.gatilhos.length ?? 0) > 0) p.gatilhosEmblema = novoEstadoGatilhos();
   const obterSorteioStatus = (rodada: number, indiceAtaque: number): number =>
     opcoes?.rngStatus
@@ -4598,6 +4629,7 @@ export function resolverCombate(
   }
 
   while (p.hp > 0 && m.hp > 0 && turno <= MAX_TURNOS) {
+    if (compartilhado) efeitosMonstroStatus = compartilhado.efeitosMonstroStatus;
     const vidaDoChefeAntes = m.hp + m.sobreescudo;
     const vidaDoPersonagemAntes = p.hp;
     curaDoPersonagemNaRodada = 0;
@@ -4742,6 +4774,8 @@ export function resolverCombate(
     });
 
     turno++;
+    if (compartilhado) compartilhado.efeitosMonstroStatus = efeitosMonstroStatus;
+    yield;
   }
 
   // 1.11.1: empate e limite de rodadas (PvE: o jogador perde no empate; ganha quem tiver mais HP no limite)
@@ -4818,4 +4852,64 @@ export function resolverCombate(
       },
     };
   }
+}
+
+export interface AliadoNoResultado {
+  nome: string;
+  /** Dano que este aliado tirou da vida e do escudo do chefe. */
+  dano: number;
+  /** Rodada em que caiu (null se terminou de pé). */
+  caiuNaRodada: number | null;
+}
+
+export interface ResultadoCombateEmGrupo {
+  vencedor: 'grupo' | 'monstro';
+  motivoFim: 'derrota' | 'limite_rodadas';
+  rodadas: number;
+  aliados: AliadoNoResultado[];
+  chefeFinal: { hp: number; hpMax: number };
+  mensagens: string[];
+}
+
+/**
+ * Luta em grupo contra um chefe (Teste de Equipe, 7.4): até 3 aliados, cada um com o próprio motor (habilidades,
+ * contadores e status do jeito de sempre), contra o MESMO chefe. A cada rodada, cada aliado de pé faz a sua rodada
+ * na ordem; o chefe responde a cada um (golpeia todos). Os status no chefe são divididos entre os aliados.
+ * Termina quando o chefe cai (vitória), quando todos caem ou no limite de 100 rodadas (derrota).
+ * O chefe da luta em grupo não deve ter mecânica única (ela iniciaria uma vez por aliado).
+ */
+export function resolverCombateEmGrupo(aliados: readonly Combatente[], monstro: MonsterDefinition, seed: number): ResultadoCombateEmGrupo {
+  const compartilhado: AlvoCompartilhado = { m: montarCombatenteDoMonstro(monstro), efeitosMonstroStatus: new Map() };
+  const m = compartilhado.m;
+  const motores = aliados.map((a, i) => motorDeCombate(a, monstro, seed + i * 7919, undefined, compartilhado));
+  const estado = aliados.map((a) => ({ nome: a.nome, dano: 0, caiuNaRodada: null as number | null, ativo: true }));
+  const mensagens: string[] = [];
+  let rodada = 0;
+  while (m.hp > 0 && estado.some((e) => e.ativo) && rodada < 100) {
+    rodada++;
+    for (const [i, motor] of motores.entries()) {
+      const e = estado[i];
+      if (!e.ativo || m.hp <= 0) continue;
+      const antes = m.hp + m.sobreescudo;
+      const passo = motor.next();
+      e.dano += Math.max(0, antes - (m.hp + m.sobreescudo));
+      if (passo.done) {
+        e.ativo = false;
+        if (passo.value.vencedor === 'monstro' && m.hp > 0) {
+          e.caiuNaRodada = rodada;
+          mensagens.push(`${e.nome} caiu na rodada ${rodada}.`);
+        }
+      }
+    }
+  }
+  const venceu = m.hp <= 0;
+  mensagens.push(venceu ? `Vitória! ${m.nome} foi derrotado em ${rodada} rodadas.` : estado.every((e) => e.caiuNaRodada !== null) ? `Derrota: todos caíram diante de ${m.nome}.` : `Limite de 100 rodadas: ${m.nome} resistiu.`);
+  return {
+    vencedor: venceu ? 'grupo' : 'monstro',
+    motivoFim: venceu || estado.every((e) => e.caiuNaRodada !== null) ? 'derrota' : 'limite_rodadas',
+    rodadas: rodada,
+    aliados: estado.map(({ nome, dano, caiuNaRodada }) => ({ nome, dano, caiuNaRodada })),
+    chefeFinal: { hp: Math.max(0, m.hp), hpMax: m.hpMax },
+    mensagens,
+  };
 }

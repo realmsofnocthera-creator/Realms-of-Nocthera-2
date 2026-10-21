@@ -368,6 +368,10 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
       : {}),
     ...(bonusDeGuildaDoDocumento(data.bonusDeGuilda) ? { bonusDeGuilda: bonusDeGuildaDoDocumento(data.bonusDeGuilda) } : {}),
     ...(participacoesDoDocumento(data.chefeSemanal) ? { chefeSemanal: participacoesDoDocumento(data.chefeSemanal) } : {}),
+    ...(data.testeEquipeTentativas && typeof data.testeEquipeTentativas === 'object'
+      ? { testeEquipeTentativas: Object.fromEntries(Object.entries(data.testeEquipeTentativas as Record<string, unknown>).filter((e): e is [string, string] => typeof e[1] === 'string')) }
+      : {}),
+    ...(Array.isArray(data.testeEquipeVencidas) ? { testeEquipeVencidas: (data.testeEquipeVencidas as unknown[]).filter((n): n is number => Number.isInteger(n)) } : {}),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
       ? { bonusSubclasseAplicado: lerAtributos(data.bonusSubclasseAplicado, ZEROS_ATRIBUTOS) }
       : {}),
@@ -426,6 +430,8 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.incursaoTentativas ? { incursaoTentativas: char.incursaoTentativas } : {}),
     ...(char.bonusDeGuilda ? { bonusDeGuilda: char.bonusDeGuilda } : {}),
     ...(char.chefeSemanal?.length ? { chefeSemanal: semUndefined(char.chefeSemanal) } : {}),
+    ...(char.testeEquipeTentativas ? { testeEquipeTentativas: char.testeEquipeTentativas } : {}),
+    ...(char.testeEquipeVencidas?.length ? { testeEquipeVencidas: char.testeEquipeVencidas } : {}),
     // campos derivados, só para o banco poder ordenar e buscar (7.1): o nome em minúsculas e os contadores das provações
     nomeBusca: chaveDeBusca(char.nome),
     ...(char.batalhaSangrentaVencidas?.length ? { vitoriasBatalha: char.batalhaSangrentaVencidas.length } : {}),
