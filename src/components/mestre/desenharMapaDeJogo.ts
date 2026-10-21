@@ -36,8 +36,13 @@ export function desenharMapaDeJogo(
   const desenharCamada = (c: 'chao' | 'objetos' | 'acima') => {
     const lista = mapa.camadas[c];
     if (!lista) return;
-    for (let y = 0; y < mapa.altura; y++) {
-      for (let x = 0; x < mapa.largura; x++) {
+    // só as células que aparecem na tela (mapas grandes têm dezenas de milhares)
+    const x0 = Math.max(0, Math.floor(ox / lado));
+    const y0 = Math.max(0, Math.floor(oy / lado));
+    const x1 = Math.min(mapa.largura - 1, Math.floor((ox + largura) / lado));
+    const y1 = Math.min(mapa.altura - 1, Math.floor((oy + altura) / lado));
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
         const valor = lista[y * mapa.largura + x];
         if (!valor) continue;
         const t = tileDoValor(valor);

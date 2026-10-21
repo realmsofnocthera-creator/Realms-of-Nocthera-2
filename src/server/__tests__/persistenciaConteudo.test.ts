@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { Firestore } from 'firebase-admin/firestore';
+import { mapaVazio } from '@/rules/mapa';
 import { criarRepositorioFirestore } from '@/server/persistencia/firestore';
 import { ErroPersistencia, type ConteudoDocumento, type Repositorio } from '@/server/persistencia/tipos';
 
@@ -151,5 +152,49 @@ describe('Conteúdo no Firestore', () => {
     fs.falha = null;
     expect((await repo.lerConteudo('mapa__vila'))?.versaoPublicada).toBeNull();
     expect(fs.docs.has('conteudo/mapa__vila/versoes/1')).toBe(false);
+  });
+
+  describe('mapas grandes (comprimidos no banco)', () => {
+    const grande = () => {
+      const m = { ...mapaVazio(200, 180), tilesets: ['floresta'] };
+      for (let i = 0; i < m.camadas.chao.length; i++) m.camadas.chao[i] = i % 11 === 0 ? 2 : 1;
+      m.camadas.colisao[777] = 1;
+      return m;
+    };
+
+    it('grava as camadas como texto, lê de volta como listas (rascunho e versão) e o banco fica bem menor', async () => {
+      const m = grande();
+      await repo.criarConteudo({ ...doc(), rascunho: m });
+      const guardado = fs.docs.get('conteudo/mapa__vila') as { rascunho: { camadas: Record<string, unknown> } };
+      expect(typeof guardado.rascunho.camadas.chao).toBe('string');
+      expect(JSON.stringify(guardado).length).toBeLessThan(JSON.stringify(m).length / 3);
+      expect((await repo.lerConteudo('mapa__vila'))?.rascunho).toEqual(m);
+
+      const r = await repo.publicarVersaoConteudo('mapa__vila', { revisao: 1 }, { ...versao('a'), dados: m });
+      expect(r).not.toBe('conflito');
+      expect(typeof (fs.docs.get('conteudo/mapa__vila/versoes/1') as { dados: { camadas: { chao: unknown } } }).dados.camadas.chao).toBe('string');
+      expect((await repo.lerVersaoConteudo('mapa__vila', 1))?.dados).toEqual(m);
+      if (typeof r !== 'string') expect(r.versao.dados).toEqual(m); // quem publica recebe as listas
+    });
+
+    it('salvar o rascunho de novo também comprime; mapas pequenos e outros tipos ficam como estão', async () => {
+      await repo.criarConteudo({ ...doc(), rascunho: mapaVazio(10, 10) });
+      expect((fs.docs.get('conteudo/mapa__vila') as { rascunho: { camadas: { chao: unknown } } }).rascunho.camadas.chao).toEqual(new Array(100).fill(0));
+      const m = grande();
+      const salvo = await repo.salvarRascunhoConteudo('mapa__vila', 1, { rascunho: m, hashRascunho: 'h2', editadoEm: 'agora', editadoPor: 'm2' });
+      expect(typeof salvo).toBe('object');
+      expect(typeof (fs.docs.get('conteudo/mapa__vila') as { rascunho: { camadas: { chao: unknown } } }).rascunho.camadas.chao).toBe('string');
+      expect((await repo.lerConteudo('mapa__vila'))?.rascunho).toEqual(m);
+
+      await repo.criarConteudo({ ...doc(), chave: 'cena__a', tipo: 'cena', id: 'a', rascunho: { camadas: { chao: [1, 2, 3] }, largura: 300, altura: 300 } });
+      expect((await repo.lerConteudo('cena__a'))?.rascunho).toEqual({ camadas: { chao: [1, 2, 3] }, largura: 300, altura: 300 });
+      expect((fs.docs.get('conteudo/cena__a') as { rascunho: { camadas: { chao: unknown } } }).rascunho.camadas.chao).toEqual([1, 2, 3]);
+    });
+
+    it('mapa grande antigo, já em listas no banco, continua lendo normalmente', async () => {
+      const m = grande();
+      fs.docs.set('conteudo/mapa__vila', { ...(({ chave: _c, ...resto }) => resto)(doc()), rascunho: m });
+      expect((await repo.lerConteudo('mapa__vila'))?.rascunho).toEqual(m);
+    });
   });
 });

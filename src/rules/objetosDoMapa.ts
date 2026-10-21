@@ -216,8 +216,8 @@ export function validarObjetos(bruto: unknown, largura: number, altura: number, 
     }
     if (tipo === 'porta') {
       const d = o.destino;
-      if (!ehObjeto(d) || typeof d.mapa !== 'string' || !ID_DO_MAPA_DESTINO.test(d.mapa) || !inteiro(d.x, 0, 127) || !inteiro(d.y, 0, 127)) {
-        erros.push(`${nome}: escolha o mapa de destino e a posição (de 0 a 127).`);
+      if (!ehObjeto(d) || typeof d.mapa !== 'string' || !ID_DO_MAPA_DESTINO.test(d.mapa) || !inteiro(d.x, 0, 255) || !inteiro(d.y, 0, 255)) {
+        erros.push(`${nome}: escolha o mapa de destino e a posição (de 0 a 255).`);
       } else {
         limpo.destino = { mapa: d.mapa, x: d.x, y: d.y };
       }

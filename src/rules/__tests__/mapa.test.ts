@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { bytesGuardados, comprimirMapa, precisaComprimir } from '@/rules/mapaComprimido';
 import { LADO_MAXIMO_DO_MAPA, MAIOR_TILE, mapaVazio, tileDoValor, validarMapa, valorDoTile } from '@/rules/mapa';
-import { TAMANHO_MAXIMO_EM_BYTES, validarConteudo, chaveDoConteudo, ehTipoDeConteudo, ID_DE_CONTEUDO } from '@/rules/conteudo';
+import { TAMANHO_MAXIMO_DO_MAPA_EM_BYTES, validarConteudo, chaveDoConteudo, ehTipoDeConteudo, ID_DE_CONTEUDO } from '@/rules/conteudo';
 
 const erros = (bruto: unknown) => {
   const r = validarMapa(bruto);
@@ -58,14 +59,39 @@ describe('Formato do mapa (v1)', () => {
     expect(erros({ ...mapaVazio(4, 4), tilesets: ['aa', 'aa'] }).join(' ')).toMatch(/repetido/);
   });
 
-  it('o maior mapa cabe no limite de tamanho do conteúdo', () => {
+  it('o maior mapa (256 × 256) cabe no limite quando tem áreas repetidas; um mapa 100% aleatório não cabe', () => {
     const m = { ...mapaVazio(LADO_MAXIMO_DO_MAPA, LADO_MAXIMO_DO_MAPA), tilesets: Array.from({ length: 16 }, (_, i) => `tileset-${i}`) };
     m.camadas.chao.fill(65_535);
     m.camadas.objetos.fill(65_535);
+    m.camadas.acima.fill(65_535);
     m.camadas.colisao.fill(1);
-    const r = validarConteudo('mapa', m);
-    expect(r.ok).toBe(true);
-    expect(new TextEncoder().encode(JSON.stringify(m)).length).toBeLessThan(TAMANHO_MAXIMO_EM_BYTES);
+    expect(validarConteudo('mapa', m).ok).toBe(true);
+    expect(bytesGuardados(m)).toBeLessThan(TAMANHO_MAXIMO_DO_MAPA_EM_BYTES);
+    // mapa realista: chão em faixas de terreno, com alguns tiles soltos
+    const real = { ...mapaVazio(256, 256), tilesets: ['floresta'] };
+    for (let i = 0; i < real.camadas.chao.length; i++) real.camadas.chao[i] = 1 + (Math.floor(i / 256 / 8) % 5) + (i % 97 === 0 ? 3 : 0);
+    expect(validarConteudo('mapa', real).ok).toBe(true);
+    // 100% aleatório: cada célula diferente da vizinha, não comprime
+    const caos = { ...mapaVazio(256, 256), tilesets: Array.from({ length: 16 }, (_, i) => `tileset-${i}`) };
+    let semente = 7;
+    for (const camada of ['chao', 'objetos', 'acima'] as const) {
+      for (let i = 0; i < caos.camadas[camada].length; i++) {
+        semente = (semente * 1103515245 + 12345) % 2147483648;
+        const v = 1 + (semente % 65_534);
+        caos.camadas[camada][i] = v % 4096 === 0 ? v + 1 : v;
+      }
+    }
+    const r = validarConteudo('mapa', caos);
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.erros.join(' ')).toMatch(/grande demais/);
+  });
+
+  it('mapas até 128 de lado seguem como listas; só os grandes são comprimidos no banco', () => {
+    const pequeno = mapaVazio(128, 128);
+    expect(precisaComprimir(pequeno)).toBe(false);
+    expect(comprimirMapa(pequeno)).toBe(pequeno);
+    expect(precisaComprimir(mapaVazio(129, 10))).toBe(true);
+    expect(precisaComprimir(mapaVazio(10, 129))).toBe(true);
   });
 });
 
