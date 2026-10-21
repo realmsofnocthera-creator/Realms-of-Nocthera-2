@@ -219,6 +219,9 @@ export interface CharacterDocument {
   /** Teste de Equipe (7.4): o dia da última tentativa de cada dificuldade e as dificuldades já vencidas. */
   testeEquipeTentativas?: Record<string, string>;
   testeEquipeVencidas?: number[];
+  /** Party (7.4): a party em que está e os convites de party esperando resposta (ids). */
+  partyId?: string;
+  convitesDeParty?: string[];
   /** Quanto o equipamento soma em cada atributo (pontos e % de Agilidade). Derivado, não é gravado. */
   bonusEquipamento?: Attributes;
   /** Mitigação física e mágica das peças de Defesa, com a % de Defesa da arma. Derivado, não é gravado. */

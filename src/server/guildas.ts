@@ -117,23 +117,11 @@ async function regras(): Promise<RegrasDeGuilda> {
 // ---------------------------------------------------------------------------
 
 /** A guilda do personagem e o lugar dele nela; erro se ele não está numa guilda. */
-export async function minhaGuildaNoContexto(ctx: ContextoTransacao, eu: CharacterDocument): Promise<{ guilda: GuildaDocumento; eu: MembroDaGuilda }> {
+async function minhaGuildaNoContexto(ctx: ContextoTransacao, eu: CharacterDocument): Promise<{ guilda: GuildaDocumento; eu: MembroDaGuilda }> {
   const guilda = eu.guildaId ? await ctx.lerGuilda(eu.guildaId) : null;
   const membro = guilda?.membros.find((m) => m.uid === eu.uid);
   if (!guilda || !membro) throw new ErroDeGuilda('Você não está numa guilda.', 404);
   return { guilda, eu: membro };
-}
-
-/** Tira o jogador das partys da guilda (saiu ou foi expulso); a liderança passa ao próximo e a party vazia some. */
-export function tirarDasPartys(guilda: GuildaDocumento, uid: string): GuildaDocumento {
-  if (!guilda.partys?.length) return guilda;
-  const partys = guilda.partys.flatMap((p) => {
-    if (!p.membros.some((m) => m.uid === uid)) return [p];
-    const membros = p.membros.filter((m) => m.uid !== uid);
-    if (!membros.length) return [];
-    return [{ ...p, membros, liderUid: p.liderUid === uid ? membros[0].uid : p.liderUid }];
-  });
-  return { ...guilda, partys };
 }
 
 /** Está mesmo numa guilda (o id no personagem pode ser de uma guilda que já acabou). */
@@ -594,7 +582,7 @@ const ACOES: Record<AcaoDeGuilda, Acao> = {
         salvarPersonagem(ctx, eu, SEM_GUILDA);
         return { mensagem: `Você saiu e a guilda ${guilda.nome} foi desfeita (você era o único membro).` };
       }
-      ctx.gravarGuilda(tirarDasPartys({ ...guilda, membros: guilda.membros.filter((m) => m.uid !== uid) }, uid));
+      ctx.gravarGuilda({ ...guilda, membros: guilda.membros.filter((m) => m.uid !== uid) });
       salvarPersonagem(ctx, eu, SEM_GUILDA);
       return { mensagem: `Você saiu da guilda ${guilda.nome}.` };
     });
@@ -609,7 +597,7 @@ const ACOES: Record<AcaoDeGuilda, Acao> = {
       if (!alvo) throw new ErroDeGuilda('Esse jogador não está na guilda.', 404);
       if (!podeExpulsar(membro.cargo, alvo.cargo)) throw new ErroDeGuilda(membro.cargo === 'oficial' ? 'Oficiais só expulsam Membros.' : 'Você não pode expulsar ninguém.');
       const doc = await ctx.lerPersonagem(alvoUid);
-      ctx.gravarGuilda(tirarDasPartys({ ...guilda, membros: guilda.membros.filter((m) => m.uid !== alvoUid) }, alvoUid));
+      ctx.gravarGuilda({ ...guilda, membros: guilda.membros.filter((m) => m.uid !== alvoUid) });
       if (doc?.guildaId === guilda.id) ctx.gravarPersonagem({ ...doc, ...SEM_GUILDA });
       return { mensagem: `${alvo.nome} foi expulso(a) da guilda.` };
     });

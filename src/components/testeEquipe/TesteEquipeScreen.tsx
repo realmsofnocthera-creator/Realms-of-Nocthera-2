@@ -9,7 +9,6 @@ import { NOCTHERA_THEME } from '@/theme/theme';
 
 type Token = () => Promise<string | null>;
 const OURO = '#C8A656';
-const BORDA = '#4A3F2A';
 const VERMELHO = '#E5484D';
 const VERDE = '#7BC47F';
 /** Enquanto está numa party, a tela recarrega sozinha para ver quem entrou e quem marcou "Pronto". */
@@ -74,6 +73,7 @@ export function TesteEquipeScreen({ tokenFresco }: { tokenFresco: Token }) {
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [dificuldade, setDificuldade] = useState(1);
+  const [convidado, setConvidado] = useState('');
 
   const carregar = useCallback(async () => {
     const r = await chamar(tokenFresco);
@@ -92,17 +92,18 @@ export function TesteEquipeScreen({ tokenFresco }: { tokenFresco: Token }) {
     return () => clearInterval(id);
   }, [naParty, carregar]);
 
-  const agir = async (acao: string, extra: Record<string, unknown> = {}) => {
+  const agir = async (acao: string, extra: Record<string, unknown> = {}): Promise<boolean> => {
     setOcupado(true);
     setAviso(null);
     const r = await chamar(tokenFresco, { acao, ...extra });
     setOcupado(false);
     if (!r.ok) {
       setAviso({ texto: String(r.dados.error ?? 'Não foi possível agora.'), erro: true });
-      return;
+      return false;
     }
     setAviso({ texto: String(r.dados.mensagem ?? 'Feito.'), erro: false });
     setEstado(r.dados.estado as EstadoDoTeste);
+    return true;
   };
 
   const party = estado?.minhaParty ?? null;
@@ -121,15 +122,10 @@ export function TesteEquipeScreen({ tokenFresco }: { tokenFresco: Token }) {
           <p role="alert" className="text-sm" style={{ color: VERMELHO }}>Não foi possível carregar agora. Tente de novo em instantes.</p>
         ) : !estado ? (
           <p className="text-sm" style={{ color: colors.text.secondary }}>Carregando...</p>
-        ) : !estado.naGuilda ? (
-          <Cartao titulo="Só com a guilda">
-            <p className="text-sm">A party é feita com membros da sua guilda. Entre numa guilda para jogar o Teste de Equipe.</p>
-            <Link href="/guilda" className="self-start text-sm underline">Ir para a Guilda</Link>
-          </Cartao>
         ) : (
           <>
             <p className="text-xs" style={{ color: colors.text.secondary }}>
-              De {TAMANHO_MINIMO_DO_TESTE} a {TAMANHO_MAXIMO_DA_PARTY} membros da guilda, nível {estado.nivelNecessario} ou mais, lutam juntos contra o chefe. Todos marcam &quot;Pronto&quot; e o líder inicia. Uma tentativa por dia em cada dificuldade.
+              Não precisa de guilda: qualquer jogador nível {estado.nivelNecessario} ou mais pode criar uma party e chamar outros pelo nome. De {TAMANHO_MINIMO_DO_TESTE} a {TAMANHO_MAXIMO_DA_PARTY} jogadores lutam juntos contra o chefe. Todos marcam &quot;Pronto&quot; e o líder inicia. Uma tentativa por dia em cada dificuldade.
             </p>
             {estado.meuNivel < estado.nivelNecessario && <p className="text-sm font-semibold" style={{ color: VERMELHO }}>Você precisa do nível {estado.nivelNecessario} (agora: {estado.meuNivel}).</p>}
 
@@ -142,7 +138,25 @@ export function TesteEquipeScreen({ tokenFresco }: { tokenFresco: Token }) {
                       <span style={{ color: m.pronto ? VERDE : colors.text.secondary }}>{m.pronto ? 'Pronto' : 'Esperando'}</span>
                     </li>
                   ))}
+                  {party.convites.map((c) => (
+                    <li key={c.uid} className="flex justify-between gap-2 text-sm" style={{ color: colors.text.secondary }}>
+                      <span>{c.nome}</span>
+                      <span>chamado(a)</span>
+                    </li>
+                  ))}
                 </ul>
+                {party.souLider && party.membros.length < TAMANHO_MAXIMO_DA_PARTY && (
+                  <form
+                    className="flex gap-2"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (await agir('convidar', { nome: convidado })) setConvidado('');
+                    }}
+                  >
+                    <input value={convidado} onChange={(e) => setConvidado(e.target.value)} maxLength={32} placeholder="Nome do jogador" aria-label="Nome do jogador para chamar" className="flex-1 min-w-0 rounded-sm border-2 px-2 py-1.5 text-sm bg-transparent" style={{ borderColor: OURO }} />
+                    <button type="submit" disabled={ocupado || convidado.trim().length < 2} className="rounded-sm border-2 px-3 text-sm font-bold disabled:opacity-50" style={{ borderColor: OURO, backgroundColor: '#3A2F18' }}>Chamar</button>
+                  </form>
+                )}
                 <div className="flex flex-wrap gap-2">
                   <Botao disabled={ocupado} onClick={() => void agir('pronto', { pronto: true })}>Estou pronto</Botao>
                   <Botao disabled={ocupado} onClick={() => void agir('pronto', { pronto: false })}>Não estou pronto</Botao>
@@ -152,21 +166,27 @@ export function TesteEquipeScreen({ tokenFresco }: { tokenFresco: Token }) {
                 {party.ultimoResultado && <Resultado r={party.ultimoResultado} />}
               </Cartao>
             ) : (
-              <Cartao titulo="Party">
-                <Botao disabled={ocupado || estado.meuNivel < estado.nivelNecessario} onClick={() => void agir('criar')}>Criar party</Botao>
-                {estado.partysAbertas.length === 0 ? (
-                  <p className="text-xs" style={{ color: colors.text.secondary }}>Nenhuma party aberta na guilda agora.</p>
-                ) : (
-                  <ul className="flex flex-col gap-1.5">
-                    {estado.partysAbertas.map((p) => (
-                      <li key={p.id} className="flex items-center justify-between gap-2 text-sm rounded-sm border px-2 py-1.5" style={{ borderColor: BORDA }}>
-                        <span className="truncate">{p.membros.join(', ')} <span className="text-[11px]" style={{ color: colors.text.secondary }}>· líder {p.lider}</span></span>
-                        <Botao disabled={ocupado || estado.meuNivel < estado.nivelNecessario} onClick={() => void agir('entrar', { partyId: p.id })}>Entrar</Botao>
-                      </li>
-                    ))}
-                  </ul>
+              <>
+                {estado.convites.length > 0 && (
+                  <Cartao titulo="Convites recebidos">
+                    <ul className="flex flex-col gap-1.5">
+                      {estado.convites.map((c) => (
+                        <li key={c.partyId} className="flex items-center justify-between gap-2 text-sm">
+                          <span className="truncate">{c.de} chamou você</span>
+                          <span className="flex gap-1.5 shrink-0">
+                            <Botao disabled={ocupado || estado.meuNivel < estado.nivelNecessario} onClick={() => void agir('aceitar', { partyId: c.partyId })}>Aceitar</Botao>
+                            <Botao perigo disabled={ocupado} onClick={() => void agir('recusar', { partyId: c.partyId })}>Recusar</Botao>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </Cartao>
                 )}
-              </Cartao>
+                <Cartao titulo="Party">
+                  <p className="text-xs" style={{ color: colors.text.secondary }}>Você não está numa party. Crie uma e chame alguém, ou espere um convite.</p>
+                  <div><Botao disabled={ocupado || estado.meuNivel < estado.nivelNecessario} onClick={() => void agir('criar')}>Criar party</Botao></div>
+                </Cartao>
+              </>
             )}
 
             <Cartao titulo="Dificuldades">

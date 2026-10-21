@@ -158,6 +158,30 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(guildaParaFirestore(g)).toMatchObject({ nomeBusca: 'ordem da névoa', quantidadeMembros: 1 });
   });
 
+  it('guarda a party e os convites de party do personagem (7.4); ids estranhos são descartados', () => {
+    const doc = personagemParaFirestore({ ...PERSONAGEM, partyId: 'p_0123456789ab', convitesDeParty: ['p_aaaaaaaaaaaa'] });
+    expect(personagemDoFirestore('u1', doc)).toMatchObject({ partyId: 'p_0123456789ab', convitesDeParty: ['p_aaaaaaaaaaaa'] });
+    const antigo = personagemParaFirestore(PERSONAGEM);
+    expect(antigo).not.toHaveProperty('partyId');
+    expect(personagemDoFirestore('u1', { ...antigo, convitesDeParty: ['../x', 3, 'p_aaaaaaaaaaaa', 'p_aaaaaaaaaaaa'] }).convitesDeParty).toEqual(['p_aaaaaaaaaaaa']);
+  });
+
+  it('a party é gravada no fim da transação, lida dentro dela e apagada (7.4)', async () => {
+    const party = { id: 'p_0123456789ab', liderUid: 'u1', membros: [{ uid: 'u1', nome: 'Aria', pronto: false }], convites: [{ uid: 'u2', nome: 'Boro', por: 'Aria' }], atualizadaEm: '2026-10-21T10:00:00.000Z' };
+    await repo.executarTransacao('criar', async (ctx) => {
+      ctx.gravarParty(party);
+      expect((await ctx.lerParty('p_0123456789ab'))?.convites).toHaveLength(1);
+      expect(db.dados.size).toBe(0);
+    });
+    expect(db.dados.get('partys/p_0123456789ab')).toMatchObject({ liderUid: 'u1' });
+    expect((await repo.lerParty('p_0123456789ab'))?.membros[0].nome).toBe('Aria');
+    await repo.executarTransacao('apagar', async (ctx) => {
+      ctx.apagarParty('p_0123456789ab');
+      expect(await ctx.lerParty('p_0123456789ab')).toBeNull();
+    });
+    expect(db.dados.has('partys/p_0123456789ab')).toBe(false);
+  });
+
   it('a escolha dos equipamentos do perfil vai e volta, inclusive a lista vazia, e valores ruins são ignorados', () => {
     const volta = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, perfilEquipamentos: ['w1', 'p2'] }));
     expect(volta.perfilEquipamentos).toEqual(['w1', 'p2']);

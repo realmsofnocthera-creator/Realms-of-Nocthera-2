@@ -1,6 +1,5 @@
 import { incursaoDoDocumento, type IncursaoDaGuilda } from './incursao';
 import { pesquisaDoDocumento, type PesquisaDaGuilda } from './pesquisa';
-import { partysDoDocumento, type PartyDaGuilda } from './testeEquipe';
 
 /**
  * Guildas (7.3). Uma guilda é um documento só (guildas/{id}) com os membros, os convites e os pedidos dentro:
@@ -152,8 +151,6 @@ export interface GuildaDocumento {
   incursao?: IncursaoDaGuilda;
   /** Pesquisa (nível Respeitada): o nível e as doações de cada ramo. */
   pesquisa?: PesquisaDaGuilda;
-  /** Partys abertas para o Teste de Equipe (7.4). */
-  partys?: PartyDaGuilda[];
 }
 
 /** O que qualquer jogador vê de uma guilda (lista, busca, página da guilda). */
@@ -228,6 +225,5 @@ export function guildaDoDocumento(id: string, bruto: unknown): GuildaDocumento |
   return { id, nome: d.nome, nomeBusca: chaveDoNomeDaGuilda(d.nome), descricao: texto(d.descricao), criadaEm: texto(d.criadaEm), membros, convites, pedidos, quantidadeMembros: membros.length, xp: typeof d.xp === 'number' && Number.isFinite(d.xp) && d.xp > 0 ? Math.floor(d.xp) : 0,
     ...(incursaoDoDocumento(d.incursao) ? { incursao: incursaoDoDocumento(d.incursao) } : {}),
     ...(Object.keys(pesquisaDoDocumento(d.pesquisa)).length ? { pesquisa: pesquisaDoDocumento(d.pesquisa) } : {}),
-    ...(partysDoDocumento(d.partys).length ? { partys: partysDoDocumento(d.partys) } : {}),
   };
 }

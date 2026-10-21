@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuthToken } from '@/server/auth';
-import { ErroDeGuilda } from '@/server/guildas';
 import { descreverErro, registrarLog } from '@/server/log';
 import { limitarPorConta, limitarPorIp } from '@/server/rateLimit';
 import { respostaErroPersistencia } from '@/server/respostaErro';
-import { agirNoTeste, estadoDoTeste } from '@/server/testeEquipe';
+import { agirNoTeste, ErroDeParty, estadoDoTeste } from '@/server/testeEquipe';
 
 function respostaDeErro(error: unknown, evento: string): NextResponse {
   const resposta = respostaErroPersistencia(error);
   if (resposta) return resposta;
-  if (error instanceof ErroDeGuilda) return NextResponse.json({ error: error.message }, { status: error.status });
+  if (error instanceof ErroDeParty) return NextResponse.json({ error: error.message }, { status: error.status });
   if (error instanceof Error && error.message.includes('Personagem não encontrado')) return NextResponse.json({ error: error.message }, { status: 404 });
   registrarLog('ERROR', evento, descreverErro(error));
   return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
 }
 
-/** A party do jogador (ou as abertas na guilda) e as dificuldades do Teste de Equipe. */
+/** A party do jogador, os convites que ele recebeu e as dificuldades do Teste de Equipe. */
 export async function GET(req: NextRequest) {
   try {
     const limiteIp = limitarPorIp(req, 'leitura');
@@ -30,7 +29,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** { acao: criar | entrar | sair | pronto | iniciar, partyId?, pronto?, dificuldade? }. Devolve a mensagem, o resultado da luta (se houve) e o estado novo. */
+/** { acao: criar | convidar | aceitar | recusar | sair | pronto | iniciar, nome?, partyId?, pronto?, dificuldade? }. Devolve a mensagem, o resultado da luta (se houve) e o estado novo. */
 export async function POST(req: NextRequest) {
   try {
     const limiteIp = limitarPorIp(req, 'combate');
@@ -40,7 +39,7 @@ export async function POST(req: NextRequest) {
     const limiteConta = limitarPorConta(user.uid, 'combate');
     if (limiteConta) return limiteConta;
     const b = (await req.json().catch(() => ({}))) ?? {};
-    const r = await agirNoTeste(user.uid, b.acao, { partyId: b.partyId, pronto: b.pronto, dificuldade: b.dificuldade });
+    const r = await agirNoTeste(user.uid, b.acao, { partyId: b.partyId, nome: b.nome, pronto: b.pronto, dificuldade: b.dificuldade });
     return NextResponse.json({ ...r, estado: await estadoDoTeste(user.uid) });
   } catch (error) {
     return respostaDeErro(error, 'testeEquipe.acao_falhou');

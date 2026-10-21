@@ -5,8 +5,8 @@ import type { Elemento } from './elements';
 import type { MonsterDefinition } from './monsters';
 
 /**
- * Party e Provação do Teste de Equipe (7.4, decididas pelo Yuri): a party é exclusiva da guilda (até 3 membros da
- * mesma guilda), cada um marca "Pronto" e o líder inicia. O grupo luta junto contra 1 chefe (o motor aceita vários
+ * Party e Provação do Teste de Equipe (7.4, decididas pelo Yuri): a party é aberta a qualquer jogador de nível 25 ou
+ * mais (não precisa de guilda): o líder chama alguém pelo nome, até 3 jogadores, cada um marca "Pronto" e o líder inicia. O grupo luta junto contra 1 chefe (o motor aceita vários
  * aliados de um lado). Dificuldades 1 a 10 com 1 chefe cada, 1 tentativa por dia por dificuldade para cada membro.
  * Chefes PROVISÓRIOS (a confirmar); recompensas, força e regras de liberação são PROPOSTA, a confirmar.
  */
@@ -96,6 +96,13 @@ export interface MembroDaParty {
   pronto: boolean;
 }
 
+export interface ConviteDaParty {
+  uid: string;
+  nome: string;
+  /** Quem chamou (nome do personagem). */
+  por: string;
+}
+
 export interface ResultadoDaParty {
   dificuldade: number;
   venceu: boolean;
@@ -104,42 +111,52 @@ export interface ResultadoDaParty {
   aliados: { nome: string; dano: number; caiuNaRodada: number | null }[];
 }
 
-/** Uma party, guardada dentro do documento da guilda. */
-export interface PartyDaGuilda {
+/** Convites que uma party pode ter esperando resposta ao mesmo tempo. */
+export const CONVITES_DA_PARTY = 5;
+/** Convites de party que um jogador pode ter esperando resposta. */
+export const CONVITES_DE_PARTY_DO_JOGADOR = 5;
+
+/** Uma party (partys/{id}). */
+export interface PartyDocumento {
   id: string;
   liderUid: string;
   membros: MembroDaParty[];
+  convites: ConviteDaParty[];
   /** A última mexida (entrar, pronto, luta): party parada há mais de 2 h some sozinha. */
   atualizadaEm: string;
   ultimoResultado?: ResultadoDaParty;
 }
 
-export function partysDoDocumento(bruto: unknown): PartyDaGuilda[] {
-  if (!Array.isArray(bruto)) return [];
-  return bruto.flatMap((x) => {
-    const o = x as Record<string, unknown> | null;
-    if (!o || typeof o.id !== 'string' || typeof o.liderUid !== 'string' || !Array.isArray(o.membros)) return [];
-    const membros = (o.membros as unknown[]).flatMap((m) => {
-      const mm = m as Record<string, unknown> | null;
-      return mm && typeof mm.uid === 'string' && typeof mm.nome === 'string' ? [{ uid: mm.uid, nome: mm.nome, pronto: mm.pronto === true }] : [];
-    });
-    if (!membros.some((m) => m.uid === o.liderUid)) return [];
-    const u = o.ultimoResultado as Record<string, unknown> | undefined;
-    const ultimoResultado =
-      u && typeof u.dificuldade === 'number' && Array.isArray(u.aliados)
-        ? {
-            dificuldade: u.dificuldade,
-            venceu: u.venceu === true,
-            rodadas: typeof u.rodadas === 'number' ? u.rodadas : 0,
-            em: typeof u.em === 'string' ? u.em : '',
-            aliados: (u.aliados as unknown[]).flatMap((a) => {
-              const aa = a as Record<string, unknown> | null;
-              return aa && typeof aa.nome === 'string' ? [{ nome: aa.nome, dano: typeof aa.dano === 'number' ? aa.dano : 0, caiuNaRodada: typeof aa.caiuNaRodada === 'number' ? aa.caiuNaRodada : null }] : [];
-            }),
-          }
-        : undefined;
-    return [{ id: o.id, liderUid: o.liderUid, membros: membros.slice(0, TAMANHO_MAXIMO_DA_PARTY), atualizadaEm: typeof o.atualizadaEm === 'string' ? o.atualizadaEm : '', ...(ultimoResultado ? { ultimoResultado } : {}) }];
+export const partyVale = (p: PartyDocumento, agora: Date) => agora.getTime() - Date.parse(p.atualizadaEm || '1970-01-01') < VALIDADE_DA_PARTY_MS;
+
+/** Lê a party do banco com tolerância; sem líder entre os membros ela não vale. */
+export function partyDoDocumento(id: string, bruto: unknown): PartyDocumento | null {
+  const o = bruto as Record<string, unknown> | null;
+  if (!o || typeof o !== 'object' || typeof o.liderUid !== 'string' || !Array.isArray(o.membros)) return null;
+  const membros = (o.membros as unknown[]).flatMap((m) => {
+    const mm = m as Record<string, unknown> | null;
+    return mm && typeof mm.uid === 'string' && typeof mm.nome === 'string' ? [{ uid: mm.uid, nome: mm.nome, pronto: mm.pronto === true }] : [];
   });
+  if (!membros.some((m) => m.uid === o.liderUid)) return null;
+  const convites = (Array.isArray(o.convites) ? (o.convites as unknown[]) : []).flatMap((c) => {
+    const cc = c as Record<string, unknown> | null;
+    return cc && typeof cc.uid === 'string' && typeof cc.nome === 'string' ? [{ uid: cc.uid, nome: cc.nome, por: typeof cc.por === 'string' ? cc.por : '' }] : [];
+  });
+  const u = o.ultimoResultado as Record<string, unknown> | undefined;
+  const ultimoResultado =
+    u && typeof u.dificuldade === 'number' && Array.isArray(u.aliados)
+      ? {
+          dificuldade: u.dificuldade,
+          venceu: u.venceu === true,
+          rodadas: typeof u.rodadas === 'number' ? u.rodadas : 0,
+          em: typeof u.em === 'string' ? u.em : '',
+          aliados: (u.aliados as unknown[]).flatMap((a) => {
+            const aa = a as Record<string, unknown> | null;
+            return aa && typeof aa.nome === 'string' ? [{ nome: aa.nome, dano: typeof aa.dano === 'number' ? aa.dano : 0, caiuNaRodada: typeof aa.caiuNaRodada === 'number' ? aa.caiuNaRodada : null }] : [];
+          }),
+        }
+      : undefined;
+  return { id, liderUid: o.liderUid, membros: membros.slice(0, TAMANHO_MAXIMO_DA_PARTY), convites: convites.slice(0, CONVITES_DA_PARTY), atualizadaEm: typeof o.atualizadaEm === 'string' ? o.atualizadaEm : '', ...(ultimoResultado ? { ultimoResultado } : {}) };
 }
 
 /** A dificuldade abre para quem venceu a anterior (a 1 está sempre aberta). */
