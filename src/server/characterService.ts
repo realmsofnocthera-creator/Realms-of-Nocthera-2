@@ -1,4 +1,5 @@
 import type { BonusDeGuilda } from '@/rules/pesquisa';
+import type { ParticipacaoNoChefeSemanal } from '@/rules/chefeSemanal';
 import { contarVitorias, type ContratosDoDia } from '@/game/contratos';
 import { ATTRIBUTES, AttributeName, Attributes } from '@/rules/attributes';
 import { GAME_CONFIG } from '@/rules/config';
@@ -213,6 +214,8 @@ export interface CharacterDocument {
   incursaoTentativas?: { dia: string; usadas: number };
   /** Bônus da Pesquisa da guilda (XP, ouro e chance de materiais), copiado da guilda para as lutas lerem sem ler a guilda. */
   bonusDeGuilda?: BonusDeGuilda;
+  /** Chefe de guildas (7.3): as semanas em que lutou (as 4 últimas) e se já resgatou. */
+  chefeSemanal?: ParticipacaoNoChefeSemanal[];
   /** Quanto o equipamento soma em cada atributo (pontos e % de Agilidade). Derivado, não é gravado. */
   bonusEquipamento?: Attributes;
   /** Mitigação física e mágica das peças de Defesa, com a % de Defesa da arma. Derivado, não é gravado. */

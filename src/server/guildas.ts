@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import {
   administraEntrada,
   chaveDoNomeDaGuilda,
@@ -53,6 +53,22 @@ import {
   type RamoDaPesquisa,
 } from '@/rules/pesquisa';
 import { gerarSementeCombate } from '@/server/combateSemente';
+import {
+  chefeDaSemana,
+  faixaDaPosicao,
+  fimDaSemana,
+  GUILDAS_NO_RANKING_SEMANAL,
+  montarChefeSemanal,
+  NIVEL_DA_GUILDA_PARA_CHEFE_SEMANAL,
+  semanaDe,
+  totalDosMembros,
+  VIDA_DO_CHEFE_SEMANAL,
+  type EntradaDoChefeSemanal,
+  type FaixaDoChefeSemanal,
+  FAIXAS_DO_CHEFE_SEMANAL,
+} from '@/rules/chefeSemanal';
+import { escolherTipoDaRaridade, type EmblemaItem } from '@/game/emblemas';
+import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
 import { PREFIXO_MAXIMO_DA_BUSCA, PREFIXO_MINIMO_DA_BUSCA } from '@/rules/social';
 import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, ganharXp, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { xpParaProximoNivel } from '@/game';
@@ -190,6 +206,7 @@ export interface MinhaGuilda {
   nivel: NivelAtualDaGuilda;
   incursao: IncursaoNaTela;
   pesquisa: PesquisaNaTela;
+  chefeSemanal: ChefeSemanalNaTela;
   /** Só para Líder e Oficial. */
   convites: ConviteDaGuilda[];
   pedidos: PedidoDaGuilda[];
@@ -264,6 +281,7 @@ export async function estadoDaGuilda(uid: string): Promise<EstadoDaGuilda> {
           nivel,
           incursao: incursaoNaTela(g, nivel.nivel, char, hoje),
           pesquisa: pesquisaNaTela(g, nivel.nivel),
+          chefeSemanal: await chefeSemanalNaTela(g, nivel.nivel, char),
           convites: admin ? g.convites : [],
           pedidos: admin ? g.pedidos : [],
         },
@@ -354,6 +372,8 @@ export const ACOES_DE_GUILDA = [
   'entregarContrato',
   'lutarIncursao',
   'doarPesquisa',
+  'lutarChefeSemanal',
+  'resgatarChefeSemanal',
 ] as const;
 export type AcaoDeGuilda = (typeof ACOES_DE_GUILDA)[number];
 export const ehAcaoDeGuilda = (v: unknown): v is AcaoDeGuilda => typeof v === 'string' && (ACOES_DE_GUILDA as readonly string[]).includes(v);
@@ -368,6 +388,8 @@ export interface PedidoDeAcao {
   contratoId?: unknown;
   /** doarPesquisa: o ramo, o ouro e os materiais ({ id: quantidade }). */
   ramo?: unknown;
+  /** resgatarChefeSemanal: a semana (a segunda-feira, AAAA-MM-DD). */
+  semana?: unknown;
   ouro?: unknown;
   materiais?: unknown;
   /** O personagem alvo (cancelarConvite, aceitarPedido, recusarPedido, expulsar, promover, rebaixar, transferir). */
@@ -620,6 +642,14 @@ const ACOES: Record<AcaoDeGuilda, Acao> = {
 
   async doarPesquisa(uid, pedido, r) {
     return doarPesquisa(uid, pedido, r);
+  },
+
+  async lutarChefeSemanal(uid, _pedido, r) {
+    return lutarChefeSemanal(uid, r, gerarSementeCombate());
+  },
+
+  async resgatarChefeSemanal(uid, pedido) {
+    return resgatarChefeSemanal(uid, pedido.semana);
   },
 
   async entregarContrato(uid, pedido) {
@@ -890,6 +920,147 @@ export async function doarPesquisa(uid: string, pedido: PedidoDeAcao, r: RegrasD
     ctx.gravarGuilda({ ...guilda, pesquisa });
     const doado = [ouro > 0 ? `${ouro} de ouro` : '', ...usados].filter(Boolean).join(', ');
     return { mensagem: `Você doou ${doado} para ${def.nome}.${subiu ? ` ${def.nome} subiu para o nível ${progresso.nivel}: +${progresso.nivel * def.porNivel}${def.unidade} de ${def.descricao}!` : ''}` };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Chefe de guildas (semanal)
+// ---------------------------------------------------------------------------
+
+export interface ChefeSemanalNaTela {
+  liberado: boolean;
+  nivelDaGuildaParaLiberar: number;
+  semana: string;
+  /** A segunda-feira em que a semana acaba (0h de Brasília). */
+  termina: string;
+  chefe: string;
+  meuMelhor: number;
+  totalDaGuilda: number;
+  /** Posição da guilda agora (null se ainda não lutou ninguém). */
+  posicao: number | null;
+  top: { posicao: number; nome: string; total: number; minha: boolean }[];
+  /** Semanas que já acabaram e o jogador ainda pode resgatar. */
+  pendentes: string[];
+  faixas: FaixaDoChefeSemanal[];
+}
+
+const GUARDA_DO_TOP_MS = 5 * 60_000;
+const topGuardado = new Map<string, { em: number; lista: EntradaDoChefeSemanal[] }>();
+
+export function limparCacheDoChefeSemanal(): void {
+  topGuardado.clear();
+}
+
+async function topDaSemana(semana: string): Promise<EntradaDoChefeSemanal[]> {
+  const g = topGuardado.get(semana);
+  if (g && Date.now() - g.em < GUARDA_DO_TOP_MS) return g.lista;
+  const lista = await repositorio.listarChefeSemanal(semana, GUILDAS_NO_RANKING_SEMANAL);
+  topGuardado.set(semana, { em: Date.now(), lista });
+  return lista;
+}
+
+/** Posições com empate: quem tem o mesmo total fica na mesma posição. */
+function posicoes(lista: readonly EntradaDoChefeSemanal[]) {
+  return lista.map((e, i) => ({ e, posicao: lista.findIndex((x) => x.total === e.total) + 1 || i + 1 }));
+}
+
+/** A tela do Chefe de guildas: 1 leitura do registro da guilda, 1 contagem para a posição e o top (5 min na memória). */
+async function chefeSemanalNaTela(g: GuildaDocumento, nivelDaGuildaAtual: number, eu: CharacterDocument, agora = new Date()): Promise<ChefeSemanalNaTela> {
+  const semana = semanaDe(agora);
+  const liberado = nivelDaGuildaAtual >= NIVEL_DA_GUILDA_PARA_CHEFE_SEMANAL;
+  const pendentes = (eu.chefeSemanal ?? []).filter((p) => p.semana < semana && !p.resgatada && p.guildaId === g.id).map((p) => p.semana);
+  const base = { liberado, nivelDaGuildaParaLiberar: NIVEL_DA_GUILDA_PARA_CHEFE_SEMANAL, semana, termina: fimDaSemana(semana), chefe: chefeDaSemana(semana).nome, pendentes, faixas: [...FAIXAS_DO_CHEFE_SEMANAL] };
+  if (!liberado) return { ...base, meuMelhor: 0, totalDaGuilda: 0, posicao: null, top: [] };
+  const [minha, top] = await Promise.all([repositorio.lerEntradaChefeSemanal(semana, g.id), topDaSemana(semana)]);
+  const posicao = minha && minha.total > 0 ? (await repositorio.contarGuildasAcimaNoChefeSemanal(semana, minha.total)) + 1 : null;
+  return {
+    ...base,
+    meuMelhor: minha?.membros[eu.uid]?.dano ?? 0,
+    totalDaGuilda: minha?.total ?? 0,
+    posicao,
+    top: posicoes(top).map(({ e, posicao: p }) => ({ posicao: p, nome: e.nomeDaGuilda, total: e.total, minha: e.guildaId === g.id })),
+  };
+}
+
+/**
+ * Uma luta contra o chefe da semana: mede o dano (o chefe tem vida sem fim). Só grava se for o maior dano do membro na
+ * semana (assim lutar sem limite não gasta gravações à toa); a primeira luta da semana também anota a participação.
+ */
+export async function lutarChefeSemanal(uid: string, r: RegrasDeGuilda, semente: number, agora = new Date()): Promise<{ mensagem: string }> {
+  const semana = semanaDe(agora);
+  return repositorio.executarTransacao('guilda:chefeSemanal', async (ctx) => {
+    const eu = await carregarPersonagem(ctx, uid);
+    const { guilda } = await minhaGuildaNoContexto(ctx, eu);
+    if (nivelDaGuilda(guilda.xp, r).nivel < NIVEL_DA_GUILDA_PARA_CHEFE_SEMANAL) throw new ErroDeGuilda('O Chefe de guildas abre quando a guilda chega ao nível Prestigiada.');
+    const entrada = (await ctx.lerEntradaChefeSemanal(semana, guilda.id)) ?? { semana, guildaId: guilda.id, nomeDaGuilda: guilda.nome, total: 0, membros: {} };
+    const chefe = montarChefeSemanal(semana);
+    const resultado = resolverCombate(combatenteDoPersonagem(eu), chefe, semente);
+    // Conta também o que foi tirado do Sobreescudo do chefe
+    const final = resultado.monstroFinal;
+    const dano = final ? Math.max(0, VIDA_DO_CHEFE_SEMANAL + (chefe.sobreescudoInicial ?? 0) - final.hp - final.sobreescudo) : 0;
+    const anterior = entrada.membros[uid]?.dano ?? 0;
+    if (dano > anterior) {
+      const membros = { ...entrada.membros, [uid]: { nome: eu.nome, dano } };
+      ctx.gravarEntradaChefeSemanal({ ...entrada, nomeDaGuilda: guilda.nome, membros, total: totalDosMembros(membros) });
+    }
+    if (!(eu.chefeSemanal ?? []).some((p) => p.semana === semana && p.guildaId === guilda.id)) {
+      salvarPersonagem(ctx, eu, { chefeSemanal: [...(eu.chefeSemanal ?? []), { semana, guildaId: guilda.id }].slice(-4) });
+    }
+    topGuardado.delete(semana);
+    return {
+      mensagem: dano > anterior ? `Você causou ${dano} de dano em ${chefe.nome}: seu novo melhor da semana!` : `Você causou ${dano} de dano em ${chefe.nome}. Seu melhor da semana continua ${anterior}.`,
+    };
+  });
+}
+
+/**
+ * Resgate da semana que acabou: pela posição final da guilda, ouro e baús de emblemas para quem lutou e ainda está
+ * nela; o XP de guilda da faixa entra uma vez só (no primeiro resgate).
+ */
+export async function resgatarChefeSemanal(uid: string, semanaPedida: unknown, agora = new Date()): Promise<{ mensagem: string }> {
+  const semana = typeof semanaPedida === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(semanaPedida) ? semanaPedida : '';
+  if (!semana) throw new ErroDeGuilda('Semana inválida.');
+  if (semana >= semanaDe(agora)) throw new ErroDeGuilda('Essa semana ainda não acabou: o resgate abre na segunda-feira.', 409);
+  const char = await repositorio.lerPersonagem(uid);
+  const participacao = char?.chefeSemanal?.find((p) => p.semana === semana);
+  if (!char || !participacao) throw new ErroDeGuilda('Você não lutou contra o Chefe de guildas nessa semana.', 404);
+  if (participacao.resgatada) throw new ErroDeGuilda('Você já resgatou essa semana.', 409);
+  const entradaAntes = await repositorio.lerEntradaChefeSemanal(semana, participacao.guildaId);
+  if (!entradaAntes || !entradaAntes.membros[uid]) throw new ErroDeGuilda('O registro da sua guilda nessa semana não foi encontrado.', 404);
+  // A semana acabou: ninguém muda mais os totais, então a contagem fora da transação é a posição final
+  const posicao = (await repositorio.contarGuildasAcimaNoChefeSemanal(semana, entradaAntes.total)) + 1;
+  const faixa = faixaDaPosicao(posicao);
+  const semente = gerarSementeCombate();
+  return repositorio.executarTransacao('guilda:resgatarChefeSemanal', async (ctx) => {
+    let eu = await carregarPersonagem(ctx, uid);
+    const p = eu.chefeSemanal?.find((x) => x.semana === semana);
+    if (!p || p.resgatada) throw new ErroDeGuilda('Você já resgatou essa semana.', 409);
+    const { guilda } = await minhaGuildaNoContexto(ctx, eu);
+    if (guilda.id !== p.guildaId) throw new ErroDeGuilda('A recompensa é de quem ainda está na guilda com que lutou.', 409);
+    const entrada = (await ctx.lerEntradaChefeSemanal(semana, guilda.id))!;
+    const motivo = `Chefe de guildas (${faixa.nome})`;
+    if (faixa.ouro > 0) eu = alterarSaldoEm(ctx, eu, 'ouro', faixa.ouro, motivo).character;
+    const novos: EmblemaItem[] = [];
+    let i = 0;
+    for (const bau of faixa.baus) {
+      for (let k = 0; k < bau.quantidade; k++, i++) {
+        const valor = Math.abs((semente + i * 7919) % 100);
+        novos.push({ id: randomUUID(), tipo: escolherTipoDaRaridade(bau.raridade, valor).id, estrelas: 1 });
+      }
+    }
+    salvarPersonagem(ctx, eu, {
+      ouro: eu.ouro,
+      ...(novos.length ? { emblemasItens: [...(eu.emblemasItens ?? []), ...novos] } : {}),
+      chefeSemanal: (eu.chefeSemanal ?? []).map((x) => (x.semana === semana ? { ...x, resgatada: true } : x)),
+    });
+    let xpDaGuilda = '';
+    if (!entrada.xpEntregue) {
+      ctx.gravarGuilda({ ...guilda, xp: guilda.xp + faixa.xpGuilda });
+      ctx.gravarEntradaChefeSemanal({ ...entrada, xpEntregue: true });
+      xpDaGuilda = ` A guilda ganhou ${faixa.xpGuilda} de XP.`;
+    }
+    const baus = faixa.baus.map((b) => `${b.quantidade} baú(s) ${EMBLEMA_RARIDADE_MAP[b.raridade].nome.toLowerCase()}(s)`).join(', ');
+    return { mensagem: `Sua guilda ficou em ${posicao}º (${faixa.nome}). Você recebeu ${faixa.ouro} de ouro${baus ? ` e ${baus} de emblemas` : ''}.${xpDaGuilda}` };
   });
 }
 

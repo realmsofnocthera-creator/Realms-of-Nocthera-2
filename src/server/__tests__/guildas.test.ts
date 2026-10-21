@@ -5,7 +5,7 @@ import { GET as guildasGet } from '@/app/api/guildas/route';
 import { GET as guildaPublicaGet } from '@/app/api/guildas/[id]/route';
 import { limparCacheRevogacao } from '@/server/auth';
 import { createCharacter, executarCacada, getCharacterByUid, getPublicCharacterByName, updateCharacter } from '@/server/characterService';
-import { agirNaGuilda, ErroDeGuilda, estadoDaGuilda, lutarIncursao, limparCacheDasGuildas, listarGuildasParaJogador, tirarDaGuildaAntesDeExcluir, verGuilda } from '@/server/guildas';
+import { agirNaGuilda, ErroDeGuilda, estadoDaGuilda, limparCacheDoChefeSemanal, lutarChefeSemanal, lutarIncursao, resgatarChefeSemanal, limparCacheDasGuildas, listarGuildasParaJogador, tirarDaGuildaAntesDeExcluir, verGuilda } from '@/server/guildas';
 import { limparCacheDeSistemas } from '@/server/sistemasLeitura';
 import { configuracaoPadrao } from '@/rules/sistemas';
 import { REGRAS_PADRAO_DE_GUILDA } from '@/rules/guilda';
@@ -470,5 +470,93 @@ describe('Incursões e Pesquisa (7.3)', () => {
     const r = await executarCacada('u1', 'rato-da-floresta', { seed: 3, combateId: 'pesquisa-bonus-1' });
     expect(r.resultado.vencedor).toBe('personagem');
     expect(r.resultado.mensagens.join(' ') + r.mensagens.join(' ')).toMatch(/Pesquisa da guilda/);
+  });
+});
+
+describe('Chefe de guildas (7.3)', () => {
+  const MEDIO = { vigor: 120, sorte: 3, forca: 90, vitalidade: 30, arcano: 0, inteligencia: 0, agilidade: 30 };
+  const QUARTA = new Date('2026-10-21T15:00:00Z');
+  const SEGUNDA_SEGUINTE = new Date('2026-10-26T15:00:00Z');
+  beforeEach(async () => {
+    (process.env as Record<string, string | undefined>).NODE_ENV = 'test';
+    resetCharacterStore();
+    limparCacheRevogacao();
+    limparCacheDeSistemas();
+    limparCacheDasGuildas();
+    limparCacheDoChefeSemanal();
+    for (const [uid, nome] of Object.entries(NOMES)) {
+      await createCharacter(uid, { nome, racaId: 'elfo', classeId: 'cavaleiro', pontos: PONTOS });
+      await updateCharacter(uid, { nivel: 12, ouro: 6000, atributos: MEDIO });
+    }
+  });
+  const subir = async (id: string) => {
+    const g = (await repositorio.lerGuilda(id))!;
+    await repositorio.executarTransacao('t', async (ctx) => ctx.gravarGuilda({ ...g, xp: 15500 }));
+  };
+
+  it('abre em Prestigiada; vale o maior dano de cada membro e o total da guilda é a soma', async () => {
+    const id = await criarGuilda();
+    await entrar(id, 'u2');
+    expect((await erro(lutarChefeSemanal('u1', REGRAS_PADRAO_DE_GUILDA, 1, QUARTA)))?.message).toMatch(/Prestigiada/);
+    await subir(id);
+    await lutarChefeSemanal('u1', REGRAS_PADRAO_DE_GUILDA, 1, QUARTA);
+    await lutarChefeSemanal('u1', REGRAS_PADRAO_DE_GUILDA, 2, QUARTA);
+    await lutarChefeSemanal('u2', REGRAS_PADRAO_DE_GUILDA, 3, QUARTA);
+    const e = (await repositorio.lerEntradaChefeSemanal('2026-10-19', id))!;
+    expect(e.membros.u1.dano).toBeGreaterThan(0);
+    expect(e.total).toBe(e.membros.u1.dano + e.membros.u2.dano);
+    expect((await getCharacterByUid('u1'))!.chefeSemanal).toEqual([{ semana: '2026-10-19', guildaId: id }]);
+  });
+
+  it('ranking entre guildas e resgate pela posição final, só depois da semana', async () => {
+    const a = await criarGuilda('u1', 'Folhaviva');
+    const b = await criarGuilda('u3', 'Lorien');
+    await entrar(a, 'u2');
+    await subir(a);
+    await subir(b);
+    await repositorio.executarTransacao('t', async (ctx) => {
+      ctx.gravarEntradaChefeSemanal({ semana: '2026-10-19', guildaId: a, nomeDaGuilda: 'Folhaviva', total: 900, membros: { u1: { nome: 'Aragorn', dano: 500 }, u2: { nome: 'Boromir', dano: 400 } } });
+      ctx.gravarEntradaChefeSemanal({ semana: '2026-10-19', guildaId: b, nomeDaGuilda: 'Lorien', total: 300, membros: { u3: { nome: 'Celeborn', dano: 300 } } });
+    });
+    for (const uid of ['u1', 'u2']) await updateCharacter(uid, { chefeSemanal: [{ semana: '2026-10-19', guildaId: a }] });
+    await updateCharacter('u3', { chefeSemanal: [{ semana: '2026-10-19', guildaId: b }] });
+    expect((await erro(agir('u1', 'resgatarChefeSemanal', { semana: '2026-10-19' })))?.message).toBeTruthy();
+    expect((await erro(resgatarChefeSemanal('u1', '2026-10-19', QUARTA)))?.message).toMatch(/ainda não acabou/);
+    const ouro1 = (await getCharacterByUid('u1'))!.ouro;
+    const { mensagem } = await resgatarChefeSemanal('u1', '2026-10-19', SEGUNDA_SEGUINTE);
+    expect(mensagem).toMatch(/1º/);
+    const d1 = (await getCharacterByUid('u1'))!;
+    expect(d1.ouro).toBe(ouro1 + 20000);
+    expect(d1.emblemasItens).toHaveLength(2);
+    expect((await repositorio.lerGuilda(a))!.xp).toBe(15500 + 3000);
+    await resgatarChefeSemanal('u2', '2026-10-19', SEGUNDA_SEGUINTE);
+    expect((await repositorio.lerGuilda(a))!.xp).toBe(15500 + 3000);
+    expect((await getCharacterByUid('u2'))!.emblemasItens).toHaveLength(2);
+    expect((await erro(resgatarChefeSemanal('u1', '2026-10-19', SEGUNDA_SEGUINTE)))?.message).toMatch(/já resgatou/);
+    await resgatarChefeSemanal('u3', '2026-10-19', SEGUNDA_SEGUINTE);
+    expect((await getCharacterByUid('u3'))!.emblemasItens).toHaveLength(1);
+    expect((await erro(resgatarChefeSemanal('u4', '2026-10-19', SEGUNDA_SEGUINTE)))?.status).toBe(404);
+  });
+
+  it('quem saiu da guilda não resgata', async () => {
+    const a = await criarGuilda();
+    await entrar(a, 'u2');
+    await subir(a);
+    await repositorio.executarTransacao('t', async (ctx) => ctx.gravarEntradaChefeSemanal({ semana: '2026-10-19', guildaId: a, nomeDaGuilda: 'Folhaviva', total: 10, membros: { u2: { nome: 'Boromir', dano: 10 } } }));
+    await updateCharacter('u2', { chefeSemanal: [{ semana: '2026-10-19', guildaId: a }] });
+    await agir('u2', 'sair');
+    expect((await erro(resgatarChefeSemanal('u2', '2026-10-19', SEGUNDA_SEGUINTE)))?.status).toBe(404);
+  });
+
+  it('a tela mostra o chefe, o melhor do jogador, a posição e o top', async () => {
+    const id = await criarGuilda();
+    await subir(id);
+    await lutarChefeSemanal('u1', REGRAS_PADRAO_DE_GUILDA, 5);
+    const c = (await estadoDaGuilda('u1')).minha!.chefeSemanal;
+    expect(c.liberado).toBe(true);
+    expect(c.meuMelhor).toBeGreaterThan(0);
+    expect(c.posicao).toBe(1);
+    expect(c.top).toEqual([{ posicao: 1, nome: 'Folhaviva', total: c.totalDaGuilda, minha: true }]);
+    expect(c.chefe).toMatch(/Chefe Semanal/);
   });
 });
