@@ -14,6 +14,7 @@ import { ehTipoDeConteudo } from '@/rules/conteudo';
 import type { ProgressoDaCampanha } from '@/game/campanha';
 import { comprimirMapa, descomprimirMapa } from '@/rules/mapaComprimido';
 import type { MissoesDoJogador } from '@/game/missoes';
+import { chaveDeBusca, type CampoDoRanking, type CriterioDeRanking, type RankingGuardado, type ResumoDePersonagem } from '@/rules/social';
 import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
 import { MAXIMO_DE_ADVERTENCIAS, sancaoDocumentoVazio, type Advertencia, type SancaoDocumento } from '@/rules/sancoes';
 import {
@@ -36,6 +37,36 @@ function descansosDoDocumento(bruto: unknown): Record<string, number> | undefine
   const entradas = Object.entries(bruto as Record<string, unknown>).filter((e): e is [string, number] => typeof e[1] === 'number' && Number.isFinite(e[1])).slice(0, 200);
   return entradas.length ? Object.fromEntries(entradas) : undefined;
 }
+const CAMPOS_DO_RESUMO_PUBLICO = ['nome', 'avatarId', 'classeId', 'racaId', 'nivel', 'xpAtual', 'escondidoNoRanking', 'escondidoNaBusca'];
+
+/** Um personagem para ranking e busca (só o público), com tolerância a dado estranho. */
+function resumoPublicoDoDocumento(data: DocumentData, campo?: CampoDoRanking): ResumoDePersonagem | null {
+  if (typeof data.nome !== 'string' || !data.nome) return null;
+  const numero = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+  return {
+    nome: data.nome,
+    avatarId: texto(data.avatarId),
+    classeId: texto(data.classeId),
+    racaId: texto(data.racaId),
+    nivel: numero(data.nivel),
+    xpAtual: numero(data.xpAtual),
+    ...(campo ? { valor: numero(data[campo]) } : {}),
+    ...(data.escondidoNoRanking === true ? { escondidoNoRanking: true } : {}),
+    ...(data.escondidoNaBusca === true ? { escondidoNaBusca: true } : {}),
+  };
+}
+
+function rankingDoDocumento(criterio: CriterioDeRanking, data: DocumentData | undefined): RankingGuardado | null {
+  if (!data || typeof data.atualizadoEm !== 'string' || !Array.isArray(data.entradas)) return null;
+  const entradas = (data.entradas as unknown[]).flatMap((e) => {
+    if (typeof e !== 'object' || e === null) return [];
+    const o = e as Record<string, unknown>;
+    if (typeof o.nome !== 'string' || typeof o.posicao !== 'number' || typeof o.valor !== 'number') return [];
+    return [{ posicao: o.posicao, nome: o.nome, avatarId: texto(o.avatarId), classeId: texto(o.classeId), racaId: texto(o.racaId), nivel: typeof o.nivel === 'number' ? o.nivel : 0, valor: o.valor }];
+  });
+  return { criterio, atualizadoEm: data.atualizadoEm, entradas };
+}
+
 /** As missões do personagem lidas do banco, com tolerância: o que estiver fora do formato é descartado. */
 function missoesDoDocumento(bruto: unknown): MissoesDoJogador | undefined {
   if (typeof bruto !== 'object' || bruto === null || Array.isArray(bruto)) return undefined;
@@ -320,6 +351,8 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(Array.isArray(data.perfilEquipamentos)
       ? { perfilEquipamentos: (data.perfilEquipamentos as unknown[]).filter((v): v is string => typeof v === 'string').slice(0, 4) }
       : {}),
+    ...(data.escondidoNoRanking === true ? { escondidoNoRanking: true } : {}),
+    ...(data.escondidoNaBusca === true ? { escondidoNaBusca: true } : {}),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
       ? { bonusSubclasseAplicado: lerAtributos(data.bonusSubclasseAplicado, ZEROS_ATRIBUTOS) }
       : {}),
@@ -369,6 +402,12 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     armaduras: char.armaduras ?? [],
     equipamento: char.equipamento ?? EQUIPAMENTO_VAZIO,
     ...(char.perfilEquipamentos ? { perfilEquipamentos: char.perfilEquipamentos } : {}),
+    ...(char.escondidoNoRanking ? { escondidoNoRanking: true } : {}),
+    ...(char.escondidoNaBusca ? { escondidoNaBusca: true } : {}),
+    // campos derivados, só para o banco poder ordenar e buscar (7.1): o nome em minúsculas e os contadores das provações
+    nomeBusca: chaveDeBusca(char.nome),
+    ...(char.batalhaSangrentaVencidas?.length ? { vitoriasBatalha: char.batalhaSangrentaVencidas.length } : {}),
+    ...(char.guerreiroVencidas?.length ? { vitoriasGuerreiro: char.guerreiroVencidas.length } : {}),
     hpMax: char.hpMax,
     sobreescudoMax: char.sobreescudoMax,
     criadoEm: char.criadoEm,
@@ -536,6 +575,44 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
         const data = snap.exists ? snap.data() : undefined;
         return data ? personagemDoFirestore(uid, data) : null;
       });
+    },
+
+    async consultarTopo(campo: CampoDoRanking, limite: number) {
+      return lerComRetry(`consultarTopo:${campo}`, async () => {
+        const snap = await db.collection('characters').orderBy(campo, 'desc').limit(limite).select(...CAMPOS_DO_RESUMO_PUBLICO, campo).get();
+        return snap.docs.flatMap((d) => {
+          const r = resumoPublicoDoDocumento(d.data(), campo);
+          return r ? [r] : [];
+        });
+      });
+    },
+
+    async buscarPorPrefixo(prefixo: string, limite: number) {
+      return lerComRetry(`buscarPorPrefixo:${prefixo}`, async () => {
+        const snap = await db
+          .collection('characters')
+          .where('nomeBusca', '>=', prefixo)
+          .where('nomeBusca', '<', `${prefixo}\uf8ff`)
+          .orderBy('nomeBusca')
+          .limit(limite)
+          .select(...CAMPOS_DO_RESUMO_PUBLICO)
+          .get();
+        return snap.docs.flatMap((d) => {
+          const r = resumoPublicoDoDocumento(d.data());
+          return r ? [r] : [];
+        });
+      });
+    },
+
+    async lerRanking(criterio: CriterioDeRanking) {
+      return lerComRetry(`lerRanking:${criterio}`, async () => {
+        const snap = await db.collection('ranking').doc(criterio).get();
+        return snap.exists ? rankingDoDocumento(criterio, snap.data()) : null;
+      });
+    },
+
+    async gravarRanking(ranking: RankingGuardado) {
+      await gravarSimples(`gravarRanking:${ranking.criterio}`, () => db.collection('ranking').doc(ranking.criterio).set({ atualizadoEm: ranking.atualizadoEm, entradas: ranking.entradas }));
     },
 
     async lerDonoDoNome(chaveNome: string) {

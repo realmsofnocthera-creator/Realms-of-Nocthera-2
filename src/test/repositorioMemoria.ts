@@ -7,6 +7,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import type { SancaoDocumento } from '@/rules/sancoes';
+import { chaveDeBusca, type CampoDoRanking, type CriterioDeRanking, type RankingGuardado, type ResumoDePersonagem } from '@/rules/social';
 import type { ConfiguracaoDeSistemas } from '@/rules/sistemas';
 import type {
   ConteudoDocumento,
@@ -34,6 +35,7 @@ interface Estado {
   versoes: Map<string, VersaoConteudo[]>;
   sancoes: Map<string, SancaoDocumento>;
   configuracaoDeSistemas: ConfiguracaoDeSistemas | null;
+  rankings: Map<string, RankingGuardado>;
 }
 
 const estado: Estado = {
@@ -48,7 +50,35 @@ const estado: Estado = {
   versoes: new Map(),
   sancoes: new Map(),
   configuracaoDeSistemas: null,
+  rankings: new Map(),
 };
+
+function valorDoCampo(c: CharacterDocument, campo: CampoDoRanking): number {
+  switch (campo) {
+    case 'nivel':
+      return c.nivel;
+    case 'torreAndar':
+      return c.torreAndar ?? 0;
+    case 'vitoriasBatalha':
+      return c.batalhaSangrentaVencidas?.length ?? 0;
+    case 'vitoriasGuerreiro':
+      return c.guerreiroVencidas?.length ?? 0;
+  }
+}
+
+function resumoPublico(c: CharacterDocument, valor?: number): ResumoDePersonagem {
+  return {
+    nome: c.nome,
+    avatarId: c.avatarId,
+    classeId: c.classeId,
+    racaId: c.racaId,
+    nivel: c.nivel,
+    xpAtual: c.xpAtual,
+    ...(valor !== undefined ? { valor } : {}),
+    ...(c.escondidoNoRanking ? { escondidoNoRanking: true } : {}),
+    ...(c.escondidoNaBusca ? { escondidoNaBusca: true } : {}),
+  };
+}
 
 function resumoDe(doc: ConteudoDocumento): ResumoConteudo {
   const { rascunho: _rascunho, ...resumo } = doc;
@@ -238,6 +268,31 @@ export const repositorio: Repositorio = {
       .slice(0, limite);
   },
 
+  async consultarTopo(campo: CampoDoRanking, limite: number) {
+    return [...estado.personagens.values()]
+      .map((c) => resumoPublico(c, valorDoCampo(c, campo)))
+      .filter((r) => (r.valor ?? 0) > 0)
+      .sort((a, b) => (b.valor ?? 0) - (a.valor ?? 0))
+      .slice(0, limite);
+  },
+
+  async buscarPorPrefixo(prefixo: string, limite: number) {
+    return [...estado.personagens.values()]
+      .filter((c) => chaveDeBusca(c.nome).startsWith(prefixo))
+      .sort((a, b) => chaveDeBusca(a.nome).localeCompare(chaveDeBusca(b.nome)))
+      .slice(0, limite)
+      .map((c) => resumoPublico(c));
+  },
+
+  async lerRanking(criterio: CriterioDeRanking) {
+    const r = estado.rankings.get(criterio);
+    return r ? structuredClone(r) : null;
+  },
+
+  async gravarRanking(ranking: RankingGuardado) {
+    estado.rankings.set(ranking.criterio, structuredClone(ranking));
+  },
+
   async lerConfiguracaoDeSistemas() {
     falhaNaConfiguracao?.();
     return estado.configuracaoDeSistemas ? structuredClone(estado.configuracaoDeSistemas) : null;
@@ -287,6 +342,7 @@ export function resetCharacterStore(): void {
   estado.versoes.clear();
   estado.sancoes.clear();
   estado.configuracaoDeSistemas = null;
+  estado.rankings.clear();
   falhaNaConfiguracao = null;
   falhaNoLogAdmin = null;
   falhaAoGravar = null;
