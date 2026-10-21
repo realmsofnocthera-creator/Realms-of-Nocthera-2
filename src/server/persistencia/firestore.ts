@@ -12,6 +12,7 @@ import { descreverErro, registrarLog } from '@/server/log';
 import { ehPapelMestre } from '@/rules/mestre';
 import { ehTipoDeConteudo } from '@/rules/conteudo';
 import type { ProgressoDaCampanha } from '@/game/campanha';
+import { comprimirMapa, descomprimirMapa } from '@/rules/mapaComprimido';
 import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
 import { MAXIMO_DE_ADVERTENCIAS, sancaoDocumentoVazio, type Advertencia, type SancaoDocumento } from '@/rules/sancoes';
 import {
@@ -96,9 +97,17 @@ function resumoConteudoDoDocumento(chave: string, data: DocumentData | undefined
   };
 }
 
+/** Mapas grandes são guardados comprimidos (ver rules/mapaComprimido): descomprime ao ler e comprime ao gravar. */
+function dadosDoTipo(tipo: string, dados: unknown): unknown {
+  return tipo === 'mapa' ? descomprimirMapa(dados) : dados;
+}
+function dadosParaGravar(tipo: string, dados: unknown): unknown {
+  return tipo === 'mapa' ? comprimirMapa(dados) : dados;
+}
+
 function conteudoDoDocumento(chave: string, data: DocumentData | undefined): ConteudoDocumento | null {
   const resumo = resumoConteudoDoDocumento(chave, data);
-  return resumo ? { ...resumo, rascunho: data?.rascunho ?? null } : null;
+  return resumo ? { ...resumo, rascunho: dadosDoTipo(resumo.tipo, data?.rascunho ?? null) } : null;
 }
 
 function resumoVersaoDoDocumento(data: DocumentData | undefined): ResumoVersao | null {
@@ -115,14 +124,14 @@ function resumoVersaoDoDocumento(data: DocumentData | undefined): ResumoVersao |
   };
 }
 
-function versaoDoDocumento(data: DocumentData | undefined): VersaoConteudo | null {
+function versaoDoDocumento(data: DocumentData | undefined, tipo: string): VersaoConteudo | null {
   const resumo = resumoVersaoDoDocumento(data);
-  return resumo ? { ...resumo, dados: data?.dados ?? null } : null;
+  return resumo ? { ...resumo, dados: dadosDoTipo(tipo, data?.dados ?? null) } : null;
 }
 
 function documentoDoConteudo(doc: ConteudoDocumento): DocumentData {
   const { chave: _chave, ...dados } = doc;
-  return dados;
+  return { ...dados, rascunho: dadosParaGravar(doc.tipo, doc.rascunho) };
 }
 
 function papelMestreDoDocumento(uid: string, data: DocumentData | undefined): PapelMestreDocumento | null {
@@ -649,7 +658,7 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
         const nova: VersaoConteudo = { ...versao, versao: numero };
         const conteudo: ConteudoDocumento = { ...atual, versaoPublicada: numero, hashPublicado: nova.hash, ultimaVersao: numero };
         // create(): uma versão nunca é sobrescrita
-        tx.create(ref.collection('versoes').doc(String(numero)), { ...nova });
+        tx.create(ref.collection('versoes').doc(String(numero)), { ...nova, dados: dadosParaGravar(atual.tipo, nova.dados) });
         tx.set(ref, documentoDoConteudo(conteudo));
         return { conteudo, versao: nova };
       });
@@ -748,7 +757,7 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
     async lerVersaoConteudo(chave: string, versao: number) {
       return lerComRetry(`lerVersao:${chave}:${versao}`, async () => {
         const snap = await db.collection('conteudo').doc(chave).collection('versoes').doc(String(versao)).get();
-        return snap.exists ? versaoDoDocumento(snap.data()) : null;
+        return snap.exists ? versaoDoDocumento(snap.data(), chave.split('__')[0]) : null;
       });
     },
   };

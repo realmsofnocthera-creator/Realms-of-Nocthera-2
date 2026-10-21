@@ -7,6 +7,7 @@ import { validarArmadura } from '@/rules/armaduraConteudo';
 import { validarEmblema } from '@/rules/emblemaConteudo';
 import { validarAnuncio } from '@/rules/anuncio';
 import { validarCena } from '@/rules/cena';
+import { bytesGuardados } from '@/rules/mapaComprimido';
 
 /**
  * Conteúdo editável pelo Painel do Mestre (3.5.2.2): cada item tem um rascunho e versões publicadas numeradas.
@@ -45,6 +46,8 @@ export const NOME_MINIMO = 2;
 export const NOME_MAXIMO = 60;
 /** Teto do conteúdo em JSON: cabe com folga num documento do banco (1 MiB). */
 export const TAMANHO_MAXIMO_EM_BYTES = 600_000;
+/** O mapa é medido pela forma que vai ao banco (comprimida, se grande); o documento do banco guarda no máximo 1 MiB. */
+export const TAMANHO_MAXIMO_DO_MAPA_EM_BYTES = 800_000;
 
 /** Tipos de catálogo: o jogo inteiro lê a lista publicada (itens que o painel edita por cima do código). */
 export const TIPOS_DO_CATALOGO = ['arma', 'armadura', 'emblema'] as const;
@@ -110,9 +113,10 @@ export function referenciasDoConteudo(tipo: TipoDeConteudo, dados: unknown): Ref
 export function validarConteudo(tipo: TipoDeConteudo, bruto: unknown): ResultadoValidacao<unknown> {
   const resultado = VALIDADORES[tipo](bruto);
   if (!resultado.ok) return resultado;
-  const bytes = new TextEncoder().encode(JSON.stringify(resultado.dados)).length;
-  if (bytes > TAMANHO_MAXIMO_EM_BYTES) {
-    return { ok: false, erros: [`O conteúdo ficou grande demais (${bytes} bytes; o máximo é ${TAMANHO_MAXIMO_EM_BYTES}).`] };
+  const bytes = tipo === 'mapa' ? bytesGuardados(resultado.dados) : new TextEncoder().encode(JSON.stringify(resultado.dados)).length;
+  const maximo = tipo === 'mapa' ? TAMANHO_MAXIMO_DO_MAPA_EM_BYTES : TAMANHO_MAXIMO_EM_BYTES;
+  if (bytes > maximo) {
+    return { ok: false, erros: [`O conteúdo ficou grande demais (${bytes} bytes; o máximo é ${maximo}).${tipo === 'mapa' ? ' Reduza o mapa ou repita mais os mesmos tiles.' : ''}`] };
   }
   return resultado;
 }

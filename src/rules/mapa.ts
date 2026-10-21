@@ -9,8 +9,10 @@ import { validarObjetos, type ObjetoDoMapa } from '@/rules/objetosDoMapa';
  */
 export const FORMATO_DO_MAPA = 1;
 export const LADO_MINIMO_DO_MAPA = 4;
-/** 128 × 128 cabe com folga num documento do banco; mapas maiores serão divididos em pedaços (3.5.6.7). */
-export const LADO_MAXIMO_DO_MAPA = 128;
+/** Até 128 de lado o mapa é guardado em listas de números; acima disso, comprimido (ver mapaComprimido.ts). */
+export const LADO_ANTIGO_DO_MAPA = 128;
+/** 256 × 256 cabe comprimido num documento do banco; mapas ainda maiores virão em blocos (3.5.6.7, etapa 2). */
+export const LADO_MAXIMO_DO_MAPA = 256;
 export const TAMANHOS_DE_TILE = [16, 24, 32, 48, 64] as const;
 export const TILE_PADRAO = 32;
 export const MAIOR_TILE = 65_535;
