@@ -1,5 +1,6 @@
 import { validarMapa, type MapaDados } from '@/rules/mapa';
 import { validarCena, type CenaDados } from '@/rules/cena';
+import { validarMissao, type MissaoDados } from '@/rules/missao';
 import { validarTileset, type TilesetDados } from '@/rules/tileset';
 import { lerConteudoPublicado } from '@/server/conteudo';
 import { lerConfiguracaoDeSistemas } from '@/server/sistemasLeitura';
@@ -54,6 +55,20 @@ export async function lerCenaPublicada(id: string): Promise<CenaPublicada | null
   if (!c) return null;
   const v = validarCena(c.dados);
   return v.ok ? { id: c.id, nome: c.nome, dados: v.dados } : null;
+}
+
+/** Uma missão PUBLICADA e válida (corrompida conta como inexistente). */
+export async function lerMissaoPublicada(id: string): Promise<{ id: string; nome: string; dados: MissaoDados } | null> {
+  const c = await lerConteudoPublicado('missao', id);
+  if (!c) return null;
+  const v = validarMissao(c.dados);
+  return v.ok ? { id: c.id, nome: c.nome, dados: v.dados } : null;
+}
+
+/** As missões publicadas entre os ids (as que não estão publicadas ficam de fora). */
+export async function lerMissoesPublicadas(ids: readonly string[]): Promise<Record<string, MissaoDados>> {
+  const lidas = await Promise.all([...new Set(ids)].map((id) => lerMissaoPublicada(id)));
+  return Object.fromEntries(lidas.flatMap((m) => (m ? [[m.id, m.dados] as const] : [])));
 }
 
 export interface TilesetPublicado {

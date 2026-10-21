@@ -251,4 +251,42 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     await expect(repo.lerPersonagem('u1')).rejects.toBeInstanceOf(ErroPersistencia);
     expect(db.leituras).toBe(1);
   });
+
+  describe('progresso da Campanha no documento do personagem', () => {
+    const progresso = {
+      mapaId: 'vila',
+      x: 3,
+      y: 4,
+      baus: ['vila:bau-1'],
+      descansos: { 'vila:area-rato': 1_800_000_000_000 },
+      cenas: ['abertura', 'cena:abertura', 'vila:cena-1'],
+      missoes: {
+        primeira: { estado: 'ativa' as const, progresso: { falar: 1, rato: 2 }, iniciadaEm: '2026-10-22T12:00:00.000Z' },
+        antiga: { estado: 'concluida' as const, progresso: {}, iniciadaEm: '2026-10-20T12:00:00.000Z', concluidaEm: '2026-10-21T12:00:00.000Z' },
+      },
+      atualizadoEm: '2026-10-22T12:00:00.000Z',
+    };
+
+    it('descansos, cenas vistas e missões vão e voltam do banco', () => {
+      const volta = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, campanha: progresso }));
+      expect(volta?.campanha).toEqual(progresso);
+    });
+
+    it('dado estranho nessas partes é descartado sem derrubar a leitura', () => {
+      const doc = personagemParaFirestore({ ...PERSONAGEM, campanha: progresso }) as Record<string, unknown>;
+      const sujo = {
+        ...doc,
+        campanha: {
+          ...(doc.campanha as Record<string, unknown>),
+          descansos: { bom: 5, ruim: 'x', pior: null },
+          cenas: ['abertura', 7, null],
+          missoes: { ok: { estado: 'ativa', progresso: { a: 1, b: 'x' }, iniciadaEm: 'agora' }, ruim: { estado: 'feita' }, lixo: 'x', nulo: null },
+        },
+      };
+      const volta = personagemDoFirestore('u1', sujo);
+      expect(volta?.campanha?.descansos).toEqual({ bom: 5 });
+      expect(volta?.campanha?.cenas).toEqual(['abertura']);
+      expect(volta?.campanha?.missoes).toEqual({ ok: { estado: 'ativa', progresso: { a: 1 }, iniciadaEm: 'agora' } });
+    });
+  });
 });

@@ -2,6 +2,8 @@ import type { MapaDados } from '@/rules/mapa';
 import { objetoCobre } from '@/rules/objetosDoMapa';
 import { dentroDoMapa, tileLivre } from '@/rules/passagem';
 import { tilesAlcancaveis } from '@/rules/verificarMapa';
+import type { SituacaoDoJogador } from '@/rules/condicao';
+import { bloqueioDoObjeto, chaveDaCenaVista, type EventoDeMissao, type MissoesDoJogador } from '@/game/missoes';
 
 /**
  * Campanha (5.5-3 e 5.5-8), regras puras: o progresso do jogador no mundo e as ações que o servidor confere.
@@ -19,6 +21,8 @@ export interface ProgressoDaCampanha {
   descansos?: Record<string, number>;
   /** Cenas já vistas: "abertura" e, para ativadores "uma vez só", "mapa:objeto". */
   cenas?: string[];
+  /** Missões do personagem (em andamento e concluídas). */
+  missoes?: MissoesDoJogador;
   atualizadoEm: string;
 }
 
@@ -83,10 +87,12 @@ export function aplicarPosicaoDaAcao(atual: ProgressoDaCampanha, mapa: MapaDados
 }
 
 /** Abre um baú: o baú precisa estar no mapa, perto da posição salva e ainda fechado. */
-export function planejarBau(atual: ProgressoDaCampanha, mapa: MapaDados, objetoId: unknown, agora: string): ResultadoDaCampanha<{ progresso: ProgressoDaCampanha; item: { id: string; qtd: number } }> {
+export function planejarBau(atual: ProgressoDaCampanha, mapa: MapaDados, objetoId: unknown, agora: string, situacao: SituacaoDoJogador): ResultadoDaCampanha<{ progresso: ProgressoDaCampanha; item: { id: string; qtd: number } }> {
   const bau = typeof objetoId === 'string' ? mapa.objetos.find((o) => o.id === objetoId && o.tipo === 'bau') : undefined;
   if (!bau || !bau.item) return { ok: false, erro: 'Não há baú aí.' };
   if (!perto(atual, bau)) return { ok: false, erro: 'Chegue mais perto do baú.' };
+  const bloqueio = bloqueioDoObjeto(bau.condicao, situacao);
+  if (bloqueio) return { ok: false, erro: bloqueio };
   const chave = chaveDoBau(atual.mapaId, bau.id);
   if (atual.baus.includes(chave)) return { ok: false, erro: 'Este baú já foi aberto.' };
   if (atual.baus.length >= MAXIMO_DE_BAUS_GUARDADOS) return { ok: false, erro: 'Não foi possível registrar o baú agora.' };
@@ -102,11 +108,14 @@ export function planejarPorta(
   mapa: MapaDados,
   objetoId: unknown,
   destino: MapaDados | null,
-  agora: string
+  agora: string,
+  situacao: SituacaoDoJogador
 ): ResultadoDaCampanha<{ progresso: ProgressoDaCampanha }> {
   const porta = typeof objetoId === 'string' ? mapa.objetos.find((o) => o.id === objetoId && o.tipo === 'porta') : undefined;
   if (!porta || !porta.destino) return { ok: false, erro: 'Não há porta aí.' };
   if (!perto(atual, porta)) return { ok: false, erro: 'Chegue mais perto da porta.' };
+  const bloqueio = bloqueioDoObjeto(porta.condicao, situacao);
+  if (bloqueio) return { ok: false, erro: bloqueio };
   if (!destino) return { ok: false, erro: 'Esta passagem está fechada por enquanto.' };
   if (!dentroDoMapa(destino, porta.destino.x, porta.destino.y) || !tileLivre(destino, porta.destino.x, porta.destino.y)) {
     return { ok: false, erro: 'Esta passagem está fechada por enquanto.' };
@@ -156,13 +165,16 @@ export function planejarLuta(
   objetoId: unknown,
   posicao: unknown,
   agoraIso: string,
-  agoraMs: number
+  agoraMs: number,
+  situacao: SituacaoDoJogador
 ): ResultadoDaCampanha<{ plano: PlanoDeLuta }> | { ok: false; erro: string; descansaAte: number } {
   const area = typeof objetoId === 'string' ? mapa.objetos.find((o) => o.id === objetoId && o.tipo === 'cacada') : undefined;
   if (!area || !area.monstroId) return { ok: false, erro: 'Não há área de monstros aí.' };
   const ponto = aplicarPosicaoDaAcao(atual, mapa, posicao, agoraIso);
   if (!ponto.ok) return ponto;
   if (!objetoCobre(area, ponto.progresso.x, ponto.progresso.y)) return { ok: false, erro: 'Você não está nessa área.' };
+  const bloqueio = bloqueioDoObjeto(area.condicao, situacao);
+  if (bloqueio) return { ok: false, erro: bloqueio };
   const chave = chaveDaArea(atual.mapaId, area.id);
   const ate = atual.descansos?.[chave];
   if (ate !== undefined && ate > agoraMs) return { ok: false, erro: mensagemDoDescanso(ate, agoraMs), descansaAte: ate };
@@ -180,29 +192,65 @@ export function planejarLuta(
   };
 }
 
-/**
- * Marca uma cena como vista (a abertura, ou um ativador "uma vez só" do mapa em que o jogador está). Marcar de novo
- * não muda nada. A posição não conta: ver a cena não mexe no lugar salvo.
- */
-export function planejarCenaVista(
-  atual: ProgressoDaCampanha,
-  mapa: MapaDados,
-  pedido: { abertura?: unknown; objetoId?: unknown },
-  aberturaConfigurada: boolean,
-  agora: string
-): ResultadoDaCampanha<{ progresso: ProgressoDaCampanha }> {
-  let chave: string;
-  if (pedido.abertura === true) {
-    if (!aberturaConfigurada) return { ok: false, erro: 'Não há cena de abertura.' };
-    chave = CHAVE_DA_ABERTURA;
-  } else {
-    const ativador = typeof pedido.objetoId === 'string' ? mapa.objetos.find((o) => o.id === pedido.objetoId && o.tipo === 'cena') : undefined;
-    if (!ativador) return { ok: false, erro: 'Não há cena aí.' };
-    if (ativador.unica === false) return { ok: true, progresso: atual };
-    chave = chaveDaCena(atual.mapaId, ativador.id);
+/** Guarda "o jogador já viu" (sem repetir); no teto, não guarda mais. */
+function comCenaVista(cenas: readonly string[] | undefined, ...chaves: string[]): string[] {
+  const vistas = [...(cenas ?? [])];
+  for (const chave of chaves) {
+    if (!vistas.includes(chave) && vistas.length < MAXIMO_DE_CENAS_VISTAS) vistas.push(chave);
   }
+  return vistas;
+}
+
+/** Marca a abertura como vista (e a cena dela, para quem exige "cena vista"). Marcar de novo não muda nada. */
+export function planejarAberturaVista(atual: ProgressoDaCampanha, aberturaCenaId: string, agora: string): ResultadoDaCampanha<{ progresso: ProgressoDaCampanha }> {
+  if (!aberturaCenaId) return { ok: false, erro: 'Não há cena de abertura.' };
   const vistas = atual.cenas ?? [];
-  if (vistas.includes(chave)) return { ok: true, progresso: atual };
+  if (vistas.includes(CHAVE_DA_ABERTURA)) return { ok: true, progresso: atual };
   if (vistas.length >= MAXIMO_DE_CENAS_VISTAS) return { ok: false, erro: 'Não foi possível registrar a cena agora.' };
-  return { ok: true, progresso: { ...atual, cenas: [...vistas, chave], atualizadoEm: agora } };
+  return { ok: true, progresso: { ...atual, cenas: comCenaVista(vistas, CHAVE_DA_ABERTURA, chaveDaCenaVista(aberturaCenaId)), atualizadoEm: agora } };
+}
+
+export interface PlanoDeAcao {
+  progresso: ProgressoDaCampanha;
+  /** A cena que o jogador deve ver agora (diálogo do NPC ou cena do ativador). */
+  cenaId?: string;
+  /** Missões que esta ação tenta começar (o servidor confere os requisitos). */
+  iniciar: string[];
+  /** O que aconteceu, para andar os objetivos das missões em andamento. */
+  eventos: EventoDeMissao[];
+  /** Ativador bloqueado pela condição: a mensagem (nada mais acontece). */
+  bloqueio?: string;
+}
+
+/**
+ * Acionar um objeto do mapa: falar com um NPC (perto dele) ou entrar numa área de ativador de cena. O NPC toca o
+ * diálogo, anda os objetivos de "falar" e pode começar uma missão; o ativador respeita a condição, toca a cena uma vez
+ * por personagem (ou sempre) e pode começar uma missão. A posição enviada vale como checkpoint, como nas outras ações.
+ */
+export function planejarAcao(atual: ProgressoDaCampanha, mapa: MapaDados, objetoId: unknown, posicao: unknown, situacao: SituacaoDoJogador, agora: string): ResultadoDaCampanha<{ plano: PlanoDeAcao }> {
+  const objeto = typeof objetoId === 'string' ? mapa.objetos.find((o) => o.id === objetoId && (o.tipo === 'npc' || o.tipo === 'cena')) : undefined;
+  if (!objeto) return { ok: false, erro: 'Não há ninguém aí.' };
+  const ponto = aplicarPosicaoDaAcao(atual, mapa, posicao, agora);
+  if (!ponto.ok) return ponto;
+  const progresso = ponto.progresso;
+  const iniciar = objeto.missaoId ? [objeto.missaoId] : [];
+
+  if (objeto.tipo === 'npc') {
+    if (!perto(progresso, objeto)) return { ok: false, erro: 'Chegue mais perto.' };
+    const eventos: EventoDeMissao[] = [{ tipo: 'falar', mapa: progresso.mapaId, objeto: objeto.id }];
+    if (objeto.cenaId) eventos.push({ tipo: 'cena', cenaId: objeto.cenaId });
+    const cenas = objeto.cenaId ? comCenaVista(progresso.cenas, chaveDaCenaVista(objeto.cenaId)) : progresso.cenas;
+    return { ok: true, plano: { progresso: cenas === progresso.cenas ? progresso : { ...progresso, cenas }, ...(objeto.cenaId ? { cenaId: objeto.cenaId } : {}), iniciar, eventos } };
+  }
+
+  if (!objetoCobre(objeto, progresso.x, progresso.y)) return { ok: false, erro: 'Você não está nessa área.' };
+  const bloqueio = bloqueioDoObjeto(objeto.condicao, situacao);
+  if (bloqueio) return { ok: true, plano: { progresso, iniciar: [], eventos: [], bloqueio } };
+  const chaveUnica = chaveDaCena(progresso.mapaId, objeto.id);
+  if (objeto.unica !== false && (progresso.cenas ?? []).includes(chaveUnica)) return { ok: true, plano: { progresso, iniciar: [], eventos: [] } };
+  const cenaId = objeto.cenaId ?? '';
+  const eventos: EventoDeMissao[] = cenaId ? [{ tipo: 'cena', cenaId }] : [];
+  const vistas = comCenaVista(progresso.cenas, ...(objeto.unica !== false ? [chaveUnica] : []), ...(cenaId ? [chaveDaCenaVista(cenaId)] : []));
+  const mudou = vistas.length !== (progresso.cenas ?? []).length;
+  return { ok: true, plano: { progresso: mudou ? { ...progresso, cenas: vistas } : progresso, ...(cenaId ? { cenaId } : {}), iniciar, eventos } };
 }

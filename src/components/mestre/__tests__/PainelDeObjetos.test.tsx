@@ -16,6 +16,7 @@ const base = {
   mapas: [{ id: 'vila', nome: 'Vila' }],
   monstros: [{ id: 'lobo-cinzento', nome: 'Lobo Cinzento' }],
   cenas: [{ id: 'abertura', nome: 'Abertura' }],
+  missoes: [{ id: 'primeira', nome: 'Primeira missão' }],
   materiais: [{ id: 'pelo-de-rato', nome: 'Pelo de Rato' }],
 };
 const render = (objetos: ObjetoDoMapa[], selecionado: string | null, podeEditar = true, erros: string[] = []) =>

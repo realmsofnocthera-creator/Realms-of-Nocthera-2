@@ -2,12 +2,14 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Hand } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Hand, ScrollText } from 'lucide-react';
 import type { MapaDados } from '@/rules/mapa';
 import { origemDaImagem, type TilesetDados } from '@/rules/tileset';
 import type { ProgressoDaCampanha } from '@/game/campanha';
 import type { CenaDados } from '@/rules/cena';
 import { CenaPlayer } from '@/components/cena/CenaPlayer';
+import { MissoesPanel } from '@/components/campanha/MissoesPanel';
+import type { ResumoDaMissao } from '@/game/missoes';
 import { andar, iniciarJogo, interagir, type Direcao, type EstadoDeJogo, type EventoDeJogo } from '@/lib/jogarMapa';
 import { deveSalvarPosicao, type PontoDaCampanha } from '@/lib/salvamentoCampanha';
 import { NOCTHERA_THEME } from '@/theme/theme';
@@ -41,6 +43,21 @@ const VERIFICA_O_SALVAMENTO_A_CADA_MS = 5_000;
 const RENOVA_O_TOKEN_A_CADA_MS = 4 * 60_000;
 
 const nomeDoItem = (id: string) => id.replace(/-/g, ' ');
+
+/** O que as missões fizeram numa ação (resposta do servidor), em linhas para o jogador ler. */
+interface AvisosDeMissoes {
+  iniciadas: { id: string; titulo: string }[];
+  concluidas: { id: string; titulo: string; mensagens: string[] }[];
+  motivoDoNaoComeco?: string;
+}
+function linhasDosAvisos(m: AvisosDeMissoes | undefined): string[] {
+  if (!m) return [];
+  return [
+    ...m.iniciadas.map((x) => `Nova missão: ${x.titulo}`),
+    ...m.concluidas.flatMap((x) => [`Missão concluída: ${x.titulo}`, ...x.mensagens]),
+    ...(m.motivoDoNaoComeco ? [m.motivoDoNaoComeco] : []),
+  ];
+}
 const novoCombateId = () => `camp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 const abertosDoMapa = (p: ProgressoDaCampanha) => p.baus.filter((b) => b.startsWith(`${p.mapaId}:`)).map((b) => b.slice(p.mapaId.length + 1));
 
@@ -74,6 +91,7 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [cena, setCena] = useState<{ dados: CenaDados; fim: () => void } | null>(null);
+  const [missoesAbertas, setMissoesAbertas] = useState<{ ativas: ResumoDaMissao[]; concluidas: ResumoDaMissao[] } | null>(null);
   const cenaAbertaRef = useRef(false);
   const nomeDoJogadorRef = useRef('Aventureiro');
   /** Cenas já vistas (abertura e ativadores "uma vez só"): "abertura" e "mapa:objeto". */
@@ -254,23 +272,53 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
 
   // ---- ações ----
 
+  /** O servidor é quem sabe o que foi salvo e o que o jogador já viu: o celular só acompanha. */
+  const atualizarDoServidor = useCallback((progresso: ProgressoDaCampanha | undefined) => {
+    if (!progresso) return;
+    cenasVistasRef.current = new Set(progresso.cenas ?? []);
+    salvaRef.current = { mapaId: progresso.mapaId, x: progresso.x, y: progresso.y };
+    ultimoSalvamentoRef.current = Date.now();
+  }, []);
+
   const tratar = useCallback(
     async (eventos: EventoDeJogo[], antes: EstadoDeJogo, depois: EstadoDeJogo) => {
       const posicao = { mapaId: depois.mapaId, x: depois.x, y: depois.y };
       for (const e of eventos) {
         if (e.tipo === 'texto') {
           setDialogo({ titulo: e.titulo, texto: e.texto });
+          if (e.npcId) {
+            // falar com o NPC anda as missões (e pode começar uma): o servidor responde e o aviso entra no mesmo quadro
+            const npcId = e.npcId;
+            void chamar('/api/campanha/acionar', { objetoId: npcId, posicao }).then((r) => {
+              if (!r.ok) return;
+              atualizarDoServidor(r.dados.progresso as ProgressoDaCampanha | undefined);
+              const linhas = linhasDosAvisos(r.dados.missoes as AvisosDeMissoes | undefined);
+              if (linhas.length) setDialogo((d) => (d ? { ...d, texto: `${d.texto}\n\n${linhas.join('\n')}` } : { titulo: 'Missões', texto: linhas.join('\n') }));
+            });
+          }
         } else if (e.tipo === 'bau-vazio') {
           setDialogo({ titulo: 'Baú', texto: 'O baú está vazio.' });
         } else if (e.tipo === 'nada') {
           setDialogo({ titulo: 'Nada aqui', texto: e.motivo });
         } else if (e.tipo === 'cena') {
+          // ativador de cena ou diálogo de NPC: o servidor decide se toca (uma vez só, condição de acesso) e anda as missões
           const chave = `${depois.mapaId}:${e.objetoId}`;
           if (e.unica && cenasVistasRef.current.has(chave)) continue;
-          if (await tocarCena(e.cenaId) && e.unica) {
-            cenasVistasRef.current.add(chave);
-            void chamar('/api/campanha/cena/vista', { objetoId: e.objetoId });
+          setOcupado(true);
+          const r = await chamar('/api/campanha/acionar', { objetoId: e.objetoId, posicao });
+          setOcupado(false);
+          if (!r.ok) {
+            setDialogo({ titulo: 'Cena', texto: String(r.dados.error ?? 'Não foi possível abrir a cena agora.') });
+            continue;
           }
+          atualizarDoServidor(r.dados.progresso as ProgressoDaCampanha | undefined);
+          if (typeof r.dados.bloqueio === 'string') {
+            setDialogo({ titulo: 'Passagem bloqueada', texto: r.dados.bloqueio });
+            continue;
+          }
+          if (typeof r.dados.cenaId === 'string') await tocarCena(r.dados.cenaId);
+          const linhas = linhasDosAvisos(r.dados.missoes as AvisosDeMissoes | undefined);
+          if (linhas.length) setDialogo({ titulo: 'Missões', texto: linhas.join('\n') });
         } else if (e.tipo === 'luta') {
           const chave = `${depois.mapaId}:${e.objetoId}`;
           if ((descansosRef.current[chave] ?? 0) > Date.now()) {
@@ -291,7 +339,7 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
             }
             continue;
           }
-          const c = r.dados.campanha as { vencedor: 'personagem' | 'monstro'; monstroNome: string; xpGanho: number; ouroGanho: number; progresso: ProgressoDaCampanha; descansaAte: number };
+          const c = r.dados.campanha as { vencedor: 'personagem' | 'monstro'; monstroNome: string; xpGanho: number; ouroGanho: number; progresso: ProgressoDaCampanha; descansaAte: number; missoes?: AvisosDeMissoes };
           const mensagens = (r.dados.mensagens as string[] | undefined) ?? [];
           descansosRef.current = { ...(c.progresso.descansos ?? {}) };
           salvaRef.current = { mapaId: c.progresso.mapaId, x: c.progresso.x, y: c.progresso.y };
@@ -304,7 +352,7 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
             setDialogo({ titulo: `Luta: ${c.monstroNome}`, texto: `Você foi derrotado por ${c.monstroNome}.\nNada foi perdido: você voltou ao último ponto salvo. A área descansa por alguns minutos.` });
           } else {
             const subiu = mensagens.filter((m) => m.includes('SUBIU DE NÍVEL'));
-            setDialogo({ titulo: `Luta: ${c.monstroNome}`, texto: [`Vitória! +${c.xpGanho} XP e +${c.ouroGanho} de ouro.`, ...subiu].join('\n') });
+            setDialogo({ titulo: `Luta: ${c.monstroNome}`, texto: [`Vitória! +${c.xpGanho} XP e +${c.ouroGanho} de ouro.`, ...subiu, ...linhasDosAvisos(c.missoes)].join('\n') });
           }
         } else if (e.tipo === 'item') {
           setOcupado(true);
@@ -313,7 +361,7 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
           if (r.ok) {
             salvaRef.current = posicao;
             ultimoSalvamentoRef.current = Date.now();
-            setDialogo({ titulo: 'Baú', texto: `Você encontrou ${e.item.qtd} × ${nomeDoItem(e.item.id)}.` });
+            setDialogo({ titulo: 'Baú', texto: [`Você encontrou ${e.item.qtd} × ${nomeDoItem(e.item.id)}.`, ...linhasDosAvisos(r.dados.missoes as AvisosDeMissoes | undefined)].join('\n') });
           } else {
             jogoRef.current = { ...depois, abertos: antes.abertos };
             setJogo(jogoRef.current); // o baú não abriu: volta a ficar fechado
@@ -324,6 +372,8 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
           const r = await chamar('/api/campanha/porta', { objetoId: e.objetoId, posicao });
           if (r.ok && (await entrar(r.dados as unknown as RespostaDoMundo))) {
             setOcupado(false);
+            const linhas = linhasDosAvisos(r.dados.missoes as AvisosDeMissoes | undefined);
+            if (linhas.length) setDialogo({ titulo: 'Missões', texto: linhas.join('\n') });
             return; // chegou ao outro mapa: o resto dos eventos não vale mais
           }
           setOcupado(false);
@@ -331,7 +381,7 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
         }
       }
     },
-    [chamar, entrar, tocarCena]
+    [chamar, entrar, tocarCena, atualizarDoServidor]
   );
 
   const passo = useCallback(
@@ -383,6 +433,20 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
           <ArrowLeft className="w-3.5 h-3.5" /> Hub
         </Link>
         <h1 className="text-[13px] font-cinzel font-bold truncate" style={{ color: '#F5E3B3' }}>{mundo?.nome ?? 'História'}</h1>
+        <button
+          type="button"
+          aria-label="Missões"
+          disabled={!jogo}
+          onClick={async () => {
+            const r = await chamar('/api/campanha/missoes');
+            if (r.ok) setMissoesAbertas({ ativas: (r.dados.ativas as ResumoDaMissao[]) ?? [], concluidas: (r.dados.concluidas as ResumoDaMissao[]) ?? [] });
+            else setAviso(String(r.dados.error ?? 'Não foi possível abrir as missões agora.'));
+          }}
+          className="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-cinzel font-bold disabled:opacity-40"
+          style={{ borderColor: OURO, color: '#E6C775' }}
+        >
+          <ScrollText className="w-3.5 h-3.5" /> Missões
+        </button>
       </header>
 
       <div ref={caixaRef} className="flex-1 min-h-0 relative">
@@ -420,6 +484,7 @@ export function CampanhaScreen({ tokenFresco }: { tokenFresco: Token }) {
           <Hand className="w-6 h-6" /> {dialogo ? 'Continuar' : 'Interagir'}
         </button>
       </div>
+      {missoesAbertas && <MissoesPanel ativas={missoesAbertas.ativas} concluidas={missoesAbertas.concluidas} aoFechar={() => setMissoesAbertas(null)} />}
       {cena && <CenaPlayer cena={cena.dados} jogador={{ nome: nomeDoJogadorRef.current }} aoTerminar={cena.fim} />}
     </main>
   );

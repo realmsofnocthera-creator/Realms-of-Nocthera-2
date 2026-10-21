@@ -1,5 +1,6 @@
 import { MATERIAIS_MAP } from '@/rules/materiais';
 import { MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
+import { ID_DE_REFERENCIA, validarCondicao, type CondicaoDeAcesso } from '@/rules/condicao';
 
 /**
  * Objetos interativos do mapa (3.5.6.3), parte do formato do mapa. Sete tipos, cada um com um gatilho e uma ação
@@ -80,6 +81,10 @@ export interface ObjetoDoMapa {
   cenaId?: string;
   /** Só ativador de cena: toca uma única vez por personagem (padrão) ou toda vez que entrar na área. */
   unica?: boolean;
+  /** NPC e ativador de cena: a missão que começa (se o jogador cumpre os requisitos dela e ainda não a começou). */
+  missaoId?: string;
+  /** Porta, baú, ativador de cena e área de monstros: o que o jogador precisa cumprir para o objeto valer. */
+  condicao?: CondicaoDeAcesso;
   /** Só baú. */
   item?: { id: string; qtd: number };
   /** Só porta. */
@@ -88,12 +93,12 @@ export interface ObjetoDoMapa {
 
 const CAMPOS_DO_TIPO: Readonly<Record<TipoDeObjeto, readonly string[]>> = {
   inicio: [],
-  npc: ['nome', 'texto', 'cenaId'],
+  npc: ['nome', 'texto', 'cenaId', 'missaoId'],
   placa: ['texto'],
-  bau: ['item'],
-  porta: ['destino'],
-  cacada: ['largura', 'altura', 'monstroId'],
-  cena: ['largura', 'altura', 'cenaId', 'unica'],
+  bau: ['item', 'condicao'],
+  porta: ['destino', 'condicao'],
+  cacada: ['largura', 'altura', 'monstroId', 'condicao'],
+  cena: ['largura', 'altura', 'cenaId', 'unica', 'missaoId', 'condicao'],
 };
 /** Tipos que ocupam uma área (largura × altura) em vez de um tile, e por isso não bloqueiam nem disputam tile. */
 export const TIPOS_COM_AREA: readonly TipoDeObjeto[] = ['cacada', 'cena'];
@@ -194,6 +199,14 @@ export function validarObjetos(bruto: unknown, largura: number, altura: number, 
       const n = typeof o.nome === 'string' ? o.nome.trim() : '';
       if (n.length < 1 || n.length > NOME_MAXIMO_DO_NPC) erros.push(`${nome}: o nome vai de 1 a ${NOME_MAXIMO_DO_NPC} caracteres.`);
       limpo.nome = n;
+    }
+    if ((tipo === 'npc' || tipo === 'cena') && o.missaoId !== undefined && o.missaoId !== '') {
+      if (typeof o.missaoId !== 'string' || !ID_DE_REFERENCIA.test(o.missaoId)) erros.push(`${nome}: escolha a missão que começa aqui (ou deixe sem).`);
+      else limpo.missaoId = o.missaoId;
+    }
+    if (o.condicao !== undefined) {
+      const c = validarCondicao(o.condicao, nome, erros);
+      if (c) limpo.condicao = c;
     }
     if (tipo === 'npc' && o.cenaId !== undefined && o.cenaId !== '') {
       if (typeof o.cenaId !== 'string' || !ID_DA_CENA.test(o.cenaId)) erros.push(`${nome}: escolha a cena do diálogo (ou deixe sem).`);

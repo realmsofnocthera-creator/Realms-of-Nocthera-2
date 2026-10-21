@@ -10,8 +10,10 @@ import { MONSTERS_MAP, type MonsterDefinition } from '@/rules/monsters';
 import { ErroMonstroIndisponivel, monstroEfetivo } from '@/server/monstros';
 import { sincronizarCatalogoDeItens } from '@/server/catalogoItens';
 import { exigirSistemaLigado } from '@/server/sistemasLeitura';
-import { aberturaDaCampanha, ErroDaCampanha, lerCenaPublicada, lerMapaPublicado, mapaInicialDaCampanha, tilesetsDoMapa, type MapaPublicado, type TilesetPublicado } from '@/server/campanha';
-import { CHAVE_DA_ABERTURA, aplicarPosicaoDaAcao, planejarBau, planejarCenaVista, planejarLuta, planejarPorta, planejarPosicao, progressoInicial, type ProgressoDaCampanha } from '@/game/campanha';
+import { aberturaDaCampanha, ErroDaCampanha, lerCenaPublicada, lerMapaPublicado, lerMissoesPublicadas, mapaInicialDaCampanha, tilesetsDoMapa, type MapaPublicado, type TilesetPublicado } from '@/server/campanha';
+import { CHAVE_DA_ABERTURA, aplicarPosicaoDaAcao, planejarAberturaVista, planejarAcao, planejarBau, planejarLuta, planejarPorta, planejarPosicao, progressoInicial, type ProgressoDaCampanha } from '@/game/campanha';
+import { idsDasMissoes, processarMissoes, situacaoDoJogador, valorDoObjetivo, type EventoDeMissao, type MissoesDoJogador, type ResumoDaMissao } from '@/game/missoes';
+import { metaDoObjetivo, textoDoObjetivo, type MissaoDados } from '@/rules/missao';
 import {
   DropSorteado,
   MENSAGEM_BLOQUEIO_CACADA,
@@ -1692,6 +1694,8 @@ export interface RespostaCampanhaLuta extends RespostaCombate {
     progresso: ProgressoDaCampanha;
     /** Até quando a área de monstros descansa (ms desde 1970). */
     descansaAte: number;
+    /** O que as missões fizeram com esta luta (objetivo andou, missão concluída com recompensa). */
+    missoes?: AvisosDeMissoes;
   };
 }
 
@@ -1715,6 +1719,7 @@ export async function campanhaLutar(
   const previo = await getCharacterByUid(uid);
   if (!previo) throw new Error('Personagem não encontrado.');
   let preparo: { mundo: MundoDoJogador; monstro: MonsterDefinition | null } | { erro: unknown };
+  let defsAtivas: Record<string, MissaoDados> = {};
   try {
     const mundo = await mundoDoJogador(previo, agora.toISOString());
     if (!mundo) throw new ErroDaCampanha('A Campanha ainda não começou.');
@@ -1722,6 +1727,7 @@ export async function campanhaLutar(
     const base = area?.monstroId;
     const monstro = base ? await monstroEfetivo(base, MONSTERS_MAP[base] ?? MONSTROS_CACADA_MAP[base] ?? CHEFES_ESPECIAIS_MAP[base]) : null;
     preparo = { mundo, monstro };
+    defsAtivas = await lerMissoesPublicadas(idsDasMissoes(mundo.progresso.missoes, 'ativa'));
   } catch (erro) {
     preparo = { erro: erro instanceof ErroMonstroIndisponivel ? new ErroDaCampanha(erro.message) : erro };
   }
@@ -1757,7 +1763,7 @@ export async function campanhaLutar(
     if (previo.campanha?.mapaId !== current.campanha?.mapaId || previo.campanha?.atualizadoEm !== current.campanha?.atualizadoEm) {
       throw new ErroDaCampanha('Seu progresso mudou enquanto isso. Tente de novo.');
     }
-    const r = planejarLuta(mundo.progresso, mundo.mapa.dados, objetoId, opcoes.posicao, agora.toISOString(), agora.getTime());
+    const r = planejarLuta(mundo.progresso, mundo.mapa.dados, objetoId, opcoes.posicao, agora.toISOString(), agora.getTime(), situacaoDoJogador(current, mundo.progresso));
     if (!r.ok) throw new ErroDaCampanha(r.erro, 'descansaAte' in r ? r.descansaAte : undefined);
     if (!monstro) throw new ErroDaCampanha('O monstro desta área ainda não existe no jogo.');
     const { plano } = r;
@@ -1783,9 +1789,22 @@ export async function campanhaLutar(
       pos = { character: current, levelUps: 0, mensagens: [...resultado.mensagens] };
     }
 
-    const progresso = venceu ? plano.progressoVitoria : plano.progressoDerrota;
-    const character = salvarPersonagem(ctx, pos.character, { campanha: progresso });
-    const campanha = { vencedor: resultado.vencedor, monstroNome: monstro.nome, xpGanho: resultado.xpGanho, ouroGanho: resultado.ouroGanho, progresso, descansaAte: plano.descansaAte };
+    let progresso = venceu ? plano.progressoVitoria : plano.progressoDerrota;
+    // a vitória anda os objetivos de "derrotar" das missões em andamento; a que concluir paga a recompensa junto
+    let avisos: AvisosDeMissoes = SEM_AVISOS;
+    let patchDeMissoes: Partial<CharacterDocument> = {};
+    if (venceu) {
+      const rm = processarMissoes({ missoes: progresso.missoes, defs: defsAtivas, eventos: [{ tipo: 'derrotar', monstroId: monstro.id }], nivel: pos.character.nivel, inventario: pos.character.inventario ?? {}, agora: agora.toISOString() });
+      if (JSON.stringify(rm.missoes) !== JSON.stringify(progresso.missoes ?? {})) progresso = { ...progresso, missoes: rm.missoes };
+      const concluidas = rm.concluidas.flatMap((id) => (defsAtivas[id] ? [{ id, def: defsAtivas[id] }] : []));
+      if (concluidas.length) {
+        const recompensa = aplicarRecompensasDeMissoesEm(ctx, pos.character, concluidas);
+        patchDeMissoes = recompensa.patch;
+        avisos = { iniciadas: [], concluidas: recompensa.avisos };
+      }
+    }
+    const character = salvarPersonagem(ctx, pos.character, { campanha: progresso, ...patchDeMissoes });
+    const campanha = { vencedor: resultado.vencedor, monstroNome: monstro.nome, xpGanho: resultado.xpGanho, ouroGanho: resultado.ouroGanho, progresso, descansaAte: plano.descansaAte, ...(temAvisos(avisos) ? { missoes: avisos } : {}) };
     const registro: RegistroCombate = {
       id: idRegistro,
       uid,
@@ -2505,11 +2524,137 @@ export async function campanhaCena(uid: string, cenaId: unknown) {
   return { id: cena.id, titulo: cena.nome, dados: cena.dados };
 }
 
-/** Marca a abertura ou um ativador "uma vez só" como visto: a cena não toca de novo para este personagem. */
-export async function campanhaCenaVista(uid: string, pedido: { abertura?: unknown; objetoId?: unknown }): Promise<EstadoDaCampanha> {
-  const aberturaConfigurada = Boolean(await aberturaDaCampanha());
-  const r = await agirNaCampanha(uid, 'campanhaCena', async (m, agora) => planejarCenaVista(m.progresso, m.mapa.dados, pedido, aberturaConfigurada, agora));
-  return { iniciada: true, progresso: r.personagem.campanha };
+/** O que as missões fizeram numa ação, para o jogador ver. */
+export interface AvisosDeMissoes {
+  iniciadas: { id: string; titulo: string }[];
+  concluidas: { id: string; titulo: string; mensagens: string[] }[];
+  /** Quando o jogador tentou começar uma missão e não pôde. */
+  motivoDoNaoComeco?: string;
+}
+const SEM_AVISOS: AvisosDeMissoes = { iniciadas: [], concluidas: [] };
+const temAvisos = (a: AvisosDeMissoes) => a.iniciadas.length > 0 || a.concluidas.length > 0 || Boolean(a.motivoDoNaoComeco);
+
+/**
+ * Entrega as recompensas das missões que acabaram de concluir (XP com subida de nível, ouro com extrato e itens na
+ * mochila), na mesma gravação da ação que as concluiu. Devolve o que mudar no personagem e as mensagens.
+ */
+function aplicarRecompensasDeMissoesEm(ctx: ContextoTransacao, char: CharacterDocument, concluidas: { id: string; def: MissaoDados }[]): { patch: Partial<CharacterDocument>; avisos: AvisosDeMissoes['concluidas'] } {
+  let atual = char;
+  const patch: Partial<CharacterDocument> = {};
+  const avisos: AvisosDeMissoes['concluidas'] = [];
+  for (const { id, def } of concluidas) {
+    const mensagens: string[] = [];
+    const r = def.recompensa;
+    if (r.xp > 0) {
+      let xp = atual.xpAtual + r.xp;
+      let nivel = atual.nivel;
+      let pontos = atual.pontosDisponiveis;
+      while (nivel < GAME_CONFIG.NIVEL_MAXIMO_GRAU_1 && xp >= xpParaProximoNivel(nivel)) {
+        xp -= xpParaProximoNivel(nivel);
+        nivel += 1;
+        pontos += GAME_CONFIG.PONTOS_POR_NIVEL;
+        mensagens.push(`★ SUBIU DE NÍVEL! ${atual.nome} alcançou o Nível ${nivel}! (+${GAME_CONFIG.PONTOS_POR_NIVEL} pontos disponíveis)`);
+      }
+      if (nivel >= GAME_CONFIG.NIVEL_MAXIMO_GRAU_1) nivel = GAME_CONFIG.NIVEL_MAXIMO_GRAU_1;
+      Object.assign(patch, { xpAtual: xp, nivel, pontosDisponiveis: pontos });
+      atual = { ...atual, xpAtual: xp, nivel, pontosDisponiveis: pontos };
+      mensagens.unshift(`+${r.xp} XP`);
+    }
+    if (r.ouro > 0) {
+      const ganho = alterarSaldoEm(ctx, atual, 'ouro', r.ouro, `Missão concluída: ${def.titulo}`);
+      atual = ganho.character;
+      patch.ouro = ganho.character.ouro;
+      mensagens.unshift(`+${r.ouro} de ouro`);
+    }
+    if (r.itens.length) {
+      const inventario = { ...(atual.inventario ?? {}) };
+      for (const item of r.itens) {
+        inventario[item.id] = (inventario[item.id] ?? 0) + item.qtd;
+        mensagens.push(`+${item.qtd} × ${item.id.replace(/-/g, ' ')}`);
+      }
+      patch.inventario = inventario;
+      atual = { ...atual, inventario };
+    }
+    avisos.push({ id, titulo: def.titulo, mensagens });
+  }
+  return { patch, avisos };
+}
+
+/** A abertura: marca como vista (a cena não toca de novo para este personagem) e anda os objetivos de "ver cena". */
+export async function campanhaAberturaVista(uid: string): Promise<EstadoDaCampanha & { missoes?: AvisosDeMissoes }> {
+  const aberturaId = await aberturaDaCampanha();
+  const r = await agirNaCampanha(
+    uid,
+    'campanhaAbertura',
+    async (m, agora) => planejarAberturaVista(m.progresso, aberturaId, agora),
+    undefined,
+    () => ({ eventos: aberturaId ? [{ tipo: 'cena', cenaId: aberturaId }] : [] })
+  );
+  return { iniciada: true, progresso: r.personagem.campanha, ...(temAvisos(r.avisos) ? { missoes: r.avisos } : {}) };
+}
+
+export interface RespostaDaAcao {
+  /** A cena que deve tocar agora (diálogo do NPC ou cena do ativador). */
+  cenaId?: string;
+  /** Ativador bloqueado pela condição: o que o jogador lê. */
+  bloqueio?: string;
+  progresso?: ProgressoDaCampanha;
+  missoes?: AvisosDeMissoes;
+}
+
+/**
+ * Falar com um NPC ou entrar na área de um ativador de cena: o servidor decide se a cena toca (uma vez só por
+ * personagem, condição de acesso), anda os objetivos das missões em andamento e começa a missão do objeto. Só grava
+ * quando algo muda além da posição, para conversar não gastar gravações.
+ */
+export async function campanhaAcionar(uid: string, objetoId: unknown, posicao?: unknown): Promise<RespostaDaAcao> {
+  const r = await agirNaCampanha(
+    uid,
+    'campanhaAcionar',
+    async (m, agora, previo) => {
+      const plano = planejarAcao(m.progresso, m.mapa.dados, objetoId, posicao, situacaoDoJogador(previo, m.progresso), agora);
+      return plano.ok ? { ok: true as const, progresso: plano.plano.progresso, acao: plano.plano } : plano;
+    },
+    undefined,
+    (plano) => ({ eventos: plano.acao.eventos, iniciar: plano.acao.iniciar }),
+    true
+  );
+  const acao = r.plano.acao;
+  return {
+    ...(acao.cenaId ? { cenaId: acao.cenaId } : {}),
+    ...(acao.bloqueio ? { bloqueio: acao.bloqueio } : {}),
+    progresso: r.personagem.campanha,
+    ...(temAvisos(r.avisos) ? { missoes: r.avisos } : {}),
+  };
+}
+
+/** As missões do personagem para a tela de Missões: as em andamento (com cada objetivo) e as concluídas. */
+export async function campanhaMissoes(uid: string): Promise<{ ativas: ResumoDaMissao[]; concluidas: ResumoDaMissao[] }> {
+  await exigirSistemaLigado(uid, 'campanha');
+  const char = await getCharacterByUid(uid);
+  if (!char) throw new Error('Personagem não encontrado.');
+  const missoes: MissoesDoJogador = char.campanha?.missoes ?? {};
+  const defs = await lerMissoesPublicadas(Object.keys(missoes));
+  const inventario = char.inventario ?? {};
+  const resumo = (id: string): ResumoDaMissao | null => {
+    const def = defs[id];
+    const m = missoes[id];
+    if (!def || !m) return null;
+    return {
+      id,
+      titulo: def.titulo,
+      descricao: def.descricao,
+      estado: m.estado,
+      objetivos: def.objetivos.map((o) => {
+        const atual = valorDoObjetivo(o, m, inventario);
+        const meta = metaDoObjetivo(o);
+        return { id: o.id, texto: textoDoObjetivo(o), atual, meta, cumprido: atual >= meta };
+      }),
+      recompensa: def.recompensa,
+    };
+  };
+  const lista = (estado: 'ativa' | 'concluida') => idsDasMissoes(missoes, estado).flatMap((id) => resumo(id) ?? []);
+  return { ativas: lista('ativa'), concluidas: lista('concluida') };
 }
 
 /**
@@ -2519,17 +2664,45 @@ export async function campanhaCenaVista(uid: string, pedido: { abertura?: unknow
 async function agirNaCampanha<T extends { progresso: ProgressoDaCampanha }>(
   uid: string,
   operacao: string,
-  planejar: (mundo: MundoDoJogador, agora: string) => Promise<{ ok: true } & T | { ok: false; erro: string }>,
-  extra: (plano: T, atual: CharacterDocument) => Partial<CharacterDocument> = () => ({})
-): Promise<{ plano: T; personagem: CharacterDocument }> {
+  planejar: (mundo: MundoDoJogador, agora: string, personagem: CharacterDocument) => Promise<{ ok: true } & T | { ok: false; erro: string }>,
+  extra: (plano: T, atual: CharacterDocument) => Partial<CharacterDocument> = () => ({}),
+  missoes?: (plano: T, previo: CharacterDocument) => { eventos: EventoDeMissao[]; iniciar?: string[] },
+  soGravaSeMudar = false
+): Promise<{ plano: T; personagem: CharacterDocument; avisos: AvisosDeMissoes }> {
   await exigirSistemaLigado(uid, 'campanha');
   const previo = await getCharacterByUid(uid);
   if (!previo) throw new Error('Personagem não encontrado.');
   const agora = new Date().toISOString();
   const mundo = await mundoDoJogador(previo, agora);
   if (!mundo) throw new ErroDaCampanha('A Campanha ainda não começou.');
-  const plano = await planejar(mundo, agora);
+  const plano = await planejar(mundo, agora, previo);
   if (!plano.ok) throw new ErroDaCampanha(plano.erro);
+
+  // as missões: os acontecimentos da ação andam os objetivos, e a missão pedida pode começar (lê só as missões publicadas envolvidas)
+  let planoFinal: T = plano;
+  let concluidas: { id: string; def: MissaoDados }[] = [];
+  let avisos = SEM_AVISOS;
+  if (missoes) {
+    const { eventos, iniciar = [] } = missoes(plano, previo);
+    const defs = await lerMissoesPublicadas([...idsDasMissoes(plano.progresso.missoes, 'ativa'), ...iniciar]);
+    const inventarioDepois = extra(plano, previo).inventario ?? previo.inventario ?? {};
+    const r = processarMissoes({ missoes: plano.progresso.missoes, defs, eventos, iniciar, nivel: previo.nivel, inventario: inventarioDepois, agora });
+    if (r.iniciadas.length || r.concluidas.length || Object.keys(r.missoes).length !== Object.keys(plano.progresso.missoes ?? {}).length || JSON.stringify(r.missoes) !== JSON.stringify(plano.progresso.missoes ?? {})) {
+      planoFinal = { ...plano, progresso: { ...plano.progresso, missoes: r.missoes } };
+    }
+    concluidas = r.concluidas.flatMap((id) => (defs[id] ? [{ id, def: defs[id] }] : []));
+    avisos = {
+      iniciadas: r.iniciadas.flatMap((id) => (defs[id] ? [{ id, titulo: defs[id].titulo }] : [])),
+      concluidas: concluidas.map(({ id, def }) => ({ id, titulo: def.titulo, mensagens: [] })),
+      ...(r.motivoDoNaoComeco ? { motivoDoNaoComeco: r.motivoDoNaoComeco } : {}),
+    };
+  }
+
+  // acionar um NPC sem novidade nenhuma: nada a gravar (a posição sozinha não vale uma gravação)
+  if (soGravaSeMudar && concluidas.length === 0) {
+    const semPosicao = (p: ProgressoDaCampanha | undefined) => JSON.stringify({ ...p, x: 0, y: 0, atualizadoEm: '' });
+    if (previo.campanha && semPosicao(previo.campanha) === semPosicao(planoFinal.progresso)) return { plano: planoFinal, personagem: { ...previo, campanha: previo.campanha }, avisos };
+  }
 
   return repositorio.executarTransacao(operacao, async (ctx) => {
     const atual = await carregarPersonagem(ctx, uid);
@@ -2538,8 +2711,11 @@ async function agirNaCampanha<T extends { progresso: ProgressoDaCampanha }>(
     if (posAntes?.mapaId !== posAgora?.mapaId || posAntes?.atualizadoEm !== posAgora?.atualizadoEm) {
       throw new ErroDaCampanha('Seu progresso mudou enquanto isso. Tente de novo.');
     }
-    const personagem = salvarPersonagem(ctx, atual, { campanha: plano.progresso, ...extra(plano, atual) });
-    return { plano, personagem };
+    const mudancas = extra(planoFinal, atual);
+    const recompensa = concluidas.length ? aplicarRecompensasDeMissoesEm(ctx, { ...atual, ...mudancas }, concluidas) : null;
+    const personagem = salvarPersonagem(ctx, atual, { campanha: planoFinal.progresso, ...mudancas, ...(recompensa?.patch ?? {}) });
+    const comMensagens: AvisosDeMissoes = recompensa ? { ...avisos, concluidas: recompensa.avisos } : avisos;
+    return { plano: planoFinal, personagem, avisos: comMensagens };
   });
 }
 
@@ -2553,27 +2729,34 @@ export async function campanhaSalvarPosicao(uid: string, pedido: { mapaId: unkno
 }
 
 /** Abre um baú do mapa em que o jogador está: o item vai para a mochila e o baú não abre de novo. */
-export async function campanhaAbrirBau(uid: string, objetoId: unknown, posicao?: unknown): Promise<{ item: { id: string; qtd: number }; character: CharacterDocument }> {
+export async function campanhaAbrirBau(uid: string, objetoId: unknown, posicao?: unknown): Promise<{ item: { id: string; qtd: number }; character: CharacterDocument; missoes?: AvisosDeMissoes }> {
   const r = await agirNaCampanha(
     uid,
     'campanhaBau',
-    async (m, agora) => {
+    async (m, agora, previo) => {
       const ponto = aplicarPosicaoDaAcao(m.progresso, m.mapa.dados, posicao, agora);
-      return ponto.ok ? planejarBau(ponto.progresso, m.mapa.dados, objetoId, agora) : ponto;
+      return ponto.ok ? planejarBau(ponto.progresso, m.mapa.dados, objetoId, agora, situacaoDoJogador(previo, ponto.progresso)) : ponto;
     },
-    (plano, atual) => ({ inventario: { ...(atual.inventario ?? {}), [plano.item.id]: ((atual.inventario ?? {})[plano.item.id] ?? 0) + plano.item.qtd } })
+    (plano, atual) => ({ inventario: { ...(atual.inventario ?? {}), [plano.item.id]: ((atual.inventario ?? {})[plano.item.id] ?? 0) + plano.item.qtd } }),
+    (plano) => ({ eventos: [{ tipo: 'bau', mapa: plano.progresso.mapaId, objeto: String(objetoId) }] })
   );
-  return { item: r.plano.item, character: r.personagem };
+  return { item: r.plano.item, character: r.personagem, ...(temAvisos(r.avisos) ? { missoes: r.avisos } : {}) };
 }
 
 /** Atravessa uma porta: o jogador passa para o mapa de destino (publicado), na posição indicada. */
-export async function campanhaAtravessarPorta(uid: string, objetoId: unknown, posicao?: unknown): Promise<EstadoDaCampanha> {
-  const r = await agirNaCampanha(uid, 'campanhaPorta', async (m, agora) => {
-    const porta = typeof objetoId === 'string' ? m.mapa.dados.objetos.find((o) => o.id === objetoId && o.tipo === 'porta') : undefined;
-    const destino = porta?.destino ? await lerMapaPublicado(porta.destino.mapa) : null;
-    const ponto = aplicarPosicaoDaAcao(m.progresso, m.mapa.dados, posicao, agora);
-    return ponto.ok ? planejarPorta(ponto.progresso, m.mapa.dados, objetoId, destino?.dados ?? null, agora) : ponto;
-  });
+export async function campanhaAtravessarPorta(uid: string, objetoId: unknown, posicao?: unknown): Promise<EstadoDaCampanha & { missoes?: AvisosDeMissoes }> {
+  const r = await agirNaCampanha(
+    uid,
+    'campanhaPorta',
+    async (m, agora, previo) => {
+      const porta = typeof objetoId === 'string' ? m.mapa.dados.objetos.find((o) => o.id === objetoId && o.tipo === 'porta') : undefined;
+      const destino = porta?.destino ? await lerMapaPublicado(porta.destino.mapa) : null;
+      const ponto = aplicarPosicaoDaAcao(m.progresso, m.mapa.dados, posicao, agora);
+      return ponto.ok ? planejarPorta(ponto.progresso, m.mapa.dados, objetoId, destino?.dados ?? null, agora, situacaoDoJogador(previo, ponto.progresso)) : ponto;
+    },
+    undefined,
+    (plano) => ({ eventos: [{ tipo: 'chegar', mapa: plano.progresso.mapaId }] })
+  );
   const novoMapa = (await lerMapaPublicado(r.personagem.campanha!.mapaId)) ?? undefined;
-  return { iniciada: true, progresso: r.personagem.campanha, mapa: novoMapa, tilesets: novoMapa ? await tilesetsDoMapa(novoMapa) : undefined };
+  return { iniciada: true, progresso: r.personagem.campanha, mapa: novoMapa, tilesets: novoMapa ? await tilesetsDoMapa(novoMapa) : undefined, ...(temAvisos(r.avisos) ? { missoes: r.avisos } : {}) };
 }

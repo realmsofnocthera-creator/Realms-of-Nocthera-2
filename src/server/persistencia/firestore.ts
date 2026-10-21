@@ -13,6 +13,7 @@ import { ehPapelMestre } from '@/rules/mestre';
 import { ehTipoDeConteudo } from '@/rules/conteudo';
 import type { ProgressoDaCampanha } from '@/game/campanha';
 import { comprimirMapa, descomprimirMapa } from '@/rules/mapaComprimido';
+import type { MissoesDoJogador } from '@/game/missoes';
 import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
 import { MAXIMO_DE_ADVERTENCIAS, sancaoDocumentoVazio, type Advertencia, type SancaoDocumento } from '@/rules/sancoes';
 import {
@@ -35,6 +36,22 @@ function descansosDoDocumento(bruto: unknown): Record<string, number> | undefine
   const entradas = Object.entries(bruto as Record<string, unknown>).filter((e): e is [string, number] => typeof e[1] === 'number' && Number.isFinite(e[1])).slice(0, 200);
   return entradas.length ? Object.fromEntries(entradas) : undefined;
 }
+/** As missões do personagem lidas do banco, com tolerância: o que estiver fora do formato é descartado. */
+function missoesDoDocumento(bruto: unknown): MissoesDoJogador | undefined {
+  if (typeof bruto !== 'object' || bruto === null || Array.isArray(bruto)) return undefined;
+  const saida: MissoesDoJogador = {};
+  for (const [id, m] of Object.entries(bruto as Record<string, unknown>).slice(0, 200)) {
+    if (typeof m !== 'object' || m === null) continue;
+    const o = m as Record<string, unknown>;
+    if (o.estado !== 'ativa' && o.estado !== 'concluida') continue;
+    const progresso: Record<string, number> = {};
+    if (typeof o.progresso === 'object' && o.progresso !== null) {
+      for (const [k, v] of Object.entries(o.progresso as Record<string, unknown>).slice(0, 20)) if (typeof v === 'number' && Number.isFinite(v)) progresso[k] = v;
+    }
+    saida[id] = { estado: o.estado, progresso, iniciadaEm: typeof o.iniciadaEm === 'string' ? o.iniciadaEm : '', ...(typeof o.concluidaEm === 'string' ? { concluidaEm: o.concluidaEm } : {}) };
+  }
+  return Object.keys(saida).length ? saida : undefined;
+}
 /** O progresso da Campanha lido do banco, com tolerância: dado estranho vira "sem progresso" (volta ao início). */
 function campanhaDoDocumento(bruto: unknown): { campanha?: ProgressoDaCampanha } {
   if (typeof bruto !== 'object' || bruto === null) return {};
@@ -47,6 +64,7 @@ function campanhaDoDocumento(bruto: unknown): { campanha?: ProgressoDaCampanha }
       y: c.y as number,
       baus: Array.isArray(c.baus) ? (c.baus as unknown[]).filter((b): b is string => typeof b === 'string').slice(0, 1000) : [],
       ...(descansosDoDocumento(c.descansos) ? { descansos: descansosDoDocumento(c.descansos) } : {}),
+      ...(missoesDoDocumento(c.missoes) ? { missoes: missoesDoDocumento(c.missoes) } : {}),
       ...(Array.isArray(c.cenas) ? { cenas: (c.cenas as unknown[]).filter((b): b is string => typeof b === 'string').slice(0, 500) } : {}),
       atualizadoEm: typeof c.atualizadoEm === 'string' ? c.atualizadoEm : '',
     },

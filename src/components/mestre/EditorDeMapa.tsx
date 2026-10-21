@@ -116,7 +116,7 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
   const [tipoDeObjeto, setTipoDeObjeto] = useState<TipoDeObjeto>('npc');
   const [selecionado, setSelecionado] = useState<string | null>(null);
   const [movendoObjeto, setMovendoObjeto] = useState(false);
-  const [opcoes, setOpcoes] = useState<{ mapas: { id: string; nome: string }[]; cenas: { id: string; nome: string }[]; monstros: { id: string; nome: string }[]; materiais: { id: string; nome: string }[] }>({ mapas: [], cenas: [], monstros: [], materiais: [] });
+  const [opcoes, setOpcoes] = useState<{ mapas: { id: string; nome: string }[]; cenas: { id: string; nome: string }[]; missoes: { id: string; nome: string }[]; monstros: { id: string; nome: string }[]; materiais: { id: string; nome: string }[] }>({ mapas: [], cenas: [], missoes: [], monstros: [], materiais: [] });
   const [desenho, setDesenho] = useState(0);
   const redesenhar = useCallback(() => setDesenho((n) => n + 1), []);
 
@@ -144,9 +144,10 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
       const outros = await chamar(tokenFresco, '/api/mestre/conteudo?tipo=tileset');
       if (ativo && outros.ok) setDisponiveis(outros.dados.itens as ResumoConteudo[]);
       // opções dos objetos: mapas de destino, monstros (do código e do banco) e materiais dos baús
-      const [mapasR, cenasR, monstrosR, cacada, monstrosCodigo, chefes, materiais, mundo] = await Promise.all([
+      const [mapasR, cenasR, missoesR, monstrosR, cacada, monstrosCodigo, chefes, materiais, mundo] = await Promise.all([
         chamar(tokenFresco, '/api/mestre/conteudo?tipo=mapa'),
         chamar(tokenFresco, '/api/mestre/conteudo?tipo=cena'),
+        chamar(tokenFresco, '/api/mestre/conteudo?tipo=missao'),
         chamar(tokenFresco, '/api/mestre/conteudo?tipo=monstro'),
         import('@/rules/cacada'),
         import('@/rules/monsters'),
@@ -159,6 +160,7 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
         const doCodigo = [...monstrosCodigo.MONSTERS, ...cacada.MONSTROS_CACADA, ...Object.values(chefes.CHEFES_ESPECIAIS_MAP)].map((m) => ({ id: m.id, nome: m.nome }));
         const ids = new Set(doCodigo.map((m) => m.id));
         setOpcoes({
+          missoes: missoesR.ok ? (missoesR.dados.itens as ResumoConteudo[]).map((m) => ({ id: m.id, nome: m.nome })) : [],
           cenas: cenasR.ok ? (cenasR.dados.itens as ResumoConteudo[]).map((c) => ({ id: c.id, nome: c.nome })) : [],
           mapas: mapasR.ok ? (mapasR.dados.itens as ResumoConteudo[]).map((m) => ({ id: m.id, nome: m.nome })) : [],
           monstros: [...doCodigo, ...doBanco.filter((m) => !ids.has(m.id))].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
@@ -753,6 +755,7 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
             mapas={opcoes.mapas}
             monstros={opcoes.monstros}
             cenas={opcoes.cenas}
+            missoes={opcoes.missoes}
             materiais={opcoes.materiais}
           />
         ) : (

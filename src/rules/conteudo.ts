@@ -7,6 +7,7 @@ import { validarArmadura } from '@/rules/armaduraConteudo';
 import { validarEmblema } from '@/rules/emblemaConteudo';
 import { validarAnuncio } from '@/rules/anuncio';
 import { validarCena } from '@/rules/cena';
+import { validarMissao, type MissaoDados } from '@/rules/missao';
 import { bytesGuardados } from '@/rules/mapaComprimido';
 
 /**
@@ -14,7 +15,7 @@ import { bytesGuardados } from '@/rules/mapaComprimido';
  * Publicar cria uma versão nova; voltar atrás publica de novo uma versão antiga como versão nova (o histórico só cresce).
  * O jogo lê apenas a versão publicada.
  */
-export const TIPOS_DE_CONTEUDO = ['mapa', 'tileset', 'monstro', 'arma', 'armadura', 'emblema', 'anuncio', 'cena'] as const;
+export const TIPOS_DE_CONTEUDO = ['mapa', 'tileset', 'monstro', 'arma', 'armadura', 'emblema', 'anuncio', 'cena', 'missao'] as const;
 export type TipoDeConteudo = (typeof TIPOS_DE_CONTEUDO)[number];
 
 export const NOME_DO_TIPO: Readonly<Record<TipoDeConteudo, string>> = {
@@ -26,6 +27,7 @@ export const NOME_DO_TIPO: Readonly<Record<TipoDeConteudo, string>> = {
   emblema: 'Emblema',
   anuncio: 'Anúncio',
   cena: 'Cena',
+  missao: 'Missão',
 };
 
 /** Permissão para criar e editar o rascunho de cada tipo; publicar e voltar atrás pedem 'conteudo.publicar'. */
@@ -38,6 +40,7 @@ export const PERMISSAO_DE_EDICAO: Readonly<Record<TipoDeConteudo, PermissaoMestr
   emblema: 'conteudo.editar',
   anuncio: 'conteudo.editar',
   cena: 'mapas.editar',
+  missao: 'mapas.editar',
 };
 
 /** Identificador do item: minúsculas, números e hífen (ex.: "vila-inicial"). Fica fixo depois de criado. */
@@ -72,6 +75,7 @@ const VALIDADORES: Readonly<Record<TipoDeConteudo, (bruto: unknown) => Resultado
   emblema: validarEmblema,
   anuncio: validarAnuncio,
   cena: validarCena,
+  missao: validarMissao,
 };
 
 /** Um conteúdo que outro usa. `soExistir`: basta existir (não precisa estar publicado). `podeSerDoCodigo`: o monstro pode ser do código. */
@@ -88,25 +92,37 @@ export interface ReferenciaDeConteudo {
  * outro) e para os monstros das áreas de monstros (do código ou do banco).
  */
 export function referenciasDoConteudo(tipo: TipoDeConteudo, dados: unknown): ReferenciaDeConteudo[] {
-  if (tipo !== 'mapa') return [];
-  const mapa = dados as MapaDados;
-  const refs: ReferenciaDeConteudo[] = mapa.tilesets.map((id) => ({ tipo: 'tileset' as const, id }));
-  const vistos = new Set<string>();
-  for (const o of mapa.objetos ?? []) {
-    if (o.tipo === 'porta' && o.destino && !vistos.has(`mapa:${o.destino.mapa}`)) {
-      vistos.add(`mapa:${o.destino.mapa}`);
-      refs.push({ tipo: 'mapa', id: o.destino.mapa, soExistir: true });
+  if (tipo !== 'mapa' && tipo !== 'missao') return [];
+  const refs = new Map<string, ReferenciaDeConteudo>();
+  const juntar = (ref: ReferenciaDeConteudo) => {
+    const chave = `${ref.tipo}:${ref.id}`;
+    const antes = refs.get(chave);
+    // a exigência mais forte vence: "precisa estar publicado" ganha de "basta existir"
+    if (!antes || (antes.soExistir && !ref.soExistir)) refs.set(chave, ref);
+  };
+  if (tipo === 'missao') {
+    const m = dados as MissaoDados;
+    for (const o of m.objetivos ?? []) {
+      if (o.cenaId) juntar({ tipo: 'cena', id: o.cenaId, soExistir: true });
+      if (o.mapa) juntar({ tipo: 'mapa', id: o.mapa, soExistir: true });
+      if (o.monstroId) juntar({ tipo: 'monstro', id: o.monstroId, podeSerDoCodigo: true });
     }
-    if ((o.tipo === 'cena' || o.tipo === 'npc') && o.cenaId && !vistos.has(`cena:${o.cenaId}`)) {
-      vistos.add(`cena:${o.cenaId}`);
-      refs.push({ tipo: 'cena', id: o.cenaId });
-    }
-    if (o.tipo === 'cacada' && o.monstroId && !vistos.has(`monstro:${o.monstroId}`)) {
-      vistos.add(`monstro:${o.monstroId}`);
-      refs.push({ tipo: 'monstro', id: o.monstroId, podeSerDoCodigo: true });
-    }
+    for (const id of m.requisitos?.missoes ?? []) juntar({ tipo: 'missao', id, soExistir: true });
+    return [...refs.values()];
   }
-  return refs;
+  const mapa = dados as MapaDados;
+  for (const id of mapa.tilesets) juntar({ tipo: 'tileset', id });
+  for (const o of mapa.objetos ?? []) {
+    if (o.tipo === 'porta' && o.destino) juntar({ tipo: 'mapa', id: o.destino.mapa, soExistir: true });
+    if ((o.tipo === 'cena' || o.tipo === 'npc') && o.cenaId) juntar({ tipo: 'cena', id: o.cenaId });
+    if (o.tipo === 'cacada' && o.monstroId) juntar({ tipo: 'monstro', id: o.monstroId, podeSerDoCodigo: true });
+    // missões se referem a mapas e mapas a missões: basta existir, senão um não seria publicado antes do outro
+    if (o.missaoId) juntar({ tipo: 'missao', id: o.missaoId, soExistir: true });
+    if (o.condicao?.missaoAtiva) juntar({ tipo: 'missao', id: o.condicao.missaoAtiva, soExistir: true });
+    if (o.condicao?.missaoConcluida) juntar({ tipo: 'missao', id: o.condicao.missaoConcluida, soExistir: true });
+    if (o.condicao?.cenaVista) juntar({ tipo: 'cena', id: o.condicao.cenaVista, soExistir: true });
+  }
+  return [...refs.values()];
 }
 
 /** Valida o conteúdo pelo schema do tipo e pelo tamanho; devolve a cópia limpa. */
