@@ -93,4 +93,14 @@ describe('Editor de mapas (lógica)', () => {
     expect(valorDaFerramenta('pincel', 'chao', 0)).toBeNull();
     expect(valorDaFerramenta('mover', 'chao', 9)).toBeNull();
   });
+
+  it('copiarMapa copia a camada acima do jogador (e aceita mapa sem ela)', () => {
+    const m = mapaVazio(4, 4);
+    m.camadas.acima[2] = 5;
+    const c = copiarMapa(m);
+    expect(c.camadas.acima[2]).toBe(5);
+    expect(c.camadas.acima).not.toBe(m.camadas.acima);
+    const antigo = { ...m, camadas: { chao: m.camadas.chao, objetos: m.camadas.objetos, colisao: m.camadas.colisao } } as unknown as typeof m;
+    expect(copiarMapa(antigo).camadas.acima).toEqual(new Array(16).fill(0));
+  });
 });

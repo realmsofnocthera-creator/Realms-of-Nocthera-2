@@ -100,4 +100,19 @@ describe('Número do tile no mapa', () => {
     n.camadas.chao[0] = 4096;
     expect(validarMapa(n).ok).toBe(false);
   });
+
+  it('camada "acima do jogador": mapa antigo sem ela vira vazia; com ela, valida como as outras', () => {
+    const { acima: _acima, ...antigas } = mapaVazio(5, 4).camadas;
+    const antigo = validarMapa({ ...mapaVazio(5, 4), camadas: antigas });
+    expect(antigo.ok && antigo.dados.camadas.acima).toEqual(new Array(20).fill(0));
+    const m = { ...mapaVazio(5, 4), tilesets: ['floresta'] };
+    m.camadas.acima[3] = valorDoTile(0, 7);
+    const v = validarMapa(m);
+    expect(v.ok && v.dados.camadas.acima[3]).toBe(valorDoTile(0, 7));
+    m.camadas.acima.pop();
+    expect(erros(m).join(' ')).toMatch(/Acima do jogador deve ter 20 posições/);
+    const fora = { ...mapaVazio(5, 4), tilesets: [] as string[] };
+    fora.camadas.acima[0] = valorDoTile(2, 0);
+    expect(erros(fora).join(' ')).toMatch(/Acima do jogador usa um tile de um tileset que não está na lista/);
+  });
 });

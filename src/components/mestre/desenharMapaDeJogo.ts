@@ -33,10 +33,12 @@ export function desenharMapaDeJogo(
   ctx.fillRect(-ox, -oy, mapa.largura * lado, mapa.altura * lado);
   ctx.imageSmoothingEnabled = false;
 
-  for (const c of ['chao', 'objetos'] as const) {
+  const desenharCamada = (c: 'chao' | 'objetos' | 'acima') => {
+    const lista = mapa.camadas[c];
+    if (!lista) return;
     for (let y = 0; y < mapa.altura; y++) {
       for (let x = 0; x < mapa.largura; x++) {
-        const valor = mapa.camadas[c][y * mapa.largura + x];
+        const valor = lista[y * mapa.largura + x];
         if (!valor) continue;
         const t = tileDoValor(valor);
         const ts = t ? tilesets[t.tileset] ?? undefined : undefined;
@@ -45,7 +47,9 @@ export function desenharMapaDeJogo(
         ctx.drawImage(ts.imagem, r.x, r.y, r.lado, r.lado, x * lado - ox, y * lado - oy, lado, lado);
       }
     }
-  }
+  };
+  desenharCamada('chao');
+  desenharCamada('objetos');
   // colisão em vermelho fraco: só no teste do painel, para mostrar onde não dá para passar
   if (opcoes.mostrarColisao) {
     ctx.fillStyle = 'rgba(229, 115, 107, 0.28)';
@@ -91,4 +95,7 @@ export function desenharMapaDeJogo(
   ctx.beginPath();
   ctx.arc(px + d[0] * lado * 0.3, py + d[1] * lado * 0.3, lado * 0.1, 0, Math.PI * 2);
   ctx.fill();
+
+  // por cima do jogador: copas de árvore, telhados, pontes
+  desenharCamada('acima');
 }

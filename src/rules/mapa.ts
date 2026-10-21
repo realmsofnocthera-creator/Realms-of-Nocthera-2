@@ -3,7 +3,7 @@ import { validarObjetos, type ObjetoDoMapa } from '@/rules/objetosDoMapa';
 /**
  * Formato do mapa 2D (3.5.6.5), versão 1. O mesmo validador roda no servidor (antes de salvar ou publicar) e na tela.
  * Cada camada é uma lista com largura × altura posições, linha por linha (da esquerda para a direita, de cima para baixo).
- * Nas camadas de chão e de objetos, 0 é vazio e os outros números apontam para um tile (ver valorDoTile); na de
+ * Nas camadas de tiles (chão, objetos e acima do jogador), 0 é vazio e os outros números apontam para um tile (ver valorDoTile); na de
  * colisão, 1 bloqueia. Os objetos interativos (início, NPC, placa, baú, porta e área de monstros) ficam na lista
  * `objetos` (ver objetosDoMapa.ts); mapas antigos sem ela valem como "sem objetos".
  */
@@ -30,12 +30,14 @@ export function tileDoValor(valor: number): { tileset: number; tile: number } | 
   return { tileset: Math.floor(valor / BLOCO_DO_TILESET), tile: resto - 1 };
 }
 
-export const CAMADAS_DO_MAPA = ['chao', 'objetos', 'colisao'] as const;
+/** `acima` é desenhada por cima do jogador (copas de árvore, telhados, pontes); mapas antigos sem ela valem como vazia. */
+export const CAMADAS_DO_MAPA = ['chao', 'objetos', 'acima', 'colisao'] as const;
 export type CamadaDoMapa = (typeof CAMADAS_DO_MAPA)[number];
 
 export const NOME_DA_CAMADA: Readonly<Record<CamadaDoMapa, string>> = {
   chao: 'Chão',
   objetos: 'Objetos',
+  acima: 'Acima do jogador',
   colisao: 'Colisão',
 };
 
@@ -62,7 +64,7 @@ export function mapaVazio(largura: number, altura: number, tamanhoDoTile: number
     altura,
     tamanhoDoTile,
     tilesets: [],
-    camadas: { chao: new Array(n).fill(0), objetos: new Array(n).fill(0), colisao: new Array(n).fill(0) },
+    camadas: { chao: new Array(n).fill(0), objetos: new Array(n).fill(0), acima: new Array(n).fill(0), colisao: new Array(n).fill(0) },
     objetos: [],
   };
 }
@@ -108,13 +110,13 @@ export function validarMapa(bruto: unknown): ResultadoValidacao<MapaDados> {
   }
 
   if (!ehObjeto(camadas)) {
-    erros.push('O mapa precisa das camadas chão, objetos e colisão.');
+    erros.push('O mapa precisa das camadas chão, objetos e colisão (a camada acima do jogador é opcional).');
   } else {
     const extrasCamadas = chavesExtras(camadas, CAMADAS_DO_MAPA);
     if (extrasCamadas.length) erros.push(`Camadas desconhecidas: ${extrasCamadas.join(', ')}.`);
     const total = ladoOk(largura) && ladoOk(altura) ? largura * altura : null;
     for (const c of CAMADAS_DO_MAPA) {
-      const valores = camadas[c];
+      const valores = c === 'acima' && camadas.acima === undefined && total !== null ? new Array(total).fill(0) : camadas[c];
       const nome = NOME_DA_CAMADA[c];
       if (!Array.isArray(valores)) {
         erros.push(`Falta a camada ${nome}.`);
@@ -135,7 +137,8 @@ export function validarMapa(bruto: unknown): ResultadoValidacao<MapaDados> {
   const objetos = ladoOk(largura) && ladoOk(altura) ? validarObjetos(bruto.objetos, largura as number, altura as number, erros) : [];
 
   if (erros.length) return { ok: false, erros };
-  const cam = camadas as Record<CamadaDoMapa, number[]>;
+  const cam = camadas as Record<CamadaDoMapa, number[] | undefined>;
+  const vazia = new Array((largura as number) * (altura as number)).fill(0);
   return {
     ok: true,
     dados: {
@@ -144,7 +147,7 @@ export function validarMapa(bruto: unknown): ResultadoValidacao<MapaDados> {
       altura: altura as number,
       tamanhoDoTile: tamanhoDoTile as number,
       tilesets: [...(tilesets as string[])],
-      camadas: { chao: [...cam.chao], objetos: [...cam.objetos], colisao: [...cam.colisao] },
+      camadas: { chao: [...cam.chao!], objetos: [...cam.objetos!], acima: [...(cam.acima ?? vazia)], colisao: [...cam.colisao!] },
       objetos,
     },
   };
