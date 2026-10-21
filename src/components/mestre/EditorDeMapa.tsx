@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Brush, Gamepad2, MapPinned, Eraser, Grid3x3, Hand, PaintBucket, Pipette, Plus, Redo2, Save, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowLeft, BoxSelect, Brush, Gamepad2, MapPinned, Eraser, Grid3x3, Hand, PaintBucket, Pipette, Plus, Redo2, Save, Slash, Square, Stamp, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { areaDoCarimbo, carimbar, copiarArea, espelharCarimbo, expandirPincel, girarCarimbo, origemDoCarimbo, pontosDoRetangulo, retanguloEntre, TAMANHOS_DO_PINCEL, type Carimbo, type TamanhoDoPincel } from '@/lib/carimbo';
 import { apagarComBorda, pintarComBorda, regraDoValor, type RegrasDoMapa } from '@/lib/autoTile';
 import { CAMADAS_DO_MAPA, MAXIMO_DE_TILESETS, NOME_DA_CAMADA, tileDoValor, valorDoTile, type CamadaDoMapa, type MapaDados } from '@/rules/mapa';
 import { recorteDoTile, type TilesetDados } from '@/rules/tileset';
@@ -41,6 +42,10 @@ const FERRAMENTAS: { id: Ferramenta; nome: string; atalho: string; icone: React.
   { id: 'pincel', nome: 'Pincel', atalho: 'B', icone: <Brush className="w-4 h-4" /> },
   { id: 'borracha', nome: 'Borracha', atalho: 'E', icone: <Eraser className="w-4 h-4" /> },
   { id: 'balde', nome: 'Preencher', atalho: 'G', icone: <PaintBucket className="w-4 h-4" /> },
+  { id: 'retangulo', nome: 'Retângulo', atalho: 'R', icone: <Square className="w-4 h-4" /> },
+  { id: 'linha', nome: 'Linha', atalho: 'L', icone: <Slash className="w-4 h-4" /> },
+  { id: 'selecionar', nome: 'Selecionar e copiar', atalho: 'V', icone: <BoxSelect className="w-4 h-4" /> },
+  { id: 'carimbo', nome: 'Carimbar', atalho: 'T', icone: <Stamp className="w-4 h-4" /> },
   { id: 'conta-gotas', nome: 'Pegar tile', atalho: 'I', icone: <Pipette className="w-4 h-4" /> },
   { id: 'mover', nome: 'Mover', atalho: 'H', icone: <Hand className="w-4 h-4" /> },
 ];
@@ -96,6 +101,10 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
   const [ferramenta, setFerramenta] = useState<Ferramenta>(podeEditar ? 'pincel' : 'mover');
   const [tileEscolhido, setTileEscolhido] = useState(0);
   const [bordaAuto, setBordaAuto] = useState(true);
+  const [tamanhoPincel, setTamanhoPincel] = useState<TamanhoDoPincel>(1);
+  const [carimbo, setCarimbo] = useState<Carimbo | null>(null);
+  /** Forma em andamento (retângulo, linha, seleção ou prévia do carimbo), desenhada por cima do mapa. */
+  const forma = useRef<{ tipo: 'retangulo' | 'linha' | 'selecionar' | 'carimbo'; inicio: Ponto; fim: Ponto; valor: number } | null>(null);
   const [tilesetAtivo, setTilesetAtivo] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [grade, setGrade] = useState(true);
@@ -260,7 +269,25 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
     ctx.lineWidth = 2;
     ctx.strokeRect(-ox, -oy, mapa.largura * lado, mapa.altura * lado);
     desenharObjetos(ctx, mapa.objetos, lado, ox, oy, modo === 'objetos' ? selecionado : null);
-  }, [desenho, tamanho, lado, tilesets, grade, mostrarColisao, camada, modo, selecionado]);
+
+    // forma em andamento: retângulo, linha, seleção ou onde o carimbo vai ficar
+    const f = forma.current;
+    if (f && modo === 'tiles') {
+      const celulas = f.tipo === 'linha' ? pontosDaLinha(f.inicio, f.fim) : f.tipo === 'carimbo' && carimbo ? pontosDoRetangulo(areaDoCarimbo(carimbo, origemDoCarimbo(carimbo, f.fim))) : pontosDoRetangulo(retanguloEntre(f.inicio, f.fim));
+      const cor = f.tipo === 'selecionar' ? '#5AA7F0' : f.tipo === 'carimbo' ? '#C27BF0' : '#F5E3B3';
+      ctx.fillStyle = `${cor}44`;
+      ctx.strokeStyle = cor;
+      ctx.lineWidth = 1.5;
+      for (const c of celulas) {
+        if (c.x < x0 || c.x > x1 || c.y < y0 || c.y > y1) continue;
+        ctx.fillRect(c.x * lado - ox, c.y * lado - oy, lado, lado);
+      }
+      if (f.tipo !== 'linha') {
+        const r = f.tipo === 'carimbo' && carimbo ? areaDoCarimbo(carimbo, origemDoCarimbo(carimbo, f.fim)) : retanguloEntre(f.inicio, f.fim);
+        ctx.strokeRect(r.x * lado - ox + 0.5, r.y * lado - oy + 0.5, r.largura * lado - 1, r.altura * lado - 1);
+      }
+    }
+  }, [desenho, tamanho, lado, tilesets, grade, mostrarColisao, camada, modo, selecionado, carimbo]);
 
   const limitarDeslocamento = useCallback(() => {
     const mapa = mapaRef.current;
@@ -302,7 +329,8 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
   const regraEscolhida = useMemo(() => (camada === 'colisao' ? null : regraDoValor(regras, tileEscolhido)), [regras, tileEscolhido, camada]);
 
   /** Pinta (ou apaga) pontos; com a borda automática ligada e um terreno com regra, acerta as bordas sozinho. */
-  const pintarCom = (mapa: MapaDados, pontos: Ponto[], valor: number, usar: Ferramenta): Mudanca[] => {
+  const pintarCom = (mapa: MapaDados, pontosBase: Ponto[], valor: number, usar: Ferramenta, comTamanho = true): Mudanca[] => {
+    const pontos = comTamanho && (usar === 'pincel' || usar === 'borracha') ? expandirPincel(pontosBase, tamanhoPincel) : pontosBase;
     if (bordaAuto && camada !== 'colisao') {
       if (usar === 'pincel' && regraEscolhida) return pintarComBorda(mapa, camada, pontos, regraEscolhida, regras);
       if (usar === 'borracha') return apagarComBorda(mapa, camada, pontos, regras);
@@ -392,9 +420,33 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
       }
       return;
     }
+    if (usar === 'selecionar') {
+      forma.current = { tipo: 'selecionar', inicio: celula, fim: celula, valor: 0 };
+      traco.current = { ultimo: celula, mudancas: [] };
+      setMensagem(null);
+      redesenhar();
+      return;
+    }
+    if (usar === 'carimbo') {
+      if (!carimbo) {
+        setMensagem({ texto: 'Primeiro selecione e copie uma área (ferramenta Selecionar).', erro: true });
+        return;
+      }
+      forma.current = { tipo: 'carimbo', inicio: celula, fim: celula, valor: 0 };
+      traco.current = { ultimo: celula, mudancas: [] };
+      setMensagem(null);
+      redesenhar();
+      return;
+    }
     const valor = valorDaFerramenta(usar, camada, tileEscolhido);
     if (valor === null) {
       setMensagem({ texto: 'Escolha um tile na paleta antes de pintar.', erro: true });
+      return;
+    }
+    if (usar === 'retangulo' || usar === 'linha') {
+      forma.current = { tipo: usar, inicio: celula, fim: celula, valor };
+      traco.current = { ultimo: celula, mudancas: [] };
+      redesenhar();
       return;
     }
     if (usar === 'balde') {
@@ -420,6 +472,11 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
       return;
     }
     const celula = celulaDoPonto(px, py, lado);
+    if (forma.current) {
+      forma.current.fim = celula;
+      redesenhar();
+      return;
+    }
     if (celula.x === atual.ultimo.x && celula.y === atual.ultimo.y) return;
     const valor = valorDaFerramenta(ferramenta, camada, tileEscolhido);
     if (valor === null) return;
@@ -428,9 +485,42 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
     redesenhar();
   };
 
+  /** Termina uma forma: pinta o retângulo ou a linha, copia a seleção ou cola o carimbo. */
+  const concluirForma = (f: NonNullable<typeof forma.current>) => {
+    const mapa = mapaRef.current;
+    if (!mapa) return;
+    if (f.tipo === 'retangulo') {
+      guardar(pintarCom(mapa, pontosDoRetangulo(retanguloEntre(f.inicio, f.fim)), f.valor, 'pincel', false));
+    } else if (f.tipo === 'linha') {
+      guardar(pintarCom(mapa, expandirPincel(pontosDaLinha(f.inicio, f.fim), tamanhoPincel), f.valor, 'pincel', false));
+    } else if (f.tipo === 'selecionar') {
+      const c = copiarArea(mapa, retanguloEntre(f.inicio, f.fim));
+      if (!c) {
+        setMensagem({ texto: 'A seleção ficou fora do mapa.', erro: true });
+      } else {
+        setCarimbo(c);
+        setFerramenta('carimbo');
+        setMensagem({ texto: `Área copiada (${c.largura} × ${c.altura}). Toque onde quer carimbar.`, erro: false });
+      }
+    } else if (carimbo) {
+      const lotes = carimbar(mapa, carimbo, origemDoCarimbo(carimbo, f.fim));
+      if (lotes.length) {
+        setHistorico((h) => registrar(h, { varios: lotes }));
+        setSujo(true);
+      }
+    }
+  };
+
   const aoSoltar = () => {
     const atual = traco.current;
     traco.current = null;
+    const f = forma.current;
+    forma.current = null;
+    if (f) {
+      concluirForma(f);
+      redesenhar();
+      return;
+    }
     if (atual && !atual.movendo) guardar(atual.mudancas);
   };
 
@@ -583,6 +673,24 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
                 </button>
               ))}
             </div>
+            {podeEditar && (ferramenta === 'pincel' || ferramenta === 'borracha' || ferramenta === 'linha') && (
+              <div role="radiogroup" aria-label="Tamanho do pincel" className="flex items-center gap-1">
+                <span className="text-[10px]">Pincel</span>
+                {TAMANHOS_DO_PINCEL.map((t) => (
+                  <button key={t} type="button" role="radio" aria-checked={tamanhoPincel === t} aria-label={`Pincel de ${t}`} onClick={() => setTamanhoPincel(t)} className="px-1.5 py-1 rounded border text-[11px] font-bold" style={botao(tamanhoPincel === t)}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+            {podeEditar && carimbo && (
+              <div role="group" aria-label="Carimbo" className="flex items-center gap-1">
+                <span className="text-[10px]">Carimbo {carimbo.largura}×{carimbo.altura}</span>
+                <button type="button" aria-label="Espelhar o carimbo" onClick={() => setCarimbo((c) => (c ? espelharCarimbo(c) : c))} className="px-1.5 py-1 rounded border text-[11px]" style={botao(false)}>Espelhar</button>
+                <button type="button" aria-label="Girar o carimbo" onClick={() => setCarimbo((c) => (c ? girarCarimbo(c) : c))} className="px-1.5 py-1 rounded border text-[11px]" style={botao(false)}>Girar</button>
+                <button type="button" aria-label="Descartar o carimbo" onClick={() => { setCarimbo(null); if (ferramenta === 'carimbo') setFerramenta('pincel'); }} className="px-1.5 py-1 rounded border text-[11px]" style={botao(false)}>Descartar</button>
+              </div>
+            )}
           </>
         ) : (
           <div role="radiogroup" aria-label="Ferramenta dos objetos" className="flex gap-1">
@@ -655,7 +763,7 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
           tileEscolhido={tileEscolhido}
           escolher={(valor) => {
             setTileEscolhido(valor);
-            if (ferramenta !== 'pincel' && ferramenta !== 'balde') setFerramenta('pincel');
+            if (ferramenta !== 'pincel' && ferramenta !== 'balde' && ferramenta !== 'retangulo' && ferramenta !== 'linha') setFerramenta('pincel');
             if (camada === 'colisao') setCamada('chao');
           }}
           podeEditar={podeEditar}
