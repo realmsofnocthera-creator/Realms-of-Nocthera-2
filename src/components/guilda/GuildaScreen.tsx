@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { CLASSES_MAP } from '@/rules/classes';
 import { DESCRICAO_MAXIMA_DA_GUILDA, NIVEIS_DA_GUILDA, nivelDaGuilda, NOME_DO_CARGO, NOME_MAXIMO_DA_GUILDA, podeExpulsar, administraEntrada, type CargoDaGuilda, type ResumoDaGuilda } from '@/rules/guilda';
-import type { ContratoNaTela, EstadoDaGuilda, GuildaPublica, IncursaoNaTela, MinhaGuilda, PesquisaNaTela } from '@/server/guildas';
+import type { ChefeSemanalNaTela, ContratoNaTela, EstadoDaGuilda, GuildaPublica, IncursaoNaTela, MinhaGuilda, PesquisaNaTela } from '@/server/guildas';
+import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
 import { PONTOS_POR_RARIDADE } from '@/rules/pesquisa';
 import type { RaridadeMaterial } from '@/rules/raridades';
 import { NOCTHERA_THEME } from '@/theme/theme';
@@ -85,6 +86,7 @@ export function GuildaScreen({ tokenFresco }: { tokenFresco: Token }) {
             <QuadroDeContratos contratos={estado.contratos} agir={agir} ocupado={ocupado} />
             <IncursaoCartao incursao={estado.minha.incursao} agir={agir} ocupado={ocupado} />
             <PesquisaCartao pesquisa={estado.minha.pesquisa} eu={estado.eu} agir={agir} ocupado={ocupado} />
+            <ChefeSemanalCartao chefe={estado.minha.chefeSemanal} agir={agir} ocupado={ocupado} />
             <MinhaGuildaPainel guilda={estado.minha} agir={agir} ocupado={ocupado} />
           </>
         ) : (
@@ -263,6 +265,59 @@ function PesquisaCartao({ pesquisa, eu, agir, ocupado }: { pesquisa: PesquisaNaT
           </li>
         ))}
       </ul>
+    </Cartao>
+  );
+}
+
+const dataCurta = (dia: string) => `${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
+
+/** Chefe de guildas: o chefe da semana, o melhor do jogador, a posição da guilda, o top 10, as faixas e os resgates. */
+function ChefeSemanalCartao({ chefe: c, agir, ocupado }: { chefe: ChefeSemanalNaTela; agir: Agir; ocupado: boolean }) {
+  const { colors } = NOCTHERA_THEME;
+  const [verFaixas, setVerFaixas] = useState(false);
+  if (!c.liberado) {
+    return (
+      <Cartao titulo="Chefe de guildas">
+        <p className="text-xs" style={{ color: colors.text.secondary }}>Abre quando a guilda chega ao nível {NIVEIS_DA_GUILDA[c.nivelDaGuildaParaLiberar - 1].nome}.</p>
+      </Cartao>
+    );
+  }
+  return (
+    <Cartao titulo="Chefe de guildas">
+      {c.pendentes.map((semana) => (
+        <div key={semana} className="rounded-sm border px-2 py-1.5 flex items-center justify-between gap-2" style={{ borderColor: VERDE }}>
+          <span className="text-xs font-semibold" style={{ color: VERDE }}>Recompensa da semana de {dataCurta(semana)}</span>
+          <Botao disabled={ocupado} onClick={() => void agir('resgatarChefeSemanal', { semana })}>Resgatar</Botao>
+        </div>
+      ))}
+      <p className="text-sm"><strong>{c.chefe}</strong></p>
+      <p className="text-xs" style={{ color: colors.text.secondary }}>Semana até {dataCurta(c.termina)} (segunda, 0h de Brasília). Lute quantas vezes quiser: vale o seu maior dano, e a guilda soma o maior de cada membro.</p>
+      <p className="text-sm">Seu melhor: <strong>{c.meuMelhor}</strong> · Guilda: <strong>{c.totalDaGuilda}</strong>{c.posicao ? ` · ${c.posicao}º lugar` : ''}</p>
+      <div><Botao disabled={ocupado} onClick={() => void agir('lutarChefeSemanal')}>Lutar</Botao></div>
+      {c.top.length > 0 && (
+        <>
+          <h3 className="text-sm font-bold mt-1">Ranking das guildas</h3>
+          <ol className="text-xs flex flex-col gap-0.5">
+            {c.top.map((t) => (
+              <li key={`${t.posicao}-${t.nome}`} className="flex justify-between gap-2" style={{ color: t.minha ? '#F5E3B3' : undefined, fontWeight: t.minha ? 700 : 400 }}>
+                <span>{t.posicao}º {t.nome}</span>
+                <span>{t.total}</span>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+      <button type="button" onClick={() => setVerFaixas(!verFaixas)} className="self-start text-xs underline" style={{ color: colors.text.secondary }}>{verFaixas ? 'Esconder recompensas' : 'Ver recompensas por posição'}</button>
+      {verFaixas && (
+        <ul className="text-[11px] flex flex-col gap-0.5" style={{ color: colors.text.secondary }}>
+          {c.faixas.map((f) => (
+            <li key={f.nome}>
+              <strong>{f.nome}:</strong> {f.ouro} de ouro para cada um que lutou, {f.xpGuilda} de XP para a guilda
+              {f.baus.map((b) => `, ${b.quantidade} baú(s) ${EMBLEMA_RARIDADE_MAP[b.raridade].nome.toLowerCase()}(s)`).join('')}
+            </li>
+          ))}
+        </ul>
+      )}
     </Cartao>
   );
 }

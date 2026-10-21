@@ -16,6 +16,7 @@ import { comprimirMapa, descomprimirMapa } from '@/rules/mapaComprimido';
 import type { MissoesDoJogador } from '@/game/missoes';
 import { chaveDeBusca, type CampoDoRanking, type CriterioDeRanking, type RankingGuardado, type ResumoDePersonagem } from '@/rules/social';
 import { contratosDoDocumento } from '@/game/contratos';
+import { entradaDoDocumento, participacoesDoDocumento, type EntradaDoChefeSemanal } from '@/rules/chefeSemanal';
 import { bonusDeGuildaDoDocumento } from '@/rules/pesquisa';
 import { chaveDoNomeDaGuilda, guildaDoDocumento, type GuildaDocumento } from '@/rules/guilda';
 import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
@@ -366,6 +367,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
       ? { incursaoTentativas: { dia: data.incursaoTentativas.dia, usadas: data.incursaoTentativas.usadas } }
       : {}),
     ...(bonusDeGuildaDoDocumento(data.bonusDeGuilda) ? { bonusDeGuilda: bonusDeGuildaDoDocumento(data.bonusDeGuilda) } : {}),
+    ...(participacoesDoDocumento(data.chefeSemanal) ? { chefeSemanal: participacoesDoDocumento(data.chefeSemanal) } : {}),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
       ? { bonusSubclasseAplicado: lerAtributos(data.bonusSubclasseAplicado, ZEROS_ATRIBUTOS) }
       : {}),
@@ -423,6 +425,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.contratos ? { contratos: semUndefined(char.contratos) } : {}),
     ...(char.incursaoTentativas ? { incursaoTentativas: char.incursaoTentativas } : {}),
     ...(char.bonusDeGuilda ? { bonusDeGuilda: char.bonusDeGuilda } : {}),
+    ...(char.chefeSemanal?.length ? { chefeSemanal: semUndefined(char.chefeSemanal) } : {}),
     // campos derivados, só para o banco poder ordenar e buscar (7.1): o nome em minúsculas e os contadores das provações
     nomeBusca: chaveDeBusca(char.nome),
     ...(char.batalhaSangrentaVencidas?.length ? { vitoriasBatalha: char.batalhaSangrentaVencidas.length } : {}),
@@ -463,6 +466,7 @@ class ContextoFirestore implements ContextoTransacao {
   /** null = apagar. */
   private guildas = new Map<string, GuildaDocumento | null>();
   private nomesDeGuilda = new Map<string, { guildaId: string; nome: string } | null>();
+  private chefeSemanal = new Map<string, EntradaDoChefeSemanal>();
 
   constructor(
     private readonly db: Firestore,
@@ -502,6 +506,17 @@ class ContextoFirestore implements ContextoTransacao {
     if (pendente) return structuredClone(pendente);
     const snap = await this.tx.get(this.db.collection('combates').doc(id));
     return snap.exists ? (snap.data() as RegistroCombate) : null;
+  }
+
+  async lerEntradaChefeSemanal(semana: string, guildaId: string): Promise<EntradaDoChefeSemanal | null> {
+    const pendente = this.chefeSemanal.get(`${semana}/${guildaId}`);
+    if (pendente) return structuredClone(pendente);
+    const snap = await this.tx.get(this.db.collection('chefeSemanal').doc(semana).collection('guildas').doc(guildaId));
+    return snap.exists ? entradaDoDocumento(snap.data()) : null;
+  }
+
+  gravarEntradaChefeSemanal(entrada: EntradaDoChefeSemanal): void {
+    this.chefeSemanal.set(`${entrada.semana}/${entrada.guildaId}`, structuredClone(entrada));
   }
 
   gravarCombate(registro: RegistroCombate): void {
@@ -563,6 +578,9 @@ class ContextoFirestore implements ContextoTransacao {
       const ref = this.db.collection('guildas').doc(id);
       if (guilda) this.tx.set(ref, guildaParaFirestore(guilda));
       else this.tx.delete(ref);
+    }
+    for (const e of this.chefeSemanal.values()) {
+      this.tx.set(this.db.collection('chefeSemanal').doc(e.semana).collection('guildas').doc(e.guildaId), semUndefined(e));
     }
     for (const [chave, dono] of this.nomesDeGuilda) {
       const ref = this.db.collection('nomesDeGuilda').doc(chave);
@@ -650,6 +668,27 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
       return lerComRetry(`lerGuilda:${id}`, async () => {
         const snap = await db.collection('guildas').doc(id).get();
         return snap.exists ? guildaDoDocumento(id, snap.data()) : null;
+      });
+    },
+
+    async listarChefeSemanal(semana: string, limite: number) {
+      return lerComRetry(`listarChefeSemanal:${semana}`, async () => {
+        const snap = await db.collection('chefeSemanal').doc(semana).collection('guildas').orderBy('total', 'desc').limit(limite).get();
+        return snap.docs.flatMap((d) => entradaDoDocumento(d.data()) ?? []);
+      });
+    },
+
+    async contarGuildasAcimaNoChefeSemanal(semana: string, total: number) {
+      return lerComRetry(`contarChefeSemanal:${semana}`, async () => {
+        const snap = await db.collection('chefeSemanal').doc(semana).collection('guildas').where('total', '>', total).count().get();
+        return snap.data().count;
+      });
+    },
+
+    async lerEntradaChefeSemanal(semana: string, guildaId: string) {
+      return lerComRetry(`lerChefeSemanal:${semana}`, async () => {
+        const snap = await db.collection('chefeSemanal').doc(semana).collection('guildas').doc(guildaId).get();
+        return snap.exists ? entradaDoDocumento(snap.data()) : null;
       });
     },
 

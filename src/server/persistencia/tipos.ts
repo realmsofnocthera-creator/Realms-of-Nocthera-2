@@ -6,6 +6,7 @@ import type { TipoDeConteudo } from '@/rules/conteudo';
 import type { SancaoDocumento } from '@/rules/sancoes';
 import type { ConfiguracaoDeSistemas } from '@/rules/sistemas';
 import { chaveDoNomeDaGuilda, type GuildaDocumento } from '@/rules/guilda';
+import type { EntradaDoChefeSemanal } from '@/rules/chefeSemanal';
 
 /**
  * Registro de um combate resolvido (0.5-B1/B3): guarda a semente e a entrada para
@@ -116,6 +117,9 @@ export interface ContextoTransacao {
   lerDonoDoNomeDeGuilda(chave: string): Promise<string | null>;
   reservarNomeDeGuilda(chave: string, guildaId: string, nome: string): void;
   liberarNomeDeGuilda(chave: string): void;
+  /** Chefe de guildas (7.3): o registro da guilda na semana. */
+  lerEntradaChefeSemanal(semana: string, guildaId: string): Promise<EntradaDoChefeSemanal | null>;
+  gravarEntradaChefeSemanal(entrada: EntradaDoChefeSemanal): void;
 }
 
 /** Papel de Mestre concedido pelo painel (o Dono vem do ambiente e não é gravado aqui). */
@@ -257,6 +261,11 @@ export interface Repositorio {
   listarGuildas(limite: number): Promise<GuildaDocumento[]>;
   /** Guildas cujo nome começa com o texto (já em minúsculas), em ordem alfabética. */
   buscarGuildasPorPrefixo(prefixo: string, limite: number): Promise<GuildaDocumento[]>;
+  /** Chefe de guildas: as guildas da semana com mais dano. */
+  listarChefeSemanal(semana: string, limite: number): Promise<EntradaDoChefeSemanal[]>;
+  /** Quantas guildas da semana têm mais dano que o total (a posição é isso + 1). */
+  contarGuildasAcimaNoChefeSemanal(semana: string, total: number): Promise<number>;
+  lerEntradaChefeSemanal(semana: string, guildaId: string): Promise<EntradaDoChefeSemanal | null>;
 }
 
 /**

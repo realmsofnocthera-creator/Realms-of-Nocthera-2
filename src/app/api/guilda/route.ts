@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const limiteConta = limitarPorConta(user.uid, 'escrita');
     if (limiteConta) return limiteConta;
     const b = (await req.json().catch(() => ({}))) ?? {};
-    const { mensagem } = await agirNaGuilda(user.uid, b.acao, { nome: b.nome, descricao: b.descricao, guildaId: b.guildaId, uid: b.uid, contratoId: b.contratoId, ramo: b.ramo, ouro: b.ouro, materiais: b.materiais });
+    const { mensagem } = await agirNaGuilda(user.uid, b.acao, { nome: b.nome, descricao: b.descricao, guildaId: b.guildaId, uid: b.uid, contratoId: b.contratoId, ramo: b.ramo, ouro: b.ouro, materiais: b.materiais, semana: b.semana });
     return NextResponse.json({ mensagem, estado: await estadoDaGuilda(user.uid) });
   } catch (error) {
     return respostaDeErro(error, 'guilda.acao_falhou');
