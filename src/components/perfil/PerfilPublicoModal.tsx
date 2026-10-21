@@ -72,6 +72,7 @@ function characterToPublicProfile(char: CharacterDocument): PublicCharacterProfi
     poderTotal: calcularPoderTotal(char.atributos),
     sobre: typeof char.sobre === 'string' ? char.sobre : '',
     equipamentosPrincipais: equipamentosDoPerfil(char),
+    ...(char.guildaId && char.guildaNome ? { guilda: char.guildaNome } : {}),
   };
 }
 
@@ -649,10 +650,9 @@ export function PerfilPublicoModal({
                 </span>
                 <div className="flex items-center gap-1 mt-0.5 text-[#5C4D3C]">
                   <Shield className="w-3.5 h-3.5 text-[#6E5D4F] shrink-0" />
-                  <span className="text-[10px] sm:text-xs font-semibold italic truncate">
-                    Em breve
+                  <span className={`text-[10px] sm:text-xs font-semibold truncate ${viewedProfile.guilda ? '' : 'italic'}`}>
+                    {viewedProfile.guilda ?? 'Sem guilda'}
                   </span>
-                  <Lock className="w-3 h-3 text-[#7A6A58] shrink-0 ml-auto" />
                 </div>
               </div>
             </div>

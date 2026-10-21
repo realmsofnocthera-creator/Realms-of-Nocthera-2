@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Firestore } from 'firebase-admin/firestore';
 import {
+  guildaParaFirestore,
   criarRepositorioFirestore,
   personagemDoFirestore,
   personagemParaFirestore,
@@ -38,10 +39,11 @@ class FirestoreFalso {
   }
 
   async runTransaction<T>(fn: (tx: unknown) => Promise<T>): Promise<T> {
-    const gravacoes: Array<[string, Record<string, unknown>]> = [];
+    const gravacoes: Array<[string, Record<string, unknown> | null]> = [];
     const tx = {
       get: async (ref: Ref) => this.snap(ref.path),
       set: (ref: Ref, d: Record<string, unknown>) => gravacoes.push([ref.path, d]),
+      delete: (ref: Ref) => gravacoes.push([ref.path, null]),
       create: (ref: Ref, d: Record<string, unknown>) => {
         if (this.dados.has(ref.path)) throw Object.assign(new Error('já existe'), { code: 6 });
         gravacoes.push([ref.path, d]);
@@ -49,7 +51,7 @@ class FirestoreFalso {
     };
     const valor = await fn(tx);
     if (this.falhaCommit) throw Object.assign(new Error('commit falhou'), this.falhaCommit);
-    for (const [path, d] of gravacoes) this.dados.set(path, structuredClone(d));
+    for (const [path, d] of gravacoes) (d ? this.dados.set(path, structuredClone(d)) : this.dados.delete(path));
     return valor;
   }
 }
@@ -141,6 +143,21 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(personagemDoFirestore('u1', antigo).escondidoNaBusca).toBeUndefined();
   });
 
+  it('guarda a guilda do personagem e os convites e pedidos (7.3); ids estranhos são descartados', () => {
+    const doc = personagemParaFirestore({ ...PERSONAGEM, guildaId: 'g_abc123def', guildaNome: 'Folhaviva', convitesDeGuilda: ['g_aaaaaa1'], pedidosDeGuilda: ['g_bbbbbb2'] });
+    const volta = personagemDoFirestore('u1', doc);
+    expect(volta).toMatchObject({ guildaId: 'g_abc123def', guildaNome: 'Folhaviva', convitesDeGuilda: ['g_aaaaaa1'], pedidosDeGuilda: ['g_bbbbbb2'] });
+    const antigo = personagemParaFirestore(PERSONAGEM);
+    expect(antigo).not.toHaveProperty('guildaId');
+    expect(antigo).not.toHaveProperty('convitesDeGuilda');
+    expect(personagemDoFirestore('u1', { ...antigo, convitesDeGuilda: ['../x', 3, 'g_ok12345', 'g_ok12345'] }).convitesDeGuilda).toEqual(['g_ok12345']);
+  });
+
+  it('a guilda vai para o banco com o nome de busca e a quantidade de membros', () => {
+    const g = { id: 'g_abc123', nome: 'Ordem  da Névoa', nomeBusca: '', descricao: '', criadaEm: '1', membros: [{ uid: 'a', nome: 'A', cargo: 'lider' as const, entrouEm: '1' }], convites: [], pedidos: [], quantidadeMembros: 0 };
+    expect(guildaParaFirestore(g)).toMatchObject({ nomeBusca: 'ordem da névoa', quantidadeMembros: 1 });
+  });
+
   it('a escolha dos equipamentos do perfil vai e volta, inclusive a lista vazia, e valores ruins são ignorados', () => {
     const volta = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, perfilEquipamentos: ['w1', 'p2'] }));
     expect(volta.perfilEquipamentos).toEqual(['w1', 'p2']);
@@ -211,6 +228,28 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     const volta = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, armaduras: [peca] }));
     expect(volta.armaduras).toEqual([peca]);
     expect(personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), armaduras: undefined }).armaduras).toEqual([]);
+  });
+
+  it('guilda e nome da guilda: gravados no fim da transação, lidos dentro dela e apagados juntos (7.3)', async () => {
+    const g = { id: 'g_abc123', nome: 'Folhaviva', nomeBusca: 'folhaviva', descricao: '', criadaEm: '1', membros: [{ uid: 'u1', nome: 'Aria', cargo: 'lider' as const, entrouEm: '1' }], convites: [], pedidos: [], quantidadeMembros: 1 };
+    await repo.executarTransacao('criar', async (ctx) => {
+      ctx.gravarGuilda(g);
+      ctx.reservarNomeDeGuilda('g_x', 'g_abc123', 'Folhaviva');
+      expect((await ctx.lerGuilda('g_abc123'))?.nome).toBe('Folhaviva');
+      expect(await ctx.lerDonoDoNomeDeGuilda('g_x')).toBe('g_abc123');
+      expect(db.dados.size).toBe(0);
+    });
+    expect(db.dados.get('guildas/g_abc123')).toMatchObject({ nome: 'Folhaviva', quantidadeMembros: 1 });
+    expect((await repo.lerGuilda('g_abc123'))?.membros).toHaveLength(1);
+    await repo.executarTransacao('desfazer', async (ctx) => {
+      expect(await ctx.lerDonoDoNomeDeGuilda('g_x')).toBe('g_abc123');
+      ctx.apagarGuilda('g_abc123');
+      ctx.liberarNomeDeGuilda('g_x');
+      expect(await ctx.lerGuilda('g_abc123')).toBeNull();
+      expect(await ctx.lerDonoDoNomeDeGuilda('g_x')).toBeNull();
+    });
+    expect(db.dados.has('guildas/g_abc123')).toBe(false);
+    expect(db.dados.has('nomesDeGuilda/g_x')).toBe(false);
   });
 
   it('grava personagem, nome e transação juntos no fim da transação', async () => {

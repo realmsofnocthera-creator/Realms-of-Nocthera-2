@@ -15,9 +15,9 @@ function botaoDe(markup: string, rotulo: string): string {
 }
 
 describe('Menu do Hub: História (Campanha)', () => {
-  it('o botão História está ligado; Guilda continua em breve', () => {
+  it('os botões História e Guilda estão ligados', () => {
     const m = html();
     expect(botaoDe(m, 'História')).not.toContain('disabled');
-    expect(botaoDe(m, 'Guilda')).toContain('disabled');
+    expect(botaoDe(m, 'Guilda')).not.toContain('disabled');
   });
 });

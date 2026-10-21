@@ -1,3 +1,5 @@
+import { REGRAS_PADRAO_DE_GUILDA, regrasDeGuildaValidas, type RegrasDeGuilda } from '@/rules/guilda';
+
 /**
  * Feature flags e modo manutenção (3.5.5.2). O Dono desliga e liga sistemas do jogo sem deploy, com mensagem
  * para o jogador. Quem tem papel no painel continua entrando (para testar e para religar).
@@ -10,6 +12,7 @@ export const SISTEMAS = [
   { id: 'guerreiro', nome: 'Provação do Guerreiro' },
   { id: 'forja', nome: 'Forja e Ferreiro (armas e armaduras)' },
   { id: 'campanha', nome: 'Campanha (explorar o mundo)' },
+  { id: 'guildas', nome: 'Guildas' },
 ] as const;
 export type SistemaId = (typeof SISTEMAS)[number]['id'];
 
@@ -33,6 +36,8 @@ export interface ConfiguracaoDeSistemas {
   manutencao: { ativa: boolean; mensagem: string };
   /** Campanha (5.5): o mapa onde o jogador começa (vazio = a Campanha ainda não começou) e a cena de abertura, tocada uma vez antes do primeiro mapa (vazio = sem abertura). */
   campanha: { mapaInicial: string; aberturaCenaId: string };
+  /** Guildas (7.3): nível e ouro para criar e o máximo de membros. */
+  guildas: RegrasDeGuilda;
   sistemas: Record<SistemaId, EstadoDoSistema>;
   atualizadoEm: string;
   atualizadoPor: string;
@@ -42,6 +47,7 @@ export function configuracaoPadrao(): ConfiguracaoDeSistemas {
   return {
     manutencao: { ativa: false, mensagem: '' },
     campanha: { mapaInicial: '', aberturaCenaId: '' },
+    guildas: { ...REGRAS_PADRAO_DE_GUILDA },
     sistemas: Object.fromEntries(SISTEMAS.map((s) => [s.id, { ativo: true, mensagem: '' }])) as Record<SistemaId, EstadoDoSistema>,
     atualizadoEm: '',
     atualizadoPor: '',
@@ -61,6 +67,8 @@ export function configuracaoDoDocumento(bruto: unknown): ConfiguracaoDeSistemas 
     const idValido = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9][a-z0-9-]{1,47}$/.test(v);
     base.campanha = { mapaInicial: idValido(c.mapaInicial) ? c.mapaInicial : '', aberturaCenaId: idValido(c.aberturaCenaId) ? c.aberturaCenaId : '' };
   }
+  const regras = regrasDeGuildaValidas(d.guildas);
+  if (regras) base.guildas = regras;
   const s = d.sistemas as Record<string, unknown> | undefined;
   if (s && typeof s === 'object') {
     for (const sistema of SISTEMAS) {

@@ -69,6 +69,7 @@ export function SistemasPainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel
 
       <MapaInicial pode={pode} config={config} tokenFresco={tokenFresco} aplicar={aplicar} />
       <CenaDeAbertura pode={pode} config={config} tokenFresco={tokenFresco} aplicar={aplicar} />
+      <RegrasDasGuildas key={`guildas-${config.atualizadoEm}`} pode={pode} config={config} aplicar={aplicar} />
 
       {SISTEMAS.map((s) => {
         const e = config.sistemas[s.id as SistemaId];
@@ -190,6 +191,52 @@ function CenaDeAbertura({ pode, config, tokenFresco, aplicar }: { pode: boolean;
               {cenas.map((c) => <option key={c.id} value={c.id}>{c.nome} ({c.id})</option>)}
             </select>
           </label>
+          <label className="text-[11px] flex flex-col gap-0.5">Motivo (vai para o log)
+            <input value={motivo} onChange={(e) => setMotivo(e.target.value)} className={campo} style={estilo} required minLength={5} maxLength={300} />
+          </label>
+          <button type="submit" disabled={ocupado} className="self-start px-3 py-1.5 rounded font-cinzel font-bold text-xs disabled:opacity-50" style={{ backgroundColor: colors.accent.primary, color: colors.background.secondary }}>Definir</button>
+          {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
+        </form>
+      )}
+    </Cartao>
+  );
+}
+
+/** Regras das Guildas (7.3): o nível e o ouro para criar uma guilda e o máximo de membros. */
+function RegrasDasGuildas({ pode, config, aplicar }: { pode: boolean; config: ConfiguracaoDeSistemas; aplicar: (corpo: Record<string, unknown>) => Promise<string | null> }) {
+  const { colors } = NOCTHERA_THEME;
+  const [regras, setRegras] = useState(config.guildas);
+  const [motivo, setMotivo] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const campo = 'rounded-sm border px-2 py-1 text-[12px] w-full';
+  const estilo = { backgroundColor: colors.background.primary, borderColor: `${OURO}66`, color: colors.text.primary };
+  const ROTULOS: [keyof typeof regras, string][] = [['nivelMinimo', 'Nível mínimo para criar'], ['custoOuro', 'Ouro para criar'], ['maxMembros', 'Máximo de membros']];
+
+  return (
+    <Cartao titulo="Guildas: regras">
+      <p className="text-[11px]" style={{ color: colors.text.secondary }}>
+        Valem para as próximas criações e entradas. Uma guilda que já passou do novo máximo de membros continua com eles, mas não aceita ninguém novo.
+      </p>
+      <p className="text-[12px] font-semibold">Agora: nível {config.guildas.nivelMinimo}, {config.guildas.custoOuro} de ouro, até {config.guildas.maxMembros} membros</p>
+      {pode && (
+        <form
+          className="flex flex-col gap-2"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setOcupado(true);
+            setErro(null);
+            const falha = await aplicar({ alvo: 'guildas-regras', regras, motivo });
+            setOcupado(false);
+            if (falha) setErro(falha);
+            else setMotivo('');
+          }}
+        >
+          {ROTULOS.map(([chave, rotulo]) => (
+            <label key={chave} className="text-[11px] flex flex-col gap-0.5">{rotulo}
+              <input type="number" value={regras[chave]} onChange={(e) => setRegras({ ...regras, [chave]: Number(e.target.value) })} className={campo} style={estilo} required />
+            </label>
+          ))}
           <label className="text-[11px] flex flex-col gap-0.5">Motivo (vai para o log)
             <input value={motivo} onChange={(e) => setMotivo(e.target.value)} className={campo} style={estilo} required minLength={5} maxLength={300} />
           </label>

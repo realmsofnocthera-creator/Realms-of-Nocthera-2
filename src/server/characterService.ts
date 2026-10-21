@@ -199,6 +199,12 @@ export interface CharacterDocument {
   /** Privacidade social (7.1): o jogador escolhe não aparecer no Ranking e/ou na Busca (sem o campo, aparece). */
   escondidoNoRanking?: boolean;
   escondidoNaBusca?: boolean;
+  /** Guildas (7.3): a guilda do personagem (o cargo fica no documento da guilda) e o nome dela, para o perfil. */
+  guildaId?: string;
+  guildaNome?: string;
+  /** Guildas que convidaram o personagem e que ele pediu para entrar (ids), esperando resposta. */
+  convitesDeGuilda?: string[];
+  pedidosDeGuilda?: string[];
   /** Quanto o equipamento soma em cada atributo (pontos e % de Agilidade). Derivado, não é gravado. */
   bonusEquipamento?: Attributes;
   /** Mitigação física e mágica das peças de Defesa, com a % de Defesa da arma. Derivado, não é gravado. */
@@ -234,6 +240,8 @@ export interface PublicCharacterProfile {
   sobre: string;
   /** Os equipamentos principais que o jogador mostra (até 4). */
   equipamentosPrincipais: EquipamentoPerfil[];
+  /** O nome da guilda do personagem, se ele estiver numa (7.3). */
+  guilda?: string;
 }
 
 export interface CreateCharacterInput {
@@ -451,7 +459,7 @@ function derivadosComReforco(char: CharacterDocument) {
 // Operações dentro de uma transação (recebem o contexto; nunca abrem outra transação)
 // ---------------------------------------------------------------------------
 
-async function carregarPersonagem(
+export async function carregarPersonagem(
   ctx: ContextoTransacao,
   uid: string,
   mensagemSeAusente = 'Personagem não encontrado.'
@@ -464,7 +472,7 @@ async function carregarPersonagem(
   return normalizarPersonagem(raw);
 }
 
-function salvarPersonagem(
+export function salvarPersonagem(
   ctx: ContextoTransacao,
   current: CharacterDocument,
   updates: Partial<CharacterDocument>
@@ -478,7 +486,7 @@ function salvarPersonagem(
  * Altera o saldo de uma moeda em memória e registra a transação no contexto.
  * Lança erro (sem gravar nada) se o delta for inválido ou o saldo ficar negativo.
  */
-function alterarSaldoEm(
+export function alterarSaldoEm(
   ctx: ContextoTransacao,
   char: CharacterDocument,
   moeda: Moeda,
@@ -566,6 +574,7 @@ function toPublicCharacterProfile(char: CharacterDocument): PublicCharacterProfi
     poderTotal: calcularPoderTotal(atributosFinais),
     sobre: typeof char.sobre === 'string' ? char.sobre : '',
     equipamentosPrincipais: equipamentosDoPerfil(char),
+    ...(char.guildaId && char.guildaNome ? { guilda: char.guildaNome } : {}),
   };
 }
 

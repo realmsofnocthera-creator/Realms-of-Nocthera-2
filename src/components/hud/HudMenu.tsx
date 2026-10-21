@@ -103,7 +103,8 @@ export function HudMenu({
       id: 'guilda',
       label: 'Guilda',
       iconSrc: HUD_ICONS.menuGuilda,
-      enabled: false,
+      enabled: true,
+      onClick: () => router.push('/guilda'),
     },
   ] as const;
 
