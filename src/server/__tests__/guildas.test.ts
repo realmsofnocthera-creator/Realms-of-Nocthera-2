@@ -4,7 +4,7 @@ import { GET as guildaGet, POST as guildaPost } from '@/app/api/guilda/route';
 import { GET as guildasGet } from '@/app/api/guildas/route';
 import { GET as guildaPublicaGet } from '@/app/api/guildas/[id]/route';
 import { limparCacheRevogacao } from '@/server/auth';
-import { createCharacter, getCharacterByUid, getPublicCharacterByName, updateCharacter } from '@/server/characterService';
+import { createCharacter, executarCacada, getCharacterByUid, getPublicCharacterByName, updateCharacter } from '@/server/characterService';
 import { agirNaGuilda, ErroDeGuilda, estadoDaGuilda, limparCacheDasGuildas, listarGuildasParaJogador, tirarDaGuildaAntesDeExcluir, verGuilda } from '@/server/guildas';
 import { limparCacheDeSistemas } from '@/server/sistemasLeitura';
 import { configuracaoPadrao } from '@/rules/sistemas';
@@ -67,13 +67,13 @@ describe('Guildas (7.3)', () => {
     });
 
     it('as regras vêm do painel (Sistemas)', async () => {
-      await repositorio.gravarConfiguracaoDeSistemas({ ...configuracaoPadrao(), guildas: { nivelMinimo: 1, custoOuro: 0, maxMembros: 2 } });
+      await repositorio.gravarConfiguracaoDeSistemas({ ...configuracaoPadrao(), guildas: { nivelMinimo: 1, custoOuro: 0, xpPorNivel: [100, 200, 300, 400, 500, 600, 700], membrosPorNivel: [2, 3, 4, 5, 6, 7, 8, 9] } });
       limparCacheDeSistemas();
       await updateCharacter('u2', { nivel: 1, ouro: 0 });
       const id = await criarGuilda('u2', 'Gratis');
       expect((await getCharacterByUid('u2'))!.ouro).toBe(0);
       await entrar(id, 'u3', 'u2');
-      expect((await erro(agir('u2', 'convidar', { nome: 'Denethor' })))?.message).toMatch(/cheia \(2 membros\)/);
+      expect((await erro(agir('u2', 'convidar', { nome: 'Denethor' })))?.message).toMatch(/cheia \(2 membros no nível Emergente\)/);
     });
 
     it('o sistema pode ser desligado no painel', async () => {
@@ -290,5 +290,83 @@ describe('Guildas (7.3)', () => {
       expect((await pub.json()).guilda.membros).toEqual([{ nome: 'Aragorn', cargo: 'lider' }]);
       expect((await guildaPublicaGet(req('/api/guildas/g_naoexiste22', 'u2'), { params: Promise.resolve({ id: 'g_naoexiste22' }) })).status).toBe(404);
     });
+  });
+});
+
+describe('Níveis e Quadro de contratos (7.3)', () => {
+  const FORTE = { vigor: 400, sorte: 0, forca: 300, vitalidade: 100, arcano: 0, inteligencia: 0, agilidade: 50 };
+  beforeEach(async () => {
+    (process.env as Record<string, string | undefined>).NODE_ENV = 'test';
+    resetCharacterStore();
+    limparCacheRevogacao();
+    limparCacheDeSistemas();
+    limparCacheDasGuildas();
+    for (const [uid, nome] of Object.entries(NOMES)) {
+      await createCharacter(uid, { nome, racaId: 'elfo', classeId: 'cavaleiro', pontos: PONTOS });
+      await updateCharacter(uid, { nivel: 12, ouro: 6000, atributos: FORTE });
+    }
+  });
+
+  it('a guilda começa Emergente com 8 vagas', async () => {
+    const id = await criarGuilda();
+    const e = await estadoDaGuilda('u1');
+    expect(e.minha!.nivel).toMatchObject({ nivel: 1, nome: 'Emergente', maxMembros: 8 });
+    expect((await verGuilda(id)).maxMembros).toBe(8);
+  });
+
+  it('abrir a guilda gera os 3 contratos do dia uma vez só', async () => {
+    await criarGuilda();
+    const a = await estadoDaGuilda('u1');
+    expect(a.contratos.map((c) => c.tipo)).toEqual(['derrotar', 'entregar', 'vencer']);
+    const b = await estadoDaGuilda('u1');
+    expect(b.contratos).toEqual(a.contratos);
+    expect((await estadoDaGuilda('u2')).contratos).toEqual([]);
+  });
+
+  it('vitórias na Caçada contam; entregar dá ouro e material e soma XP à guilda e ao membro', async () => {
+    const id = await criarGuilda();
+    const derrotar = (await estadoDaGuilda('u1')).contratos[0];
+    expect((await erro(agir('u1', 'entregarContrato', { contratoId: 'c1' })))?.message).toMatch(/ainda não está pronto/);
+    let vitorias = 0;
+    for (let seed = 1; vitorias < derrotar.quantidade && seed < 60; seed++) {
+      const r = await executarCacada('u1', derrotar.alvo, { seed, combateId: `contrato-teste-${seed}` });
+      if (r.resultado.vencedor === 'personagem') vitorias++;
+    }
+    const pronto = (await estadoDaGuilda('u1')).contratos[0];
+    expect(pronto).toMatchObject({ feito: derrotar.quantidade, pronto: true });
+    expect((await estadoDaGuilda('u1')).contratos[2].feito).toBeGreaterThanOrEqual(Math.min(vitorias, 5));
+    const ouroAntes = (await getCharacterByUid('u1'))!.ouro;
+    const { mensagem } = await agir('u1', 'entregarContrato', { contratoId: 'c1' });
+    expect(mensagem).toMatch(/Contrato entregue/);
+    const depois = (await getCharacterByUid('u1'))!;
+    expect(depois.ouro).toBe(ouroAntes + derrotar.recompensa.ouro);
+    for (const m of derrotar.recompensa.materiais) expect(depois.inventario?.[m.id]).toBeGreaterThanOrEqual(m.qtd);
+    const g = (await repositorio.lerGuilda(id))!;
+    expect(g.xp).toBe(33);
+    expect(g.membros[0].xpContribuido).toBe(33);
+    expect((await erro(agir('u1', 'entregarContrato', { contratoId: 'c1' })))?.message).toMatch(/já foi entregue/);
+  });
+
+  it('o contrato de entregar tira os materiais da mochila', async () => {
+    await criarGuilda();
+    const entregar = (await estadoDaGuilda('u1')).contratos[1];
+    await updateCharacter('u1', { inventario: { [entregar.alvo]: entregar.quantidade + 2 } });
+    await agir('u1', 'entregarContrato', { contratoId: 'c2' });
+    expect((await getCharacterByUid('u1'))!.inventario?.[entregar.alvo]).toBe(2);
+  });
+
+  it('XP suficiente sobe a guilda de nível e abre mais vagas; contratos de outro dia não entregam', async () => {
+    const id = await criarGuilda();
+    await estadoDaGuilda('u1');
+    const g = (await repositorio.lerGuilda(id))!;
+    await repositorio.executarTransacao('t', async (ctx) => ctx.gravarGuilda({ ...g, xp: 2490 }));
+    const entregar = (await estadoDaGuilda('u1')).contratos[1];
+    await updateCharacter('u1', { inventario: { [entregar.alvo]: entregar.quantidade } });
+    const { mensagem } = await agir('u1', 'entregarContrato', { contratoId: 'c2' });
+    expect(mensagem).toMatch(/subiu para Reconhecida/);
+    expect((await estadoDaGuilda('u1')).minha!.maxMembros).toBe(10);
+    const c = (await getCharacterByUid('u1'))!.contratos!;
+    await updateCharacter('u1', { contratos: { ...c, dia: '2000-01-01' } });
+    expect((await erro(agir('u1', 'entregarContrato', { contratoId: 'c3' })))?.message).toMatch(/já venceram/);
   });
 });

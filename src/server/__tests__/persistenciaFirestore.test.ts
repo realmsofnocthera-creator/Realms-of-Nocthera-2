@@ -154,7 +154,7 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
   });
 
   it('a guilda vai para o banco com o nome de busca e a quantidade de membros', () => {
-    const g = { id: 'g_abc123', nome: 'Ordem  da Névoa', nomeBusca: '', descricao: '', criadaEm: '1', membros: [{ uid: 'a', nome: 'A', cargo: 'lider' as const, entrouEm: '1' }], convites: [], pedidos: [], quantidadeMembros: 0 };
+    const g = { id: 'g_abc123', nome: 'Ordem  da Névoa', nomeBusca: '', descricao: '', criadaEm: '1', membros: [{ uid: 'a', nome: 'A', cargo: 'lider' as const, entrouEm: '1' }], convites: [], pedidos: [], quantidadeMembros: 0, xp: 0 };
     expect(guildaParaFirestore(g)).toMatchObject({ nomeBusca: 'ordem da névoa', quantidadeMembros: 1 });
   });
 
@@ -231,7 +231,7 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
   });
 
   it('guilda e nome da guilda: gravados no fim da transação, lidos dentro dela e apagados juntos (7.3)', async () => {
-    const g = { id: 'g_abc123', nome: 'Folhaviva', nomeBusca: 'folhaviva', descricao: '', criadaEm: '1', membros: [{ uid: 'u1', nome: 'Aria', cargo: 'lider' as const, entrouEm: '1' }], convites: [], pedidos: [], quantidadeMembros: 1 };
+    const g = { id: 'g_abc123', nome: 'Folhaviva', nomeBusca: 'folhaviva', descricao: '', criadaEm: '1', membros: [{ uid: 'u1', nome: 'Aria', cargo: 'lider' as const, entrouEm: '1' }], convites: [], pedidos: [], quantidadeMembros: 1, xp: 0 };
     await repo.executarTransacao('criar', async (ctx) => {
       ctx.gravarGuilda(g);
       ctx.reservarNomeDeGuilda('g_x', 'g_abc123', 'Folhaviva');

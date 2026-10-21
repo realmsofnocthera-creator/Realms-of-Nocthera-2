@@ -1,3 +1,4 @@
+import { contarVitorias, type ContratosDoDia } from '@/game/contratos';
 import { ATTRIBUTES, AttributeName, Attributes } from '@/rules/attributes';
 import { GAME_CONFIG } from '@/rules/config';
 import { bonusSortePassivaRacial, getRaceById } from '@/rules/races';
@@ -205,6 +206,8 @@ export interface CharacterDocument {
   /** Guildas que convidaram o personagem e que ele pediu para entrar (ids), esperando resposta. */
   convitesDeGuilda?: string[];
   pedidosDeGuilda?: string[];
+  /** Quadro de contratos (7.3): os 3 contratos do dia e o progresso. */
+  contratos?: ContratosDoDia;
   /** Quanto o equipamento soma em cada atributo (pontos e % de Agilidade). Derivado, não é gravado. */
   bonusEquipamento?: Attributes;
   /** Mitigação física e mágica das peças de Defesa, com a % de Defesa da arma. Derivado, não é gravado. */
@@ -1316,7 +1319,9 @@ function aplicarResultadoCombateEm(
   ctx: ContextoTransacao,
   current: CharacterDocument,
   resultado: ResultadoCombate,
-  monstroNome: string
+  monstroNome: string,
+  /** Para contar a vitória nos contratos de guilda do dia (7.3). */
+  monstroId?: string
 ): ResultadoPosCombate {
   const mensagens: string[] = [...resultado.mensagens];
   let transaction: TransactionDocument | undefined;
@@ -1361,11 +1366,13 @@ function aplicarResultadoCombateEm(
       transaction = ganho.transaction;
     }
 
+    const contratos = monstroId ? contarVitorias(current.contratos, [monstroId], diaDeBrasilia(new Date())) : null;
     const character = salvarPersonagem(ctx, current, {
       xpAtual: novoXp,
       nivel: novoNivel,
       pontosDisponiveis,
       ouro: novoOuro,
+      ...(contratos ? { contratos } : {}),
     });
     return { character, levelUps, transaction, mensagens };
   }
@@ -1540,7 +1547,7 @@ export async function executarCombate(
       }
     }
 
-    const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome);
+    const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id);
 
     const registro: RegistroCombate = {
       id: idRegistro,
@@ -1653,7 +1660,7 @@ export async function executarCacada(
       resultado.xpGanho = 0;
     }
 
-    const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome);
+    const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id);
     let character = pos.character;
     const mensagens = [...pos.mensagens];
 
@@ -1792,7 +1799,7 @@ export async function campanhaLutar(
     if (venceu) {
       // só XP e ouro, sem a trava da Caçada (o descanso da área faz esse papel); a passiva racial de XP entra por cima
       resultado.xpGanho = calcularXpComBonusRacial(monstro.xpConcedido, current.racaId);
-      pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome);
+      pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id);
     } else {
       // derrota sem penalidade: nada de ouro perdido; a vida volta ao máximo na próxima luta, como sempre
       resultado.xpGanho = 0;
@@ -1981,7 +1988,9 @@ export async function executarBatalhaSangrenta(
     const vencidas = primeiraVitoria
       ? [...(character.batalhaSangrentaVencidas ?? []), dificuldade.id]
       : character.batalhaSangrentaVencidas ?? [];
-    character = salvarPersonagem(ctx, character, { fragmentosSubclasse, batalhaSangrenta: estadoTentativas, batalhaSangrentaVencidas: vencidas });
+    // Cada onda vencida conta nos contratos de guilda do dia
+    const contratos = contarVitorias(character.contratos, ondas.filter((o) => o.vencedor === 'personagem').map((o) => o.monstroId), diaDeBrasilia(agora));
+    character = salvarPersonagem(ctx, character, { fragmentosSubclasse, batalhaSangrenta: estadoTentativas, batalhaSangrentaVencidas: vencidas, ...(contratos ? { contratos } : {}) });
 
     const nomeSubclasse = recompensa.fragmentosSubclasse
       ? SUBCLASSES.find((sc) => sc.id === recompensa.fragmentosSubclasse?.subclasseId)?.nome ?? recompensa.fragmentosSubclasse.subclasseId
@@ -2096,7 +2105,7 @@ export async function executarTorre(uid: string, opcoes: OpcoesCombate): Promise
     const motivo = `Torre Celestial (andar ${andar})`;
 
     if (venceu) {
-      const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome);
+      const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id);
       character = pos.character;
       levelUps = pos.levelUps;
       transaction = pos.transaction;
@@ -2221,11 +2230,13 @@ export async function executarGuerreiro(uid: string, dificuldadeId: unknown, opc
     const emblemasGanhos = venceu ? sortearEmblemas(dificuldade, sorteioDeDrops(opcoes.seed)) : [];
     const primeiraVitoria = venceu && !(current.guerreiroVencidas ?? []).includes(dificuldade);
 
+    const contratosDoGuerreiro = venceu ? contarVitorias(current.contratos, [monstro.id], diaDeBrasilia(agora)) : null;
     const novosEmblemas: EmblemaItem[] = emblemasGanhos.map((e) => ({ id: randomUUID(), tipo: e.tipoId, estrelas: 1 }));
     const character = salvarPersonagem(ctx, current, {
       guerreiroTentativas: { ...(current.guerreiroTentativas ?? {}), [String(dificuldade)]: diaDeBrasilia(agora) },
       guerreiroVencidas: primeiraVitoria ? [...(current.guerreiroVencidas ?? []), dificuldade].sort((a, b) => a - b) : current.guerreiroVencidas ?? [],
       emblemasItens: [...(current.emblemasItens ?? []), ...novosEmblemas],
+      ...(contratosDoGuerreiro ? { contratos: contratosDoGuerreiro } : {}),
     });
 
     const mensagens: string[] = [

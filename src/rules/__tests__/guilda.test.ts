@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { guildaDoDocumento, membrosEmOrdem, podeExpulsar, regrasDeGuildaValidas, sucessorDoLider, validarDescricaoDaGuilda, validarNomeDaGuilda, type MembroDaGuilda } from '@/rules/guilda';
+import { guildaDoDocumento, membrosEmOrdem, nivelDaGuilda, REGRAS_PADRAO_DE_GUILDA, podeExpulsar, regrasDeGuildaValidas, sucessorDoLider, validarDescricaoDaGuilda, validarNomeDaGuilda, type MembroDaGuilda } from '@/rules/guilda';
 import { configuracaoDoDocumento } from '@/rules/sistemas';
 
 const m = (uid: string, cargo: MembroDaGuilda['cargo'], entrouEm: string): MembroDaGuilda => ({ uid, nome: uid.toUpperCase(), cargo, entrouEm });
@@ -36,14 +36,29 @@ describe('regras das guildas', () => {
     expect(sucessorDoLider([m('a', 'lider', '0')])).toBeNull();
   });
 
-  it('regras do painel: inteiros dentro dos limites', () => {
-    expect(regrasDeGuildaValidas({ nivelMinimo: 10, custoOuro: 5000, maxMembros: 30 })).toEqual({ nivelMinimo: 10, custoOuro: 5000, maxMembros: 30 });
-    expect(regrasDeGuildaValidas({ nivelMinimo: 0, custoOuro: 5000, maxMembros: 30 })).toBeNull();
-    expect(regrasDeGuildaValidas({ nivelMinimo: 10, custoOuro: 5000, maxMembros: 51 })).toBeNull();
-    expect(regrasDeGuildaValidas({ nivelMinimo: 10, custoOuro: 1.5, maxMembros: 30 })).toBeNull();
-    expect(configuracaoDoDocumento({}).guildas).toEqual({ nivelMinimo: 10, custoOuro: 5000, maxMembros: 30 });
-    expect(configuracaoDoDocumento({ guildas: { nivelMinimo: 5, custoOuro: 0, maxMembros: 10 } }).guildas).toEqual({ nivelMinimo: 5, custoOuro: 0, maxMembros: 10 });
+  it('regras do painel: inteiros dentro dos limites, 7 de XP e 8 de membros sem diminuir', () => {
+    const boas = { nivelMinimo: 10, custoOuro: 5000, xpPorNivel: [2500, 5000, 8000, 12000, 16000, 21000, 26000], membrosPorNivel: [8, 10, 15, 20, 25, 30, 40, 50] };
+    expect(regrasDeGuildaValidas(boas)).toEqual(boas);
+    expect(regrasDeGuildaValidas({ ...boas, nivelMinimo: 0 })).toBeNull();
+    expect(regrasDeGuildaValidas({ ...boas, xpPorNivel: [1, 2, 3] })).toBeNull();
+    expect(regrasDeGuildaValidas({ ...boas, membrosPorNivel: [8, 10, 15, 20, 25, 30, 40, 51] })).toBeNull();
+    expect(regrasDeGuildaValidas({ ...boas, membrosPorNivel: [8, 10, 9, 20, 25, 30, 40, 50] })).toBeNull();
+    expect(regrasDeGuildaValidas({ ...boas, custoOuro: 1.5 })).toBeNull();
+    expect(configuracaoDoDocumento({}).guildas).toEqual(REGRAS_PADRAO_DE_GUILDA);
+    expect(configuracaoDoDocumento({ guildas: { maxMembros: 10 } }).guildas).toEqual(REGRAS_PADRAO_DE_GUILDA);
     expect(configuracaoDoDocumento({}).sistemas.guildas.ativo).toBe(true);
+  });
+
+  it('nível a partir do XP (Emergente a Lendária, 90.500 no total)', () => {
+    const r = REGRAS_PADRAO_DE_GUILDA;
+    expect(nivelDaGuilda(0, r)).toEqual({ nivel: 1, nome: 'Emergente', maxMembros: 8, xpNoNivel: 0, xpDoNivel: 2500 });
+    expect(nivelDaGuilda(2499, r).nivel).toBe(1);
+    expect(nivelDaGuilda(2500, r)).toMatchObject({ nivel: 2, nome: 'Reconhecida', maxMembros: 10, xpNoNivel: 0, xpDoNivel: 5000 });
+    expect(nivelDaGuilda(7600, r)).toMatchObject({ nivel: 3, nome: 'Respeitada', xpNoNivel: 100 });
+    expect(nivelDaGuilda(90_499, r).nome).toBe('Grandiosa');
+    expect(nivelDaGuilda(90_500, r)).toMatchObject({ nivel: 8, nome: 'Lendária', maxMembros: 50, xpDoNivel: null });
+    expect(nivelDaGuilda(1e9, r).nivel).toBe(8);
+    expect(r.xpPorNivel.reduce((a, b) => a + b, 0)).toBe(90_500);
   });
 
   it('lê o documento com tolerância; sem Líder a guilda não vale', () => {

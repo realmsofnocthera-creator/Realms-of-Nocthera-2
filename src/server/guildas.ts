@@ -5,6 +5,8 @@ import {
   CONVITES_DA_GUILDA,
   CONVITES_DO_JOGADOR,
   membrosEmOrdem,
+  nivelDaGuilda,
+  type NivelAtualDaGuilda,
   NOME_DO_CARGO,
   PEDIDOS_DA_GUILDA,
   PEDIDOS_DO_JOGADOR,
@@ -21,6 +23,9 @@ import {
   type RegrasDeGuilda,
   type ResumoDaGuilda,
 } from '@/rules/guilda';
+import { contratoPronto, gerarContratos, progressoDoContrato, type Contrato } from '@/game/contratos';
+import { diaDeBrasilia } from '@/game/batalhaSangrenta';
+import { MATERIAIS_MAP } from '@/rules/materiais';
 import { PREFIXO_MAXIMO_DA_BUSCA, PREFIXO_MINIMO_DA_BUSCA } from '@/rules/social';
 import { alterarSaldoEm, carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { chaveDoNome, chaveDoNomeDeGuilda, repositorio, type ContextoTransacao } from '@/server/persistencia';
@@ -111,7 +116,8 @@ function entrarNoContexto(ctx: ContextoTransacao, guilda: GuildaDocumento, jogad
 }
 
 function exigirVaga(guilda: GuildaDocumento, r: RegrasDeGuilda) {
-  if (guilda.membros.length >= r.maxMembros) throw new ErroDeGuilda(`A guilda está cheia (${r.maxMembros} membros).`, 409);
+  const { maxMembros, nome } = nivelDaGuilda(guilda.xp, r);
+  if (guilda.membros.length >= maxMembros) throw new ErroDeGuilda(`A guilda está cheia (${maxMembros} membros no nível ${nome}).`, 409);
 }
 
 /**
@@ -150,6 +156,8 @@ export interface MinhaGuilda {
   meuCargo: CargoDaGuilda;
   membros: MembroDaGuilda[];
   maxMembros: number;
+  xp: number;
+  nivel: NivelAtualDaGuilda;
   /** Só para Líder e Oficial. */
   convites: ConviteDaGuilda[];
   pedidos: PedidoDaGuilda[];
@@ -163,7 +171,18 @@ export interface EstadoDaGuilda {
   /** Guildas que convidaram o jogador e para onde ele pediu para entrar (só as que ainda valem). */
   convites: ResumoDaGuilda[];
   pedidos: ResumoDaGuilda[];
+  /** Os contratos do dia (só para quem está numa guilda), com o progresso de agora. */
+  contratos: ContratoNaTela[];
 }
+
+export interface ContratoNaTela extends Contrato {
+  /** Quanto já tem (para entregar: o que está na mochila). */
+  feito: number;
+  pronto: boolean;
+}
+
+const contratosNaTela = (lista: readonly Contrato[], inventario: Readonly<Record<string, number>> | undefined): ContratoNaTela[] =>
+  lista.map((c) => ({ ...c, feito: progressoDoContrato(c, inventario), pronto: contratoPronto(c, inventario) }));
 
 /**
  * O estado do jogador nas guildas. Custa 1 leitura do personagem + 1 da guilda (ou até 8 das guildas dos convites
@@ -181,12 +200,26 @@ export async function estadoDaGuilda(uid: string): Promise<EstadoDaGuilda> {
     const membro = g?.membros.find((m) => m.uid === uid);
     if (g && membro) {
       const admin = administraEntrada(membro.cargo);
+      const nivel = nivelDaGuilda(g.xp, r);
+      // Os contratos do dia nascem quando o membro abre a guilda (1 gravação por dia); depois as lutas os contam
+      const hoje = diaDeBrasilia(new Date());
+      let contratos = char.contratos?.dia === hoje ? char.contratos : null;
+      if (!contratos) {
+        contratos = await repositorio.executarTransacao('guilda:contratosDoDia', async (ctx) => {
+          const atual = await carregarPersonagem(ctx, uid);
+          if (atual.contratos?.dia === hoje) return atual.contratos;
+          const novos = gerarContratos(uid, hoje, atual.nivel, atual.cacadaChavesVencidas);
+          salvarPersonagem(ctx, atual, { contratos: novos });
+          return novos;
+        });
+      }
       return {
         regras: r,
         eu,
-        minha: { id: g.id, nome: g.nome, descricao: g.descricao, criadaEm: g.criadaEm, meuCargo: membro.cargo, membros: membrosEmOrdem(g.membros), maxMembros: r.maxMembros, convites: admin ? g.convites : [], pedidos: admin ? g.pedidos : [] },
+        minha: { id: g.id, nome: g.nome, descricao: g.descricao, criadaEm: g.criadaEm, meuCargo: membro.cargo, membros: membrosEmOrdem(g.membros), maxMembros: nivel.maxMembros, xp: g.xp, nivel, convites: admin ? g.convites : [], pedidos: admin ? g.pedidos : [] },
         convites: [],
         pedidos: [],
+        contratos: contratosNaTela(contratos.lista, char.inventario),
       };
     }
   }
@@ -212,6 +245,7 @@ export async function estadoDaGuilda(uid: string): Promise<EstadoDaGuilda> {
     regras: r,
     eu,
     minha: null,
+    contratos: [],
     convites: convitesValidos.map((id) => resumoDaGuilda(guildas.get(id)!)),
     pedidos: pedidosValidos.map((id) => resumoDaGuilda(guildas.get(id)!)),
   };
@@ -220,6 +254,7 @@ export async function estadoDaGuilda(uid: string): Promise<EstadoDaGuilda> {
 export interface GuildaPublica extends ResumoDaGuilda {
   criadaEm: string;
   maxMembros: number;
+  nivel: NivelAtualDaGuilda;
   membros: { nome: string; cargo: CargoDaGuilda }[];
 }
 
@@ -227,7 +262,8 @@ export interface GuildaPublica extends ResumoDaGuilda {
 export async function verGuilda(id: unknown): Promise<GuildaPublica> {
   const g = typeof id === 'string' && /^g_[a-z0-9]{6,32}$/.test(id) ? await repositorio.lerGuilda(id) : null;
   if (!g) throw new ErroDeGuilda('Essa guilda não existe (ou foi desfeita).', 404);
-  return { ...resumoDaGuilda(g), criadaEm: g.criadaEm, maxMembros: (await regras()).maxMembros, membros: membrosEmOrdem(g.membros).map((m) => ({ nome: m.nome, cargo: m.cargo })) };
+  const nivel = nivelDaGuilda(g.xp, await regras());
+  return { ...resumoDaGuilda(g), criadaEm: g.criadaEm, maxMembros: nivel.maxMembros, nivel, membros: membrosEmOrdem(g.membros).map((m) => ({ nome: m.nome, cargo: m.cargo })) };
 }
 
 /** As guildas com mais membros (sem texto) ou as que começam com o texto (2 a 24 letras). */
@@ -265,6 +301,7 @@ export const ACOES_DE_GUILDA = [
   'transferir',
   'desfazer',
   'editarDescricao',
+  'entregarContrato',
 ] as const;
 export type AcaoDeGuilda = (typeof ACOES_DE_GUILDA)[number];
 export const ehAcaoDeGuilda = (v: unknown): v is AcaoDeGuilda => typeof v === 'string' && (ACOES_DE_GUILDA as readonly string[]).includes(v);
@@ -275,6 +312,8 @@ export interface PedidoDeAcao {
   descricao?: unknown;
   /** aceitarConvite, recusarConvite, pedir, cancelarPedido. */
   guildaId?: unknown;
+  /** entregarContrato: c1, c2 ou c3. */
+  contratoId?: unknown;
   /** O personagem alvo (cancelarConvite, aceitarPedido, recusarPedido, expulsar, promover, rebaixar, transferir). */
   uid?: unknown;
 }
@@ -319,7 +358,7 @@ const ACOES: Record<AcaoDeGuilda, Acao> = {
       }
       const id = novoIdDeGuilda();
       const em = agora();
-      ctx.gravarGuilda({ id, nome: nome.nome, nomeBusca: chaveDoNomeDaGuilda(nome.nome), descricao: descricao.descricao, criadaEm: em, membros: [{ uid, nome: eu.nome, cargo: 'lider', entrouEm: em }], convites: [], pedidos: [], quantidadeMembros: 1 });
+      ctx.gravarGuilda({ id, nome: nome.nome, nomeBusca: chaveDoNomeDaGuilda(nome.nome), descricao: descricao.descricao, criadaEm: em, membros: [{ uid, nome: eu.nome, cargo: 'lider', entrouEm: em }], convites: [], pedidos: [], quantidadeMembros: 1, xp: 0 });
       ctx.reservarNomeDeGuilda(chave, id, nome.nome);
       salvarPersonagem(ctx, eu, { ouro: eu.ouro, guildaId: id, guildaNome: nome.nome, convitesDeGuilda: undefined, pedidosDeGuilda: undefined });
       return { mensagem: `A guilda ${nome.nome} foi criada. Você é o Líder.` };
@@ -519,6 +558,10 @@ const ACOES: Record<AcaoDeGuilda, Acao> = {
     });
   },
 
+  async entregarContrato(uid, pedido) {
+    return entregarContrato(uid, pedido);
+  },
+
   async editarDescricao(uid, pedido) {
     const descricao = validarDescricaoDaGuilda(pedido.descricao);
     if (!descricao.ok) throw new ErroDeGuilda(descricao.erro);
@@ -531,6 +574,40 @@ const ACOES: Record<AcaoDeGuilda, Acao> = {
     });
   },
 };
+
+/**
+ * Entrega um contrato pronto: dá o ouro e os materiais ao jogador (tira da mochila o que o contrato pede) e soma o
+ * XP de guilda à guilda e à contribuição do membro, tudo na mesma transação.
+ */
+async function entregarContrato(uid: string, pedido: PedidoDeAcao): Promise<{ mensagem: string }> {
+  const contratoId = typeof pedido.contratoId === 'string' ? pedido.contratoId : '';
+  const hoje = diaDeBrasilia(new Date());
+  return repositorio.executarTransacao('guilda:entregarContrato', async (ctx) => {
+    let eu = await carregarPersonagem(ctx, uid);
+    const { guilda } = await minhaGuildaNoContexto(ctx, eu);
+    if (eu.contratos?.dia !== hoje) throw new ErroDeGuilda('Esses contratos já venceram. Abra a guilda de novo para ver os de hoje.', 409);
+    const contrato = eu.contratos.lista.find((c) => c.id === contratoId);
+    if (!contrato) throw new ErroDeGuilda('Contrato não encontrado.', 404);
+    if (contrato.entregue) throw new ErroDeGuilda('Esse contrato já foi entregue.', 409);
+    if (!contratoPronto(contrato, eu.inventario)) throw new ErroDeGuilda('Esse contrato ainda não está pronto.');
+    const inventario = { ...(eu.inventario ?? {}) };
+    if (contrato.tipo === 'entregar') {
+      inventario[contrato.alvo] -= contrato.quantidade;
+      if (inventario[contrato.alvo] <= 0) delete inventario[contrato.alvo];
+    }
+    for (const m of contrato.recompensa.materiais) inventario[m.id] = (inventario[m.id] ?? 0) + m.qtd;
+    if (contrato.recompensa.ouro > 0) eu = alterarSaldoEm(ctx, eu, 'ouro', contrato.recompensa.ouro, `Contrato de guilda: ${contrato.nomeAlvo}`).character;
+    const contratos = { dia: hoje, lista: eu.contratos!.lista.map((c) => (c.id === contrato.id ? { ...c, entregue: true } : c)) };
+    salvarPersonagem(ctx, eu, { ouro: eu.ouro, inventario, contratos });
+    const antes = nivelDaGuilda(guilda.xp, await regras());
+    const xp = guilda.xp + contrato.recompensa.xpGuilda;
+    ctx.gravarGuilda({ ...guilda, xp, membros: guilda.membros.map((m) => (m.uid === uid ? { ...m, xpContribuido: (m.xpContribuido ?? 0) + contrato.recompensa.xpGuilda } : m)) });
+    const depois = nivelDaGuilda(xp, await regras());
+    const materiais = contrato.recompensa.materiais.map((m) => `${MATERIAIS_MAP[m.id]?.nome ?? m.id} x${m.qtd}`);
+    const ganhos = [`${contrato.recompensa.ouro} de ouro`, ...materiais, `${contrato.recompensa.xpGuilda} de XP para a guilda`].join(', ');
+    return { mensagem: `Contrato entregue: ${ganhos}.${depois.nivel > antes.nivel ? ` A guilda subiu para ${depois.nome}!` : ''}` };
+  });
+}
 
 async function mudarCargo(uid: string, pedido: PedidoDeAcao, de: CargoDaGuilda, para: CargoDaGuilda): Promise<{ mensagem: string }> {
   const alvoUid = uidAlvo(pedido.uid);
