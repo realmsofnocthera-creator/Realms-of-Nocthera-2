@@ -46,6 +46,7 @@ export function PainelDeObjetos({
   mapas,
   monstros,
   cenas,
+  missoes,
   materiais,
 }: {
   tipo: TipoDeObjeto;
@@ -63,6 +64,7 @@ export function PainelDeObjetos({
   mapas: Opcao[];
   monstros: Opcao[];
   cenas: Opcao[];
+  missoes: Opcao[];
   materiais: Opcao[];
 }) {
   const { colors } = NOCTHERA_THEME;
@@ -99,6 +101,13 @@ export function PainelDeObjetos({
                   <option value="">Sem cena (usa a fala)</option>
                   {o.cenaId && !cenas.some((c) => c.id === o.cenaId) && <option value={o.cenaId}>{o.cenaId}</option>}
                   {cenas.map((c) => <option key={c.id} value={c.id}>{c.nome} ({c.id})</option>)}
+                </select>
+              </Campo>
+              <Campo rotulo="Missão que começa aqui (opcional)">
+                <select aria-label="Missão do NPC" value={o.missaoId ?? ''} disabled={!podeEditar} onChange={(e) => mudar('missaoId', (x) => { if (e.target.value) x.missaoId = e.target.value; else delete x.missaoId; })} className={CAMPO} style={estilo}>
+                  <option value="">Nenhuma</option>
+                  {o.missaoId && !missoes.some((m) => m.id === o.missaoId) && <option value={o.missaoId}>{o.missaoId}</option>}
+                  {missoes.map((m) => <option key={m.id} value={m.id}>{m.nome} ({m.id})</option>)}
                 </select>
               </Campo>
               <Campo rotulo="Fala"><textarea aria-label="Fala" value={o.texto ?? ''} rows={4} disabled={!podeEditar} maxLength={TEXTO_MAXIMO_DO_OBJETO} onChange={(e) => mudar('texto', (x) => void (x.texto = e.target.value))} className={CAMPO} style={estilo} /></Campo>
@@ -142,6 +151,13 @@ export function PainelDeObjetos({
                   {cenas.map((c) => <option key={c.id} value={c.id}>{c.nome} ({c.id})</option>)}
                 </select>
               </Campo>
+              <Campo rotulo="Missão que começa ao entrar (opcional)">
+                <select aria-label="Missão do ativador" value={o.missaoId ?? ''} disabled={!podeEditar} onChange={(e) => mudar('missaoId', (x) => { if (e.target.value) x.missaoId = e.target.value; else delete x.missaoId; })} className={CAMPO} style={estilo}>
+                  <option value="">Nenhuma</option>
+                  {o.missaoId && !missoes.some((m) => m.id === o.missaoId) && <option value={o.missaoId}>{o.missaoId}</option>}
+                  {missoes.map((m) => <option key={m.id} value={m.id}>{m.nome} ({m.id})</option>)}
+                </select>
+              </Campo>
               <label className="text-[11px] flex items-center gap-1.5">
                 <input type="checkbox" aria-label="Toca uma vez só" checked={o.unica !== false} disabled={!podeEditar} onChange={(e) => mudar('unica', (x) => void (x.unica = e.target.checked))} />
                 Toca uma vez só por personagem
@@ -163,6 +179,10 @@ export function PainelDeObjetos({
                 <Campo rotulo="Altura (tiles)"><input aria-label="Altura da área" type="number" min={1} max={LADO_MAXIMO_DA_AREA} value={o.altura ?? 1} disabled={!podeEditar} onChange={(e) => mudar('altura', (x) => void (x.altura = num(e.target.value)))} className={CAMPO} style={estilo} /></Campo>
               </div>
             </>
+          )}
+
+          {(o.tipo === 'porta' || o.tipo === 'bau' || o.tipo === 'cena' || o.tipo === 'cacada') && (
+            <CamposDeCondicao o={o} podeEditar={podeEditar} mudar={mudar} estilo={estilo} missoes={missoes} cenas={cenas} materiais={materiais} />
           )}
 
           {podeEditar && (
@@ -203,6 +223,71 @@ export function PainelDeObjetos({
         </ul>
       )}
     </aside>
+  );
+}
+
+/** A condição para o objeto valer (porta, baú, ativador de cena, área de monstros): todas as exigências juntas. */
+function CamposDeCondicao({
+  o,
+  podeEditar,
+  mudar,
+  estilo,
+  missoes,
+  cenas,
+  materiais,
+}: {
+  o: ObjetoDoMapa;
+  podeEditar: boolean;
+  mudar: (campo: string, fn: (o: ObjetoDoMapa) => void) => void;
+  estilo: React.CSSProperties;
+  missoes: Opcao[];
+  cenas: Opcao[];
+  materiais: Opcao[];
+}) {
+  const c = o.condicao ?? {};
+  const atualizar = (campo: string, fn: (cond: NonNullable<ObjetoDoMapa['condicao']>) => void) =>
+    mudar(`condicao-${campo}`, (x) => {
+      const cond = { ...(x.condicao ?? {}) };
+      fn(cond);
+      if (Object.keys(cond).length) x.condicao = cond;
+      else delete x.condicao;
+    });
+  const seletor = (rotulo: string, chave: 'missaoAtiva' | 'missaoConcluida' | 'cenaVista', lista: Opcao[]) => (
+    <Campo rotulo={rotulo}>
+      <select aria-label={rotulo} value={c[chave] ?? ''} disabled={!podeEditar} onChange={(e) => atualizar(chave, (cond) => { if (e.target.value) cond[chave] = e.target.value; else delete cond[chave]; })} className={CAMPO} style={estilo}>
+        <option value="">Sem exigência</option>
+        {c[chave] && !lista.some((m) => m.id === c[chave]) && <option value={c[chave]}>{c[chave]}</option>}
+        {lista.map((m) => <option key={m.id} value={m.id}>{m.nome} ({m.id})</option>)}
+      </select>
+    </Campo>
+  );
+  return (
+    <details className="rounded-sm border p-1.5" style={{ borderColor: `${OURO}33` }} open={Boolean(o.condicao)}>
+      <summary className="text-[11px] font-bold cursor-pointer">Condição para valer {o.condicao ? '(ligada)' : '(nenhuma)'}</summary>
+      <div className="flex flex-col gap-1.5 mt-1.5">
+        {seletor('Missão em andamento', 'missaoAtiva', missoes)}
+        {seletor('Missão concluída', 'missaoConcluida', missoes)}
+        {seletor('Cena já vista', 'cenaVista', cenas)}
+        <div className="grid grid-cols-[1fr_4.5rem] gap-1.5">
+          <Campo rotulo="Item na mochila (chave)">
+            <select aria-label="Item da condição" value={c.item?.id ?? ''} disabled={!podeEditar} onChange={(e) => atualizar('item', (cond) => { if (e.target.value) cond.item = { id: e.target.value, qtd: cond.item?.qtd ?? 1 }; else delete cond.item; })} className={CAMPO} style={estilo}>
+              <option value="">Sem exigência</option>
+              {c.item && !materiais.some((m) => m.id === c.item?.id) && <option value={c.item.id}>{c.item.id}</option>}
+              {materiais.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+            </select>
+          </Campo>
+          <Campo rotulo="Qtd">
+            <input aria-label="Quantidade do item da condição" type="number" min={1} value={c.item?.qtd ?? 1} disabled={!podeEditar || !c.item} onChange={(e) => atualizar('item', (cond) => { if (cond.item) cond.item = { ...cond.item, qtd: Number(e.target.value) }; })} className={CAMPO} style={estilo} />
+          </Campo>
+        </div>
+        <Campo rotulo="Nível mínimo (0 = sem exigência)">
+          <input aria-label="Nível mínimo da condição" type="number" min={0} max={30} value={c.nivelMinimo ?? 0} disabled={!podeEditar} onChange={(e) => atualizar('nivelMinimo', (cond) => { const n = Number(e.target.value); if (n > 0) cond.nivelMinimo = n; else delete cond.nivelMinimo; })} className={CAMPO} style={estilo} />
+        </Campo>
+        <Campo rotulo="Mensagem quando bloqueado (vazio = padrão)">
+          <input aria-label="Mensagem do bloqueio" value={c.mensagem ?? ''} maxLength={200} disabled={!podeEditar} onChange={(e) => atualizar('mensagem', (cond) => { if (e.target.value) cond.mensagem = e.target.value; else delete cond.mensagem; })} className={CAMPO} style={estilo} />
+        </Campo>
+      </div>
+    </details>
   );
 }
 

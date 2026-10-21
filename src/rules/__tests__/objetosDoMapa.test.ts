@@ -101,4 +101,30 @@ describe('Objetos interativos do mapa (3.5.6.3)', () => {
     expect(objetoCobre(lista[0], 0, 0)).toBe(true);
     expect(objetoCobre(lista[0], 1, 0)).toBe(false);
   });
+
+  it('missão que começa (NPC e ativador) e condição de acesso (porta, baú, ativador e área de monstros)', () => {
+    const npc = { ...objetoNovo('npc', 'npc-1', 1, 1), missaoId: 'primeira' };
+    const ativador = { ...objetoNovo('cena', 'cena-1', 3, 3), cenaId: 'chegada', missaoId: 'segunda', condicao: { missaoConcluida: 'primeira', mensagem: 'Ainda não.' } };
+    const porta = { ...objetoNovo('porta', 'porta-1', 5, 5), destino: { mapa: 'vila', x: 1, y: 1 }, condicao: { item: { id: 'pelo-de-rato', qtd: 1 }, nivelMinimo: 2 } };
+    const bau = { ...objetoNovo('bau', 'bau-1', 6, 6), condicao: { missaoAtiva: 'primeira' } };
+    const area = { ...objetoNovo('cacada', 'area-1', 0, 4), largura: 2, altura: 2, condicao: { cenaVista: 'chegada' } };
+    const e: string[] = [];
+    const lista = validarObjetos([npc, ativador, porta, bau, area], 10, 8, e);
+    expect(e).toEqual([]);
+    expect(lista[0].missaoId).toBe('primeira');
+    expect(lista[1]).toMatchObject({ missaoId: 'segunda', condicao: { missaoConcluida: 'primeira', mensagem: 'Ainda não.' } });
+    expect(lista[2].condicao).toEqual({ item: { id: 'pelo-de-rato', qtd: 1 }, nivelMinimo: 2 });
+    // condição vazia some; missão vazia some
+    const l2: string[] = [];
+    const limpa = validarObjetos([{ ...npc, missaoId: '' }, { ...porta, id: 'porta-2', x: 7, y: 7, condicao: {} }], 10, 8, l2);
+    expect(l2).toEqual([]);
+    expect(limpa[0]).not.toHaveProperty('missaoId');
+    expect(limpa[1]).not.toHaveProperty('condicao');
+    // erros
+    expect(erros([{ ...npc, missaoId: 'Missão Ruim' }])[0]).toMatch(/escolha a missão que começa aqui/);
+    expect(erros([{ ...porta, condicao: { item: { id: 'nao-existe', qtd: 1 } } }])[0]).toMatch(/item da condição desconhecido/);
+    expect(erros([{ ...objetoNovo('placa', 'placa-1', 2, 2), condicao: {} }])[0]).toMatch(/campos que este tipo não tem/);
+    expect(erros([{ ...objetoNovo('inicio', 'inicio-1', 2, 2), missaoId: 'primeira' }])[0]).toMatch(/campos que este tipo não tem/);
+    expect(erros([{ ...porta, missaoId: 'primeira' }])[0]).toMatch(/campos que este tipo não tem/);
+  });
 });
