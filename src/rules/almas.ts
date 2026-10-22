@@ -6,8 +6,8 @@ import type { EmblemaRaridade } from './emblemas';
  * São 9 espaços: 3 de Alma, 3 de Corpo e 3 de Mente. Cada carta tem 1 efeito FIXO (por tipo de carta) e de 1 a 3
  * efeitos ALEATÓRIOS (por raridade). Lendárias e míticas podem ser despertadas (I, II, III) com cópias e poeira de
  * alma. Cacos de alma refinam (sorteiam de novo) um efeito aleatório por vez e vêm de destruir cartas.
- * O catálogo tem 54 cartas (3 por categoria em cada uma das 6 raridades); nomes e visual são PROVISÓRIOS ("a
- * confirmar"). Todos os valores abaixo são PROPOSTA, a confirmar.
+ * O catálogo tem 54 cartas (3 por categoria em cada uma das 6 raridades); os nomes são do Yuri e o visual e os textos
+ * ainda vêm. Os valores abaixo são PROPOSTA, a confirmar.
  */
 
 export type CategoriaDeCarta = 'alma' | 'corpo' | 'mente';
@@ -117,14 +117,34 @@ const FIXOS_POR_CATEGORIA: Readonly<Record<CategoriaDeCarta, readonly EfeitoDeCa
   corpo: ['hp', 'defesa', 'atqFisico'],
   mente: ['agilidade', 'chanceCritico', 'chanceEfeitos'],
 };
-const NUMERAIS = ['I', 'II', 'III'];
+/**
+ * Os 54 nomes das cartas, do Yuri (22/10/2026): por categoria, as 3 cartas (I, II, III) e, em cada uma, a raridade na
+ * ordem comum, raro, muito raro, épico, lendário e mítico. Os textos e o visual ainda vêm depois.
+ */
+const NOMES_DAS_CARTAS: Readonly<Record<CategoriaDeCarta, readonly (readonly string[])[]>> = {
+  alma: [
+    ['Centelha Arcana', 'Essência Arcana', 'Núcleo Feérico', 'Coração do Éter', 'Alma do Arcanista', 'Origem da Magia'],
+    ['Sussurro Oculto', 'Elo do Abismo', 'Marca do Ocultista', 'Pacto do Inefável', 'Vontade do Abismo', 'Domínio do Caos'],
+    ['Instinto Letal', 'Presságio Mortal', 'Olhar do Carrasco', 'Marca da Ruína', 'Decreto da Morte', 'Destino Inevitável'],
+  ],
+  corpo: [
+    ['Pulso Vital', 'Coração Vital', 'Sangue Ancestral', 'Essência do Colosso', 'Coração Imortal', 'Fonte da Vida'],
+    ['Pele Resistente', 'Couraça Ancestral', 'Escamas de Titã', 'Bastião Eterno', 'Fortaleza dos Antigos', 'Muralha Inquebrável'],
+    ['Força Primitiva', 'Fúria Bestial', 'Instinto de Guerra', 'Poder do Destruidor', 'Ira dos Titãs', 'Força Primordial'],
+  ],
+  mente: [
+    ['Reflexos Aguçados', 'Instinto Predatório', 'Percepção Sobrenatural', 'Pensamento Relâmpago', 'Consciência Temporal', 'Domínio do Instante'],
+    ['Mira Precisa', 'Visão do Carrasco', 'Olhos da Predação', 'Foco Absoluto', 'Visão do Destino', 'Perfeição Fatal'],
+    ['Vontade Firme', 'Vontade Corrupta', 'Mente Profanada', 'Domínio Psíquico', 'Soberania Mental', 'Consciência Absoluta'],
+  ],
+};
 
-/** As 54 cartas: PROVISÓRIAS (nome "a confirmar"); o Yuri passa nomes, textos e visual depois. */
-export const TIPOS_DE_CARTA: readonly TipoDeCarta[] = RARIDADES_DE_CARTA.flatMap((raridade) =>
+/** As 54 cartas (3 por categoria em cada raridade). */
+export const TIPOS_DE_CARTA: readonly TipoDeCarta[] = RARIDADES_DE_CARTA.flatMap((raridade, r) =>
   CATEGORIAS_DE_CARTA.flatMap((categoria) =>
     FIXOS_POR_CATEGORIA[categoria].map((fixo, i) => ({
       id: `${categoria}-${raridade}-${i + 1}`,
-      nome: `Carta de ${NOME_DA_CATEGORIA[categoria]} ${NUMERAIS[i]} (a confirmar)`,
+      nome: NOMES_DAS_CARTAS[categoria][i][r],
       categoria,
       raridade,
       fixo,

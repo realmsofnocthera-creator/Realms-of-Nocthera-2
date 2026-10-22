@@ -49,6 +49,21 @@ describe('catálogo da Alma', () => {
     }
   });
 
+  it('os 54 nomes são do Yuri: únicos e na ordem categoria, carta e raridade', () => {
+    expect(new Set(TIPOS_DE_CARTA.map((t) => t.nome)).size).toBe(54);
+    expect(TIPOS_DE_CARTA.some((t) => t.nome.includes('a confirmar'))).toBe(false);
+    const nome = (id: string) => TIPO_DE_CARTA_MAP[id].nome;
+    expect(nome('alma-comum-1')).toBe('Centelha Arcana');
+    expect(nome('alma-mitico-1')).toBe('Origem da Magia');
+    expect(nome('alma-lendario-2')).toBe('Vontade do Abismo');
+    expect(nome('alma-epico-3')).toBe('Marca da Ruína');
+    expect(nome('corpo-muitoRaro-2')).toBe('Escamas de Titã');
+    expect(nome('corpo-mitico-3')).toBe('Força Primordial');
+    expect(nome('mente-raro-1')).toBe('Instinto Predatório');
+    expect(nome('mente-comum-2')).toBe('Mira Precisa');
+    expect(nome('mente-mitico-3')).toBe('Consciência Absoluta');
+  });
+
   it('efeitos aleatórios por raridade: 1, 1, 2, 2, 3, 3', () => {
     expect(RARIDADES_DE_CARTA.map((r) => EFEITOS_ALEATORIOS_POR_RARIDADE[r])).toEqual([1, 1, 2, 2, 3, 3]);
     for (const r of RARIDADES_DE_CARTA) {
