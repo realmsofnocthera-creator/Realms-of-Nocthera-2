@@ -1,6 +1,7 @@
 import { bonusDasCartas, bonusVazio, type BonusDeAlma } from '@/game/almas';
 import { atributosDosColecionaveis } from '@/game/colecionaveis';
 import type { ColecionaveisDoJogador, SelosDoJogador } from '@/rules/colecionaveis';
+import type { ExpedicaoEmAndamento } from '@/rules/expedicao';
 import type { CartaItem } from '@/rules/almas';
 import type { BonusDeGuilda } from '@/rules/pesquisa';
 import type { ParticipacaoNoChefeSemanal } from '@/rules/chefeSemanal';
@@ -233,6 +234,9 @@ export interface CharacterDocument {
   colecionaveis?: ColecionaveisDoJogador;
   fragmentosDeMemoria?: number;
   pedrasDaRecordacao?: number;
+  /** Expedição: as expedições nas vagas (até 3) e os Avanços de expedição guardados. */
+  expedicoes?: ExpedicaoEmAndamento[];
+  avancosDeExpedicao?: number;
   /** Teste de Equipe (7.4): as dificuldades concluídas de cada teste ("alma:3"), as chaves da provação e os selos do abismo. */
   testeEquipeConcluidas?: string[];
   chavesDaProvacao?: ChavesDaProvacao;
@@ -930,8 +934,8 @@ export interface AjusteDoMestre {
   xp?: number;
   /** Variação por material (mochila). Resultado negativo é recusado; zero remove a entrada. */
   materiais?: Record<string, number>;
-  /** Variação dos selos de busca, dos Fragmentos de Memória e das Pedras da Recordação. Resultado negativo é recusado. */
-  colecionaveis?: { selos: SelosDoJogador; fragmentosDeMemoria?: number; pedrasDaRecordacao?: number };
+  /** Variação dos selos de busca, dos Fragmentos de Memória, das Pedras da Recordação e dos Avanços de expedição. Resultado negativo é recusado. */
+  colecionaveis?: { selos: SelosDoJogador; fragmentosDeMemoria?: number; pedrasDaRecordacao?: number; avancosDeExpedicao?: number };
 }
 
 /**
@@ -978,7 +982,7 @@ export async function ajustarPersonagemPorMestre(uid: string, ajuste: AjusteDoMe
         else selos[selo] = novo;
       }
       patch.selosDeBusca = Object.keys(selos).length ? selos : undefined;
-      for (const saldo of ['fragmentosDeMemoria', 'pedrasDaRecordacao'] as const) {
+      for (const saldo of ['fragmentosDeMemoria', 'pedrasDaRecordacao', 'avancosDeExpedicao'] as const) {
         const delta = ajuste.colecionaveis[saldo];
         if (!delta) continue;
         const novo = (atual[saldo] ?? 0) + delta;

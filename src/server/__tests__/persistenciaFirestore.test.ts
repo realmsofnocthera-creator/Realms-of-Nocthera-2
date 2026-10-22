@@ -166,6 +166,15 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(personagemDoFirestore('u1', { ...antigo, convitesDeParty: ['../x', 3, 'p_aaaaaaaaaaaa', 'p_aaaaaaaaaaaa'] }).convitesDeParty).toEqual(['p_aaaaaaaaaaaa']);
   });
 
+  it('guarda as expedições e os Avanços de expedição', () => {
+    const expedicoes = [{ vaga: 0, horas: 6, inicio: '2026-10-22T10:00:00.000Z', fim: '2026-10-22T15:00:00.000Z', avancos: 1 }];
+    const doc = personagemParaFirestore({ ...PERSONAGEM, expedicoes, avancosDeExpedicao: 4 });
+    expect(personagemDoFirestore('u1', doc)).toMatchObject({ expedicoes, avancosDeExpedicao: 4 });
+    const antigo = personagemParaFirestore(PERSONAGEM);
+    expect(antigo).not.toHaveProperty('expedicoes');
+    expect(antigo).not.toHaveProperty('avancosDeExpedicao');
+  });
+
   it('guarda os selos de busca, a garantia, os colecionáveis e as moedas deles; descarta o que é inválido', () => {
     const doc = personagemParaFirestore({
       ...PERSONAGEM,
