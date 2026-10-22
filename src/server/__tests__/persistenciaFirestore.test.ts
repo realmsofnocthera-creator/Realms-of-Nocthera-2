@@ -166,6 +166,14 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(personagemDoFirestore('u1', { ...antigo, convitesDeParty: ['../x', 3, 'p_aaaaaaaaaaaa', 'p_aaaaaaaaaaaa'] }).convitesDeParty).toEqual(['p_aaaaaaaaaaaa']);
   });
 
+  it('guarda a Essência de Soberano, o Correio e os dias do Chefe Mundial', () => {
+    const correio = [{ id: 'm_1', titulo: 'Oi', texto: 'Texto', de: 'Mestre', criadaEm: '2026-10-22T10:00:00.000Z', expiraEm: '2026-11-21T10:00:00.000Z', presente: { ouro: 5 } }];
+    const doc = personagemParaFirestore({ ...PERSONAGEM, essenciaDeSoberano: 40, correio, correioGeral: { cg_1: 'resgatada' }, chefeMundial: [{ dia: '2026-10-22', enviada: true }] });
+    expect(personagemDoFirestore('u1', doc)).toMatchObject({ essenciaDeSoberano: 40, correio, correioGeral: { cg_1: 'resgatada' }, chefeMundial: [{ dia: '2026-10-22', enviada: true }] });
+    const antigo = personagemParaFirestore(PERSONAGEM);
+    for (const campo of ['essenciaDeSoberano', 'correio', 'correioGeral', 'chefeMundial']) expect(antigo).not.toHaveProperty(campo);
+  });
+
   it('guarda as expedições e os Avanços de expedição', () => {
     const expedicoes = [{ vaga: 0, horas: 6, inicio: '2026-10-22T10:00:00.000Z', fim: '2026-10-22T15:00:00.000Z', avancos: 1 }];
     const doc = personagemParaFirestore({ ...PERSONAGEM, expedicoes, avancosDeExpedicao: 4 });

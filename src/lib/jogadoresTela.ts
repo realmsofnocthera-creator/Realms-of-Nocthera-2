@@ -10,6 +10,7 @@ const NOME_DA_MOEDA: Readonly<Record<string, string>> = {
   fragmentosSubclasse: 'fragmentos de subclasse',
   essenciaHabilidade: 'essência de habilidade',
   fragmentosAscensao: 'fragmentos de ascensão',
+  essenciaDeSoberano: 'Essência de Soberano',
 };
 
 /** "+250 ouro" ou "−3 Diamantes". */

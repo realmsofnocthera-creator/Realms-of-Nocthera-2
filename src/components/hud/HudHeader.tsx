@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Lock, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
 import { onAuthStateChanged, sendEmailVerification, User } from 'firebase/auth';
@@ -42,6 +43,26 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
   const [cooldown, setCooldown] = useState<number>(0);
   const [sendingVerification, setSendingVerification] = useState<boolean>(false);
   const [verificationFeedback, setVerificationFeedback] = useState<string | null>(null);
+
+  // Correio: quantas mensagens têm presente para resgatar (o ponto no botão)
+  const [presentesNoCorreio, setPresentesNoCorreio] = useState(0);
+  useEffect(() => {
+    if (!firebaseUser) return;
+    let cancelado = false;
+    void (async () => {
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch('/api/correio', { headers: { Authorization: `Bearer ${token}` } });
+        const dados = (await res.json().catch(() => ({}))) as { naoResgatadas?: number };
+        if (!cancelado && res.ok) setPresentesNoCorreio(dados.naoResgatadas ?? 0);
+      } catch {
+        // sem o ponto, o botão continua funcionando
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [firebaseUser]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -246,14 +267,12 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
           />
         </div>
 
-        {/* Botão Mail (travado + NotificationBadge sobreposto no canto superior direito) */}
-        <button
-          type="button"
-          disabled
-          aria-disabled="true"
-          title="Em breve"
-          aria-label="Correio (Em breve)"
-          className="relative w-6 h-6 sm:w-8 sm:h-8 rounded-md flex items-center justify-center opacity-85 cursor-not-allowed select-none"
+        {/* Botão do Correio (o ponto aparece quando há presente para resgatar) */}
+        <Link
+          href="/correio"
+          title="Correio"
+          aria-label={presentesNoCorreio ? `Correio: ${presentesNoCorreio} ${presentesNoCorreio === 1 ? 'presente' : 'presentes'} para resgatar` : 'Correio'}
+          className="relative w-6 h-6 sm:w-8 sm:h-8 rounded-md flex items-center justify-center select-none"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -262,8 +281,8 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
             aria-hidden="true"
             className="w-5 h-5 sm:w-7 sm:h-7 object-contain select-none pointer-events-none drop-shadow"
           />
-          <NotificationBadge />
-        </button>
+          {presentesNoCorreio > 0 && <NotificationBadge />}
+        </Link>
 
         {/* Botão Configurações (travado) */}
         <button

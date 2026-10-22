@@ -21,6 +21,8 @@ import { entradaDoDocumento, participacoesDoDocumento, type EntradaDoChefeSemana
 import { chavesDoDocumento, partyDoDocumento, type PartyDocumento } from '@/rules/testeEquipe';
 import { colecionaveisDoDocumento, contadorPorSeloDoDocumento } from '@/rules/colecionaveis';
 import { expedicoesDoDocumento } from '@/rules/expedicao';
+import { correioGeralDoDocumento, mensagemDoDocumento, mensagensDoDocumento, type MensagemGeral } from '@/rules/correio';
+import { entradaMundialDoDocumento, participacoesMundiaisDoDocumento, type EntradaDoChefeMundial } from '@/rules/chefeMundial';
 import { bonusDeGuildaDoDocumento } from '@/rules/pesquisa';
 import { chaveDoNomeDaGuilda, guildaDoDocumento, type GuildaDocumento } from '@/rules/guilda';
 import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
@@ -398,6 +400,10 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(quantidadePositiva(data.pedrasDaRecordacao) ? { pedrasDaRecordacao: quantidadePositiva(data.pedrasDaRecordacao) } : {}),
     ...(expedicoesDoDocumento(data.expedicoes) ? { expedicoes: expedicoesDoDocumento(data.expedicoes) } : {}),
     ...(quantidadePositiva(data.avancosDeExpedicao) ? { avancosDeExpedicao: quantidadePositiva(data.avancosDeExpedicao) } : {}),
+    ...(quantidadePositiva(data.essenciaDeSoberano) ? { essenciaDeSoberano: quantidadePositiva(data.essenciaDeSoberano) } : {}),
+    ...(mensagensDoDocumento(data.correio) ? { correio: mensagensDoDocumento(data.correio) } : {}),
+    ...(correioGeralDoDocumento(data.correioGeral) ? { correioGeral: correioGeralDoDocumento(data.correioGeral) } : {}),
+    ...(participacoesMundiaisDoDocumento(data.chefeMundial) ? { chefeMundial: participacoesMundiaisDoDocumento(data.chefeMundial) } : {}),
     ...(typeof data.partyId === 'string' && data.partyId ? { partyId: data.partyId } : {}),
     ...(idsDeParty(data.convitesDeParty).length ? { convitesDeParty: idsDeParty(data.convitesDeParty) } : {}),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
@@ -473,6 +479,10 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.pedrasDaRecordacao ? { pedrasDaRecordacao: char.pedrasDaRecordacao } : {}),
     ...(char.expedicoes?.length ? { expedicoes: semUndefined(char.expedicoes) } : {}),
     ...(char.avancosDeExpedicao ? { avancosDeExpedicao: char.avancosDeExpedicao } : {}),
+    ...(char.essenciaDeSoberano ? { essenciaDeSoberano: char.essenciaDeSoberano } : {}),
+    ...(char.correio?.length ? { correio: semUndefined(char.correio) } : {}),
+    ...(char.correioGeral && Object.keys(char.correioGeral).length ? { correioGeral: char.correioGeral } : {}),
+    ...(char.chefeMundial?.length ? { chefeMundial: semUndefined(char.chefeMundial) } : {}),
     ...(char.partyId ? { partyId: char.partyId } : {}),
     ...(char.convitesDeParty?.length ? { convitesDeParty: char.convitesDeParty } : {}),
     // campos derivados, só para o banco poder ordenar e buscar (7.1): o nome em minúsculas e os contadores das provações
@@ -516,6 +526,7 @@ class ContextoFirestore implements ContextoTransacao {
   private guildas = new Map<string, GuildaDocumento | null>();
   private nomesDeGuilda = new Map<string, { guildaId: string; nome: string } | null>();
   private chefeSemanal = new Map<string, EntradaDoChefeSemanal>();
+  private chefeMundial = new Map<string, EntradaDoChefeMundial>();
   /** null = apagar. */
   private partys = new Map<string, PartyDocumento | null>();
 
@@ -568,6 +579,22 @@ class ContextoFirestore implements ContextoTransacao {
 
   gravarEntradaChefeSemanal(entrada: EntradaDoChefeSemanal): void {
     this.chefeSemanal.set(`${entrada.semana}/${entrada.guildaId}`, structuredClone(entrada));
+  }
+
+  async lerEntradaChefeMundial(dia: string, uid: string): Promise<EntradaDoChefeMundial | null> {
+    const pendente = this.chefeMundial.get(`${dia}/${uid}`);
+    if (pendente) return structuredClone(pendente);
+    const snap = await this.tx.get(this.db.collection('chefeMundial').doc(dia).collection('jogadores').doc(uid));
+    return snap.exists ? entradaMundialDoDocumento(snap.data()) : null;
+  }
+
+  gravarEntradaChefeMundial(entrada: EntradaDoChefeMundial): void {
+    this.chefeMundial.set(`${entrada.dia}/${entrada.uid}`, structuredClone(entrada));
+  }
+
+  async lerMensagemGeral(id: string): Promise<MensagemGeral | null> {
+    const snap = await this.tx.get(this.db.collection('correioGeral').doc(id));
+    return snap.exists ? mensagemDoDocumento(snap.data()) : null;
   }
 
   async lerParty(id: string): Promise<PartyDocumento | null> {
@@ -654,6 +681,9 @@ class ContextoFirestore implements ContextoTransacao {
     }
     for (const e of this.chefeSemanal.values()) {
       this.tx.set(this.db.collection('chefeSemanal').doc(e.semana).collection('guildas').doc(e.guildaId), semUndefined(e));
+    }
+    for (const e of this.chefeMundial.values()) {
+      this.tx.set(this.db.collection('chefeMundial').doc(e.dia).collection('jogadores').doc(e.uid), semUndefined(e));
     }
     for (const [chave, dono] of this.nomesDeGuilda) {
       const ref = this.db.collection('nomesDeGuilda').doc(chave);
@@ -770,6 +800,38 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
         const snap = await db.collection('partys').doc(id).get();
         return snap.exists ? partyDoDocumento(id, snap.data()) : null;
       });
+    },
+
+    async listarChefeMundial(dia: string, limite: number) {
+      return lerComRetry(`listarChefeMundial:${dia}`, async () => {
+        const snap = await db.collection('chefeMundial').doc(dia).collection('jogadores').orderBy('dano', 'desc').limit(limite).get();
+        return snap.docs.flatMap((d) => entradaMundialDoDocumento(d.data()) ?? []);
+      });
+    },
+
+    async contarAcimaNoChefeMundial(dia: string, dano: number) {
+      return lerComRetry(`contarChefeMundial:${dia}`, async () => {
+        const snap = await db.collection('chefeMundial').doc(dia).collection('jogadores').where('dano', '>', dano).count().get();
+        return snap.data().count;
+      });
+    },
+
+    async lerEntradaChefeMundial(dia: string, uid: string) {
+      return lerComRetry(`lerChefeMundial:${dia}`, async () => {
+        const snap = await db.collection('chefeMundial').doc(dia).collection('jogadores').doc(uid).get();
+        return snap.exists ? entradaMundialDoDocumento(snap.data()) : null;
+      });
+    },
+
+    async listarMensagensGerais(desde: string, limite: number) {
+      return lerComRetry('listarMensagensGerais', async () => {
+        const snap = await db.collection('correioGeral').where('criadaEm', '>=', desde).orderBy('criadaEm', 'desc').limit(limite).get();
+        return snap.docs.flatMap((d) => mensagemDoDocumento(d.data()) ?? []);
+      });
+    },
+
+    async gravarMensagemGeral(mensagem: MensagemGeral) {
+      await gravarSimples(`gravarMensagemGeral:${mensagem.id}`, () => db.collection('correioGeral').doc(mensagem.id).set(semUndefined(mensagem)));
     },
 
     async listarGuildas(limite: number) {
@@ -1043,6 +1105,9 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
     async excluirDadosDoJogador(uid: string, chaveNome: string | null) {
       await gravarSimples(`excluirDadosDoJogador:${uid}`, async () => {
         const refs = [db.collection('characters').doc(uid), db.collection('sancoes').doc(uid), db.collection('revogacoes').doc(uid)];
+        // O nome do jogador no ranking do Chefe Mundial (os dias em que ele lutou)
+        const personagem = await db.collection('characters').doc(uid).get();
+        for (const p of participacoesMundiaisDoDocumento(personagem.data()?.chefeMundial) ?? []) refs.push(db.collection('chefeMundial').doc(p.dia).collection('jogadores').doc(uid));
         if (chaveNome) {
           const nome = await db.collection('nomes').doc(chaveNome).get();
           if (nome.exists && nome.data()?.uid === uid) refs.push(nome.ref);

@@ -11,6 +11,8 @@ import { chaveDeBusca, type CampoDoRanking, type CriterioDeRanking, type Ranking
 import type { ConfiguracaoDeSistemas } from '@/rules/sistemas';
 import { chaveDoNomeDaGuilda, type GuildaDocumento } from '@/rules/guilda';
 import type { EntradaDoChefeSemanal } from '@/rules/chefeSemanal';
+import type { EntradaDoChefeMundial } from '@/rules/chefeMundial';
+import type { MensagemGeral } from '@/rules/correio';
 import type { PartyDocumento } from '@/rules/testeEquipe';
 import type {
   ConteudoDocumento,
@@ -43,6 +45,8 @@ interface Estado {
   nomesDeGuilda: Map<string, { guildaId: string; nome: string }>;
   chefeSemanal: Map<string, EntradaDoChefeSemanal>;
   partys: Map<string, PartyDocumento>;
+  chefeMundial: Map<string, EntradaDoChefeMundial>;
+  correioGeral: Map<string, MensagemGeral>;
 }
 
 const estado: Estado = {
@@ -62,6 +66,8 @@ const estado: Estado = {
   nomesDeGuilda: new Map(),
   chefeSemanal: new Map(),
   partys: new Map(),
+  chefeMundial: new Map(),
+  correioGeral: new Map(),
 };
 
 function valorDoCampo(c: CharacterDocument, campo: CampoDoRanking): number {
@@ -117,6 +123,7 @@ class ContextoMemoria implements ContextoTransacao {
   nomesDeGuilda = new Map<string, { guildaId: string; nome: string } | null>();
   chefeSemanal = new Map<string, EntradaDoChefeSemanal>();
   partys = new Map<string, PartyDocumento | null>();
+  chefeMundial = new Map<string, EntradaDoChefeMundial>();
 
   async lerPersonagem(uid: string) {
     const valor = this.personagens.get(uid) ?? estado.personagens.get(uid);
@@ -180,6 +187,17 @@ class ContextoMemoria implements ContextoTransacao {
   gravarEntradaChefeSemanal(entrada: EntradaDoChefeSemanal) {
     this.chefeSemanal.set(`${entrada.semana}/${entrada.guildaId}`, structuredClone(entrada));
   }
+  async lerEntradaChefeMundial(dia: string, uid: string) {
+    const e = this.chefeMundial.get(`${dia}/${uid}`) ?? estado.chefeMundial.get(`${dia}/${uid}`);
+    return e ? structuredClone(e) : null;
+  }
+  gravarEntradaChefeMundial(entrada: EntradaDoChefeMundial) {
+    this.chefeMundial.set(`${entrada.dia}/${entrada.uid}`, structuredClone(entrada));
+  }
+  async lerMensagemGeral(id: string) {
+    const m = estado.correioGeral.get(id);
+    return m ? structuredClone(m) : null;
+  }
 }
 
 export const repositorio: Repositorio = {
@@ -202,6 +220,7 @@ export const repositorio: Repositorio = {
         for (const [id, c] of ctx.combates) estado.combates.set(id, c);
         for (const [id, g] of ctx.guildas) (g ? estado.guildas.set(id, g) : estado.guildas.delete(id));
         for (const [k, e] of ctx.chefeSemanal) estado.chefeSemanal.set(k, e);
+        for (const [k, e] of ctx.chefeMundial) estado.chefeMundial.set(k, e);
         for (const [id, pt] of ctx.partys) (pt ? estado.partys.set(id, pt) : estado.partys.delete(id));
         for (const [chave, n] of ctx.nomesDeGuilda) (n ? estado.nomesDeGuilda.set(chave, n) : estado.nomesDeGuilda.delete(chave));
         estado.transacoes.push(...ctx.transacoes);
@@ -371,6 +390,7 @@ export const repositorio: Repositorio = {
     estado.transacoes = estado.transacoes.filter((t) => t.uid !== uid);
     estado.sancoes.delete(uid);
     estado.revogacoes.delete(uid);
+    for (const [k, e] of estado.chefeMundial) if (e.uid === uid) estado.chefeMundial.delete(k);
   },
 
   async lerGuilda(id: string) {
@@ -389,6 +409,27 @@ export const repositorio: Repositorio = {
   async lerEntradaChefeSemanal(semana: string, guildaId: string) {
     const e = estado.chefeSemanal.get(`${semana}/${guildaId}`);
     return e ? structuredClone(e) : null;
+  },
+
+  async listarChefeMundial(dia: string, limite: number) {
+    return [...estado.chefeMundial.values()].filter((e) => e.dia === dia).sort((a, b) => b.dano - a.dano).slice(0, limite).map((e) => structuredClone(e));
+  },
+
+  async contarAcimaNoChefeMundial(dia: string, dano: number) {
+    return [...estado.chefeMundial.values()].filter((e) => e.dia === dia && e.dano > dano).length;
+  },
+
+  async lerEntradaChefeMundial(dia: string, uid: string) {
+    const e = estado.chefeMundial.get(`${dia}/${uid}`);
+    return e ? structuredClone(e) : null;
+  },
+
+  async listarMensagensGerais(desde: string, limite: number) {
+    return [...estado.correioGeral.values()].filter((m) => m.criadaEm >= desde).sort((a, b) => b.criadaEm.localeCompare(a.criadaEm)).slice(0, limite).map((m) => structuredClone(m));
+  },
+
+  async gravarMensagemGeral(mensagem: MensagemGeral) {
+    estado.correioGeral.set(mensagem.id, structuredClone(mensagem));
   },
 
   async lerParty(id: string) {
@@ -437,6 +478,8 @@ export function resetCharacterStore(): void {
   estado.nomesDeGuilda.clear();
   estado.chefeSemanal.clear();
   estado.partys.clear();
+  estado.chefeMundial.clear();
+  estado.correioGeral.clear();
   falhaNaConfiguracao = null;
   falhaNoLogAdmin = null;
   falhaAoGravar = null;
