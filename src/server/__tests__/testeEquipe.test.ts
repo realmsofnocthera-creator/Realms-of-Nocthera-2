@@ -7,12 +7,16 @@ import { agirNoTeste, ErroDeParty, estadoDoTeste, iniciarTeste } from '@/server/
 import { limparCacheDeSistemas } from '@/server/sistemasLeitura';
 import { repositorio } from '@/server/persistencia';
 import { VALIDADE_DA_PARTY_MS } from '@/rules/testeEquipe';
+import { diaDeBrasilia } from '@/game/batalhaSangrenta';
+import { sorteadorDaSemente } from '@/server/almas';
 import { TIPO_DE_CARTA_MAP } from '@/rules/almas';
 import { resetCharacterStore } from '@/test/repositorioMemoria';
 import { tokenDeTeste } from '@/test/firebaseAdminMock';
 
 const PONTOS = { vigor: 5, sorte: 0, forca: 5, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 0 };
 const FORTE = { vigor: 900, sorte: 0, forca: 700, vitalidade: 300, arcano: 0, inteligencia: 0, agilidade: 150 };
+const FORTISSIMO = { vigor: 20000, sorte: 0, forca: 20000, vitalidade: 20000, arcano: 0, inteligencia: 0, agilidade: 2000 };
+const hoje = () => diaDeBrasilia(new Date());
 const NOMES: Record<string, string> = { u1: 'Aragorn', u2: 'Boromir', u3: 'Celeborn', u4: 'Denethor' };
 const erro = (p: Promise<unknown>) => p.then(() => null, (e: unknown) => e as ErroDeParty);
 const req = (uid: string, corpo?: unknown) =>
@@ -89,52 +93,122 @@ describe('Party e Teste de Equipe (7.4)', () => {
     delete NOMES.u5;
   });
 
-  it('mínimo 2, todos prontos e só o líder inicia; dificuldade bloqueada', async () => {
+  it('mínimo 2, todos prontos e só o líder inicia; teste e dificuldade bloqueada', async () => {
     await agirNoTeste('u1', 'criar', {});
     await agirNoTeste('u1', 'pronto', { pronto: true });
-    expect((await erro(iniciarTeste('u1', 1, 1)))?.message).toMatch(/pelo menos 2/);
+    expect((await erro(iniciarTeste('u1', 'alma', 1, 1)))?.message).toMatch(/pelo menos 2/);
     await agirNoTeste('u1', 'convidar', { nome: 'Boromir' });
     await agirNoTeste('u2', 'aceitar', { partyId: (await estadoDoTeste('u1')).minhaParty!.id });
-    expect((await erro(iniciarTeste('u1', 1, 1)))?.message).toMatch(/Pronto/);
+    expect((await erro(iniciarTeste('u1', 'alma', 1, 1)))?.message).toMatch(/Pronto/);
     await agirNoTeste('u2', 'pronto', { pronto: true });
-    expect((await erro(iniciarTeste('u2', 1, 1)))?.message).toMatch(/Só o líder/);
-    expect((await erro(iniciarTeste('u1', 2, 1)))?.message).toMatch(/ainda não venceu a dificuldade 1/);
-    expect((await erro(iniciarTeste('u1', 11, 1)))?.message).toMatch(/inválida/);
+    expect((await erro(iniciarTeste('u2', 'alma', 1, 1)))?.message).toMatch(/Só o líder/);
+    expect((await erro(iniciarTeste('u1', 'alma', 2, 1)))?.message).toMatch(/ainda não concluiu o Muito fácil do Teste da Alma/);
+    expect((await erro(iniciarTeste('u1', 'alma', 7, 1)))?.message).toMatch(/inválida/);
+    expect((await erro(iniciarTeste('u1', 'fogo', 1, 1)))?.message).toMatch(/Escolha o teste/);
   });
 
-  it('vitória: recompensa para todos, dificuldade vencida, tentativa do dia usada e resultado na party', async () => {
+  it('vitória: chave gasta, cacos e 1 carta da categoria; diamantes só na primeira conclusão; abre a próxima só naquele teste', async () => {
     await partyPronta(['u1', 'u2']);
     const antes = (await getCharacterByUid('u2'))!;
-    const r = await iniciarTeste('u1', 1, 42);
-    expect(r.resultado.venceu).toBe(true);
+    const r = await iniciarTeste('u1', 'corpo', 1, 42);
+    expect(r.resultado).toMatchObject({ categoria: 'corpo', dificuldade: 1, venceu: true });
     const depois = (await getCharacterByUid('u2'))!;
-    expect(depois.ouro).toBe(antes.ouro + 1500);
+    expect(depois.ouro).toBe(antes.ouro);
+    expect(depois.xpAtual).toBe(antes.xpAtual);
     expect(depois.diamantes).toBe((antes.diamantes ?? 0) + 10);
-    expect(depois.testeEquipeVencidas).toEqual([1]);
-    // Alma: poeira de alma (dobro na primeira vitória) e 1 carta por vitória
-    expect(depois.poeiraDeAlma).toBe(20);
+    expect(depois.cacosDeAlma).toBe(10);
+    expect(depois.poeiraDeAlma ?? 0).toBe(0);
+    expect(depois.testeEquipeConcluidas).toEqual(['corpo:1']);
     expect(depois.cartasItens).toHaveLength(1);
-    expect(depois.cartasDescobertas).toHaveLength(1);
-    expect(['comum', 'raro']).toContain(TIPO_DE_CARTA_MAP[depois.cartasItens![0].tipo].raridade);
+    expect(TIPO_DE_CARTA_MAP[depois.cartasItens![0].tipo]).toMatchObject({ categoria: 'corpo', raridade: 'comum' });
     const e = await estadoDoTeste('u2');
-    expect(e.dificuldades[0]).toMatchObject({ vencida: true, tentouHoje: true });
-    expect(e.dificuldades[1].liberada).toBe(true);
-    expect(e.minhaParty!.ultimoResultado).toMatchObject({ dificuldade: 1, venceu: true });
+    expect(e.chaves.gratisRestantes).toBe(2);
+    const corpo = e.testes.find((t) => t.categoria === 'corpo')!;
+    expect(corpo.dificuldades[0]).toMatchObject({ concluida: true, diamantes: 0 });
+    expect(corpo.dificuldades[1].liberada).toBe(true);
+    expect(e.testes.find((t) => t.categoria === 'alma')!.dificuldades[1].liberada).toBe(false);
+    expect(e.minhaParty!.ultimoResultado).toMatchObject({ categoria: 'corpo', dificuldade: 1, venceu: true });
     expect(e.minhaParty!.membros.every((m) => !m.pronto)).toBe(true);
+    // De novo na mesma dificuldade: sem diamantes, mais cacos e mais uma carta
     for (const uid of ['u1', 'u2']) await agirNoTeste(uid, 'pronto', { pronto: true });
-    expect((await erro(iniciarTeste('u1', 1, 43)))?.message).toMatch(/já tentou a dificuldade 1 hoje/);
+    await iniciarTeste('u1', 'corpo', 1, 43);
+    const outra = (await getCharacterByUid('u2'))!;
+    expect(outra.diamantes).toBe(depois.diamantes);
+    expect(outra.cacosDeAlma).toBe(20);
+    expect(outra.cartasItens).toHaveLength(2);
+    expect((await estadoDoTeste('u2')).chaves.gratisRestantes).toBe(1);
   });
 
-  it('derrota: só gasta a tentativa', async () => {
+  it('derrota: só gasta a chave de cada um', async () => {
     for (const uid of ['u1', 'u2']) await updateCharacter(uid, { atributos: { vigor: 5, sorte: 0, forca: 5, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 1 } });
     await partyPronta(['u1', 'u2']);
-    const ouro = (await getCharacterByUid('u1'))!.ouro;
-    const r = await iniciarTeste('u1', 1, 1);
+    const r = await iniciarTeste('u1', 'alma', 1, 1);
     expect(r.resultado.venceu).toBe(false);
-    const d = (await getCharacterByUid('u1'))!;
-    expect(d.ouro).toBe(ouro);
-    expect(d.testeEquipeVencidas).toBeUndefined();
-    expect(Object.keys(d.testeEquipeTentativas ?? {})).toEqual(['1']);
+    for (const uid of ['u1', 'u2']) {
+      const d = (await getCharacterByUid(uid))!;
+      expect(d.testeEquipeConcluidas).toBeUndefined();
+      expect(d.cacosDeAlma ?? 0).toBe(0);
+      expect(d.chavesDaProvacao).toMatchObject({ dia: hoje(), gratisUsadas: 1 });
+    }
+  });
+
+  it('chaves: 3 grátis por dia (não acumulam), até 3 compradas por dia a 50 diamantes (ficam guardadas)', async () => {
+    await partyPronta(['u1', 'u2']);
+    await updateCharacter('u2', { chavesDaProvacao: { dia: hoje(), gratisUsadas: 3, compradasHoje: 0, guardadas: 0 }, diamantes: 120 });
+    expect((await erro(iniciarTeste('u1', 'alma', 1, 1)))?.message).toMatch(/Boromir não tem chave da provação/);
+    await agirNoTeste('u2', 'comprarChave', {});
+    await agirNoTeste('u2', 'comprarChave', {});
+    expect((await erro(agirNoTeste('u2', 'comprarChave', {})))?.message).toMatch(/50 diamantes/);
+    await updateCharacter('u2', { diamantes: 1000 });
+    await agirNoTeste('u2', 'comprarChave', {});
+    expect((await erro(agirNoTeste('u2', 'comprarChave', {})))?.message).toMatch(/já comprou as chaves de hoje/);
+    let e = await estadoDoTeste('u2');
+    expect(e.chaves).toMatchObject({ gratisRestantes: 0, guardadas: 3, comprasRestantes: 0, preco: 50 });
+    expect(e.diamantes).toBe(950);
+    await iniciarTeste('u1', 'alma', 1, 42);
+    expect((await estadoDoTeste('u2')).chaves.guardadas).toBe(2);
+    expect((await estadoDoTeste('u1')).chaves.gratisRestantes).toBe(2);
+    // Virou o dia: as grátis voltam a 3 (sem acumular) e as compradas continuam
+    await updateCharacter('u2', { chavesDaProvacao: { dia: '2000-01-01', gratisUsadas: 3, compradasHoje: 3, guardadas: 2 } });
+    e = await estadoDoTeste('u2');
+    expect(e.chaves).toMatchObject({ gratisRestantes: 3, guardadas: 2, comprasRestantes: 3 });
+  });
+
+  it('Inferno: pede o selo do abismo de cada um; dá poeira e cartas das raridades altas', async () => {
+    for (const uid of ['u1', 'u2']) await updateCharacter(uid, { atributos: FORTISSIMO, testeEquipeConcluidas: ['mente:5'] });
+    await partyPronta(['u1', 'u2']);
+    await updateCharacter('u1', { selosDoAbismo: 1 });
+    expect((await erro(iniciarTeste('u1', 'mente', 6, 1)))?.message).toMatch(/Boromir não tem selo do abismo/);
+    await updateCharacter('u2', { selosDoAbismo: 2 });
+    const r = await iniciarTeste('u1', 'mente', 6, 7);
+    expect(r.resultado.venceu).toBe(true);
+    const u1 = (await getCharacterByUid('u1'))!;
+    const u2 = (await getCharacterByUid('u2'))!;
+    expect(u1.selosDoAbismo).toBeUndefined();
+    expect(u2.selosDoAbismo).toBe(1);
+    expect(u1.chavesDaProvacao).toBeUndefined();
+    expect(u1.poeiraDeAlma).toBe(30);
+    expect(u1.cacosDeAlma).toBe(120);
+    expect(u1.testeEquipeConcluidas).toEqual(['mente:5', 'mente:6']);
+    const tipo = TIPO_DE_CARTA_MAP[u1.cartasItens![0].tipo];
+    expect(tipo.categoria).toBe('mente');
+    expect(['muitoRaro', 'epico', 'lendario', 'mitico']).toContain(tipo.raridade);
+  });
+
+  it('Muito difícil: a chance do selo do abismo na vitória', async () => {
+    // Uma semente em que o 3º sorteio do líder (depois da raridade e do tipo da carta) cai abaixo de 10%
+    const semente = Array.from({ length: 500 }, (_, i) => i + 1).find((s) => {
+      const r = sorteadorDaSemente(s);
+      r();
+      r();
+      return r() < 0.1;
+    })!;
+    for (const uid of ['u1', 'u2']) await updateCharacter(uid, { atributos: FORTISSIMO, testeEquipeConcluidas: ['corpo:4'] });
+    await partyPronta(['u1', 'u2']);
+    const r = await iniciarTeste('u1', 'corpo', 5, semente);
+    expect(r.resultado.venceu).toBe(true);
+    expect((await getCharacterByUid('u1'))!.selosDoAbismo).toBe(1);
+    expect((await estadoDoTeste('u1')).testes.find((t) => t.categoria === 'corpo')!.dificuldades[5].liberada).toBe(true);
   });
 
   it('sair passa a liderança; o último a sair apaga a party', async () => {

@@ -166,6 +166,18 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(personagemDoFirestore('u1', { ...antigo, convitesDeParty: ['../x', 3, 'p_aaaaaaaaaaaa', 'p_aaaaaaaaaaaa'] }).convitesDeParty).toEqual(['p_aaaaaaaaaaaa']);
   });
 
+  it('guarda o progresso, as chaves da provação e os selos do abismo do Teste de Equipe (7.4)', () => {
+    const chaves = { dia: '2026-10-22', gratisUsadas: 2, compradasHoje: 1, guardadas: 1 };
+    const doc = personagemParaFirestore({ ...PERSONAGEM, testeEquipeConcluidas: ['alma:1', 'alma:2'], chavesDaProvacao: chaves, selosDoAbismo: 2 });
+    expect(personagemDoFirestore('u1', doc)).toMatchObject({ testeEquipeConcluidas: ['alma:1', 'alma:2'], chavesDaProvacao: chaves, selosDoAbismo: 2 });
+    const antigo = personagemParaFirestore(PERSONAGEM);
+    expect(antigo).not.toHaveProperty('chavesDaProvacao');
+    expect(antigo).not.toHaveProperty('selosDoAbismo');
+    const lido = personagemDoFirestore('u1', { ...antigo, chavesDaProvacao: { dia: 3 }, selosDoAbismo: -1, testeEquipeVencidas: [1] });
+    expect(lido.chavesDaProvacao).toBeUndefined();
+    expect(lido.selosDoAbismo).toBeUndefined();
+  });
+
   it('a party é gravada no fim da transação, lida dentro dela e apagada (7.4)', async () => {
     const party = { id: 'p_0123456789ab', liderUid: 'u1', membros: [{ uid: 'u1', nome: 'Aria', pronto: false }], convites: [{ uid: 'u2', nome: 'Boro', por: 'Aria' }], atualizadaEm: '2026-10-21T10:00:00.000Z' };
     await repo.executarTransacao('criar', async (ctx) => {

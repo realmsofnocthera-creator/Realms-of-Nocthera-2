@@ -18,7 +18,7 @@ import type { MissoesDoJogador } from '@/game/missoes';
 import { chaveDeBusca, type CampoDoRanking, type CriterioDeRanking, type RankingGuardado, type ResumoDePersonagem } from '@/rules/social';
 import { contratosDoDocumento } from '@/game/contratos';
 import { entradaDoDocumento, participacoesDoDocumento, type EntradaDoChefeSemanal } from '@/rules/chefeSemanal';
-import { partyDoDocumento, type PartyDocumento } from '@/rules/testeEquipe';
+import { chavesDoDocumento, partyDoDocumento, type PartyDocumento } from '@/rules/testeEquipe';
 import { bonusDeGuildaDoDocumento } from '@/rules/pesquisa';
 import { chaveDoNomeDaGuilda, guildaDoDocumento, type GuildaDocumento } from '@/rules/guilda';
 import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
@@ -385,10 +385,9 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
       : {}),
     ...(bonusDeGuildaDoDocumento(data.bonusDeGuilda) ? { bonusDeGuilda: bonusDeGuildaDoDocumento(data.bonusDeGuilda) } : {}),
     ...(participacoesDoDocumento(data.chefeSemanal) ? { chefeSemanal: participacoesDoDocumento(data.chefeSemanal) } : {}),
-    ...(data.testeEquipeTentativas && typeof data.testeEquipeTentativas === 'object'
-      ? { testeEquipeTentativas: Object.fromEntries(Object.entries(data.testeEquipeTentativas as Record<string, unknown>).filter((e): e is [string, string] => typeof e[1] === 'string')) }
-      : {}),
-    ...(Array.isArray(data.testeEquipeVencidas) ? { testeEquipeVencidas: (data.testeEquipeVencidas as unknown[]).filter((n): n is number => Number.isInteger(n)) } : {}),
+    ...(Array.isArray(data.testeEquipeConcluidas) ? { testeEquipeConcluidas: (data.testeEquipeConcluidas as unknown[]).filter((x): x is string => typeof x === 'string') } : {}),
+    ...(chavesDoDocumento(data.chavesDaProvacao) ? { chavesDaProvacao: chavesDoDocumento(data.chavesDaProvacao) } : {}),
+    ...(typeof data.selosDoAbismo === 'number' && Number.isInteger(data.selosDoAbismo) && data.selosDoAbismo > 0 ? { selosDoAbismo: data.selosDoAbismo } : {}),
     ...(typeof data.partyId === 'string' && data.partyId ? { partyId: data.partyId } : {}),
     ...(idsDeParty(data.convitesDeParty).length ? { convitesDeParty: idsDeParty(data.convitesDeParty) } : {}),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
@@ -454,8 +453,9 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.incursaoTentativas ? { incursaoTentativas: char.incursaoTentativas } : {}),
     ...(char.bonusDeGuilda ? { bonusDeGuilda: char.bonusDeGuilda } : {}),
     ...(char.chefeSemanal?.length ? { chefeSemanal: semUndefined(char.chefeSemanal) } : {}),
-    ...(char.testeEquipeTentativas ? { testeEquipeTentativas: char.testeEquipeTentativas } : {}),
-    ...(char.testeEquipeVencidas?.length ? { testeEquipeVencidas: char.testeEquipeVencidas } : {}),
+    ...(char.testeEquipeConcluidas?.length ? { testeEquipeConcluidas: char.testeEquipeConcluidas } : {}),
+    ...(char.chavesDaProvacao ? { chavesDaProvacao: char.chavesDaProvacao } : {}),
+    ...(char.selosDoAbismo ? { selosDoAbismo: char.selosDoAbismo } : {}),
     ...(char.partyId ? { partyId: char.partyId } : {}),
     ...(char.convitesDeParty?.length ? { convitesDeParty: char.convitesDeParty } : {}),
     // campos derivados, só para o banco poder ordenar e buscar (7.1): o nome em minúsculas e os contadores das provações

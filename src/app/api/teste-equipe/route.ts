@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** { acao: criar | convidar | aceitar | recusar | sair | pronto | iniciar, nome?, partyId?, pronto?, dificuldade? }. Devolve a mensagem, o resultado da luta (se houve) e o estado novo. */
+/** { acao: criar | convidar | aceitar | recusar | sair | pronto | comprarChave | iniciar, nome?, partyId?, pronto?, categoria?, dificuldade? }. Devolve a mensagem, o resultado da luta (se houve) e o estado novo. */
 export async function POST(req: NextRequest) {
   try {
     const limiteIp = limitarPorIp(req, 'combate');
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const limiteConta = limitarPorConta(user.uid, 'combate');
     if (limiteConta) return limiteConta;
     const b = (await req.json().catch(() => ({}))) ?? {};
-    const r = await agirNoTeste(user.uid, b.acao, { partyId: b.partyId, nome: b.nome, pronto: b.pronto, dificuldade: b.dificuldade });
+    const r = await agirNoTeste(user.uid, b.acao, { partyId: b.partyId, nome: b.nome, pronto: b.pronto, categoria: b.categoria, dificuldade: b.dificuldade });
     return NextResponse.json({ ...r, estado: await estadoDoTeste(user.uid) });
   } catch (error) {
     return respostaDeErro(error, 'testeEquipe.acao_falhou');

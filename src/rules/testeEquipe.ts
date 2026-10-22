@@ -1,26 +1,123 @@
 import type { Attributes } from './attributes';
+import { CATEGORIAS_DE_CARTA, NOME_DA_CATEGORIA, type CategoriaDeCarta } from './almas';
 import { MULT_CHAVE, PERFIS, pontosDeReferencia } from './cacada';
 import type { CategoriaCorporal } from './corposMonstros';
 import type { Elemento } from './elements';
+import type { EmblemaRaridade } from './emblemas';
 import type { MonsterDefinition } from './monsters';
 
 /**
- * Party e Provação do Teste de Equipe (7.4, decididas pelo Yuri): a party é aberta a qualquer jogador de nível 25 ou
- * mais (não precisa de guilda): o líder chama alguém pelo nome, até 3 jogadores, cada um marca "Pronto" e o líder inicia. O grupo luta junto contra 1 chefe (o motor aceita vários
- * aliados de um lado). Dificuldades 1 a 10 com 1 chefe cada, 1 tentativa por dia por dificuldade para cada membro.
- * Chefes PROVISÓRIOS (a confirmar); recompensas, força e regras de liberação são PROPOSTA, a confirmar.
+ * Party e Provação do Teste de Equipe (7.4, decididas pelo Yuri em 21 e 22/10/2026).
+ * - A party é aberta a qualquer jogador de nível 25 ou mais (não precisa de guilda): o líder chama alguém pelo nome,
+ *   até 3 jogadores, cada um marca "Pronto" e o líder escolhe o teste e a dificuldade e inicia. O grupo luta junto
+ *   contra 1 chefe (o motor aceita vários aliados de um lado).
+ * - 3 testes: da Alma, do Corpo e da Mente. Cada um dá cartas só da própria categoria.
+ * - 6 dificuldades: Muito fácil, Fácil, Médio, Difícil, Muito difícil e Inferno. Para desafiar uma, é preciso ter
+ *   concluído a anterior naquele teste.
+ * - Entrar custa, para CADA membro: 1 chave da provação (Muito fácil a Muito difícil) ou 1 selo do abismo (Inferno).
+ *   São 3 chaves grátis por dia (não acumulam) e até mais 3 compradas por dia, a 50 diamantes cada (as compradas
+ *   ficam guardadas). O selo vem, com chance pequena, de vitórias no Muito difícil.
+ * - Na vitória: cacos de alma (mais a cada dificuldade) e 1 carta, com as raridades do Yuri por dificuldade; no Inferno,
+ *   também poeira de alma; na primeira vez que conclui cada dificuldade de cada teste, diamantes.
+ * Chefes PROVISÓRIOS (a confirmar). Os pesos das raridades, as quantidades, a chance do selo e a força são PROPOSTA.
  */
 
 export const TAMANHO_MAXIMO_DA_PARTY = 3;
 export const TAMANHO_MINIMO_DO_TESTE = 2;
 /** O nível do personagem para o Teste de Equipe (o mesmo da vitrine das Provações). */
 export const NIVEL_DO_TESTE_DE_EQUIPE = 25;
-export const DIFICULDADES_DO_TESTE = 10;
 /** Party parada há mais que isso é desfeita sozinha (alguém abriu e foi embora). */
 export const VALIDADE_DA_PARTY_MS = 2 * 60 * 60_000;
 
-export interface ChefeDoTeste {
+export type CategoriaDoTeste = CategoriaDeCarta;
+export const CATEGORIAS_DO_TESTE: readonly CategoriaDoTeste[] = CATEGORIAS_DE_CARTA;
+export const NOME_DO_TESTE: Readonly<Record<CategoriaDoTeste, string>> = { alma: 'Teste da Alma', corpo: 'Teste do Corpo', mente: 'Teste da Mente' };
+export const ehCategoriaDoTeste = (v: unknown): v is CategoriaDoTeste => typeof v === 'string' && (CATEGORIAS_DO_TESTE as readonly string[]).includes(v);
+
+export const DIFICULDADES_DO_TESTE = 6;
+export const NOMES_DAS_DIFICULDADES = ['Muito fácil', 'Fácil', 'Médio', 'Difícil', 'Muito difícil', 'Inferno'] as const;
+/** A dificuldade que pede o selo do abismo em vez da chave. */
+export const DIFICULDADE_DO_SELO = 6;
+/** A dificuldade em que o selo pode cair. */
+export const DIFICULDADE_QUE_DA_SELO = 5;
+/** Chance de ganhar 1 selo do abismo numa vitória no Muito difícil (proposta, a confirmar). */
+export const CHANCE_DO_SELO = 0.1;
+
+export interface DificuldadeDoTeste {
   dificuldade: number;
+  nome: string;
+  /** Pesos [comum, raro, muito raro, épico, lendário, mítico] da carta da vitória: as raridades são as do Yuri; os pesos, proposta. */
+  pesos: readonly number[];
+  cacos: number;
+  poeira: number;
+  /** Diamantes na primeira vez que conclui a dificuldade naquele teste. */
+  diamantesPrimeiraVez: number;
+}
+
+export const DIFICULDADES: readonly DificuldadeDoTeste[] = [
+  { dificuldade: 1, nome: 'Muito fácil', pesos: [100, 0, 0, 0, 0, 0], cacos: 10, poeira: 0, diamantesPrimeiraVez: 10 },
+  { dificuldade: 2, nome: 'Fácil', pesos: [70, 30, 0, 0, 0, 0], cacos: 20, poeira: 0, diamantesPrimeiraVez: 20 },
+  { dificuldade: 3, nome: 'Médio', pesos: [50, 35, 15, 0, 0, 0], cacos: 35, poeira: 0, diamantesPrimeiraVez: 30 },
+  { dificuldade: 4, nome: 'Difícil', pesos: [35, 35, 22, 8, 0, 0], cacos: 55, poeira: 0, diamantesPrimeiraVez: 50 },
+  { dificuldade: 5, nome: 'Muito difícil', pesos: [0, 40, 35, 20, 5, 0], cacos: 80, poeira: 0, diamantesPrimeiraVez: 80 },
+  { dificuldade: 6, nome: 'Inferno', pesos: [0, 0, 40, 35, 20, 5], cacos: 120, poeira: 30, diamantesPrimeiraVez: 150 },
+];
+
+export const dificuldadeDoTeste = (d: number): DificuldadeDoTeste => DIFICULDADES[Math.min(DIFICULDADES_DO_TESTE, Math.max(1, Math.floor(d))) - 1]!;
+
+/** As raridades que podem sair na dificuldade (para a tela). */
+export const raridadesDaDificuldade = (d: number): EmblemaRaridade[] => {
+  const ordem: EmblemaRaridade[] = ['comum', 'raro', 'muitoRaro', 'epico', 'lendario', 'mitico'];
+  return ordem.filter((_, i) => dificuldadeDoTeste(d).pesos[i] > 0);
+};
+
+/** Chaves da provação. */
+export const CHAVES_GRATIS_POR_DIA = 3;
+export const CHAVES_COMPRAVEIS_POR_DIA = 3;
+export const PRECO_DA_CHAVE_EM_DIAMANTES = 50;
+
+/** O estado das chaves do personagem (as grátis do dia e as compradas guardadas). */
+export interface ChavesDaProvacao {
+  /** Dia (Brasília) a que `gratisUsadas` e `compradasHoje` se referem. */
+  dia: string;
+  gratisUsadas: number;
+  compradasHoje: number;
+  /** Compradas e ainda não usadas (não somem na virada do dia). */
+  guardadas: number;
+}
+
+export function chavesDoDia(c: ChavesDaProvacao | undefined, hoje: string): ChavesDaProvacao {
+  if (!c) return { dia: hoje, gratisUsadas: 0, compradasHoje: 0, guardadas: 0 };
+  return c.dia === hoje ? c : { dia: hoje, gratisUsadas: 0, compradasHoje: 0, guardadas: c.guardadas };
+}
+
+export const chavesGratisRestantes = (c: ChavesDaProvacao) => Math.max(0, CHAVES_GRATIS_POR_DIA - c.gratisUsadas);
+export const chavesDisponiveis = (c: ChavesDaProvacao) => chavesGratisRestantes(c) + c.guardadas;
+export const comprasRestantesHoje = (c: ChavesDaProvacao) => Math.max(0, CHAVES_COMPRAVEIS_POR_DIA - c.compradasHoje);
+
+/** Gasta 1 chave: as grátis do dia primeiro, depois as compradas. null se não há chave. */
+export function gastarChave(c: ChavesDaProvacao): ChavesDaProvacao | null {
+  if (chavesGratisRestantes(c) > 0) return { ...c, gratisUsadas: c.gratisUsadas + 1 };
+  if (c.guardadas > 0) return { ...c, guardadas: c.guardadas - 1 };
+  return null;
+}
+
+export function chavesDoDocumento(bruto: unknown): ChavesDaProvacao | undefined {
+  const o = bruto as Record<string, unknown> | null;
+  if (!o || typeof o !== 'object' || typeof o.dia !== 'string') return undefined;
+  const n = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) && v > 0 ? v : 0);
+  return { dia: o.dia, gratisUsadas: n(o.gratisUsadas), compradasHoje: n(o.compradasHoje), guardadas: n(o.guardadas) };
+}
+
+/** A chave de progresso de um teste: "alma:3" = concluiu a dificuldade 3 do Teste da Alma. */
+export const chaveDeConclusao = (categoria: CategoriaDoTeste, dificuldade: number) => `${categoria}:${dificuldade}`;
+
+/** A dificuldade abre para quem concluiu a anterior NAQUELE teste (a 1 está sempre aberta). */
+export const dificuldadeLiberada = (categoria: CategoriaDoTeste, dificuldade: number, concluidas: readonly string[] | undefined) =>
+  dificuldade === 1 || (concluidas ?? []).includes(chaveDeConclusao(categoria, dificuldade - 1));
+
+export interface ChefeDoTeste {
+  categoria: CategoriaDoTeste;
   id: string;
   nome: string;
   categoriaCorporal: CategoriaCorporal;
@@ -28,28 +125,25 @@ export interface ChefeDoTeste {
   tipoDano: 'fisico' | 'magico';
 }
 
-const NUMERAIS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
-const CORPOS: CategoriaCorporal[] = ['feral', 'rochoso', 'eterio', 'escamoso', 'cristalino', 'blindadoPesado', 'amorfo', 'quitinoso', 'blindagemMedia', 'organicoDesprotegido'];
-const ELEMENTOS: (Elemento | undefined)[] = [undefined, 'terra', 'sombrio', 'fogo', 'gelo', undefined, 'relampago', 'vento', 'sagrado', 'sombrio'];
+/** Os 3 chefes PROVISÓRIOS, um por teste (a confirmar: o Yuri passa nomes, mecânicas e visual depois). */
+export const CHEFES_DO_TESTE: Readonly<Record<CategoriaDoTeste, ChefeDoTeste>> = {
+  alma: { categoria: 'alma', id: 'teste-alma', nome: `Guardião da ${NOME_DA_CATEGORIA.alma} (a confirmar)`, categoriaCorporal: 'eterio', elementoAtaque: 'sombrio', tipoDano: 'magico' },
+  corpo: { categoria: 'corpo', id: 'teste-corpo', nome: `Guardião do ${NOME_DA_CATEGORIA.corpo} (a confirmar)`, categoriaCorporal: 'blindadoPesado', elementoAtaque: 'terra', tipoDano: 'fisico' },
+  mente: { categoria: 'mente', id: 'teste-mente', nome: `Guardião da ${NOME_DA_CATEGORIA.mente} (a confirmar)`, categoriaCorporal: 'cristalino', elementoAtaque: 'relampago', tipoDano: 'magico' },
+};
 
-/** Os 10 chefes PROVISÓRIOS (a confirmar: o Yuri passa nomes, mecânicas e visual depois). */
-export const CHEFES_DO_TESTE: readonly ChefeDoTeste[] = NUMERAIS.map((n, i) => ({
-  dificuldade: i + 1,
-  id: `teste-equipe-${i + 1}`,
-  nome: `Chefe do Teste de Equipe ${n} (a confirmar)`,
-  categoriaCorporal: CORPOS[i],
-  ...(ELEMENTOS[i] ? { elementoAtaque: ELEMENTOS[i] } : {}),
-  tipoDano: i % 2 === 0 ? 'fisico' : 'magico',
-}));
+/** Multiplicador de força por dificuldade (proposta, a confirmar): Muito fácil a Inferno. */
+const MULT_DA_DIFICULDADE = [0.8, 1.1, 1.5, 2, 2.7, 3.6];
 
 /**
- * Força (proposta, a confirmar): o monstro-chave da Caçada no nível 25 + 2 × (dificuldade − 1) (com +15% por
- * dificuldade acima do nível 30), vida 1,5× a do monstro-chave e multiplicada pelo tamanho da party (o chefe golpeia todos a cada rodada).
+ * Força (proposta, a confirmar): o monstro-chave da Caçada no nível 25 + (dificuldade − 1), com o multiplicador da
+ * dificuldade; vida 1,5× a do monstro-chave e multiplicada pelo tamanho da party (o chefe golpeia todos a cada rodada).
  */
-export function montarChefeDoTeste(dificuldade: number, tamanhoDaParty: number): MonsterDefinition {
-  const chefe = CHEFES_DO_TESTE[Math.min(DIFICULDADES_DO_TESTE, Math.max(1, dificuldade)) - 1];
-  const ref = 25 + 2 * (chefe.dificuldade - 1);
-  const p = pontosDeReferencia(Math.min(30, ref)) * (1 + 0.15 * Math.max(0, ref - 30));
+export function montarChefeDoTeste(categoria: CategoriaDoTeste, dificuldade: number, tamanhoDaParty: number): MonsterDefinition {
+  const chefe = CHEFES_DO_TESTE[categoria];
+  const d = dificuldadeDoTeste(dificuldade).dificuldade;
+  const ref = 25 + (d - 1);
+  const p = pontosDeReferencia(Math.min(30, ref)) * MULT_DA_DIFICULDADE[d - 1];
   const perfil = PERFIS.normal;
   const dano = Math.max(1, Math.round(p * perfil.forca * MULT_CHAVE.forca));
   const atributos: Attributes = {
@@ -62,12 +156,11 @@ export function montarChefeDoTeste(dificuldade: number, tamanhoDaParty: number):
     agilidade: Math.max(1, Math.round(p * perfil.agilidade)),
   };
   const vidaDeUm = Math.round(p * perfil.hp * MULT_CHAVE.hp * 1.5);
-  const hp = vidaDeUm * Math.max(1, tamanhoDaParty);
   return {
     id: chefe.id,
     nome: chefe.nome,
     nivel: Math.min(30, ref),
-    hp,
+    hp: vidaDeUm * Math.max(1, tamanhoDaParty),
     sobreescudoInicial: Math.floor(vidaDeUm / 10),
     chefe: true,
     categoriaCorporal: chefe.categoriaCorporal,
@@ -77,16 +170,6 @@ export function montarChefeDoTeste(dificuldade: number, tamanhoDaParty: number):
     modificadoresElementais: {},
     enfurecido: true,
     ...(chefe.elementoAtaque ? { elementoAtaque: chefe.elementoAtaque } : {}),
-  };
-}
-
-/** Recompensa de cada membro na vitória (proposta, a confirmar); a primeira vitória da dificuldade dá diamantes a mais. */
-export function recompensaDoTeste(dificuldade: number, primeiraVitoria: boolean) {
-  return {
-    ouro: 1500 * dificuldade,
-    /** Fração do XP do próximo nível do jogador. */
-    fracaoDeXp: 0.08 + 0.01 * dificuldade,
-    diamantes: (primeiraVitoria ? 10 : 2) * dificuldade,
   };
 }
 
@@ -104,6 +187,7 @@ export interface ConviteDaParty {
 }
 
 export interface ResultadoDaParty {
+  categoria: CategoriaDoTeste;
   dificuldade: number;
   venceu: boolean;
   rodadas: number;
@@ -146,6 +230,7 @@ export function partyDoDocumento(id: string, bruto: unknown): PartyDocumento | n
   const ultimoResultado =
     u && typeof u.dificuldade === 'number' && Array.isArray(u.aliados)
       ? {
+          categoria: ehCategoriaDoTeste(u.categoria) ? u.categoria : ('alma' as const),
           dificuldade: u.dificuldade,
           venceu: u.venceu === true,
           rodadas: typeof u.rodadas === 'number' ? u.rodadas : 0,
@@ -158,6 +243,3 @@ export function partyDoDocumento(id: string, bruto: unknown): PartyDocumento | n
       : undefined;
   return { id, liderUid: o.liderUid, membros: membros.slice(0, TAMANHO_MAXIMO_DA_PARTY), convites: convites.slice(0, CONVITES_DA_PARTY), atualizadaEm: typeof o.atualizadaEm === 'string' ? o.atualizadaEm : '', ...(ultimoResultado ? { ultimoResultado } : {}) };
 }
-
-/** A dificuldade abre para quem venceu a anterior (a 1 está sempre aberta). */
-export const dificuldadeLiberada = (dificuldade: number, vencidas: readonly number[] | undefined) => dificuldade === 1 || (vencidas ?? []).includes(dificuldade - 1);

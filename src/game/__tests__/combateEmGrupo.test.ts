@@ -59,7 +59,7 @@ describe('Luta em grupo (Teste de Equipe)', () => {
   });
 
   it('o chefe do Teste tem mais vida com party maior', () => {
-    expect(montarChefeDoTeste(1, 3).hp).toBe(montarChefeDoTeste(1, 1).hp * 3);
-    expect(montarChefeDoTeste(10, 2).hp).toBeGreaterThan(montarChefeDoTeste(1, 2).hp);
+    expect(montarChefeDoTeste('alma', 1, 3).hp).toBe(montarChefeDoTeste('alma', 1, 1).hp * 3);
+    expect(montarChefeDoTeste('corpo', 6, 2).hp).toBeGreaterThan(montarChefeDoTeste('corpo', 1, 2).hp);
   });
 });

@@ -2,34 +2,51 @@ import { randomBytes } from 'node:crypto';
 import { resolverCombateEmGrupo } from '@/game/combat';
 import { contarVitorias } from '@/game/contratos';
 import { diaDeBrasilia } from '@/game/batalhaSangrenta';
-import { xpParaProximoNivel } from '@/game';
 import {
+  CHANCE_DO_SELO,
+  CATEGORIAS_DO_TESTE,
+  CHAVES_GRATIS_POR_DIA,
   CHEFES_DO_TESTE,
+  chaveDeConclusao,
+  chavesDisponiveis,
+  chavesDoDia,
+  chavesGratisRestantes,
+  comprasRestantesHoje,
   CONVITES_DA_PARTY,
   CONVITES_DE_PARTY_DO_JOGADOR,
+  DIFICULDADE_DO_SELO,
+  DIFICULDADE_QUE_DA_SELO,
+  DIFICULDADES,
+  dificuldadeDoTeste,
   dificuldadeLiberada,
   DIFICULDADES_DO_TESTE,
+  ehCategoriaDoTeste,
+  gastarChave,
   montarChefeDoTeste,
   NIVEL_DO_TESTE_DE_EQUIPE,
+  NOME_DO_TESTE,
   partyVale,
-  recompensaDoTeste,
+  PRECO_DA_CHAVE_EM_DIAMANTES,
+  raridadesDaDificuldade,
   TAMANHO_MAXIMO_DA_PARTY,
   TAMANHO_MINIMO_DO_TESTE,
+  type CategoriaDoTeste,
   type PartyDocumento,
   type ResultadoDaParty,
 } from '@/rules/testeEquipe';
-import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, ganharXp, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
+import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { gerarSementeCombate } from '@/server/combateSemente';
 import { entregarCartas, sorteadorDaSemente, sortearTipoDaRaridade } from '@/server/almas';
-import { PESOS_DO_TESTE_DE_EQUIPE, poeiraDoTeste, sortearRaridadePorPesos } from '@/rules/almas';
+import { sortearRaridadePorPesos } from '@/rules/almas';
+import type { EmblemaRaridade } from '@/rules/emblemas';
 import { chaveDoNome, repositorio, type ContextoTransacao } from '@/server/persistencia';
 import { exigirSistemaLigado } from '@/server/sistemasLeitura';
 
 /**
  * Party e Teste de Equipe (7.4). A party é aberta a qualquer jogador de nível 25 ou mais (não precisa de guilda): o
- * líder chama alguém pelo nome (até 3 jogadores), cada um marca "Pronto" e o líder escolhe a dificuldade e inicia.
- * Cada party é um documento (partys/{id}) com os membros e os convites. A luta inteira roda no servidor, numa
- * transação que lê e grava a party e os personagens: tentativas, recompensas e o resultado para todos verem.
+ * líder chama alguém pelo nome (até 3 jogadores), cada um marca "Pronto" e o líder escolhe o teste e a dificuldade e
+ * inicia. Cada party é um documento (partys/{id}) com os membros e os convites. A luta inteira roda no servidor, numa
+ * transação que lê e grava a party e os personagens: a chave (ou o selo) de cada um, as recompensas e o resultado.
  */
 
 export class ErroDeParty extends Error {
@@ -56,10 +73,25 @@ async function minhaPartyNoContexto(ctx: ContextoTransacao, eu: CharacterDocumen
 
 export interface DificuldadeNaTela {
   dificuldade: number;
-  chefe: string;
+  nome: string;
   liberada: boolean;
-  vencida: boolean;
-  tentouHoje: boolean;
+  concluida: boolean;
+  /** O que cada membro gasta para entrar. */
+  custo: 'chave' | 'selo';
+  raridades: EmblemaRaridade[];
+  cacos: number;
+  poeira: number;
+  /** Diamantes da primeira conclusão (0 se já concluiu). */
+  diamantes: number;
+  /** Chance de selo do abismo na vitória (só no Muito difícil). */
+  chanceDoSelo: number;
+}
+
+export interface TesteNaTela {
+  categoria: CategoriaDoTeste;
+  nome: string;
+  chefe: string;
+  dificuldades: DificuldadeNaTela[];
 }
 
 export interface EstadoDoTeste {
@@ -68,20 +100,42 @@ export interface EstadoDoTeste {
   minhaParty: (PartyDocumento & { souLider: boolean }) | null;
   /** Convites de party que o jogador recebeu e ainda valem. */
   convites: { partyId: string; de: string }[];
-  dificuldades: DificuldadeNaTela[];
+  chaves: { gratisRestantes: number; gratisPorDia: number; guardadas: number; comprasRestantes: number; preco: number };
+  selos: number;
+  cacos: number;
+  poeira: number;
+  diamantes: number;
+  testes: TesteNaTela[];
+}
+
+function testesNaTela(char: CharacterDocument): TesteNaTela[] {
+  const concluidas = char.testeEquipeConcluidas ?? [];
+  return CATEGORIAS_DO_TESTE.map((categoria) => ({
+    categoria,
+    nome: NOME_DO_TESTE[categoria],
+    chefe: CHEFES_DO_TESTE[categoria].nome,
+    dificuldades: DIFICULDADES.map((d) => {
+      const concluida = concluidas.includes(chaveDeConclusao(categoria, d.dificuldade));
+      return {
+        dificuldade: d.dificuldade,
+        nome: d.nome,
+        liberada: dificuldadeLiberada(categoria, d.dificuldade, concluidas),
+        concluida,
+        custo: d.dificuldade === DIFICULDADE_DO_SELO ? ('selo' as const) : ('chave' as const),
+        raridades: raridadesDaDificuldade(d.dificuldade),
+        cacos: d.cacos,
+        poeira: d.poeira,
+        diamantes: concluida ? 0 : d.diamantesPrimeiraVez,
+        chanceDoSelo: d.dificuldade === DIFICULDADE_QUE_DA_SELO ? CHANCE_DO_SELO : 0,
+      };
+    }),
+  }));
 }
 
 export async function estadoDoTeste(uid: string): Promise<EstadoDoTeste> {
   const char = await repositorio.lerPersonagem(uid);
   if (!char) throw new Error('Personagem não encontrado.');
-  const hoje = diaDeBrasilia(agora());
-  const dificuldades = CHEFES_DO_TESTE.map((c) => ({
-    dificuldade: c.dificuldade,
-    chefe: c.nome,
-    liberada: dificuldadeLiberada(c.dificuldade, char.testeEquipeVencidas),
-    vencida: (char.testeEquipeVencidas ?? []).includes(c.dificuldade),
-    tentouHoje: char.testeEquipeTentativas?.[String(c.dificuldade)] === hoje,
-  }));
+  const chaves = chavesDoDia(char.chavesDaProvacao, diaDeBrasilia(agora()));
   const propria = char.partyId ? await repositorio.lerParty(char.partyId) : null;
   const minha = propria && partyVale(propria, agora()) && propria.membros.some((m) => m.uid === uid) ? propria : null;
   const ids = char.convitesDeParty ?? [];
@@ -95,17 +149,29 @@ export async function estadoDoTeste(uid: string): Promise<EstadoDoTeste> {
     meuNivel: char.nivel,
     minhaParty: minha ? { ...minha, souLider: minha.liderUid === uid } : null,
     convites,
-    dificuldades,
+    chaves: {
+      gratisRestantes: chavesGratisRestantes(chaves),
+      gratisPorDia: CHAVES_GRATIS_POR_DIA,
+      guardadas: chaves.guardadas,
+      comprasRestantes: comprasRestantesHoje(chaves),
+      preco: PRECO_DA_CHAVE_EM_DIAMANTES,
+    },
+    selos: char.selosDoAbismo ?? 0,
+    cacos: char.cacosDeAlma ?? 0,
+    poeira: char.poeiraDeAlma ?? 0,
+    diamantes: char.diamantes ?? 0,
+    testes: testesNaTela(char),
   };
 }
 
-export const ACOES_DO_TESTE = ['criar', 'convidar', 'aceitar', 'recusar', 'sair', 'pronto', 'iniciar'] as const;
+export const ACOES_DO_TESTE = ['criar', 'convidar', 'aceitar', 'recusar', 'sair', 'pronto', 'comprarChave', 'iniciar'] as const;
 export type AcaoDoTeste = (typeof ACOES_DO_TESTE)[number];
 
 export interface PedidoDoTeste {
   partyId?: unknown;
   nome?: unknown;
   pronto?: unknown;
+  categoria?: unknown;
   dificuldade?: unknown;
 }
 
@@ -190,17 +256,34 @@ export async function agirNoTeste(uid: string, acao: unknown, pedido: PedidoDoTe
         ctx.gravarParty({ ...p, membros: p.membros.map((m) => (m.uid === uid ? { ...m, pronto } : m)), atualizadaEm: em });
         return { mensagem: pronto ? 'Você está pronto.' : 'Você não está mais pronto.' };
       });
+    case 'comprarChave':
+      return repositorio.executarTransacao('teste:comprarChave', async (ctx) => {
+        const eu = await carregarPersonagem(ctx, uid);
+        const chaves = chavesDoDia(eu.chavesDaProvacao, diaDeBrasilia(agora()));
+        if (comprasRestantesHoje(chaves) <= 0) throw new ErroDeParty('Você já comprou as chaves de hoje. Volte amanhã.', 409);
+        if ((eu.diamantes ?? 0) < PRECO_DA_CHAVE_EM_DIAMANTES) throw new ErroDeParty(`Você precisa de ${PRECO_DA_CHAVE_EM_DIAMANTES} diamantes.`, 409);
+        const doc = alterarSaldoEm(ctx, eu, 'diamantes', -PRECO_DA_CHAVE_EM_DIAMANTES, 'Chave da provação').character;
+        salvarPersonagem(ctx, doc, { diamantes: doc.diamantes, chavesDaProvacao: { ...chaves, compradasHoje: chaves.compradasHoje + 1, guardadas: chaves.guardadas + 1 } });
+        return { mensagem: 'Você comprou 1 chave da provação.' };
+      });
     case 'iniciar':
-      return iniciarTeste(uid, pedido.dificuldade, gerarSementeCombate());
+      return iniciarTeste(uid, pedido.categoria, pedido.dificuldade, gerarSementeCombate());
   }
 }
 
-/** O líder inicia: confere todos, roda a luta em grupo e aplica tentativas e recompensas de todos na mesma transação. */
-export async function iniciarTeste(uid: string, dificuldadePedida: unknown, semente: number): Promise<{ mensagem: string; resultado: ResultadoDaParty }> {
+/**
+ * O líder inicia: confere todos (nível, a dificuldade anterior concluída e a chave ou o selo), gasta a chave (ou o
+ * selo) de cada um, roda a luta em grupo e aplica as recompensas de todos na mesma transação.
+ */
+export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificuldadePedida: unknown, semente: number): Promise<{ mensagem: string; resultado: ResultadoDaParty }> {
+  if (!ehCategoriaDoTeste(categoriaPedida)) throw new ErroDeParty('Escolha o teste (Alma, Corpo ou Mente).');
+  const categoria = categoriaPedida;
   const dificuldade = typeof dificuldadePedida === 'number' && Number.isInteger(dificuldadePedida) ? dificuldadePedida : 0;
   if (dificuldade < 1 || dificuldade > DIFICULDADES_DO_TESTE) throw new ErroDeParty('Dificuldade inválida.');
   await exigirSistemaLigado(uid, 'testeEquipe');
   const hoje = diaDeBrasilia(agora());
+  const regra = dificuldadeDoTeste(dificuldade);
+  const pedeSelo = dificuldade === DIFICULDADE_DO_SELO;
   return repositorio.executarTransacao('teste:iniciar', async (ctx) => {
     const eu = await carregarPersonagem(ctx, uid);
     const p = await minhaPartyNoContexto(ctx, eu);
@@ -211,49 +294,55 @@ export async function iniciarTeste(uid: string, dificuldadePedida: unknown, seme
     const docs = await Promise.all(p.membros.map((m) => carregarPersonagem(ctx, m.uid)));
     for (const d of docs) {
       if (d.nivel < NIVEL_DO_TESTE_DE_EQUIPE) throw new ErroDeParty(`${d.nome} ainda não tem o nível ${NIVEL_DO_TESTE_DE_EQUIPE}.`);
-      if (!dificuldadeLiberada(dificuldade, d.testeEquipeVencidas)) throw new ErroDeParty(`${d.nome} ainda não venceu a dificuldade ${dificuldade - 1}.`);
-      if (d.testeEquipeTentativas?.[String(dificuldade)] === hoje) throw new ErroDeParty(`${d.nome} já tentou a dificuldade ${dificuldade} hoje.`, 409);
+      if (!dificuldadeLiberada(categoria, dificuldade, d.testeEquipeConcluidas)) {
+        throw new ErroDeParty(`${d.nome} ainda não concluiu o ${dificuldadeDoTeste(dificuldade - 1).nome} do ${NOME_DO_TESTE[categoria]}.`);
+      }
+      if (pedeSelo ? (d.selosDoAbismo ?? 0) < 1 : chavesDisponiveis(chavesDoDia(d.chavesDaProvacao, hoje)) < 1) {
+        throw new ErroDeParty(`${d.nome} não tem ${pedeSelo ? 'selo do abismo' : 'chave da provação'}.`, 409);
+      }
     }
-    const chefe = montarChefeDoTeste(dificuldade, docs.length);
+    const chefe = montarChefeDoTeste(categoria, dificuldade, docs.length);
     const r = resolverCombateEmGrupo(docs.map(combatenteDoPersonagem), chefe, semente);
     const venceu = r.vencedor === 'grupo';
+    let selosGanhos = 0;
     for (const [indice, d] of docs.entries()) {
       let doc = d;
-      const tentativas = { ...(doc.testeEquipeTentativas ?? {}), [String(dificuldade)]: hoje };
+      // A entrada: 1 chave (as grátis do dia primeiro) ou 1 selo, ganhe ou perca
+      const selosDepoisDaEntrada = (doc.selosDoAbismo ?? 0) - (pedeSelo ? 1 : 0);
+      const custo = pedeSelo ? { selosDoAbismo: selosDepoisDaEntrada || undefined } : { chavesDaProvacao: gastarChave(chavesDoDia(doc.chavesDaProvacao, hoje))! };
       if (!venceu) {
-        salvarPersonagem(ctx, doc, { testeEquipeTentativas: tentativas });
+        salvarPersonagem(ctx, doc, custo);
         continue;
       }
-      const primeira = !(doc.testeEquipeVencidas ?? []).includes(dificuldade);
-      const rec = recompensaDoTeste(dificuldade, primeira);
-      const motivo = `Teste de Equipe (dificuldade ${dificuldade})`;
-      doc = alterarSaldoEm(ctx, doc, 'ouro', rec.ouro, motivo).character;
-      doc = alterarSaldoEm(ctx, doc, 'diamantes', rec.diamantes, motivo).character;
-      const xp = ganharXp(doc, Math.floor(xpParaProximoNivel(doc.nivel) * rec.fracaoDeXp));
+      const conclusao = chaveDeConclusao(categoria, dificuldade);
+      const primeira = !(doc.testeEquipeConcluidas ?? []).includes(conclusao);
+      if (primeira) doc = alterarSaldoEm(ctx, doc, 'diamantes', regra.diamantesPrimeiraVez, `${NOME_DO_TESTE[categoria]} (${regra.nome}, primeira vez)`).character;
       const contratos = contarVitorias(doc.contratos, [chefe.id], hoje);
-      // Alma (7.8): poeira de alma e 1 carta por vitória, mais rara nas dificuldades altas
+      // Alma (7.8): 1 carta do teste (só da categoria), cacos e, no Inferno, poeira; no Muito difícil, a chance do selo
       const sorteio = sorteadorDaSemente(semente + indice * 104729);
-      const carta = entregarCartas(doc, [sortearTipoDaRaridade(sortearRaridadePorPesos(PESOS_DO_TESTE_DE_EQUIPE[dificuldade - 1], sorteio), sorteio)], semente + indice);
+      const carta = entregarCartas(doc, [sortearTipoDaRaridade(sortearRaridadePorPesos(regra.pesos, sorteio), sorteio, categoria)], semente + indice);
+      const ganhouSelo = dificuldade === DIFICULDADE_QUE_DA_SELO && sorteio() < CHANCE_DO_SELO;
+      if (ganhouSelo) selosGanhos++;
+      const selos = selosDepoisDaEntrada + (ganhouSelo ? 1 : 0);
       salvarPersonagem(ctx, doc, {
+        ...custo,
         ...carta.patch,
-        poeiraDeAlma: (doc.poeiraDeAlma ?? 0) + poeiraDoTeste(dificuldade, primeira),
-        ouro: doc.ouro,
+        cacosDeAlma: (carta.patch.cacosDeAlma ?? doc.cacosDeAlma ?? 0) + regra.cacos,
+        ...(regra.poeira ? { poeiraDeAlma: (doc.poeiraDeAlma ?? 0) + regra.poeira } : {}),
+        selosDoAbismo: selos || undefined,
         diamantes: doc.diamantes,
-        xpAtual: xp.xpAtual,
-        nivel: xp.nivel,
-        pontosDisponiveis: xp.pontosDisponiveis,
-        testeEquipeTentativas: tentativas,
-        testeEquipeVencidas: primeira ? [...(doc.testeEquipeVencidas ?? []), dificuldade].sort((a, b) => a - b) : doc.testeEquipeVencidas ?? [],
+        ...(primeira ? { testeEquipeConcluidas: [...(doc.testeEquipeConcluidas ?? []), conclusao] } : {}),
         ...(contratos ? { contratos } : {}),
       });
     }
-    const resultado: ResultadoDaParty = { dificuldade, venceu, rodadas: r.rodadas, em: new Date().toISOString(), aliados: r.aliados };
+    const resultado: ResultadoDaParty = { categoria, dificuldade, venceu, rodadas: r.rodadas, em: new Date().toISOString(), aliados: r.aliados };
     ctx.gravarParty({ ...p, membros: p.membros.map((m) => ({ ...m, pronto: false })), atualizadaEm: resultado.em, ultimoResultado: resultado });
-    const rec = recompensaDoTeste(dificuldade, false);
+    const titulo = `${NOME_DO_TESTE[categoria]} (${regra.nome})`;
+    const extras = [regra.poeira ? `${regra.poeira} de poeira de alma` : '', selosGanhos ? `${selosGanhos} selo(s) do abismo na party` : ''].filter(Boolean);
     return {
       mensagem: venceu
-        ? `Vitória! ${chefe.nome} caiu em ${r.rodadas} rodadas. Cada um recebeu ${rec.ouro} de ouro, XP, diamantes, poeira de alma e uma carta (mais ouro, diamantes e poeira na primeira vitória).`
-        : `Derrota diante de ${chefe.nome}. A tentativa de hoje desta dificuldade foi usada.`,
+        ? `Vitória no ${titulo}! ${chefe.nome} caiu em ${r.rodadas} rodadas. Cada um recebeu ${regra.cacos} cacos de alma e uma carta${extras.length ? `, além de ${extras.join(' e ')}` : ''} (e diamantes na primeira conclusão).`
+        : `Derrota no ${titulo} diante de ${chefe.nome}. ${pedeSelo ? 'O selo' : 'A chave'} de cada um foi gast${pedeSelo ? 'o' : 'a'}.`,
       resultado,
     };
   });
