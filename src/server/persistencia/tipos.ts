@@ -8,6 +8,8 @@ import type { ConfiguracaoDeSistemas } from '@/rules/sistemas';
 import { chaveDoNomeDaGuilda, type GuildaDocumento } from '@/rules/guilda';
 import type { EntradaDoChefeSemanal } from '@/rules/chefeSemanal';
 import type { PartyDocumento } from '@/rules/testeEquipe';
+import type { EntradaDoChefeMundial } from '@/rules/chefeMundial';
+import type { MensagemGeral } from '@/rules/correio';
 
 /**
  * Registro de um combate resolvido (0.5-B1/B3): guarda a semente e a entrada para
@@ -125,6 +127,11 @@ export interface ContextoTransacao {
   lerParty(id: string): Promise<PartyDocumento | null>;
   gravarParty(party: PartyDocumento): void;
   apagarParty(id: string): void;
+  /** Chefe Mundial: o melhor dano do jogador no dia. */
+  lerEntradaChefeMundial(dia: string, uid: string): Promise<EntradaDoChefeMundial | null>;
+  gravarEntradaChefeMundial(entrada: EntradaDoChefeMundial): void;
+  /** Correio: uma mensagem para todos (para resgatar o presente dela). */
+  lerMensagemGeral(id: string): Promise<MensagemGeral | null>;
 }
 
 /** Papel de Mestre concedido pelo painel (o Dono vem do ambiente e não é gravado aqui). */
@@ -273,6 +280,14 @@ export interface Repositorio {
   lerEntradaChefeSemanal(semana: string, guildaId: string): Promise<EntradaDoChefeSemanal | null>;
   /** Party do Teste de Equipe (7.4), fora de transação. */
   lerParty(id: string): Promise<PartyDocumento | null>;
+  /** Chefe Mundial: os jogadores do dia com mais dano. */
+  listarChefeMundial(dia: string, limite: number): Promise<EntradaDoChefeMundial[]>;
+  /** Quantos jogadores do dia têm mais dano (a posição é isso + 1). */
+  contarAcimaNoChefeMundial(dia: string, dano: number): Promise<number>;
+  lerEntradaChefeMundial(dia: string, uid: string): Promise<EntradaDoChefeMundial | null>;
+  /** Correio: as mensagens para todos criadas a partir de `desde` (ISO), das mais novas para as mais antigas. */
+  listarMensagensGerais(desde: string, limite: number): Promise<MensagemGeral[]>;
+  gravarMensagemGeral(mensagem: MensagemGeral): Promise<void>;
 }
 
 /**

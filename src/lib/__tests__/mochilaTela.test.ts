@@ -49,10 +49,10 @@ describe('Itens da Mochila por aba', () => {
 });
 
 describe('Saldos e emblemas da Mochila', () => {
-  it('mostra as cinco moedas formatadas em português, com zero quando não há', () => {
-    const s = saldosDaMochila({ ouro: 12500, diamantes: 3, fragmentosAlma: undefined, essenciaHabilidade: 1000000, fragmentosAscensao: 0 });
-    expect(s.map((x) => x.id)).toEqual(['ouro', 'diamantes', 'fragmentosAlma', 'essenciaHabilidade', 'fragmentosAscensao']);
-    expect(s.map((x) => x.valor)).toEqual(['12.500', '3', '0', '1.000.000', '0']);
+  it('mostra as seis moedas (com a Essência de Soberano) formatadas em português, com zero quando não há', () => {
+    const s = saldosDaMochila({ ouro: 12500, diamantes: 3, fragmentosAlma: undefined, essenciaHabilidade: 1000000, fragmentosAscensao: 0, essenciaDeSoberano: 40 });
+    expect(s.map((x) => x.id)).toEqual(['ouro', 'diamantes', 'fragmentosAlma', 'essenciaHabilidade', 'fragmentosAscensao', 'essenciaDeSoberano']);
+    expect(s.map((x) => x.valor)).toEqual(['12.500', '3', '0', '1.000.000', '0', '40']);
   });
 
   it('resume os emblemas guardados e equipados', () => {

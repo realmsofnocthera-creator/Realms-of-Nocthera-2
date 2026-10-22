@@ -11,6 +11,7 @@ import type { FichaDoJogador } from '@/server/jogadores';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { Cartao, chamar, OURO, VERMELHO } from '@/components/mestre/comum';
 import type { SessaoDoPainel } from '@/components/mestre/MestrePainel';
+import { CorreioDoMestre } from '@/components/mestre/CorreioDoMestre';
 
 type Token = () => Promise<string>;
 const COR_DO_TOM = { ok: '#7BC47F', aviso: '#E6C775', perigo: VERMELHO } as const;
@@ -132,6 +133,7 @@ export function JogadoresPainel({ sessao, tokenFresco }: { sessao: SessaoDoPaine
         />
       )}
       {ficha && <Transacoes ficha={ficha} />}
+      {podeAjustar && <CorreioDoMestre key={ficha?.uid ?? 'todos'} tokenFresco={tokenFresco} jogador={ficha ? { uid: ficha.uid, nome: ficha.personagem.nome } : null} />}
     </div>
   );
 }

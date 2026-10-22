@@ -2,6 +2,8 @@ import { bonusDasCartas, bonusVazio, type BonusDeAlma } from '@/game/almas';
 import { atributosDosColecionaveis } from '@/game/colecionaveis';
 import type { ColecionaveisDoJogador, SelosDoJogador } from '@/rules/colecionaveis';
 import type { ExpedicaoEmAndamento } from '@/rules/expedicao';
+import type { CorreioGeralDoJogador, MensagemDoCorreio } from '@/rules/correio';
+import type { ParticipacaoNoChefeMundial } from '@/rules/chefeMundial';
 import type { CartaItem } from '@/rules/almas';
 import type { BonusDeGuilda } from '@/rules/pesquisa';
 import type { ParticipacaoNoChefeSemanal } from '@/rules/chefeSemanal';
@@ -234,6 +236,13 @@ export interface CharacterDocument {
   colecionaveis?: ColecionaveisDoJogador;
   fragmentosDeMemoria?: number;
   pedrasDaRecordacao?: number;
+  /** Essência de Soberano: a moeda da loja (vem do Chefe Mundial). */
+  essenciaDeSoberano?: number;
+  /** Correio: as mensagens do jogador e o que ele fez com as mensagens para todos. */
+  correio?: MensagemDoCorreio[];
+  correioGeral?: CorreioGeralDoJogador;
+  /** Chefe Mundial: os dias em que lutou (os 30 últimos) e se a recompensa já foi para o Correio. */
+  chefeMundial?: ParticipacaoNoChefeMundial[];
   /** Expedição: as expedições nas vagas (até 3) e os Avanços de expedição guardados. */
   expedicoes?: ExpedicaoEmAndamento[];
   avancosDeExpedicao?: number;
@@ -303,7 +312,8 @@ export interface TransactionDocument {
     | 'fragmentosAlma'
     | 'fragmentosSubclasse'
     | 'essenciaHabilidade'
-    | 'fragmentosAscensao';
+    | 'fragmentosAscensao'
+    | 'essenciaDeSoberano';
   motivo: string;
   timestamp: string;
 }
@@ -320,7 +330,7 @@ export function calcularXpComBonusRacial(xpBase: number, racaId: string): number
   return xpBase;
 }
 
-export type Moeda = 'ouro' | 'diamantes' | 'fragmentosAlma' | 'essenciaHabilidade' | 'fragmentosAscensao';
+export type Moeda = 'ouro' | 'diamantes' | 'fragmentosAlma' | 'essenciaHabilidade' | 'fragmentosAscensao' | 'essenciaDeSoberano';
 
 const MENSAGEM_SALDO_INSUFICIENTE: Record<Moeda, string> = {
   ouro: 'Ouro insuficiente',
@@ -328,6 +338,7 @@ const MENSAGEM_SALDO_INSUFICIENTE: Record<Moeda, string> = {
   fragmentosAlma: 'Fragmentos de alma insuficientes',
   essenciaHabilidade: 'Essência de habilidade insuficiente',
   fragmentosAscensao: 'Fragmentos de ascensão insuficientes',
+  essenciaDeSoberano: 'Essência de Soberano insuficiente',
 };
 
 const MENSAGEM_DELTA_INVALIDO: Record<Moeda, string> = {
@@ -339,6 +350,8 @@ const MENSAGEM_DELTA_INVALIDO: Record<Moeda, string> = {
     'Delta de essência de habilidade inválido: deve ser um número inteiro diferente de zero.',
   fragmentosAscensao:
     'Delta de fragmentos de ascensão inválido: deve ser um número inteiro diferente de zero.',
+  essenciaDeSoberano:
+    'Delta de Essência de Soberano inválido: deve ser um número inteiro diferente de zero.',
 };
 
 function novoIdTransacao(): string {
@@ -1009,7 +1022,7 @@ export async function zerarProgressaoPorMestre(uid: string, motivo: string): Pro
     if (atual.bonusSubclasseAplicado) atributos = removerBonusSubclasse(atributos, atual.bonusSubclasseAplicado);
 
     let corrente = atual;
-    const moedas: Moeda[] = ['ouro', 'diamantes', 'fragmentosAlma', 'essenciaHabilidade', 'fragmentosAscensao'];
+    const moedas: Moeda[] = ['ouro', 'diamantes', 'fragmentosAlma', 'essenciaHabilidade', 'fragmentosAscensao', 'essenciaDeSoberano'];
     for (const moeda of moedas) {
       const saldo = (corrente[moeda] as number | undefined) ?? 0;
       if (saldo > 0) corrente = alterarSaldoEm(ctx, corrente, moeda, -saldo, motivo).character;

@@ -79,7 +79,7 @@ export function itensDaMochila(inventario: Record<string, number> | undefined): 
 }
 
 export interface SaldoMochila {
-  id: 'ouro' | 'diamantes' | 'fragmentosAlma' | 'essenciaHabilidade' | 'fragmentosAscensao';
+  id: 'ouro' | 'diamantes' | 'fragmentosAlma' | 'essenciaHabilidade' | 'fragmentosAscensao' | 'essenciaDeSoberano';
   rotulo: string;
   valor: string;
 }
@@ -87,13 +87,16 @@ export interface SaldoMochila {
 const formatar = (n: number | undefined) => (n ?? 0).toLocaleString('pt-BR');
 
 /** Faixa de saldos do topo da Mochila. */
-export function saldosDaMochila(c: Pick<CharacterDocument, 'ouro' | 'diamantes' | 'fragmentosAlma' | 'essenciaHabilidade' | 'fragmentosAscensao'>): SaldoMochila[] {
+export function saldosDaMochila(
+  c: Pick<CharacterDocument, 'ouro' | 'diamantes' | 'fragmentosAlma' | 'essenciaHabilidade' | 'fragmentosAscensao'> & Partial<Pick<CharacterDocument, 'essenciaDeSoberano'>>
+): SaldoMochila[] {
   return [
     { id: 'ouro', rotulo: 'Ouro', valor: formatar(c.ouro) },
     { id: 'diamantes', rotulo: 'Diamantes', valor: formatar(c.diamantes) },
     { id: 'fragmentosAlma', rotulo: 'Fragmentos de alma', valor: formatar(c.fragmentosAlma) },
     { id: 'essenciaHabilidade', rotulo: 'Essência de habilidade', valor: formatar(c.essenciaHabilidade) },
     { id: 'fragmentosAscensao', rotulo: 'Fragmentos de ascensão', valor: formatar(c.fragmentosAscensao) },
+    { id: 'essenciaDeSoberano', rotulo: 'Essência de Soberano', valor: formatar(c.essenciaDeSoberano) },
   ];
 }
 
