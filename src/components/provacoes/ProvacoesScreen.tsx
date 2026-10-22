@@ -158,13 +158,12 @@ export function ProvacoesScreen({ personagem }: ProvacoesScreenProps) {
 
   // Disposição exata conforme o layout de referência:
   // Linha 1 (Topo - 2 colunas): Batalha Sangrenta (esq) | Guerreiro (dir)
-  // Linha 2 (Meio - Assimétrica): Dungeons vertical (esq) | Chefe Mundial + Caçada empilhados (dir)
+  // Linha 2 (Meio - 2 colunas): Chefe Mundial (esq) | Caçada (dir); a Provação de Dungeons saiu do catálogo (Yuri, 22/10/2026)
   // Linha 3 (Base - 2 colunas): Torre Celestial (esq) | Teste de Equipe (dir)
   const cardTopoEsq = obterProvacao('batalha-sangrenta');
   const cardTopoDir = obterProvacao('guerreiro');
-  const cardMeioVerticalEsq = obterProvacao('dungeons');
-  const cardMeioDirTopo = obterProvacao('chefe-mundial');
-  const cardMeioDirBase = obterProvacao('cacada');
+  const cardMeioEsq = obterProvacao('chefe-mundial');
+  const cardMeioDir = obterProvacao('cacada');
   const cardBaseEsq = obterProvacao('torre-celestial');
   const cardBaseDir = obterProvacao('teste-equipe');
 
@@ -239,7 +238,7 @@ export function ProvacoesScreen({ personagem }: ProvacoesScreenProps) {
           </div>
         </header>
 
-        {/* MOSAICO DE 7 PROVAÇÕES (Disposição idêntica à imagem de referência) */}
+        {/* MOSAICO DAS 6 PROVAÇÕES: 3 linhas de 2 cards */}
         <section aria-label="Lista de Provações" className="w-full flex flex-col gap-2.5 sm:gap-3">
           {/* LINHA 1: 2 Cards Horizontais Lado a Lado */}
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
@@ -255,28 +254,18 @@ export function ProvacoesScreen({ personagem }: ProvacoesScreenProps) {
             />
           </div>
 
-          {/* LINHA 2: Card Vertical Alto à Esquerda + 2 Cards Horizontais Empilhados à Direita */}
-          <div className="grid grid-cols-12 gap-2.5 sm:gap-3 items-stretch">
-            <div className="col-span-5 flex">
-              <ProvacaoCard
-                provacao={cardMeioVerticalEsq}
-                nivelPersonagem={personagem.nivel}
-                variant="vertical"
-              />
-            </div>
-
-            <div className="col-span-7 flex flex-col justify-between gap-2.5 sm:gap-3">
-              <ProvacaoCard
-                provacao={cardMeioDirTopo}
-                nivelPersonagem={personagem.nivel}
-                variant="stacked"
-              />
-              <ProvacaoCard
-                provacao={cardMeioDirBase}
-                nivelPersonagem={personagem.nivel}
-                variant="stacked"
-              />
-            </div>
+          {/* LINHA 2: 2 Cards Horizontais Lado a Lado */}
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+            <ProvacaoCard
+              provacao={cardMeioEsq}
+              nivelPersonagem={personagem.nivel}
+              variant="horizontal"
+            />
+            <ProvacaoCard
+              provacao={cardMeioDir}
+              nivelPersonagem={personagem.nivel}
+              variant="horizontal"
+            />
           </div>
 
           {/* LINHA 3: 2 Cards Horizontais Lado a Lado na Base */}

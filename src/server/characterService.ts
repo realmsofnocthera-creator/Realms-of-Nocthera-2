@@ -1,4 +1,6 @@
-import { bonusDasCartas, type BonusDeAlma } from '@/game/almas';
+import { bonusDasCartas, bonusVazio, type BonusDeAlma } from '@/game/almas';
+import { atributosDosColecionaveis } from '@/game/colecionaveis';
+import type { ColecionaveisDoJogador, SelosDoJogador } from '@/rules/colecionaveis';
 import type { CartaItem } from '@/rules/almas';
 import type { BonusDeGuilda } from '@/rules/pesquisa';
 import type { ParticipacaoNoChefeSemanal } from '@/rules/chefeSemanal';
@@ -225,6 +227,12 @@ export interface CharacterDocument {
   bonusDeGuilda?: BonusDeGuilda;
   /** Chefe de guildas (7.3): as semanas em que lutou (as 4 últimas) e se já resgatou. */
   chefeSemanal?: ParticipacaoNoChefeSemanal[];
+  /** Buscar e Colecionáveis: os selos de busca, o andamento da garantia por selo, os colecionáveis e as moedas deles. */
+  selosDeBusca?: SelosDoJogador;
+  garantiaDaBusca?: SelosDoJogador;
+  colecionaveis?: ColecionaveisDoJogador;
+  fragmentosDeMemoria?: number;
+  pedrasDaRecordacao?: number;
   /** Teste de Equipe (7.4): as dificuldades concluídas de cada teste ("alma:3"), as chaves da provação e os selos do abismo. */
   testeEquipeConcluidas?: string[];
   chavesDaProvacao?: ChavesDaProvacao;
@@ -457,16 +465,25 @@ function mesclarPersonagem(
   };
 }
 
-/** O bônus das cartas equipadas e da coleção (só a partir do nível da Alma); undefined se não há nada. */
-function bonusDeAlmaDe(char: Partial<Pick<CharacterDocument, 'cartasItens' | 'cartasEquipadas' | 'cartasDescobertas' | 'nivel'>>): BonusDeAlma | undefined {
-  if (!char.cartasItens?.length && !char.cartasDescobertas?.length) return undefined;
-  return bonusDasCartas(char.cartasItens ?? [], char.cartasEquipadas ?? [], char.cartasDescobertas ?? [], char.nivel ?? 1);
+/**
+ * O bônus passivo da Alma (cartas equipadas e coleção, só a partir do nível da Alma) somado aos atributos dos
+ * colecionáveis ativados; undefined se não há nada.
+ */
+function bonusDeAlmaDe(char: Partial<Pick<CharacterDocument, 'cartasItens' | 'cartasEquipadas' | 'cartasDescobertas' | 'nivel' | 'colecionaveis'>>): BonusDeAlma | undefined {
+  const temCartas = !!char.cartasItens?.length || !!char.cartasDescobertas?.length;
+  const temColecionaveis = !!char.colecionaveis && Object.keys(char.colecionaveis).length > 0;
+  if (!temCartas && !temColecionaveis) return undefined;
+  const bonus = temCartas ? bonusDasCartas(char.cartasItens ?? [], char.cartasEquipadas ?? [], char.cartasDescobertas ?? [], char.nivel ?? 1) : bonusVazio();
+  if (!temColecionaveis) return bonus;
+  const dosColecionaveis = atributosDosColecionaveis(char.colecionaveis);
+  for (const a of ATTRIBUTES) bonus.atributos[a] += dosColecionaveis[a];
+  return bonus;
 }
 
 /** Atributos que valem em combate e nos derivados: os gravados, o Reforço de Habilidade e o equipamento equipado. */
 export function atributosEfetivos(
   char: Pick<CharacterDocument, 'atributos' | 'reforcoHabilidade'> &
-    Partial<Pick<CharacterDocument, 'equipamento' | 'armas' | 'armaduras' | 'emblemasItens' | 'emblemasEquipados' | 'cartasItens' | 'cartasEquipadas' | 'cartasDescobertas' | 'nivel'>>
+    Partial<Pick<CharacterDocument, 'equipamento' | 'armas' | 'armaduras' | 'emblemasItens' | 'emblemasEquipados' | 'cartasItens' | 'cartasEquipadas' | 'cartasDescobertas' | 'nivel' | 'colecionaveis'>>
 ): Attributes {
   const comReforco = aplicarReforcoAtributos(char.atributos, char.reforcoHabilidade);
   const emblemas = emblemasEquipadosDe(char);
@@ -913,6 +930,8 @@ export interface AjusteDoMestre {
   xp?: number;
   /** Variação por material (mochila). Resultado negativo é recusado; zero remove a entrada. */
   materiais?: Record<string, number>;
+  /** Variação dos selos de busca, dos Fragmentos de Memória e das Pedras da Recordação. Resultado negativo é recusado. */
+  colecionaveis?: { selos: SelosDoJogador; fragmentosDeMemoria?: number; pedrasDaRecordacao?: number };
 }
 
 /**
@@ -949,6 +968,23 @@ export async function ajustarPersonagemPorMestre(uid: string, ajuste: AjusteDoMe
         else inventario[id] = novo;
       }
       patch.inventario = inventario;
+    }
+    if (ajuste.colecionaveis) {
+      const selos: SelosDoJogador = { ...(atual.selosDeBusca ?? {}) };
+      for (const [selo, delta] of Object.entries(ajuste.colecionaveis.selos) as [keyof SelosDoJogador, number][]) {
+        const novo = (selos[selo] ?? 0) + delta;
+        if (novo < 0) throw new Error(`Selos insuficientes: ${selo}`);
+        if (novo === 0) delete selos[selo];
+        else selos[selo] = novo;
+      }
+      patch.selosDeBusca = Object.keys(selos).length ? selos : undefined;
+      for (const saldo of ['fragmentosDeMemoria', 'pedrasDaRecordacao'] as const) {
+        const delta = ajuste.colecionaveis[saldo];
+        if (!delta) continue;
+        const novo = (atual[saldo] ?? 0) + delta;
+        if (novo < 0) throw new Error(`Saldo insuficiente: ${saldo}`);
+        patch[saldo] = novo || undefined;
+      }
     }
     return salvarPersonagem(ctx, atual, patch);
   });

@@ -166,6 +166,30 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(personagemDoFirestore('u1', { ...antigo, convitesDeParty: ['../x', 3, 'p_aaaaaaaaaaaa', 'p_aaaaaaaaaaaa'] }).convitesDeParty).toEqual(['p_aaaaaaaaaaaa']);
   });
 
+  it('guarda os selos de busca, a garantia, os colecionáveis e as moedas deles; descarta o que é inválido', () => {
+    const doc = personagemParaFirestore({
+      ...PERSONAGEM,
+      selosDeBusca: { desgastado: 40, origem: 10 },
+      garantiaDaBusca: { desgastado: 3 },
+      colecionaveis: { 'RI-C01': { fragmentos: 5, nivel: 7, estrelas: 1 }, 'SO-M01': { fragmentos: 12 } },
+      fragmentosDeMemoria: 300,
+      pedrasDaRecordacao: 4,
+    });
+    expect(personagemDoFirestore('u1', doc)).toMatchObject({
+      selosDeBusca: { desgastado: 40, origem: 10 },
+      garantiaDaBusca: { desgastado: 3 },
+      colecionaveis: { 'RI-C01': { fragmentos: 5, nivel: 7, estrelas: 1 }, 'SO-M01': { fragmentos: 12 } },
+      fragmentosDeMemoria: 300,
+      pedrasDaRecordacao: 4,
+    });
+    const antigo = personagemParaFirestore(PERSONAGEM);
+    for (const campo of ['selosDeBusca', 'garantiaDaBusca', 'colecionaveis', 'fragmentosDeMemoria', 'pedrasDaRecordacao']) expect(antigo).not.toHaveProperty(campo);
+    const lido = personagemDoFirestore('u1', { ...antigo, selosDeBusca: { origem: -1, falso: 3 }, colecionaveis: { 'XX-C01': { fragmentos: 3 } }, pedrasDaRecordacao: 'muitas' });
+    expect(lido.selosDeBusca).toBeUndefined();
+    expect(lido.colecionaveis).toBeUndefined();
+    expect(lido.pedrasDaRecordacao).toBeUndefined();
+  });
+
   it('guarda o progresso, as chaves da provação e os selos do abismo do Teste de Equipe (7.4)', () => {
     const chaves = { dia: '2026-10-22', gratisUsadas: 2, compradasHoje: 1, guardadas: 1 };
     const doc = personagemParaFirestore({ ...PERSONAGEM, testeEquipeConcluidas: ['alma:1', 'alma:2'], chavesDaProvacao: chaves, selosDoAbismo: 2 });
