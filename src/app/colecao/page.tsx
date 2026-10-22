@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { ColecaoScreen } from '@/components/alma/ColecaoScreen';
+import { ColecaoScreen } from '@/components/colecao/ColecaoScreen';
 import { usePersonagemLogado } from '@/lib/usePersonagemLogado';
 import { NOCTHERA_THEME } from '@/theme/theme';
 
 export default function ColecaoPage() {
-  const { character, loading } = usePersonagemLogado();
+  const { character, loading, tokenFresco } = usePersonagemLogado();
   if (loading || !character) {
     const { colors } = NOCTHERA_THEME;
     return (
@@ -15,5 +15,5 @@ export default function ColecaoPage() {
       </main>
     );
   }
-  return <ColecaoScreen personagem={character} />;
+  return <ColecaoScreen personagem={character} tokenFresco={tokenFresco} />;
 }

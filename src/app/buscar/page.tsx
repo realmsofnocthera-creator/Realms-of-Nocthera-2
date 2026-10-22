@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { BuscarScreen } from '@/components/social/BuscarScreen';
+import { BuscaScreen } from '@/components/colecionaveis/BuscaScreen';
 import { usePersonagemLogado } from '@/lib/usePersonagemLogado';
 import { NOCTHERA_THEME } from '@/theme/theme';
 
@@ -15,5 +15,5 @@ export default function BuscarPage() {
       </main>
     );
   }
-  return <BuscarScreen tokenFresco={tokenFresco} />;
+  return <BuscaScreen tokenFresco={tokenFresco} />;
 }

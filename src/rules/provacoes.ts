@@ -1,6 +1,5 @@
 export type ProvacaoId =
   | 'teste-equipe'
-  | 'dungeons'
   | 'cacada'
   | 'chefe-mundial'
   | 'batalha-sangrenta'
@@ -9,7 +8,6 @@ export type ProvacaoId =
 
 export type ProvacaoAssetKey =
   | 'provacao-teste-equipe'
-  | 'provacao-dungeons'
   | 'provacao-cacada'
   | 'provacao-chefe-mundial'
   | 'provacao-batalha-sangrenta'
@@ -29,12 +27,6 @@ export const PROVACOES: readonly ProvacaoDefinition[] = [
     nome: 'Teste de Equipe',
     nivelRequerido: 25,
     assetKey: 'provacao-teste-equipe',
-  },
-  {
-    id: 'dungeons',
-    nome: 'Provação de Dungeons',
-    nivelRequerido: 15,
-    assetKey: 'provacao-dungeons',
   },
   {
     id: 'cacada',

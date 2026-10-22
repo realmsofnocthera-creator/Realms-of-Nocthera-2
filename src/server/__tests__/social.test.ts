@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET as rankingRota } from '@/app/api/ranking/route';
-import { GET as buscarRota } from '@/app/api/buscar/route';
+import { GET as buscarRota } from '@/app/api/jogadores/buscar/route';
 import { GET as privacidadeGet, POST as privacidadePost } from '@/app/api/character/privacidade/route';
 import { GET as publicoRota } from '@/app/api/character/public/[nome]/route';
 import { limparCacheRevogacao } from '@/server/auth';
@@ -96,7 +96,7 @@ describe('social (7.1)', () => {
     it('401 sem login', async () => {
       const sem = new NextRequest('http://t/api/ranking');
       expect((await rankingRota(sem)).status).toBe(401);
-      expect((await buscarRota(new NextRequest('http://t/api/buscar?q=ara'))).status).toBe(401);
+      expect((await buscarRota(new NextRequest('http://t/api/jogadores/buscar?q=ara'))).status).toBe(401);
       expect((await privacidadeGet(new NextRequest('http://t/api/character/privacidade'))).status).toBe(401);
     });
 
@@ -108,9 +108,9 @@ describe('social (7.1)', () => {
     });
 
     it('buscar: 200 com resultados e 400 com texto curto', async () => {
-      const ok = await buscarRota(req('/api/buscar?q=bor', 'u1'));
+      const ok = await buscarRota(req('/api/jogadores/buscar?q=bor', 'u1'));
       expect((await ok.json()).resultados.map((r: { nome: string }) => r.nome)).toEqual(['Boromir']);
-      expect((await buscarRota(req('/api/buscar?q=b', 'u1'))).status).toBe(400);
+      expect((await buscarRota(req('/api/jogadores/buscar?q=b', 'u1'))).status).toBe(400);
     });
 
     it('privacidade: lê e muda', async () => {

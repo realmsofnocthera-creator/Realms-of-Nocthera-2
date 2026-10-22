@@ -88,7 +88,7 @@ export function AlmaScreen({ personagem, tokenFresco }: { personagem: CharacterD
         <header className="flex items-center gap-2">
           <Link href="/personagem" aria-label="Voltar à Ficha" className="p-1"><ArrowLeft className="w-5 h-5" /></Link>
           <h1 className="text-2xl font-cinzel font-extrabold italic tracking-widest uppercase" style={{ color: '#F5E3B3' }}>Alma</h1>
-          <Link href="/colecao" className="ml-auto text-xs underline" style={{ color: colors.text.secondary }}>Coleção</Link>
+          <Link href="/colecao?aba=alma" className="ml-auto text-xs underline" style={{ color: colors.text.secondary }}>Coleção</Link>
         </header>
         {aviso && <p role={aviso.erro ? 'alert' : 'status'} className="text-sm font-semibold" style={{ color: aviso.erro ? VERMELHO : VERDE }}>{aviso.texto}</p>}
 

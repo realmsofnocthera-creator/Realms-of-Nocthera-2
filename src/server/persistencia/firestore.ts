@@ -19,6 +19,7 @@ import { chaveDeBusca, type CampoDoRanking, type CriterioDeRanking, type Ranking
 import { contratosDoDocumento } from '@/game/contratos';
 import { entradaDoDocumento, participacoesDoDocumento, type EntradaDoChefeSemanal } from '@/rules/chefeSemanal';
 import { chavesDoDocumento, partyDoDocumento, type PartyDocumento } from '@/rules/testeEquipe';
+import { colecionaveisDoDocumento, contadorPorSeloDoDocumento } from '@/rules/colecionaveis';
 import { bonusDeGuildaDoDocumento } from '@/rules/pesquisa';
 import { chaveDoNomeDaGuilda, guildaDoDocumento, type GuildaDocumento } from '@/rules/guilda';
 import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
@@ -132,6 +133,7 @@ function sancaoDoDocumento(uid: string, data: DocumentData | undefined): SancaoD
 }
 
 const inteiroOuNulo = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) ? v : null);
+const quantidadePositiva = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.floor(v) : 0);
 
 const CAMPOS_DO_RESUMO = ['tipo', 'id', 'nome', 'revisao', 'hashRascunho', 'editadoEm', 'editadoPor', 'criadoEm', 'criadoPor', 'versaoPublicada', 'hashPublicado', 'ultimaVersao'];
 const CAMPOS_DA_VERSAO = ['versao', 'hash', 'publicadoEm', 'publicadoPor', 'motivo', 'origem', 'revertidaDe'];
@@ -388,6 +390,11 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(Array.isArray(data.testeEquipeConcluidas) ? { testeEquipeConcluidas: (data.testeEquipeConcluidas as unknown[]).filter((x): x is string => typeof x === 'string') } : {}),
     ...(chavesDoDocumento(data.chavesDaProvacao) ? { chavesDaProvacao: chavesDoDocumento(data.chavesDaProvacao) } : {}),
     ...(typeof data.selosDoAbismo === 'number' && Number.isInteger(data.selosDoAbismo) && data.selosDoAbismo > 0 ? { selosDoAbismo: data.selosDoAbismo } : {}),
+    ...(contadorPorSeloDoDocumento(data.selosDeBusca) ? { selosDeBusca: contadorPorSeloDoDocumento(data.selosDeBusca) } : {}),
+    ...(contadorPorSeloDoDocumento(data.garantiaDaBusca) ? { garantiaDaBusca: contadorPorSeloDoDocumento(data.garantiaDaBusca) } : {}),
+    ...(colecionaveisDoDocumento(data.colecionaveis) ? { colecionaveis: colecionaveisDoDocumento(data.colecionaveis) } : {}),
+    ...(quantidadePositiva(data.fragmentosDeMemoria) ? { fragmentosDeMemoria: quantidadePositiva(data.fragmentosDeMemoria) } : {}),
+    ...(quantidadePositiva(data.pedrasDaRecordacao) ? { pedrasDaRecordacao: quantidadePositiva(data.pedrasDaRecordacao) } : {}),
     ...(typeof data.partyId === 'string' && data.partyId ? { partyId: data.partyId } : {}),
     ...(idsDeParty(data.convitesDeParty).length ? { convitesDeParty: idsDeParty(data.convitesDeParty) } : {}),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
@@ -456,6 +463,11 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.testeEquipeConcluidas?.length ? { testeEquipeConcluidas: char.testeEquipeConcluidas } : {}),
     ...(char.chavesDaProvacao ? { chavesDaProvacao: char.chavesDaProvacao } : {}),
     ...(char.selosDoAbismo ? { selosDoAbismo: char.selosDoAbismo } : {}),
+    ...(char.selosDeBusca && Object.keys(char.selosDeBusca).length ? { selosDeBusca: semUndefined(char.selosDeBusca) } : {}),
+    ...(char.garantiaDaBusca && Object.keys(char.garantiaDaBusca).length ? { garantiaDaBusca: semUndefined(char.garantiaDaBusca) } : {}),
+    ...(char.colecionaveis && Object.keys(char.colecionaveis).length ? { colecionaveis: semUndefined(char.colecionaveis) } : {}),
+    ...(char.fragmentosDeMemoria ? { fragmentosDeMemoria: char.fragmentosDeMemoria } : {}),
+    ...(char.pedrasDaRecordacao ? { pedrasDaRecordacao: char.pedrasDaRecordacao } : {}),
     ...(char.partyId ? { partyId: char.partyId } : {}),
     ...(char.convitesDeParty?.length ? { convitesDeParty: char.convitesDeParty } : {}),
     // campos derivados, só para o banco poder ordenar e buscar (7.1): o nome em minúsculas e os contadores das provações

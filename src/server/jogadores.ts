@@ -13,7 +13,7 @@ import {
 } from '@/rules/sancoes';
 import type { PapelMestre } from '@/rules/mestre';
 import { ajustarPersonagemPorMestre, zerarProgressaoPorMestre, type AjusteDoMestre, type CharacterDocument, type Moeda, type TransactionDocument } from '@/server/characterService';
-import { ehCampoDeAjuste, LIMITE_DE_MATERIAL_POR_PEDIDO, LIMITE_POR_CAMPO, MAXIMO_DE_MATERIAIS_POR_PEDIDO, NOME_DO_CAMPO } from '@/rules/ajustes';
+import { CAMPOS_DOS_COLECIONAVEIS, ehCampoDeAjuste, ehCampoDosColecionaveis, LIMITE_DE_MATERIAL_POR_PEDIDO, LIMITE_POR_CAMPO, MAXIMO_DE_MATERIAIS_POR_PEDIDO, NOME_DO_CAMPO } from '@/rules/ajustes';
 import { MATERIAIS_MAP } from '@/rules/materiais';
 import { MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
 import { adminAuth } from '@/server/firebaseAdmin';
@@ -260,6 +260,11 @@ export async function ajustarJogador(sessao: SessaoMestre, uidAlvo: unknown, ped
     if (campo === 'xp') {
       if (valor < 0) throw new ErroMestre(400, 'XP só pode ser concedido, não retirado.');
       ajuste.xp = valor;
+    } else if (ehCampoDosColecionaveis(campo)) {
+      const alvo = CAMPOS_DOS_COLECIONAVEIS[campo];
+      ajuste.colecionaveis ??= { selos: {} };
+      if ('selo' in alvo) ajuste.colecionaveis.selos[alvo.selo] = valor;
+      else ajuste.colecionaveis[alvo.saldo] = valor;
     } else ajuste.moedas[campo as Moeda] = valor;
     resumo[campo] = valor;
   }

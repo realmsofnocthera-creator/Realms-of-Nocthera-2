@@ -26,8 +26,11 @@ interface Perfil {
   sobre: string;
 }
 
-/** Buscar (7.1): procura jogadores pelo começo do nome e mostra o perfil público. */
-export function BuscarScreen({ tokenFresco }: { tokenFresco: () => Promise<string | null> }) {
+/**
+ * Procurar jogador (7.1): procura jogadores pelo começo do nome e mostra o perfil público. Saiu do card Buscar do Menu
+ * (que agora é a roleta de colecionáveis) e vai para o futuro botão de Amizades (decisão do Yuri em 22/10/2026).
+ */
+export function ProcurarJogadorScreen({ tokenFresco }: { tokenFresco: () => Promise<string | null> }) {
   const { colors } = NOCTHERA_THEME;
   const [texto, setTexto] = useState('');
   const [resultados, setResultados] = useState<Resultado[] | null>(null);
@@ -40,7 +43,7 @@ export function BuscarScreen({ tokenFresco }: { tokenFresco: () => Promise<strin
     setMensagem(null);
     try {
       const token = await tokenFresco();
-      const res = await fetch(`/api/buscar?q=${encodeURIComponent(texto)}`, { headers: { Authorization: `Bearer ${token ?? ''}` } });
+      const res = await fetch(`/api/jogadores/buscar?q=${encodeURIComponent(texto)}`, { headers: { Authorization: `Bearer ${token ?? ''}` } });
       const corpo = (await res.json().catch(() => ({}))) as { resultados?: Resultado[]; error?: string };
       if (!res.ok) {
         setResultados(null);
@@ -72,7 +75,7 @@ export function BuscarScreen({ tokenFresco }: { tokenFresco: () => Promise<strin
       <div className="w-full max-w-[480px] flex flex-col gap-3">
         <header className="flex items-center gap-2">
           <Link href="/menu" aria-label="Voltar ao Menu" className="p-1"><ArrowLeft className="w-5 h-5" /></Link>
-          <h1 className="text-2xl font-cinzel font-extrabold italic tracking-widest uppercase" style={{ color: '#F5E3B3' }}>Buscar</h1>
+          <h1 className="text-2xl font-cinzel font-extrabold italic tracking-widest uppercase" style={{ color: '#F5E3B3' }}>Procurar jogador</h1>
         </header>
         <form onSubmit={(e) => void buscar(e)} className="flex gap-2">
           <input value={texto} onChange={(e) => setTexto(e.target.value)} maxLength={24} placeholder="Começo do nome do jogador" aria-label="Nome do jogador" className="flex-1 rounded-sm border-2 px-2 py-1.5 text-sm bg-transparent" style={{ borderColor: '#C8A656' }} />

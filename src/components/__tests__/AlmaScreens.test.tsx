@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AlmaScreen } from '@/components/alma/AlmaScreen';
-import { ColecaoScreen } from '@/components/alma/ColecaoScreen';
+import { ColecaoDaAlma } from '@/components/alma/ColecaoDaAlma';
 import { tiposDaRaridadeDeCarta } from '@/rules/almas';
 import type { CharacterDocument } from '@/server/characterService';
 
@@ -43,7 +43,7 @@ describe('Telas da Alma (7.8)', () => {
   });
 
   it('Coleção: 54 cartas, as descobertas aparecem com o nome e as outras como ???', () => {
-    const html = renderToStaticMarkup(<ColecaoScreen personagem={{ ...base, cartasDescobertas: [tipo.id] } as CharacterDocument} />);
+    const html = renderToStaticMarkup(<ColecaoDaAlma personagem={{ ...base, cartasDescobertas: [tipo.id] } as CharacterDocument} />);
     expect(html).toContain('de 54 cartas');
     expect(html).toContain(tipo.nome);
     expect(html).toContain('???');
