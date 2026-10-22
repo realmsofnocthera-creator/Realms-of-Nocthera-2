@@ -3,6 +3,7 @@ import { resolverCombateEmGrupo } from '@/game/combat';
 import { contarVitorias } from '@/game/contratos';
 import { diaDeBrasilia } from '@/game/batalhaSangrenta';
 import {
+  CARTAS_POR_VITORIA,
   CHANCE_DO_SELO,
   CATEGORIAS_DO_TESTE,
   CHAVES_GRATIS_POR_DIA,
@@ -78,7 +79,8 @@ export interface DificuldadeNaTela {
   concluida: boolean;
   /** O que cada membro gasta para entrar. */
   custo: 'chave' | 'selo';
-  raridades: EmblemaRaridade[];
+  /** As raridades possíveis e a chance (%) de cada carta. */
+  raridades: { raridade: EmblemaRaridade; chance: number }[];
   cacos: number;
   poeira: number;
   /** Diamantes da primeira conclusão (0 se já concluiu). */
@@ -318,9 +320,10 @@ export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificu
       const primeira = !(doc.testeEquipeConcluidas ?? []).includes(conclusao);
       if (primeira) doc = alterarSaldoEm(ctx, doc, 'diamantes', regra.diamantesPrimeiraVez, `${NOME_DO_TESTE[categoria]} (${regra.nome}, primeira vez)`).character;
       const contratos = contarVitorias(doc.contratos, [chefe.id], hoje);
-      // Alma (7.8): 1 carta do teste (só da categoria), cacos e, no Inferno, poeira; no Muito difícil, a chance do selo
+      // Alma (7.8): 3 cartas do teste (só da categoria, cada uma sorteada à parte), cacos e, no Inferno, poeira; no Muito difícil, a chance do selo
       const sorteio = sorteadorDaSemente(semente + indice * 104729);
-      const carta = entregarCartas(doc, [sortearTipoDaRaridade(sortearRaridadePorPesos(regra.pesos, sorteio), sorteio, categoria)], semente + indice);
+      const tipos = Array.from({ length: CARTAS_POR_VITORIA }, () => sortearTipoDaRaridade(sortearRaridadePorPesos(regra.pesos, sorteio), sorteio, categoria));
+      const carta = entregarCartas(doc, tipos, semente + indice);
       const ganhouSelo = dificuldade === DIFICULDADE_QUE_DA_SELO && sorteio() < CHANCE_DO_SELO;
       if (ganhouSelo) selosGanhos++;
       const selos = selosDepoisDaEntrada + (ganhouSelo ? 1 : 0);
@@ -341,7 +344,7 @@ export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificu
     const extras = [regra.poeira ? `${regra.poeira} de poeira de alma` : '', selosGanhos ? `${selosGanhos} selo(s) do abismo na party` : ''].filter(Boolean);
     return {
       mensagem: venceu
-        ? `Vitória no ${titulo}! ${chefe.nome} caiu em ${r.rodadas} rodadas. Cada um recebeu ${regra.cacos} cacos de alma e uma carta${extras.length ? `, além de ${extras.join(' e ')}` : ''} (e diamantes na primeira conclusão).`
+        ? `Vitória no ${titulo}! ${chefe.nome} caiu em ${r.rodadas} rodadas. Cada um recebeu ${regra.cacos} cacos de alma e ${CARTAS_POR_VITORIA} cartas${extras.length ? `, além de ${extras.join(' e ')}` : ''} (e diamantes na primeira conclusão).`
         : `Derrota no ${titulo} diante de ${chefe.nome}. ${pedeSelo ? 'O selo' : 'A chave'} de cada um foi gast${pedeSelo ? 'o' : 'a'}.`,
       resultado,
     };
