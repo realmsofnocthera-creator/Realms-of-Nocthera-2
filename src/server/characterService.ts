@@ -2,6 +2,7 @@ import { bonusDasCartas, type BonusDeAlma } from '@/game/almas';
 import type { CartaItem } from '@/rules/almas';
 import type { BonusDeGuilda } from '@/rules/pesquisa';
 import type { ParticipacaoNoChefeSemanal } from '@/rules/chefeSemanal';
+import type { ChavesDaProvacao } from '@/rules/testeEquipe';
 import { contarVitorias, type ContratosDoDia } from '@/game/contratos';
 import { ATTRIBUTES, AttributeName, Attributes } from '@/rules/attributes';
 import { GAME_CONFIG } from '@/rules/config';
@@ -224,9 +225,10 @@ export interface CharacterDocument {
   bonusDeGuilda?: BonusDeGuilda;
   /** Chefe de guildas (7.3): as semanas em que lutou (as 4 últimas) e se já resgatou. */
   chefeSemanal?: ParticipacaoNoChefeSemanal[];
-  /** Teste de Equipe (7.4): o dia da última tentativa de cada dificuldade e as dificuldades já vencidas. */
-  testeEquipeTentativas?: Record<string, string>;
-  testeEquipeVencidas?: number[];
+  /** Teste de Equipe (7.4): as dificuldades concluídas de cada teste ("alma:3"), as chaves da provação e os selos do abismo. */
+  testeEquipeConcluidas?: string[];
+  chavesDaProvacao?: ChavesDaProvacao;
+  selosDoAbismo?: number;
   /** Party (7.4): a party em que está e os convites de party esperando resposta (ids). */
   partyId?: string;
   convitesDeParty?: string[];

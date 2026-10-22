@@ -247,26 +247,9 @@ export function lerCartasPersonagem(itensBrutos: unknown, equipadasBrutas: unkno
 }
 
 /**
- * Origem das cartas (decidida pelo Yuri em 22/10/2026: Teste de Equipe, Chefe de guildas e Incursões). As chances e as
- * raridades de cada fonte são PROPOSTA, a confirmar.
+ * Origem das cartas (decidida pelo Yuri em 22/10/2026: Teste de Equipe, Chefe de guildas e Incursões). As raridades
+ * do Teste de Equipe estão em `testeEquipe.ts`; as chances e as raridades das outras fontes são PROPOSTA, a confirmar.
  */
-
-/** Pesos de raridade [comum, raro, muito raro, épico, lendário, mítico] de uma vitória no Teste de Equipe, por dificuldade (1 a 10). */
-export const PESOS_DO_TESTE_DE_EQUIPE: readonly (readonly number[])[] = [
-  [70, 30, 0, 0, 0, 0],
-  [55, 40, 5, 0, 0, 0],
-  [35, 50, 15, 0, 0, 0],
-  [20, 45, 30, 5, 0, 0],
-  [10, 35, 40, 15, 0, 0],
-  [0, 25, 45, 28, 2, 0],
-  [0, 10, 40, 42, 8, 0],
-  [0, 0, 30, 52, 17, 1],
-  [0, 0, 15, 50, 32, 3],
-  [0, 0, 5, 40, 47, 8],
-];
-
-/** Poeira de alma de cada vitória no Teste de Equipe: 10 × dificuldade (o dobro na primeira vitória). */
-export const poeiraDoTeste = (dificuldade: number, primeiraVitoria: boolean) => 10 * dificuldade * (primeiraVitoria ? 2 : 1);
 
 /** Sorteia a raridade pelos pesos (na ordem comum a mítico). */
 export function sortearRaridadePorPesos(pesos: readonly number[], sorteio: () => number): EmblemaRaridade {

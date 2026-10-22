@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { desequiparCarta, despertarCarta, destruirCartas, equiparCarta, guardarCartas, MENSAGEM_BLOQUEIO_ALMA, refinarCarta, type MotivoBloqueioAlma } from '@/game/almas';
-import { criarCarta, NIVEL_DA_ALMA, TIPO_DE_CARTA_MAP, tiposDaRaridadeDeCarta, type CartaItem } from '@/rules/almas';
+import { criarCarta, NIVEL_DA_ALMA, TIPO_DE_CARTA_MAP, tiposDaRaridadeDeCarta, type CartaItem, type CategoriaDeCarta } from '@/rules/almas';
 import type { EmblemaRaridade } from '@/rules/emblemas';
 import { carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { gerarSementeCombate } from '@/server/combateSemente';
@@ -30,9 +30,9 @@ export function sorteadorDaSemente(semente: number): () => number {
   };
 }
 
-/** Sorteia um tipo de carta da raridade (qualquer categoria). */
-export function sortearTipoDaRaridade(raridade: EmblemaRaridade, sorteio: () => number): string {
-  const tipos = tiposDaRaridadeDeCarta(raridade);
+/** Sorteia um tipo de carta da raridade (de qualquer categoria, ou só da `categoria` pedida). */
+export function sortearTipoDaRaridade(raridade: EmblemaRaridade, sorteio: () => number, categoria?: CategoriaDeCarta): string {
+  const tipos = tiposDaRaridadeDeCarta(raridade).filter((t) => !categoria || t.categoria === categoria);
   return tipos[Math.min(tipos.length - 1, Math.floor(sorteio() * tipos.length))].id;
 }
 
