@@ -69,13 +69,12 @@ describe('Buscar e colecionáveis (regras puras)', () => {
     expect(subirEstrela({ 'RI-C01': { fragmentos: 999, nivel: 5, estrelas: 5 } }, 99, 'RI-C01')).toEqual({ ok: false, motivo: 'estrelasMaximas' });
   });
 
-  it('os atributos somam os ativados e arredondam para baixo por atributo', () => {
-    // RI-C01 (Força) e RI-C03 (Força) no nível 1 dão 0,25 + 0,25 = 0,50 → 0; com quatro de Força, 1,00 → 1
-    expect(atributosDosColecionaveis({ 'RI-C01': { fragmentos: 0, nivel: 1 }, 'RI-C03': { fragmentos: 0, nivel: 1 } }).forca).toBe(0);
-    const quatro = Object.fromEntries(['RI-C01', 'RI-C03', 'RI-C05', 'RI-C07'].map((id) => [id, { fragmentos: 0, nivel: 1 }]));
-    expect(atributosDosColecionaveis(quatro).forca).toBe(1);
+  it('os atributos somam os pontos inteiros dos ativados', () => {
+    // RI-C01 e RI-C03 dão Força: +1 cada no nível 1; RI-C02 dá Vitalidade
+    const r = atributosDosColecionaveis({ 'RI-C01': { fragmentos: 0, nivel: 1 }, 'RI-C03': { fragmentos: 0, nivel: 10, estrelas: 1 }, 'RI-C02': { fragmentos: 0, nivel: 1 } });
+    expect([r.forca, r.vitalidade, r.sorte]).toEqual([3, 1, 0]);
     // fragmentos sem ativar não contam
     expect(atributosDosColecionaveis({ 'RI-M01': { fragmentos: 70 } }).forca).toBe(0);
-    expect(atributosDosColecionaveis({ 'RI-M01': { fragmentos: 0, nivel: 30, estrelas: 5 } }).forca).toBe(10);
+    expect(atributosDosColecionaveis({ 'RI-M01': { fragmentos: 0, nivel: 30, estrelas: 5 } }).forca).toBe(20);
   });
 });

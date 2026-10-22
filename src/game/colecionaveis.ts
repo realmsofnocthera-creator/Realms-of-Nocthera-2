@@ -162,8 +162,8 @@ export function subirEstrela(
   };
 }
 
-/** O valor (em centésimos) de cada atributo somando os colecionáveis ativados. */
-export function centesimosDosColecionaveis(colecionaveis: ColecionaveisDoJogador | undefined): Attributes {
+/** Os pontos de atributo que os colecionáveis ativados dão (a soma de cada atributo). */
+export function atributosDosColecionaveis(colecionaveis: ColecionaveisDoJogador | undefined): Attributes {
   const total = Object.fromEntries(ATTRIBUTES.map((a) => [a, 0])) as Attributes;
   for (const [id, e] of Object.entries(colecionaveis ?? {})) {
     const c = COLECIONAVEL_MAP[id];
@@ -171,10 +171,4 @@ export function centesimosDosColecionaveis(colecionaveis: ColecionaveisDoJogador
     total[c.atributo] += valorDoColecionavel(c.raridade, e.nivel ?? 1, e.estrelas ?? 0);
   }
   return total;
-}
-
-/** Os pontos de atributo que os colecionáveis dão (a soma de cada atributo, arredondada para baixo). */
-export function atributosDosColecionaveis(colecionaveis: ColecionaveisDoJogador | undefined): Attributes {
-  const centesimos = centesimosDosColecionaveis(colecionaveis);
-  return Object.fromEntries(ATTRIBUTES.map((a) => [a, Math.floor(centesimos[a] / 100)])) as Attributes;
 }

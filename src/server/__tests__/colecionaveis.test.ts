@@ -60,7 +60,7 @@ describe('Buscar e Colecionáveis: servidor', () => {
     for (const id of forca) await agirNosColecionaveis('u1', 'ativar', { id });
     const depois = (await getCharacterByUid('u1'))!;
     expect(depois.colecionaveis!['RI-C01']).toEqual({ fragmentos: 10, nivel: 1 });
-    expect((depois.bonusEquipamento?.forca ?? 0) - antes).toBe(1);
+    expect((depois.bonusEquipamento?.forca ?? 0) - antes).toBe(4);
     expect((await erro(agirNosColecionaveis('u1', 'ativar', { id: 'RI-C01' })))?.message).toMatch(/já está ativado/);
 
     const r = await agirNosColecionaveis('u1', 'reforcar', { id: 'RI-C01', niveis: 4 });
