@@ -53,6 +53,8 @@ import {
   type RamoDaPesquisa,
 } from '@/rules/pesquisa';
 import { gerarSementeCombate } from '@/server/combateSemente';
+import { entregarCartas, sorteadorDaSemente, sortearTipoDaRaridade } from '@/server/almas';
+import { CHANCE_DE_CARTA_DA_INCURSAO, RARIDADE_DA_CARTA_DA_INCURSAO } from '@/rules/almas';
 import {
   chefeDaSemana,
   faixaDaPosicao,
@@ -840,7 +842,10 @@ export async function lutarIncursao(uid: string, r: RegrasDeGuilda, semente: num
       const material = materialDaIncursao(rec.raridadeDoMaterial, semente + i * 7919);
       const inventario = { ...(doc.inventario ?? {}) };
       if (material) inventario[material] = (inventario[material] ?? 0) + 1;
-      const salvo = { ...doc, ouro: doc.ouro, diamantes: doc.diamantes, xpAtual: xp.xpAtual, nivel: xp.nivel, pontosDisponiveis: xp.pontosDisponiveis, inventario };
+      // Alma (7.8): 50% de chance de uma carta, mais rara nas dificuldades altas
+      const sorteioDaCarta = sorteadorDaSemente(semente + i * 15485863);
+      const carta = sorteioDaCarta() < CHANCE_DE_CARTA_DA_INCURSAO ? entregarCartas(doc, [sortearTipoDaRaridade(RARIDADE_DA_CARTA_DA_INCURSAO[info.dificuldade], sorteioDaCarta)], semente + i) : null;
+      const salvo = { ...doc, ouro: doc.ouro, diamantes: doc.diamantes, xpAtual: xp.xpAtual, nivel: xp.nivel, pontosDisponiveis: xp.pontosDisponiveis, inventario, ...(carta?.patch ?? {}) };
       if (p.uid === uid) euDepois = salvarPersonagem(ctx, doc, salvo);
       else ctx.gravarPersonagem(salvo);
     }
@@ -851,7 +856,7 @@ export async function lutarIncursao(uid: string, r: RegrasDeGuilda, semente: num
       xp: guilda.xp + xpGuilda,
       incursao: { ...incursaoNova(proximo), ultima: { nivel: inc.nivel, chefe: info.chefe.nome, dificuldade: info.nomeDaDificuldade, em: new Date().toISOString() } },
     });
-    return { mensagem: `${info.chefe.nome} (${info.nomeDaDificuldade}) foi derrotado! Seu golpe final causou ${dano} de dano. Quem lutou recebeu ouro, XP, diamantes e um material, e a guilda ganhou ${xpGuilda} de XP.` };
+    return { mensagem: `${info.chefe.nome} (${info.nomeDaDificuldade}) foi derrotado! Seu golpe final causou ${dano} de dano. Quem lutou recebeu ouro, XP, diamantes e um material (e, às vezes, uma carta da Alma), e a guilda ganhou ${xpGuilda} de XP.` };
   });
 }
 
@@ -1048,7 +1053,11 @@ export async function resgatarChefeSemanal(uid: string, semanaPedida: unknown, a
         novos.push({ id: randomUUID(), tipo: escolherTipoDaRaridade(bau.raridade, valor).id, estrelas: 1 });
       }
     }
+    // Alma (7.8): as cartas da faixa
+    const sorteioDasCartas = sorteadorDaSemente(semente + 31);
+    const cartas = entregarCartas(eu, faixa.cartas.map((r) => sortearTipoDaRaridade(r, sorteioDasCartas)), semente + 37);
     salvarPersonagem(ctx, eu, {
+      ...cartas.patch,
       ouro: eu.ouro,
       ...(novos.length ? { emblemasItens: [...(eu.emblemasItens ?? []), ...novos] } : {}),
       chefeSemanal: (eu.chefeSemanal ?? []).map((x) => (x.semana === semana ? { ...x, resgatada: true } : x)),
@@ -1060,7 +1069,7 @@ export async function resgatarChefeSemanal(uid: string, semanaPedida: unknown, a
       xpDaGuilda = ` A guilda ganhou ${faixa.xpGuilda} de XP.`;
     }
     const baus = faixa.baus.map((b) => `${b.quantidade} baú(s) ${EMBLEMA_RARIDADE_MAP[b.raridade].nome.toLowerCase()}(s)`).join(', ');
-    return { mensagem: `Sua guilda ficou em ${posicao}º (${faixa.nome}). Você recebeu ${faixa.ouro} de ouro${baus ? ` e ${baus} de emblemas` : ''}.${xpDaGuilda}` };
+    return { mensagem: `Sua guilda ficou em ${posicao}º (${faixa.nome}). Você recebeu ${faixa.ouro} de ouro${baus ? ` e ${baus} de emblemas` : ''}. Mais ${cartas.criadas.length} ${cartas.criadas.length === 1 ? 'carta da Alma' : 'cartas da Alma'}.${xpDaGuilda}` };
   });
 }
 

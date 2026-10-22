@@ -20,6 +20,8 @@ import {
 } from '@/rules/testeEquipe';
 import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, ganharXp, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { gerarSementeCombate } from '@/server/combateSemente';
+import { entregarCartas, sorteadorDaSemente, sortearTipoDaRaridade } from '@/server/almas';
+import { PESOS_DO_TESTE_DE_EQUIPE, poeiraDoTeste, sortearRaridadePorPesos } from '@/rules/almas';
 import { chaveDoNome, repositorio, type ContextoTransacao } from '@/server/persistencia';
 import { exigirSistemaLigado } from '@/server/sistemasLeitura';
 
@@ -215,7 +217,7 @@ export async function iniciarTeste(uid: string, dificuldadePedida: unknown, seme
     const chefe = montarChefeDoTeste(dificuldade, docs.length);
     const r = resolverCombateEmGrupo(docs.map(combatenteDoPersonagem), chefe, semente);
     const venceu = r.vencedor === 'grupo';
-    for (const d of docs) {
+    for (const [indice, d] of docs.entries()) {
       let doc = d;
       const tentativas = { ...(doc.testeEquipeTentativas ?? {}), [String(dificuldade)]: hoje };
       if (!venceu) {
@@ -229,7 +231,12 @@ export async function iniciarTeste(uid: string, dificuldadePedida: unknown, seme
       doc = alterarSaldoEm(ctx, doc, 'diamantes', rec.diamantes, motivo).character;
       const xp = ganharXp(doc, Math.floor(xpParaProximoNivel(doc.nivel) * rec.fracaoDeXp));
       const contratos = contarVitorias(doc.contratos, [chefe.id], hoje);
+      // Alma (7.8): poeira de alma e 1 carta por vitória, mais rara nas dificuldades altas
+      const sorteio = sorteadorDaSemente(semente + indice * 104729);
+      const carta = entregarCartas(doc, [sortearTipoDaRaridade(sortearRaridadePorPesos(PESOS_DO_TESTE_DE_EQUIPE[dificuldade - 1], sorteio), sorteio)], semente + indice);
       salvarPersonagem(ctx, doc, {
+        ...carta.patch,
+        poeiraDeAlma: (doc.poeiraDeAlma ?? 0) + poeiraDoTeste(dificuldade, primeira),
         ouro: doc.ouro,
         diamantes: doc.diamantes,
         xpAtual: xp.xpAtual,
@@ -245,7 +252,7 @@ export async function iniciarTeste(uid: string, dificuldadePedida: unknown, seme
     const rec = recompensaDoTeste(dificuldade, false);
     return {
       mensagem: venceu
-        ? `Vitória! ${chefe.nome} caiu em ${r.rodadas} rodadas. Cada um recebeu ${rec.ouro} de ouro, XP e diamantes (mais na primeira vitória).`
+        ? `Vitória! ${chefe.nome} caiu em ${r.rodadas} rodadas. Cada um recebeu ${rec.ouro} de ouro, XP, diamantes, poeira de alma e uma carta (mais ouro, diamantes e poeira na primeira vitória).`
         : `Derrota diante de ${chefe.nome}. A tentativa de hoje desta dificuldade foi usada.`,
       resultado,
     };

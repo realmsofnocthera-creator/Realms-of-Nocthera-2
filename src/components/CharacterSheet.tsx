@@ -20,6 +20,7 @@ import {
   FichaSlotsEmblema,
 } from '@/components/ficha';
 import type { SlotEquipamento } from '@/lib/equipamentoTela';
+import { NIVEL_DA_ALMA } from '@/rules/almas';
 
 interface CharacterSheetProps {
   character: CharacterDocument;
@@ -61,6 +62,13 @@ export function CharacterSheet({
 
   const handleTogglePopover = (skillId: string) => {
     setActiveSkillPopoverId((prev) => (prev === skillId ? null : skillId));
+  };
+
+  const [avisoAlma, setAvisoAlma] = useState(false);
+  // A aba Alma (7.8) tem tela própria; antes do nível 25, só avisa
+  const abrirAlma = () => {
+    if (character.nivel >= NIVEL_DA_ALMA) router.push('/alma');
+    else setAvisoAlma(true);
   };
 
   const handleGoBack = () => {
@@ -110,6 +118,7 @@ export function CharacterSheet({
           onOpenLupa={() => setLupaOpen(true)}
           aba={aba}
           onMudarAba={onEquiparItem ? setAba : undefined}
+          onAbrirAlma={abrirAlma}
           colunaEquipamentos={<FichaSlotsEquipamento character={character} onAbrirSlot={setSlotAberto} />}
           colunaEmblemas={<FichaSlotsEmblema character={character} onAbrir={() => setEmblemasAberto(true)} />}
           className="flex-1 min-h-0"
@@ -148,6 +157,16 @@ export function CharacterSheet({
       {/* 6b) INVENTÁRIO DE EMBLEMAS (aba Emblemas) */}
       {aba === 'emblemas' && emblemasAberto && (
         <FichaEmblemaModal character={character} onClose={() => setEmblemasAberto(false)} onAcao={onEmblemaAcao} onFundir={onFundirEmblemas} />
+      )}
+
+      {avisoAlma && (
+        <div role="alertdialog" aria-label="Alma bloqueada" className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-6" onClick={() => setAvisoAlma(false)}>
+          <div className="rounded-lg border border-[#B2A66C]/60 bg-[#120F0C] px-4 py-3 text-center text-sm text-[#E2D6B6] max-w-xs">
+            <p className="font-cinzel font-bold mb-1">Alma</p>
+            <p>A Alma abre no nível {NIVEL_DA_ALMA}. Você está no nível {character.nivel}.</p>
+            <button type="button" onClick={() => setAvisoAlma(false)} className="mt-2 rounded border border-[#B2A66C]/60 px-3 py-1 text-xs">Entendi</button>
+          </div>
+        </div>
       )}
 
       {/* 7) MODAL DE EXPLICAÇÃO DOS ATRIBUTOS (LUPA) */}

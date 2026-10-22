@@ -7,12 +7,15 @@ export type AbaFicha = 'personagem' | 'equipamentos' | 'emblemas';
 
 interface FichaSidebarProps {
   className?: string;
+  /** A aba Alma (7.8) tem tela própria: abre quando o personagem tem o nível (25); antes disso o botão avisa. */
+  onAbrirAlma?: () => void;
+  almaLiberada?: boolean;
   /** Aba aberta. Sem `onMudarAba`, só a aba Personagem funciona. */
   aba?: AbaFicha;
   onMudarAba?: (aba: AbaFicha) => void;
 }
 
-export function FichaSidebar({ className = '', aba = 'personagem', onMudarAba }: FichaSidebarProps) {
+export function FichaSidebar({ className = '', aba = 'personagem', onMudarAba, onAbrirAlma, almaLiberada = false }: FichaSidebarProps) {
   const buttons = [
     {
       id: 'personagem',
@@ -94,6 +97,22 @@ export function FichaSidebar({ className = '', aba = 'personagem', onMudarAba }:
                   mixBlendMode: 'screen',
                 }}
               />
+            </button>
+          );
+        }
+
+        if (btn.id === 'alma' && onAbrirAlma) {
+          return (
+            <button
+              key={btn.id}
+              type="button"
+              aria-label={almaLiberada ? 'Alma' : 'Alma (abre no nível 25)'}
+              onClick={onAbrirAlma}
+              className="relative w-10 h-10 sm:w-11 sm:h-11 min-w-[40px] min-h-[40px] rounded-lg p-1.5 flex items-center justify-center border border-[#B2A66C]/60 cursor-pointer active:scale-95 transition-all"
+              style={{ backgroundColor: 'rgba(13,13,13,0.85)', isolation: 'isolate', opacity: almaLiberada ? 1 : 0.6 }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={btn.src} alt={btn.label} className="w-full h-full object-contain pointer-events-none select-none" style={{ filter: btn.invert ? 'invert(1)' : undefined, mixBlendMode: 'screen' }} />
             </button>
           );
         }

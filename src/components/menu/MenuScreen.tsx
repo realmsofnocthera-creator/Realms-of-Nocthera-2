@@ -149,6 +149,7 @@ export function MenuScreen({ personagem }: MenuScreenProps) {
                   if (item.id === 'producao') router.push('/ferreiro');
                   if (item.id === 'anuncios') router.push('/anuncios');
                   if (item.id === 'buscar') router.push('/buscar');
+                  if (item.id === 'colecao') router.push('/colecao');
                   if (item.id === 'ranking') router.push('/ranking');
                 }}
                 style={{

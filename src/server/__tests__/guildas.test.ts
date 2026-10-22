@@ -9,6 +9,7 @@ import { agirNaGuilda, ErroDeGuilda, estadoDaGuilda, limparCacheDoChefeSemanal, 
 import { limparCacheDeSistemas } from '@/server/sistemasLeitura';
 import { configuracaoPadrao } from '@/rules/sistemas';
 import { REGRAS_PADRAO_DE_GUILDA } from '@/rules/guilda';
+import { TIPO_DE_CARTA_MAP } from '@/rules/almas';
 import { repositorio } from '@/server/persistencia';
 import { resetCharacterStore } from '@/test/repositorioMemoria';
 import { tokenDeTeste } from '@/test/firebaseAdminMock';
@@ -439,6 +440,10 @@ describe('Incursões e Pesquisa (7.3)', () => {
     expect(depois2.xpAtual + depois2.nivel * 1e6).toBeGreaterThan(antes2.xpAtual + antes2.nivel * 1e6);
     expect(Object.values(depois2.inventario ?? {}).reduce((a, b) => a + b, 0)).toBe(1);
     expect((await getCharacterByUid('u5'))!.ouro).toBe(antes5.ouro);
+    // Alma: no máximo 1 carta por participante, e só para quem lutou
+    expect((await getCharacterByUid('u5'))!.cartasItens).toBeUndefined();
+    expect((depois1.cartasItens ?? []).length).toBeLessThanOrEqual(1);
+    expect((depois2.cartasItens ?? []).length).toBeLessThanOrEqual(1);
   });
 
   it('Pesquisa: abre em Respeitada; doações enchem as barras e o ramo sobe; o bônus vai para todos os membros', async () => {
@@ -528,6 +533,9 @@ describe('Chefe de guildas (7.3)', () => {
     const d1 = (await getCharacterByUid('u1'))!;
     expect(d1.ouro).toBe(ouro1 + 20000);
     expect(d1.emblemasItens).toHaveLength(2);
+    // Alma: o 1º lugar leva 1 carta mítica
+    expect(d1.cartasItens).toHaveLength(1);
+    expect(TIPO_DE_CARTA_MAP[d1.cartasItens![0].tipo].raridade).toBe('mitico');
     expect((await repositorio.lerGuilda(a))!.xp).toBe(15500 + 3000);
     await resgatarChefeSemanal('u2', '2026-10-19', SEGUNDA_SEGUINTE);
     expect((await repositorio.lerGuilda(a))!.xp).toBe(15500 + 3000);
@@ -535,6 +543,7 @@ describe('Chefe de guildas (7.3)', () => {
     expect((await erro(resgatarChefeSemanal('u1', '2026-10-19', SEGUNDA_SEGUINTE)))?.message).toMatch(/já resgatou/);
     await resgatarChefeSemanal('u3', '2026-10-19', SEGUNDA_SEGUINTE);
     expect((await getCharacterByUid('u3'))!.emblemasItens).toHaveLength(1);
+    expect(TIPO_DE_CARTA_MAP[(await getCharacterByUid('u3'))!.cartasItens![0].tipo].raridade).toBe('lendario');
     expect((await erro(resgatarChefeSemanal('u4', '2026-10-19', SEGUNDA_SEGUINTE)))?.status).toBe(404);
   });
 
