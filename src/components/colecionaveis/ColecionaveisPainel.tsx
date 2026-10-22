@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { centesimosDosColecionaveis } from '@/game/colecionaveis';
+import { atributosDosColecionaveis } from '@/game/colecionaveis';
 import { ATTRIBUTES } from '@/rules/attributes';
 import { ATTRIBUTE_DISPLAY_NAMES } from '@/rules/attributeInfo';
 import {
@@ -17,7 +17,8 @@ import {
   NOME_DA_RARIDADE_DE_COLECIONAVEL,
   nivelMaximoDoReforco,
   RARIDADES_DE_COLECIONAVEL,
-  textoDoValor,
+  proximaEstrelaQueSobe,
+  proximoNivelQueSobe,
   valorDoColecionavel,
   type CategoriaDeColecionavel,
   type Colecionavel,
@@ -84,7 +85,7 @@ export function ColecionaveisPainel({ tokenFresco }: { tokenFresco: Token }) {
   if (!estado) return <p className="text-sm" style={{ color: colors.text.secondary }}>Carregando...</p>;
 
   const ativos = COLECIONAVEIS.filter((c) => estaAtivo(estado.colecionaveis[c.id])).length;
-  const totais = centesimosDosColecionaveis(estado.colecionaveis);
+  const totais = atributosDosColecionaveis(estado.colecionaveis);
   const comBonus = ATTRIBUTES.filter((a) => totais[a] > 0);
 
   return (
@@ -95,9 +96,8 @@ export function ColecionaveisPainel({ tokenFresco }: { tokenFresco: Token }) {
         <p className="text-xs" style={{ color: colors.text.secondary }}>Fragmentos de Memória: {estado.fragmentosDeMemoria} · Pedras da Recordação: {estado.pedrasDaRecordacao}</p>
         <p className="text-xs">
           Bônus nos atributos:{' '}
-          {comBonus.length ? comBonus.map((a) => `${ATTRIBUTE_DISPLAY_NAMES[a]} ${textoDoValor(totais[a])}`).join(' · ') : 'nenhum ainda'}
+          {comBonus.length ? comBonus.map((a) => `${ATTRIBUTE_DISPLAY_NAMES[a]} +${totais[a]}`).join(' · ') : 'nenhum ainda'}
         </p>
-        <p className="text-[11px]" style={{ color: colors.text.secondary }}>No combate vale a parte inteira de cada atributo (ex.: +7,40 conta como +7).</p>
       </section>
 
       <div role="tablist" aria-label="Categorias" className="grid grid-cols-2 gap-1.5">
@@ -146,7 +146,9 @@ export function ColecionaveisPainel({ tokenFresco }: { tokenFresco: Token }) {
                     {expandido && (
                       <div className="px-2 pb-2 flex flex-col gap-1.5">
                         <p style={{ color: colors.text.secondary }}>
-                          {c.id} · {ativo ? `Dá ${textoDoValor(valorDoColecionavel(c.raridade, nivel, estrelas))} de ${ATTRIBUTE_DISPLAY_NAMES[c.atributo]}.` : `Ativado, dá ${textoDoValor(valorDoColecionavel(c.raridade, 1, 0))} de ${ATTRIBUTE_DISPLAY_NAMES[c.atributo]}.`}
+                          {c.id} · {ativo ? `Dá +${valorDoColecionavel(c.raridade, nivel, estrelas)} de ${ATTRIBUTE_DISPLAY_NAMES[c.atributo]}.` : `Ativado, dá +${valorDoColecionavel(c.raridade, 1, 0)} de ${ATTRIBUTE_DISPLAY_NAMES[c.atributo]}.`}
+                          {ativo && proximoNivelQueSobe(c.raridade, nivel) ? ` Sobe +1 no nível ${proximoNivelQueSobe(c.raridade, nivel)}.` : ''}
+                          {ativo && proximaEstrelaQueSobe(c.raridade, estrelas) ? ` Sobe +1 com ${proximaEstrelaQueSobe(c.raridade, estrelas)}★.` : ''}
                           {ativo ? ` Fragmentos guardados: ${e.fragmentos}.` : ''}
                         </p>
                         {!ativo ? (

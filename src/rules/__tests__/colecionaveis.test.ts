@@ -11,7 +11,6 @@ import {
   RARIDADES_DE_COLECIONAVEL,
   SELOS_DE_BUSCA,
   sortearResultado,
-  textoDoValor,
   valorDoColecionavel,
 } from '@/rules/colecionaveis';
 
@@ -61,12 +60,17 @@ describe('Colecionáveis: catálogo e regras', () => {
     expect(sortearResultado('desgastado', () => 0)).toEqual({ raridade: 'comum', inteiro: false });
   });
 
-  it('reforço: limite 5 com 0★ e +5 por estrela até 30; valor sobe com o nível e +10% por estrela', () => {
+  it('reforço: limite 5 com 0★ e +5 por estrela até 30; o valor é sempre inteiro e sobe em níveis e estrelas marcados', () => {
     expect([0, 1, 2, 3, 4, 5].map(nivelMaximoDoReforco)).toEqual([5, 10, 15, 20, 25, 30]);
-    expect(valorDoColecionavel('comum', 1, 0)).toBe(25);
-    expect(valorDoColecionavel('comum', 30, 5)).toBe(168);
-    expect(valorDoColecionavel('mitico', 1, 0)).toBeGreaterThan(valorDoColecionavel('lendario', 1, 0));
-    expect(textoDoValor(25)).toBe('+0,25');
+    expect([valorDoColecionavel('comum', 1, 0), valorDoColecionavel('muitoRaro', 1, 0), valorDoColecionavel('lendario', 1, 0), valorDoColecionavel('mitico', 1, 0)]).toEqual([1, 2, 3, 5]);
+    expect([valorDoColecionavel('comum', 30, 5), valorDoColecionavel('muitoRaro', 30, 5), valorDoColecionavel('lendario', 30, 5), valorDoColecionavel('mitico', 30, 5)]).toEqual([5, 7, 11, 20]);
+    expect(valorDoColecionavel('comum', 9, 1)).toBe(1);
+    expect(valorDoColecionavel('comum', 10, 1)).toBe(2);
+    expect(valorDoColecionavel('muitoRaro', 5, 0)).toBe(3);
+    expect(valorDoColecionavel('mitico', 6, 1)).toBe(8);
+    for (const r of ['comum', 'muitoRaro', 'lendario', 'mitico'] as const) {
+      for (let n = 1; n <= 30; n++) for (let e = 0; e <= 5; e++) expect(Number.isInteger(valorDoColecionavel(r, n, e))).toBe(true);
+    }
     expect(custoDaEstrela('comum', 1)).toEqual({ fragmentos: 10, pedras: 1 });
     expect(custoDaEstrela('mitico', 5)).toEqual({ fragmentos: 200, pedras: 25 });
   });

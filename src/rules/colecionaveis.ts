@@ -320,22 +320,38 @@ export function custoDaEstrela(raridade: RaridadeDeColecionavel, estrela: number
 }
 
 /**
- * O valor do atributo, em centésimos de ponto: base no nível 1, mais o ganho por nível de reforço, e +10% por estrela.
- * Ex.: um Comum no nível 1 dá +0,25; no nível 30 com 5 estrelas, +1,68. A soma de todos é arredondada para baixo em
- * cada atributo. Proposta, a confirmar.
+ * O valor do atributo, sempre em pontos inteiros (decisão do Yuri em 22/10/2026: nada de frações). O colecionável dá
+ * a base ao ser ativado e ganha +1 ponto ao chegar em certos níveis de reforço e em certas estrelas. Proposta, a confirmar:
+ * - Comum: 1; +1 nos níveis 10, 20 e 30; +1 com 5★ (máximo 5).
+ * - Muito raro: 2; +1 nos níveis 5, 15 e 25; +1 com 3★ e com 5★ (máximo 7).
+ * - Lendário: 3; +1 a cada 5 níveis (5 a 30); +1 com 3★ e com 5★ (máximo 11).
+ * - Mítico: 5; +1 a cada 3 níveis (3 a 30); +1 a cada estrela (máximo 20).
  */
-const BASE_EM_CENTESIMOS: Readonly<Record<RaridadeDeColecionavel, number>> = { comum: 25, muitoRaro: 40, lendario: 80, mitico: 150 };
-const GANHO_POR_NIVEL_EM_CENTESIMOS: Readonly<Record<RaridadeDeColecionavel, number>> = { comum: 3, muitoRaro: 6, lendario: 10, mitico: 18 };
-export const BONUS_POR_ESTRELA_PERCENTUAL = 10;
-
-export function valorDoColecionavel(raridade: RaridadeDeColecionavel, nivel: number, estrelas: number): number {
-  const n = Math.max(1, nivel);
-  const bruto = BASE_EM_CENTESIMOS[raridade] + GANHO_POR_NIVEL_EM_CENTESIMOS[raridade] * (n - 1);
-  return Math.floor((bruto * (100 + BONUS_POR_ESTRELA_PERCENTUAL * Math.max(0, estrelas))) / 100);
+export interface ProgressaoDoValor {
+  base: number;
+  /** Níveis de reforço em que o valor sobe +1. */
+  niveis: readonly number[];
+  /** Estrelas em que o valor sobe +1. */
+  estrelas: readonly number[];
 }
 
-/** "+0,25" a partir de centésimos. */
-export const textoDoValor = (centesimos: number) => `+${(centesimos / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export const PROGRESSAO_DO_VALOR: Readonly<Record<RaridadeDeColecionavel, ProgressaoDoValor>> = {
+  comum: { base: 1, niveis: [10, 20, 30], estrelas: [5] },
+  muitoRaro: { base: 2, niveis: [5, 15, 25], estrelas: [3, 5] },
+  lendario: { base: 3, niveis: [5, 10, 15, 20, 25, 30], estrelas: [3, 5] },
+  mitico: { base: 5, niveis: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30], estrelas: [1, 2, 3, 4, 5] },
+};
+
+/** Os pontos de atributo que o colecionável dá no nível e nas estrelas dele. */
+export function valorDoColecionavel(raridade: RaridadeDeColecionavel, nivel: number, estrelas: number): number {
+  const p = PROGRESSAO_DO_VALOR[raridade];
+  return p.base + p.niveis.filter((n) => nivel >= n).length + p.estrelas.filter((e) => estrelas >= e).length;
+}
+
+/** O próximo nível de reforço em que o valor sobe (null se não há mais). */
+export const proximoNivelQueSobe = (raridade: RaridadeDeColecionavel, nivel: number) => PROGRESSAO_DO_VALOR[raridade].niveis.find((n) => n > nivel) ?? null;
+/** A próxima estrela em que o valor sobe (null se não há mais). */
+export const proximaEstrelaQueSobe = (raridade: RaridadeDeColecionavel, estrelas: number) => PROGRESSAO_DO_VALOR[raridade].estrelas.find((e) => e > estrelas) ?? null;
 
 // ---------------------------------------------------------------------------------------------------------------
 // O que fica no personagem
