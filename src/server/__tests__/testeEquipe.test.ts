@@ -119,8 +119,8 @@ describe('Party e Teste de Equipe (7.4)', () => {
     expect(depois.cacosDeAlma).toBe(10);
     expect(depois.poeiraDeAlma ?? 0).toBe(0);
     expect(depois.testeEquipeConcluidas).toEqual(['corpo:1']);
-    expect(depois.cartasItens).toHaveLength(1);
-    expect(TIPO_DE_CARTA_MAP[depois.cartasItens![0].tipo]).toMatchObject({ categoria: 'corpo', raridade: 'comum' });
+    expect(depois.cartasItens).toHaveLength(3);
+    for (const c of depois.cartasItens!) expect(TIPO_DE_CARTA_MAP[c.tipo]).toMatchObject({ categoria: 'corpo', raridade: 'comum' });
     const e = await estadoDoTeste('u2');
     expect(e.chaves.gratisRestantes).toBe(2);
     const corpo = e.testes.find((t) => t.categoria === 'corpo')!;
@@ -135,7 +135,7 @@ describe('Party e Teste de Equipe (7.4)', () => {
     const outra = (await getCharacterByUid('u2'))!;
     expect(outra.diamantes).toBe(depois.diamantes);
     expect(outra.cacosDeAlma).toBe(20);
-    expect(outra.cartasItens).toHaveLength(2);
+    expect(outra.cartasItens).toHaveLength(6);
     expect((await estadoDoTeste('u2')).chaves.gratisRestantes).toBe(1);
   });
 
@@ -190,17 +190,19 @@ describe('Party e Teste de Equipe (7.4)', () => {
     expect(u1.poeiraDeAlma).toBe(30);
     expect(u1.cacosDeAlma).toBe(120);
     expect(u1.testeEquipeConcluidas).toEqual(['mente:5', 'mente:6']);
-    const tipo = TIPO_DE_CARTA_MAP[u1.cartasItens![0].tipo];
-    expect(tipo.categoria).toBe('mente');
-    expect(['muitoRaro', 'epico', 'lendario', 'mitico']).toContain(tipo.raridade);
+    expect(u1.cartasItens).toHaveLength(3);
+    for (const c of u1.cartasItens!) {
+      const tipo = TIPO_DE_CARTA_MAP[c.tipo];
+      expect(tipo.categoria).toBe('mente');
+      expect(['muitoRaro', 'epico', 'lendario', 'mitico']).toContain(tipo.raridade);
+    }
   });
 
   it('Muito difícil: a chance do selo do abismo na vitória', async () => {
-    // Uma semente em que o 3º sorteio do líder (depois da raridade e do tipo da carta) cai abaixo de 10%
+    // Uma semente em que o 7º sorteio do líder (depois da raridade e do tipo das 3 cartas) cai abaixo de 10%
     const semente = Array.from({ length: 500 }, (_, i) => i + 1).find((s) => {
       const r = sorteadorDaSemente(s);
-      r();
-      r();
+      for (let i = 0; i < 6; i++) r();
       return r() < 0.1;
     })!;
     for (const uid of ['u1', 'u2']) await updateCharacter(uid, { atributos: FORTISSIMO, testeEquipeConcluidas: ['corpo:4'] });

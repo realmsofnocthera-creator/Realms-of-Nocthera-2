@@ -17,7 +17,7 @@ import type { MonsterDefinition } from './monsters';
  * - Entrar custa, para CADA membro: 1 chave da provação (Muito fácil a Muito difícil) ou 1 selo do abismo (Inferno).
  *   São 3 chaves grátis por dia (não acumulam) e até mais 3 compradas por dia, a 50 diamantes cada (as compradas
  *   ficam guardadas). O selo vem, com chance pequena, de vitórias no Muito difícil.
- * - Na vitória: cacos de alma (mais a cada dificuldade) e 1 carta, com as raridades do Yuri por dificuldade; no Inferno,
+ * - Na vitória: cacos de alma (mais a cada dificuldade) e 3 cartas aleatórias, com as raridades do Yuri por dificuldade; no Inferno,
  *   também poeira de alma; na primeira vez que conclui cada dificuldade de cada teste, diamantes.
  * Chefes PROVISÓRIOS (a confirmar). Os pesos das raridades, as quantidades, a chance do selo e a força são PROPOSTA.
  */
@@ -35,6 +35,8 @@ export const NOME_DO_TESTE: Readonly<Record<CategoriaDoTeste, string>> = { alma:
 export const ehCategoriaDoTeste = (v: unknown): v is CategoriaDoTeste => typeof v === 'string' && (CATEGORIAS_DO_TESTE as readonly string[]).includes(v);
 
 export const DIFICULDADES_DO_TESTE = 6;
+/** Cartas aleatórias por vitória, cada uma sorteada à parte (decidido pelo Yuri em 22/10/2026). */
+export const CARTAS_POR_VITORIA = 3;
 export const NOMES_DAS_DIFICULDADES = ['Muito fácil', 'Fácil', 'Médio', 'Difícil', 'Muito difícil', 'Inferno'] as const;
 /** A dificuldade que pede o selo do abismo em vez da chave. */
 export const DIFICULDADE_DO_SELO = 6;
@@ -46,7 +48,7 @@ export const CHANCE_DO_SELO = 0.1;
 export interface DificuldadeDoTeste {
   dificuldade: number;
   nome: string;
-  /** Pesos [comum, raro, muito raro, épico, lendário, mítico] da carta da vitória: as raridades são as do Yuri; os pesos, proposta. */
+  /** Pesos [comum, raro, muito raro, épico, lendário, mítico] de cada carta da vitória: as raridades são as do Yuri; os pesos, proposta. */
   pesos: readonly number[];
   cacos: number;
   poeira: number;
@@ -65,10 +67,12 @@ export const DIFICULDADES: readonly DificuldadeDoTeste[] = [
 
 export const dificuldadeDoTeste = (d: number): DificuldadeDoTeste => DIFICULDADES[Math.min(DIFICULDADES_DO_TESTE, Math.max(1, Math.floor(d))) - 1]!;
 
-/** As raridades que podem sair na dificuldade (para a tela). */
-export const raridadesDaDificuldade = (d: number): EmblemaRaridade[] => {
+/** As raridades que podem sair na dificuldade e a chance (%) de cada carta sair nelas (para a tela). */
+export const raridadesDaDificuldade = (d: number): { raridade: EmblemaRaridade; chance: number }[] => {
   const ordem: EmblemaRaridade[] = ['comum', 'raro', 'muitoRaro', 'epico', 'lendario', 'mitico'];
-  return ordem.filter((_, i) => dificuldadeDoTeste(d).pesos[i] > 0);
+  const pesos = dificuldadeDoTeste(d).pesos;
+  const total = pesos.reduce((s, p) => s + p, 0);
+  return ordem.flatMap((raridade, i) => (pesos[i] > 0 ? [{ raridade, chance: Math.round((pesos[i] / total) * 1000) / 10 }] : []));
 };
 
 /** Chaves da provação. */

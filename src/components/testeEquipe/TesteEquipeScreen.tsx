@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
-import { dificuldadeDoTeste, NOME_DO_TESTE, TAMANHO_MAXIMO_DA_PARTY, TAMANHO_MINIMO_DO_TESTE, type CategoriaDoTeste, type ResultadoDaParty } from '@/rules/testeEquipe';
+import { CARTAS_POR_VITORIA, dificuldadeDoTeste, NOME_DO_TESTE, TAMANHO_MAXIMO_DA_PARTY, TAMANHO_MINIMO_DO_TESTE, type CategoriaDoTeste, type ResultadoDaParty } from '@/rules/testeEquipe';
 import type { EstadoDoTeste } from '@/server/testeEquipe';
 import { NOCTHERA_THEME } from '@/theme/theme';
 
@@ -249,9 +249,9 @@ export function TesteEquipeScreen({ tokenFresco }: { tokenFresco: Token }) {
                               {d.diamantes ? ` · ${d.diamantes} diamantes na 1ª vez` : ''}
                             </span>
                             <span className="text-[11px] flex flex-wrap gap-x-1.5">
-                              Carta:
+                              {CARTAS_POR_VITORIA} cartas:
                               {d.raridades.map((r) => (
-                                <span key={r} style={{ color: EMBLEMA_RARIDADE_MAP[r].cor }}>{EMBLEMA_RARIDADE_MAP[r].nome}</span>
+                                <span key={r.raridade} style={{ color: EMBLEMA_RARIDADE_MAP[r.raridade].cor }}>{EMBLEMA_RARIDADE_MAP[r.raridade].nome} {r.chance}%</span>
                               ))}
                             </span>
                           </span>
