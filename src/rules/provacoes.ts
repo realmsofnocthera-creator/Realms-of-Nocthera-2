@@ -1,5 +1,6 @@
 export type ProvacaoId =
   | 'teste-equipe'
+  | 'expedicao'
   | 'cacada'
   | 'chefe-mundial'
   | 'batalha-sangrenta'
@@ -18,7 +19,8 @@ export interface ProvacaoDefinition {
   id: ProvacaoId;
   nome: string;
   nivelRequerido: number;
-  assetKey: ProvacaoAssetKey;
+  /** A arte do card (com o título na imagem). Sem arte, o card mostra o nome escrito. */
+  assetKey?: ProvacaoAssetKey;
 }
 
 export const PROVACOES: readonly ProvacaoDefinition[] = [
@@ -27,6 +29,12 @@ export const PROVACOES: readonly ProvacaoDefinition[] = [
     nome: 'Teste de Equipe',
     nivelRequerido: 25,
     assetKey: 'provacao-teste-equipe',
+  },
+  {
+    // No lugar da Provação de Dungeons (Yuri, 22/10/2026); a arte ainda não existe
+    id: 'expedicao',
+    nome: 'Expedição',
+    nivelRequerido: 15,
   },
   {
     id: 'cacada',

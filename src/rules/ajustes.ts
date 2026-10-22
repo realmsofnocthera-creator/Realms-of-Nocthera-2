@@ -12,6 +12,7 @@ export const CAMPOS_DE_AJUSTE = [
   'seloOrigem',
   'fragmentosDeMemoria',
   'pedrasDaRecordacao',
+  'avancosDeExpedicao',
 ] as const;
 export type CampoDeAjuste = (typeof CAMPOS_DE_AJUSTE)[number];
 
@@ -28,9 +29,10 @@ export const NOME_DO_CAMPO: Readonly<Record<CampoDeAjuste, string>> = {
   seloOrigem: 'Selo da Origem',
   fragmentosDeMemoria: 'Fragmentos de Memória',
   pedrasDaRecordacao: 'Pedras da Recordação',
+  avancosDeExpedicao: 'Avanços de expedição',
 };
 
-/** Os campos dos colecionáveis (Buscar): não são moedas com extrato, mudam direto no personagem. */
+/** Os campos dos colecionáveis (Buscar) e da Expedição: não são moedas com extrato, mudam direto no personagem. */
 export const CAMPOS_DOS_COLECIONAVEIS = {
   seloDesgastado: { selo: 'desgastado' },
   seloEncantado: { selo: 'encantado' },
@@ -38,6 +40,7 @@ export const CAMPOS_DOS_COLECIONAVEIS = {
   seloOrigem: { selo: 'origem' },
   fragmentosDeMemoria: { saldo: 'fragmentosDeMemoria' },
   pedrasDaRecordacao: { saldo: 'pedrasDaRecordacao' },
+  avancosDeExpedicao: { saldo: 'avancosDeExpedicao' },
 } as const;
 export type CampoDosColecionaveis = keyof typeof CAMPOS_DOS_COLECIONAVEIS;
 export const ehCampoDosColecionaveis = (c: string): c is CampoDosColecionaveis => c in CAMPOS_DOS_COLECIONAVEIS;
@@ -56,6 +59,7 @@ export const LIMITE_POR_CAMPO: Readonly<Record<CampoDeAjuste, number>> = {
   seloOrigem: 10_000,
   fragmentosDeMemoria: 100_000,
   pedrasDaRecordacao: 10_000,
+  avancosDeExpedicao: 1_000,
 };
 
 export const LIMITE_DE_MATERIAL_POR_PEDIDO = 1_000;

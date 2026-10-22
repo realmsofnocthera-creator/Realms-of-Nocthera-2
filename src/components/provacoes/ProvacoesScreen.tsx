@@ -54,6 +54,30 @@ function OrnateCorners({ locked }: { locked: boolean }) {
   );
 }
 
+/** A arte da provação (já contém o título na própria imagem); sem arte, o nome escrito sobre um fundo escuro. */
+function ArteDaProvacao({ provacao, bloqueada = false }: { provacao: ProvacaoDefinition; bloqueada?: boolean }) {
+  if (!provacao.assetKey) {
+    return (
+      <div
+        className="absolute inset-0 flex items-center justify-center px-3 text-center select-none pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse at center, rgba(70, 52, 28, 0.95) 0%, rgba(18, 14, 10, 1) 80%)', filter: bloqueada ? 'grayscale(45%)' : undefined }}
+      >
+        <span className="font-cinzel font-extrabold italic uppercase tracking-widest text-lg sm:text-xl drop-shadow-[0_3px_6px_rgba(0,0,0,0.95)]" style={{ color: '#F5E3B3' }}>
+          {provacao.nome}
+        </span>
+      </div>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={PROVACOES_IMAGES[provacao.assetKey]}
+      alt={provacao.nome}
+      className={`absolute inset-0 w-full h-full object-cover object-center select-none pointer-events-none${bloqueada ? ' grayscale-[45%]' : ''}`}
+    />
+  );
+}
+
 function ProvacaoCard({
   provacao,
   nivelPersonagem,
@@ -61,7 +85,6 @@ function ProvacaoCard({
 }: ProvacaoCardProps) {
   const { colors } = NOCTHERA_THEME;
   const desbloqueada = nivelPersonagem >= provacao.nivelRequerido;
-  const imgSrc = PROVACOES_IMAGES[provacao.assetKey];
 
   const heightClasses =
     variant === 'vertical'
@@ -82,13 +105,7 @@ function ProvacaoCard({
       >
         <OrnateCorners locked />
 
-        {/* Arte da provação (já contém o título na própria imagem) */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={imgSrc}
-          alt={provacao.nome}
-          className="absolute inset-0 w-full h-full object-cover object-center grayscale-[45%] select-none pointer-events-none"
-        />
+        <ArteDaProvacao provacao={provacao} bloqueada />
 
         {/* Topo direito: Cadeado + Requisito "Nível X" em destaque */}
         <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
@@ -108,8 +125,8 @@ function ProvacaoCard({
     );
   }
 
-  // Provações com tela própria (Caçada, Batalha Sangrenta, Torre Celestial, Guerreiro e Teste de Equipe) viram link
-  const destino = provacao.id === 'cacada' ? '/cacada' : provacao.id === 'batalha-sangrenta' ? '/batalha-sangrenta' : provacao.id === 'torre-celestial' ? '/torre-celestial' : provacao.id === 'guerreiro' ? '/guerreiro' : provacao.id === 'teste-equipe' ? '/teste-equipe' : null;
+  // Provações com tela própria (Caçada, Batalha Sangrenta, Torre Celestial, Guerreiro, Teste de Equipe e Expedição) viram link
+  const destino = provacao.id === 'cacada' ? '/cacada' : provacao.id === 'batalha-sangrenta' ? '/batalha-sangrenta' : provacao.id === 'torre-celestial' ? '/torre-celestial' : provacao.id === 'guerreiro' ? '/guerreiro' : provacao.id === 'teste-equipe' ? '/teste-equipe' : provacao.id === 'expedicao' ? '/expedicao' : null;
   const card = (
     <article
       aria-label={`${provacao.nome} - Nível ${provacao.nivelRequerido}`}
@@ -121,13 +138,7 @@ function ProvacaoCard({
     >
       <OrnateCorners locked={false} />
 
-      {/* Arte da provação (já contém o título na própria imagem) */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={imgSrc}
-        alt={provacao.nome}
-        className="absolute inset-0 w-full h-full object-cover object-center select-none pointer-events-none"
-      />
+      <ArteDaProvacao provacao={provacao} />
 
       {/* Topo direito: Badge discreto de Nível da provação */}
       <div className="absolute top-2 right-2 z-20 flex items-center">
@@ -158,12 +169,13 @@ export function ProvacoesScreen({ personagem }: ProvacoesScreenProps) {
 
   // Disposição exata conforme o layout de referência:
   // Linha 1 (Topo - 2 colunas): Batalha Sangrenta (esq) | Guerreiro (dir)
-  // Linha 2 (Meio - 2 colunas): Chefe Mundial (esq) | Caçada (dir); a Provação de Dungeons saiu do catálogo (Yuri, 22/10/2026)
+  // Linha 2 (Meio - Assimétrica): Expedição vertical (esq, no lugar da Dungeon) | Chefe Mundial + Caçada empilhados (dir)
   // Linha 3 (Base - 2 colunas): Torre Celestial (esq) | Teste de Equipe (dir)
   const cardTopoEsq = obterProvacao('batalha-sangrenta');
   const cardTopoDir = obterProvacao('guerreiro');
-  const cardMeioEsq = obterProvacao('chefe-mundial');
-  const cardMeioDir = obterProvacao('cacada');
+  const cardMeioVerticalEsq = obterProvacao('expedicao');
+  const cardMeioDirTopo = obterProvacao('chefe-mundial');
+  const cardMeioDirBase = obterProvacao('cacada');
   const cardBaseEsq = obterProvacao('torre-celestial');
   const cardBaseDir = obterProvacao('teste-equipe');
 
@@ -238,7 +250,7 @@ export function ProvacoesScreen({ personagem }: ProvacoesScreenProps) {
           </div>
         </header>
 
-        {/* MOSAICO DAS 6 PROVAÇÕES: 3 linhas de 2 cards */}
+        {/* MOSAICO DAS 7 PROVAÇÕES (Disposição idêntica à imagem de referência) */}
         <section aria-label="Lista de Provações" className="w-full flex flex-col gap-2.5 sm:gap-3">
           {/* LINHA 1: 2 Cards Horizontais Lado a Lado */}
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
@@ -254,18 +266,28 @@ export function ProvacoesScreen({ personagem }: ProvacoesScreenProps) {
             />
           </div>
 
-          {/* LINHA 2: 2 Cards Horizontais Lado a Lado */}
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-            <ProvacaoCard
-              provacao={cardMeioEsq}
-              nivelPersonagem={personagem.nivel}
-              variant="horizontal"
-            />
-            <ProvacaoCard
-              provacao={cardMeioDir}
-              nivelPersonagem={personagem.nivel}
-              variant="horizontal"
-            />
+          {/* LINHA 2: Card Vertical Alto à Esquerda + 2 Cards Horizontais Empilhados à Direita */}
+          <div className="grid grid-cols-12 gap-2.5 sm:gap-3 items-stretch">
+            <div className="col-span-5 flex">
+              <ProvacaoCard
+                provacao={cardMeioVerticalEsq}
+                nivelPersonagem={personagem.nivel}
+                variant="vertical"
+              />
+            </div>
+
+            <div className="col-span-7 flex flex-col justify-between gap-2.5 sm:gap-3">
+              <ProvacaoCard
+                provacao={cardMeioDirTopo}
+                nivelPersonagem={personagem.nivel}
+                variant="stacked"
+              />
+              <ProvacaoCard
+                provacao={cardMeioDirBase}
+                nivelPersonagem={personagem.nivel}
+                variant="stacked"
+              />
+            </div>
           </div>
 
           {/* LINHA 3: 2 Cards Horizontais Lado a Lado na Base */}

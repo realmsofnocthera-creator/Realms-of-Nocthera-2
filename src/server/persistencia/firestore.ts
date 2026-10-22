@@ -20,6 +20,7 @@ import { contratosDoDocumento } from '@/game/contratos';
 import { entradaDoDocumento, participacoesDoDocumento, type EntradaDoChefeSemanal } from '@/rules/chefeSemanal';
 import { chavesDoDocumento, partyDoDocumento, type PartyDocumento } from '@/rules/testeEquipe';
 import { colecionaveisDoDocumento, contadorPorSeloDoDocumento } from '@/rules/colecionaveis';
+import { expedicoesDoDocumento } from '@/rules/expedicao';
 import { bonusDeGuildaDoDocumento } from '@/rules/pesquisa';
 import { chaveDoNomeDaGuilda, guildaDoDocumento, type GuildaDocumento } from '@/rules/guilda';
 import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
@@ -395,6 +396,8 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(colecionaveisDoDocumento(data.colecionaveis) ? { colecionaveis: colecionaveisDoDocumento(data.colecionaveis) } : {}),
     ...(quantidadePositiva(data.fragmentosDeMemoria) ? { fragmentosDeMemoria: quantidadePositiva(data.fragmentosDeMemoria) } : {}),
     ...(quantidadePositiva(data.pedrasDaRecordacao) ? { pedrasDaRecordacao: quantidadePositiva(data.pedrasDaRecordacao) } : {}),
+    ...(expedicoesDoDocumento(data.expedicoes) ? { expedicoes: expedicoesDoDocumento(data.expedicoes) } : {}),
+    ...(quantidadePositiva(data.avancosDeExpedicao) ? { avancosDeExpedicao: quantidadePositiva(data.avancosDeExpedicao) } : {}),
     ...(typeof data.partyId === 'string' && data.partyId ? { partyId: data.partyId } : {}),
     ...(idsDeParty(data.convitesDeParty).length ? { convitesDeParty: idsDeParty(data.convitesDeParty) } : {}),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
@@ -468,6 +471,8 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.colecionaveis && Object.keys(char.colecionaveis).length ? { colecionaveis: semUndefined(char.colecionaveis) } : {}),
     ...(char.fragmentosDeMemoria ? { fragmentosDeMemoria: char.fragmentosDeMemoria } : {}),
     ...(char.pedrasDaRecordacao ? { pedrasDaRecordacao: char.pedrasDaRecordacao } : {}),
+    ...(char.expedicoes?.length ? { expedicoes: semUndefined(char.expedicoes) } : {}),
+    ...(char.avancosDeExpedicao ? { avancosDeExpedicao: char.avancosDeExpedicao } : {}),
     ...(char.partyId ? { partyId: char.partyId } : {}),
     ...(char.convitesDeParty?.length ? { convitesDeParty: char.convitesDeParty } : {}),
     // campos derivados, só para o banco poder ordenar e buscar (7.1): o nome em minúsculas e os contadores das provações
