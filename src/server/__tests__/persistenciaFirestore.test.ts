@@ -182,6 +182,22 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(db.dados.has('partys/p_0123456789ab')).toBe(false);
   });
 
+  it('guarda as cartas da Alma, as equipadas, as descobertas e as moedas (7.8); dado estranho é descartado', () => {
+    const carta = { id: 'c1', tipo: 'corpo-comum-1', efeitos: [{ efeito: 'forca', valor: 1 }], despertar: 0 };
+    const doc = personagemParaFirestore({ ...PERSONAGEM, cartasItens: [carta as never], cartasEquipadas: ['c1'], cartasDescobertas: ['corpo-comum-1'], poeiraDeAlma: 30, cacosDeAlma: 12 });
+    const volta = personagemDoFirestore('u1', doc);
+    expect(volta).toMatchObject({ cartasItens: [carta], cartasEquipadas: ['c1'], cartasDescobertas: ['corpo-comum-1'], poeiraDeAlma: 30, cacosDeAlma: 12 });
+    const antigo = personagemParaFirestore(PERSONAGEM);
+    expect(antigo).not.toHaveProperty('cartasItens');
+    expect(antigo).not.toHaveProperty('poeiraDeAlma');
+    const ruim = personagemDoFirestore('u1', { ...antigo, cartasItens: [carta, { id: 'x', tipo: 'inexistente', efeitos: [] }, 5], cartasEquipadas: ['c1', 'x'], cartasDescobertas: ['lixo'], poeiraDeAlma: -5, cacosDeAlma: 'x' });
+    expect(ruim.cartasItens).toEqual([carta]);
+    expect(ruim.cartasEquipadas).toEqual(['c1']);
+    expect(ruim.cartasDescobertas).toEqual(['corpo-comum-1']);
+    expect(ruim.poeiraDeAlma).toBeUndefined();
+    expect(ruim.cacosDeAlma).toBeUndefined();
+  });
+
   it('a escolha dos equipamentos do perfil vai e volta, inclusive a lista vazia, e valores ruins são ignorados', () => {
     const volta = personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, perfilEquipamentos: ['w1', 'p2'] }));
     expect(volta.perfilEquipamentos).toEqual(['w1', 'p2']);

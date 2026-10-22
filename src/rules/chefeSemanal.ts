@@ -105,6 +105,8 @@ export interface FaixaDoChefeSemanal {
   xpGuilda: number;
   /** Baús de emblemas para cada membro que lutou (cada baú = 1 emblema aleatório da raridade). */
   baus: { raridade: EmblemaRaridade; quantidade: number }[];
+  /** Cartas da Alma para cada membro que lutou (a raridade de cada carta). */
+  cartas: EmblemaRaridade[];
 }
 
 /**
@@ -112,13 +114,13 @@ export interface FaixaDoChefeSemanal {
  * lendário; 4 épicos); o resto ("e assim sucessivamente"), o ouro e o XP de guilda são PROPOSTA, a confirmar.
  */
 export const FAIXAS_DO_CHEFE_SEMANAL: readonly FaixaDoChefeSemanal[] = [
-  { de: 1, ate: 1, nome: '1º lugar', ouro: 20000, xpGuilda: 3000, baus: [{ raridade: 'lendario', quantidade: 2 }] },
-  { de: 2, ate: 2, nome: '2º lugar', ouro: 15000, xpGuilda: 2500, baus: [{ raridade: 'lendario', quantidade: 1 }] },
-  { de: 3, ate: 3, nome: '3º lugar', ouro: 12000, xpGuilda: 2000, baus: [{ raridade: 'epico', quantidade: 4 }] },
-  { de: 4, ate: 10, nome: '4º ao 10º', ouro: 8000, xpGuilda: 1500, baus: [{ raridade: 'epico', quantidade: 2 }] },
-  { de: 11, ate: 50, nome: '11º ao 50º', ouro: 5000, xpGuilda: 1000, baus: [{ raridade: 'epico', quantidade: 1 }] },
-  { de: 51, ate: 100, nome: '51º ao 100º', ouro: 3000, xpGuilda: 600, baus: [{ raridade: 'muitoRaro', quantidade: 2 }] },
-  { de: 101, ate: null, nome: '101º em diante', ouro: 1500, xpGuilda: 300, baus: [] },
+  { de: 1, ate: 1, nome: '1º lugar', ouro: 20000, xpGuilda: 3000, baus: [{ raridade: 'lendario', quantidade: 2 }], cartas: ['mitico'] },
+  { de: 2, ate: 2, nome: '2º lugar', ouro: 15000, xpGuilda: 2500, baus: [{ raridade: 'lendario', quantidade: 1 }], cartas: ['lendario'] },
+  { de: 3, ate: 3, nome: '3º lugar', ouro: 12000, xpGuilda: 2000, baus: [{ raridade: 'epico', quantidade: 4 }], cartas: ['lendario'] },
+  { de: 4, ate: 10, nome: '4º ao 10º', ouro: 8000, xpGuilda: 1500, baus: [{ raridade: 'epico', quantidade: 2 }], cartas: ['epico'] },
+  { de: 11, ate: 50, nome: '11º ao 50º', ouro: 5000, xpGuilda: 1000, baus: [{ raridade: 'epico', quantidade: 1 }], cartas: ['muitoRaro'] },
+  { de: 51, ate: 100, nome: '51º ao 100º', ouro: 3000, xpGuilda: 600, baus: [{ raridade: 'muitoRaro', quantidade: 2 }], cartas: ['raro'] },
+  { de: 101, ate: null, nome: '101º em diante', ouro: 1500, xpGuilda: 300, baus: [], cartas: ['comum'] },
 ];
 
 export const faixaDaPosicao = (posicao: number) => FAIXAS_DO_CHEFE_SEMANAL.find((f) => posicao >= f.de && (f.ate === null || posicao <= f.ate))!;

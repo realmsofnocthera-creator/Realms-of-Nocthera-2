@@ -6,6 +6,7 @@ import { lerArmasPersonagem } from '@/game/forja';
 import { lerArmadurasPersonagem } from '@/game/armaduraForja';
 import { EQUIPAMENTO_VAZIO, lerEquipamentoPersonagem } from '@/game/equipamento';
 import { EmblemaItem, lerEmblemasPersonagem } from '@/game/emblemas';
+import { lerCartasPersonagem } from '@/rules/almas';
 import type { Attributes } from '@/rules/attributes';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import { descreverErro, registrarLog } from '@/server/log';
@@ -268,6 +269,19 @@ const ATRIBUTOS_PADRAO_LEGADO: Attributes = {
 };
 
 /** Converte o documento characters/{uid} do Firestore no formato usado pelo servidor. */
+/** As cartas da Alma do documento (descarta o que é inválido) e as moedas da Alma. */
+function almaDoDocumento(data: Record<string, unknown>): Partial<Pick<CharacterDocument, 'cartasItens' | 'cartasEquipadas' | 'cartasDescobertas' | 'poeiraDeAlma' | 'cacosDeAlma'>> {
+  const { itens, equipadas, descobertas } = lerCartasPersonagem(data.cartasItens, data.cartasEquipadas, data.cartasDescobertas);
+  const inteiro = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.floor(v) : 0);
+  return {
+    ...(itens.length > 0 ? { cartasItens: itens } : {}),
+    ...(equipadas.length > 0 ? { cartasEquipadas: equipadas } : {}),
+    ...(descobertas.length > 0 ? { cartasDescobertas: descobertas } : {}),
+    ...(inteiro(data.poeiraDeAlma) ? { poeiraDeAlma: inteiro(data.poeiraDeAlma) } : {}),
+    ...(inteiro(data.cacosDeAlma) ? { cacosDeAlma: inteiro(data.cacosDeAlma) } : {}),
+  };
+}
+
 /** Os emblemas do documento (descarta o que é inválido); sem emblemas, não devolve os campos. */
 function emblemasDoDocumento(data: Record<string, unknown>): { emblemasItens?: EmblemaItem[]; emblemasEquipados?: string[] } {
   const { itens, equipados } = lerEmblemasPersonagem(data.emblemasItens, data.emblemasEquipados);
@@ -348,6 +362,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
       ? { guerreiroVencidas: (data.guerreiroVencidas as unknown[]).filter((n): n is number => typeof n === 'number') }
       : {}),
     ...emblemasDoDocumento(data),
+    ...almaDoDocumento(data),
     ...(typeof data.torreAndar === 'number' && data.torreAndar > 0 ? { torreAndar: Math.floor(data.torreAndar) } : {}),
     ...campanhaDoDocumento(data.campanha),
     ...(Array.isArray(data.batalhaSangrentaVencidas)
@@ -421,6 +436,11 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.guerreiroVencidas ? { guerreiroVencidas: char.guerreiroVencidas } : {}),
     ...(char.emblemasItens && char.emblemasItens.length > 0 ? { emblemasItens: char.emblemasItens } : {}),
     ...(char.emblemasEquipados && char.emblemasEquipados.length > 0 ? { emblemasEquipados: char.emblemasEquipados } : {}),
+    ...(char.cartasItens?.length ? { cartasItens: semUndefined(char.cartasItens) } : {}),
+    ...(char.cartasEquipadas?.length ? { cartasEquipadas: char.cartasEquipadas } : {}),
+    ...(char.cartasDescobertas?.length ? { cartasDescobertas: char.cartasDescobertas } : {}),
+    ...(char.poeiraDeAlma ? { poeiraDeAlma: char.poeiraDeAlma } : {}),
+    ...(char.cacosDeAlma ? { cacosDeAlma: char.cacosDeAlma } : {}),
     armas: char.armas ?? [],
     armaduras: char.armaduras ?? [],
     equipamento: char.equipamento ?? EQUIPAMENTO_VAZIO,

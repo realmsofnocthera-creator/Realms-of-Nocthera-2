@@ -1,3 +1,5 @@
+import { bonusDasCartas, type BonusDeAlma } from '@/game/almas';
+import type { CartaItem } from '@/rules/almas';
 import type { BonusDeGuilda } from '@/rules/pesquisa';
 import type { ParticipacaoNoChefeSemanal } from '@/rules/chefeSemanal';
 import { contarVitorias, type ContratosDoDia } from '@/game/contratos';
@@ -191,6 +193,12 @@ export interface CharacterDocument {
   emblemasItens?: EmblemaItem[];
   /** Ids dos emblemas equipados (até 4 espaços). */
   emblemasEquipados?: string[];
+  /** Sistema de Alma (7.8): as cartas, as equipadas (até 3 por categoria), os tipos já descobertos (para a Coleção) e as moedas da Alma. */
+  cartasItens?: CartaItem[];
+  cartasEquipadas?: string[];
+  cartasDescobertas?: string[];
+  poeiraDeAlma?: number;
+  cacosDeAlma?: number;
   /** Armas fabricadas na Forja. */
   armas?: ArmaPersonagem[];
   /** Peças de armadura fabricadas no Ferreiro. */
@@ -419,6 +427,11 @@ function mesclarPersonagem(
     ...((updates.guerreiroVencidas ?? current.guerreiroVencidas) ? { guerreiroVencidas: updates.guerreiroVencidas ?? current.guerreiroVencidas } : {}),
     ...((updates.emblemasItens ?? current.emblemasItens) ? { emblemasItens: updates.emblemasItens ?? current.emblemasItens } : {}),
     ...((updates.emblemasEquipados ?? current.emblemasEquipados) ? { emblemasEquipados: updates.emblemasEquipados ?? current.emblemasEquipados } : {}),
+    ...((updates.cartasItens ?? current.cartasItens) ? { cartasItens: updates.cartasItens ?? current.cartasItens } : {}),
+    ...((updates.cartasEquipadas ?? current.cartasEquipadas) ? { cartasEquipadas: updates.cartasEquipadas ?? current.cartasEquipadas } : {}),
+    ...((updates.cartasDescobertas ?? current.cartasDescobertas) ? { cartasDescobertas: updates.cartasDescobertas ?? current.cartasDescobertas } : {}),
+    ...((updates.poeiraDeAlma ?? current.poeiraDeAlma) ? { poeiraDeAlma: updates.poeiraDeAlma ?? current.poeiraDeAlma } : {}),
+    ...((updates.cacosDeAlma ?? current.cacosDeAlma) ? { cacosDeAlma: updates.cacosDeAlma ?? current.cacosDeAlma } : {}),
     ...((updates.perfilEquipamentos ?? current.perfilEquipamentos) ? { perfilEquipamentos: updates.perfilEquipamentos ?? current.perfilEquipamentos } : {}),
     armas: updates.armas ?? current.armas ?? [],
     armaduras: updates.armaduras ?? current.armaduras ?? [],
@@ -442,20 +455,27 @@ function mesclarPersonagem(
   };
 }
 
+/** O bônus das cartas equipadas e da coleção (só a partir do nível da Alma); undefined se não há nada. */
+function bonusDeAlmaDe(char: Partial<Pick<CharacterDocument, 'cartasItens' | 'cartasEquipadas' | 'cartasDescobertas' | 'nivel'>>): BonusDeAlma | undefined {
+  if (!char.cartasItens?.length && !char.cartasDescobertas?.length) return undefined;
+  return bonusDasCartas(char.cartasItens ?? [], char.cartasEquipadas ?? [], char.cartasDescobertas ?? [], char.nivel ?? 1);
+}
+
 /** Atributos que valem em combate e nos derivados: os gravados, o Reforço de Habilidade e o equipamento equipado. */
 export function atributosEfetivos(
   char: Pick<CharacterDocument, 'atributos' | 'reforcoHabilidade'> &
-    Partial<Pick<CharacterDocument, 'equipamento' | 'armas' | 'armaduras' | 'emblemasItens' | 'emblemasEquipados'>>
+    Partial<Pick<CharacterDocument, 'equipamento' | 'armas' | 'armaduras' | 'emblemasItens' | 'emblemasEquipados' | 'cartasItens' | 'cartasEquipadas' | 'cartasDescobertas' | 'nivel'>>
 ): Attributes {
   const comReforco = aplicarReforcoAtributos(char.atributos, char.reforcoHabilidade);
   const emblemas = emblemasEquipadosDe(char);
-  if (!char.equipamento && emblemas.length === 0) return comReforco;
-  return aplicarEquipamentoAosAtributos(comReforco, calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras, emblemas));
+  const alma = bonusDeAlmaDe(char);
+  if (!char.equipamento && emblemas.length === 0 && !alma) return comReforco;
+  return aplicarEquipamentoAosAtributos(comReforco, calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras, emblemas, alma));
 }
 
 /** Derivados calculados com o Reforço e o equipamento (atributos, HP e defesa) e a Ascensão (nível das passivas). */
 function derivadosComReforco(char: CharacterDocument) {
-  const ficha = calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras, emblemasEquipadosDe(char));
+  const ficha = calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras, emblemasEquipadosDe(char), bonusDeAlmaDe(char));
   const comReforco = aplicarReforcoAtributos(char.atributos, char.reforcoHabilidade);
   const efetivos = aplicarEquipamentoAosAtributos(comReforco, ficha);
   const derivados = calcularAtributosDerivados(efetivos, char.classeId, char.nivel, char);
@@ -1480,7 +1500,7 @@ function temPercentuais(ficha: ReturnType<typeof calcularFichaEquipamento>): boo
 /** Monta o personagem para o combate: HP cheio, Sobreescudo e atributos com o Reforço de Habilidade e o equipamento. */
 export function combatenteDoPersonagem(current: CharacterDocument): Combatente {
   // A ficha de combate do equipamento: o motor só lê o que está aqui (arma: dano, tipo, elemento e status)
-  const ficha = calcularFichaEquipamento(current.equipamento, current.armas, current.armaduras, emblemasEquipadosDe(current));
+  const ficha = calcularFichaEquipamento(current.equipamento, current.armas, current.armaduras, emblemasEquipadosDe(current), bonusDeAlmaDe(current));
   const arma = ficha.arma;
   const emblemasCombate = emblemasNoCombate(ficha.emblemas);
   // Habilidades de armadura que dependem do estado da luta (dano e crítico condicionais, Heroísmo)

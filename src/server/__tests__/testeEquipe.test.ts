@@ -7,6 +7,7 @@ import { agirNoTeste, ErroDeParty, estadoDoTeste, iniciarTeste } from '@/server/
 import { limparCacheDeSistemas } from '@/server/sistemasLeitura';
 import { repositorio } from '@/server/persistencia';
 import { VALIDADE_DA_PARTY_MS } from '@/rules/testeEquipe';
+import { TIPO_DE_CARTA_MAP } from '@/rules/almas';
 import { resetCharacterStore } from '@/test/repositorioMemoria';
 import { tokenDeTeste } from '@/test/firebaseAdminMock';
 
@@ -110,6 +111,11 @@ describe('Party e Teste de Equipe (7.4)', () => {
     expect(depois.ouro).toBe(antes.ouro + 1500);
     expect(depois.diamantes).toBe((antes.diamantes ?? 0) + 10);
     expect(depois.testeEquipeVencidas).toEqual([1]);
+    // Alma: poeira de alma (dobro na primeira vitória) e 1 carta por vitória
+    expect(depois.poeiraDeAlma).toBe(20);
+    expect(depois.cartasItens).toHaveLength(1);
+    expect(depois.cartasDescobertas).toHaveLength(1);
+    expect(['comum', 'raro']).toContain(TIPO_DE_CARTA_MAP[depois.cartasItens![0].tipo].raridade);
     const e = await estadoDoTeste('u2');
     expect(e.dificuldades[0]).toMatchObject({ vencida: true, tentouHoje: true });
     expect(e.dificuldades[1].liberada).toBe(true);

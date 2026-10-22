@@ -7,6 +7,7 @@ import { getClassById } from '@/rules/classes';
 import { resolveAvatarSrc } from '@/assets/avatars';
 import { calcularPoderTotal, xpParaProximoNivel } from '@/game';
 import { AbaFicha, FichaSidebar } from './FichaSidebar';
+import { NIVEL_DA_ALMA } from '@/rules/almas';
 import { FichaAtributos } from './FichaAtributos';
 
 interface FichaHeroProps {
@@ -16,6 +17,8 @@ interface FichaHeroProps {
   /** Aba aberta: na de Equipamentos, os espaços tomam o lugar da moldura de atributos. */
   aba?: AbaFicha;
   onMudarAba?: (aba: AbaFicha) => void;
+  /** Abre a tela da Alma (7.8). */
+  onAbrirAlma?: () => void;
   colunaEquipamentos?: React.ReactNode;
   /** Na aba Emblemas, os 4 espaços de emblema tomam o lugar da moldura de atributos. */
   colunaEmblemas?: React.ReactNode;
@@ -27,6 +30,7 @@ export function FichaHero({
   onOpenLupa,
   aba = 'personagem',
   onMudarAba,
+  onAbrirAlma,
   colunaEquipamentos,
   colunaEmblemas,
   className = '',
@@ -83,7 +87,7 @@ export function FichaHero({
         <div className="flex items-start justify-between gap-1.5 sm:gap-2 w-full">
           {/* BARRA LATERAL (4 botões verticais sem botão de avatar) */}
           <div className="flex flex-col gap-1.5 pt-0.5 shrink-0">
-            <FichaSidebar aba={aba} onMudarAba={onMudarAba} />
+            <FichaSidebar aba={aba} onMudarAba={onMudarAba} onAbrirAlma={onAbrirAlma} almaLiberada={character.nivel >= NIVEL_DA_ALMA} />
           </div>
 
           {/* COLUNA DIREITA: Bloco de Identidade (Nome, Raça, Nível, XP) + Moldura de Atributos */}

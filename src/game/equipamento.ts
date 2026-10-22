@@ -1,3 +1,4 @@
+import type { BonusDeAlma } from '@/game/almas';
 import { ATTRIBUTES, AttributeName, Attributes } from '@/rules/attributes';
 import {
   ESPACOS_ARMADURA,
@@ -166,7 +167,9 @@ export function calcularFichaEquipamento(
   armas: readonly ArmaPersonagem[] = [],
   armaduras: readonly ArmaduraPersonagem[] = [],
   /** Emblemas equipados: somam os atributos deles (as habilidades entram à parte). */
-  emblemasEquipados: readonly EmblemaItem[] = []
+  emblemasEquipados: readonly EmblemaItem[] = [],
+  /** Cartas da Alma equipadas e a coleção (7.8): atributos, percentuais e HP. */
+  alma?: BonusDeAlma
 ): FichaEquipamento {
   const ficha: FichaEquipamento = {
     atributos: zerarAtributos(),
@@ -190,6 +193,16 @@ export function calcularFichaEquipamento(
   ficha.hpPercentual += fxEmblema.hpPercentual;
   ficha.resistenciaElemental = { ...fxEmblema.resistenciaElemental };
   ficha.emblemas = fxEmblema;
+  if (alma) {
+    for (const a of ATTRIBUTES) ficha.atributos[a] += alma.atributos[a];
+    ficha.percentuais.danoFisico += alma.atqFisico;
+    ficha.percentuais.danoMagico += alma.atqMagico;
+    ficha.percentuais.defesa += alma.defesa;
+    ficha.percentuais.agilidade += alma.agilidade;
+    ficha.percentuais.chanceCritico += alma.chanceCritico;
+    ficha.percentuais.chanceEfeitos += alma.chanceEfeitos;
+    ficha.hpPercentual += alma.hp;
+  }
   if (!equipamento) return ficha;
 
   // Peças primeiro: as habilidades delas (somadas) mexem no dano fixo da arma e nos percentuais
