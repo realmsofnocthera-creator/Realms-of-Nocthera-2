@@ -17,6 +17,7 @@ import type { MissoesDoJogador } from '@/game/missoes';
 import { chaveDeBusca, type CampoDoRanking, type CriterioDeRanking, type RankingGuardado, type ResumoDePersonagem } from '@/rules/social';
 import { contratosDoDocumento } from '@/game/contratos';
 import { entradaDoDocumento, participacoesDoDocumento, type EntradaDoChefeSemanal } from '@/rules/chefeSemanal';
+import { partyDoDocumento, type PartyDocumento } from '@/rules/testeEquipe';
 import { bonusDeGuildaDoDocumento } from '@/rules/pesquisa';
 import { chaveDoNomeDaGuilda, guildaDoDocumento, type GuildaDocumento } from '@/rules/guilda';
 import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
@@ -60,6 +61,7 @@ function resumoPublicoDoDocumento(data: DocumentData, campo?: CampoDoRanking): R
   };
 }
 
+const idsDeParty = (v: unknown) => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && /^p_[a-f0-9]{12}$/.test(x)))].slice(0, 10) : []);
 const idsDeGuilda = (v: unknown) => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && /^g_[a-z0-9]{6,32}$/.test(x)))].slice(0, 10) : []);
 
 function rankingDoDocumento(criterio: CriterioDeRanking, data: DocumentData | undefined): RankingGuardado | null {
@@ -368,6 +370,12 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
       : {}),
     ...(bonusDeGuildaDoDocumento(data.bonusDeGuilda) ? { bonusDeGuilda: bonusDeGuildaDoDocumento(data.bonusDeGuilda) } : {}),
     ...(participacoesDoDocumento(data.chefeSemanal) ? { chefeSemanal: participacoesDoDocumento(data.chefeSemanal) } : {}),
+    ...(data.testeEquipeTentativas && typeof data.testeEquipeTentativas === 'object'
+      ? { testeEquipeTentativas: Object.fromEntries(Object.entries(data.testeEquipeTentativas as Record<string, unknown>).filter((e): e is [string, string] => typeof e[1] === 'string')) }
+      : {}),
+    ...(Array.isArray(data.testeEquipeVencidas) ? { testeEquipeVencidas: (data.testeEquipeVencidas as unknown[]).filter((n): n is number => Number.isInteger(n)) } : {}),
+    ...(typeof data.partyId === 'string' && data.partyId ? { partyId: data.partyId } : {}),
+    ...(idsDeParty(data.convitesDeParty).length ? { convitesDeParty: idsDeParty(data.convitesDeParty) } : {}),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
       ? { bonusSubclasseAplicado: lerAtributos(data.bonusSubclasseAplicado, ZEROS_ATRIBUTOS) }
       : {}),
@@ -426,6 +434,10 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.incursaoTentativas ? { incursaoTentativas: char.incursaoTentativas } : {}),
     ...(char.bonusDeGuilda ? { bonusDeGuilda: char.bonusDeGuilda } : {}),
     ...(char.chefeSemanal?.length ? { chefeSemanal: semUndefined(char.chefeSemanal) } : {}),
+    ...(char.testeEquipeTentativas ? { testeEquipeTentativas: char.testeEquipeTentativas } : {}),
+    ...(char.testeEquipeVencidas?.length ? { testeEquipeVencidas: char.testeEquipeVencidas } : {}),
+    ...(char.partyId ? { partyId: char.partyId } : {}),
+    ...(char.convitesDeParty?.length ? { convitesDeParty: char.convitesDeParty } : {}),
     // campos derivados, só para o banco poder ordenar e buscar (7.1): o nome em minúsculas e os contadores das provações
     nomeBusca: chaveDeBusca(char.nome),
     ...(char.batalhaSangrentaVencidas?.length ? { vitoriasBatalha: char.batalhaSangrentaVencidas.length } : {}),
@@ -467,6 +479,8 @@ class ContextoFirestore implements ContextoTransacao {
   private guildas = new Map<string, GuildaDocumento | null>();
   private nomesDeGuilda = new Map<string, { guildaId: string; nome: string } | null>();
   private chefeSemanal = new Map<string, EntradaDoChefeSemanal>();
+  /** null = apagar. */
+  private partys = new Map<string, PartyDocumento | null>();
 
   constructor(
     private readonly db: Firestore,
@@ -517,6 +531,23 @@ class ContextoFirestore implements ContextoTransacao {
 
   gravarEntradaChefeSemanal(entrada: EntradaDoChefeSemanal): void {
     this.chefeSemanal.set(`${entrada.semana}/${entrada.guildaId}`, structuredClone(entrada));
+  }
+
+  async lerParty(id: string): Promise<PartyDocumento | null> {
+    if (this.partys.has(id)) {
+      const pendente = this.partys.get(id);
+      return pendente ? structuredClone(pendente) : null;
+    }
+    const snap = await this.tx.get(this.db.collection('partys').doc(id));
+    return snap.exists ? partyDoDocumento(id, snap.data()) : null;
+  }
+
+  gravarParty(party: PartyDocumento): void {
+    this.partys.set(party.id, structuredClone(party));
+  }
+
+  apagarParty(id: string): void {
+    this.partys.set(id, null);
   }
 
   gravarCombate(registro: RegistroCombate): void {
@@ -577,6 +608,11 @@ class ContextoFirestore implements ContextoTransacao {
     for (const [id, guilda] of this.guildas) {
       const ref = this.db.collection('guildas').doc(id);
       if (guilda) this.tx.set(ref, guildaParaFirestore(guilda));
+      else this.tx.delete(ref);
+    }
+    for (const [id, party] of this.partys) {
+      const ref = this.db.collection('partys').doc(id);
+      if (party) this.tx.set(ref, semUndefined(party));
       else this.tx.delete(ref);
     }
     for (const e of this.chefeSemanal.values()) {
@@ -689,6 +725,13 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
       return lerComRetry(`lerChefeSemanal:${semana}`, async () => {
         const snap = await db.collection('chefeSemanal').doc(semana).collection('guildas').doc(guildaId).get();
         return snap.exists ? entradaDoDocumento(snap.data()) : null;
+      });
+    },
+
+    async lerParty(id: string) {
+      return lerComRetry(`lerParty:${id}`, async () => {
+        const snap = await db.collection('partys').doc(id).get();
+        return snap.exists ? partyDoDocumento(id, snap.data()) : null;
       });
     },
 

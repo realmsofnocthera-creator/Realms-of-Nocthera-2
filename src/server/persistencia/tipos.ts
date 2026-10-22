@@ -7,6 +7,7 @@ import type { SancaoDocumento } from '@/rules/sancoes';
 import type { ConfiguracaoDeSistemas } from '@/rules/sistemas';
 import { chaveDoNomeDaGuilda, type GuildaDocumento } from '@/rules/guilda';
 import type { EntradaDoChefeSemanal } from '@/rules/chefeSemanal';
+import type { PartyDocumento } from '@/rules/testeEquipe';
 
 /**
  * Registro de um combate resolvido (0.5-B1/B3): guarda a semente e a entrada para
@@ -120,6 +121,10 @@ export interface ContextoTransacao {
   /** Chefe de guildas (7.3): o registro da guilda na semana. */
   lerEntradaChefeSemanal(semana: string, guildaId: string): Promise<EntradaDoChefeSemanal | null>;
   gravarEntradaChefeSemanal(entrada: EntradaDoChefeSemanal): void;
+  /** Party do Teste de Equipe (7.4). */
+  lerParty(id: string): Promise<PartyDocumento | null>;
+  gravarParty(party: PartyDocumento): void;
+  apagarParty(id: string): void;
 }
 
 /** Papel de Mestre concedido pelo painel (o Dono vem do ambiente e não é gravado aqui). */
@@ -266,6 +271,8 @@ export interface Repositorio {
   /** Quantas guildas da semana têm mais dano que o total (a posição é isso + 1). */
   contarGuildasAcimaNoChefeSemanal(semana: string, total: number): Promise<number>;
   lerEntradaChefeSemanal(semana: string, guildaId: string): Promise<EntradaDoChefeSemanal | null>;
+  /** Party do Teste de Equipe (7.4), fora de transação. */
+  lerParty(id: string): Promise<PartyDocumento | null>;
 }
 
 /**

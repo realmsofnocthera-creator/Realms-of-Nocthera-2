@@ -216,6 +216,12 @@ export interface CharacterDocument {
   bonusDeGuilda?: BonusDeGuilda;
   /** Chefe de guildas (7.3): as semanas em que lutou (as 4 últimas) e se já resgatou. */
   chefeSemanal?: ParticipacaoNoChefeSemanal[];
+  /** Teste de Equipe (7.4): o dia da última tentativa de cada dificuldade e as dificuldades já vencidas. */
+  testeEquipeTentativas?: Record<string, string>;
+  testeEquipeVencidas?: number[];
+  /** Party (7.4): a party em que está e os convites de party esperando resposta (ids). */
+  partyId?: string;
+  convitesDeParty?: string[];
   /** Quanto o equipamento soma em cada atributo (pontos e % de Agilidade). Derivado, não é gravado. */
   bonusEquipamento?: Attributes;
   /** Mitigação física e mágica das peças de Defesa, com a % de Defesa da arma. Derivado, não é gravado. */

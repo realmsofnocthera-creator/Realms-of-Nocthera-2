@@ -11,6 +11,7 @@ import { chaveDeBusca, type CampoDoRanking, type CriterioDeRanking, type Ranking
 import type { ConfiguracaoDeSistemas } from '@/rules/sistemas';
 import { chaveDoNomeDaGuilda, type GuildaDocumento } from '@/rules/guilda';
 import type { EntradaDoChefeSemanal } from '@/rules/chefeSemanal';
+import type { PartyDocumento } from '@/rules/testeEquipe';
 import type {
   ConteudoDocumento,
   ContextoTransacao,
@@ -41,6 +42,7 @@ interface Estado {
   guildas: Map<string, GuildaDocumento>;
   nomesDeGuilda: Map<string, { guildaId: string; nome: string }>;
   chefeSemanal: Map<string, EntradaDoChefeSemanal>;
+  partys: Map<string, PartyDocumento>;
 }
 
 const estado: Estado = {
@@ -59,6 +61,7 @@ const estado: Estado = {
   guildas: new Map(),
   nomesDeGuilda: new Map(),
   chefeSemanal: new Map(),
+  partys: new Map(),
 };
 
 function valorDoCampo(c: CharacterDocument, campo: CampoDoRanking): number {
@@ -113,6 +116,7 @@ class ContextoMemoria implements ContextoTransacao {
   guildas = new Map<string, GuildaDocumento | null>();
   nomesDeGuilda = new Map<string, { guildaId: string; nome: string } | null>();
   chefeSemanal = new Map<string, EntradaDoChefeSemanal>();
+  partys = new Map<string, PartyDocumento | null>();
 
   async lerPersonagem(uid: string) {
     const valor = this.personagens.get(uid) ?? estado.personagens.get(uid);
@@ -159,6 +163,16 @@ class ContextoMemoria implements ContextoTransacao {
   liberarNomeDeGuilda(chave: string) {
     this.nomesDeGuilda.set(chave, null);
   }
+  async lerParty(id: string) {
+    const v = this.partys.has(id) ? this.partys.get(id) : estado.partys.get(id);
+    return v ? structuredClone(v) : null;
+  }
+  gravarParty(party: PartyDocumento) {
+    this.partys.set(party.id, structuredClone(party));
+  }
+  apagarParty(id: string) {
+    this.partys.set(id, null);
+  }
   async lerEntradaChefeSemanal(semana: string, guildaId: string) {
     const e = this.chefeSemanal.get(`${semana}/${guildaId}`) ?? estado.chefeSemanal.get(`${semana}/${guildaId}`);
     return e ? structuredClone(e) : null;
@@ -188,6 +202,7 @@ export const repositorio: Repositorio = {
         for (const [id, c] of ctx.combates) estado.combates.set(id, c);
         for (const [id, g] of ctx.guildas) (g ? estado.guildas.set(id, g) : estado.guildas.delete(id));
         for (const [k, e] of ctx.chefeSemanal) estado.chefeSemanal.set(k, e);
+        for (const [id, pt] of ctx.partys) (pt ? estado.partys.set(id, pt) : estado.partys.delete(id));
         for (const [chave, n] of ctx.nomesDeGuilda) (n ? estado.nomesDeGuilda.set(chave, n) : estado.nomesDeGuilda.delete(chave));
         estado.transacoes.push(...ctx.transacoes);
         return valor;
@@ -376,6 +391,11 @@ export const repositorio: Repositorio = {
     return e ? structuredClone(e) : null;
   },
 
+  async lerParty(id: string) {
+    const v = estado.partys.get(id);
+    return v ? structuredClone(v) : null;
+  },
+
   async listarGuildas(limite: number) {
     return [...estado.guildas.values()].sort((a, b) => b.membros.length - a.membros.length).slice(0, limite).map((g) => structuredClone(g));
   },
@@ -416,6 +436,7 @@ export function resetCharacterStore(): void {
   estado.guildas.clear();
   estado.nomesDeGuilda.clear();
   estado.chefeSemanal.clear();
+  estado.partys.clear();
   falhaNaConfiguracao = null;
   falhaNoLogAdmin = null;
   falhaAoGravar = null;
