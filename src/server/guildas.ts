@@ -72,7 +72,7 @@ import {
 import { escolherTipoDaRaridade, type EmblemaItem } from '@/game/emblemas';
 import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
 import { PREFIXO_MAXIMO_DA_BUSCA, PREFIXO_MINIMO_DA_BUSCA } from '@/rules/social';
-import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, ganharXp, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
+import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, ganharXp, maestriasDasVitorias, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { xpParaProximoNivel } from '@/game';
 import { chaveDoNome, chaveDoNomeDeGuilda, repositorio, type ContextoTransacao } from '@/server/persistencia';
 import { exigirSistemaLigado, lerConfiguracaoDeSistemas } from '@/server/sistemasLeitura';
@@ -816,7 +816,11 @@ export async function lutarIncursao(uid: string, r: RegrasDeGuilda, semente: num
     const hp = Math.max(0, inc.hp - dano);
     const info = nivelDeIncursao(inc.nivel);
     const contratos = resultado.vencedor === 'personagem' ? contarVitorias(eu.contratos, [chefe.id], hoje) : null;
-    let euDepois = salvarPersonagem(ctx, eu, { incursaoTentativas: { dia: hoje, usadas: usadas + 1 }, ...(contratos ? { contratos } : {}) });
+    let euDepois = salvarPersonagem(ctx, eu, {
+      incursaoTentativas: { dia: hoje, usadas: usadas + 1 },
+      ...(contratos ? { contratos } : {}),
+      ...(resultado.vencedor === 'personagem' ? maestriasDasVitorias(eu, [true], new Date()) : {}),
+    });
     const restantes = LUTAS_DE_INCURSAO_POR_DIA - usadas - 1;
 
     if (hp > 0) {

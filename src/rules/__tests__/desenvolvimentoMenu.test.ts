@@ -17,10 +17,8 @@ describe('DESENVOLVIMENTO_MENU', () => {
     ]);
   });
 
-  it('só "maestrias" ainda é "Em breve" (Reforço e Ascensão de Habilidade liberados na 2.2)', () => {
-    const liberados = DESENVOLVIMENTO_MENU.filter((item) => item.disponivel).map((item) => item.id);
-    expect(liberados).toEqual(['atributos', 'subclasse', 'melhorarHabilidade', 'avancoHabilidade']);
-    expect(DESENVOLVIMENTO_MENU.find((item) => item.id === 'maestrias')?.disponivel).toBe(false);
+  it('todos os itens estão liberados (Maestrias liberadas em 23/10/2026)', () => {
+    expect(DESENVOLVIMENTO_MENU.every((item) => item.disponivel)).toBe(true);
   });
 
   it('DESENVOLVIMENTO_SECAO_PADRAO é "atributos"', () => {

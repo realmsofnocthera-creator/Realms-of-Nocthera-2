@@ -2748,6 +2748,7 @@ function turnoDeCombateInterno(
       bonusDanoCondicionalDeEmblemas(atacante.equipamento?.emblemas, contextoEmblema) +
       bonusDosGatilhos(atacante.gatilhosEmblema, numeroTurno).dano +
       (i > 0 ? atacante.equipamento?.emblemas?.danoGolpesSeguidosPercentual ?? 0 : 0) +
+      (defensor.chefe === true ? atacante.equipamento?.contraChefes?.danoPercentual ?? 0 : 0) +
       pontoFracoNesteAtaque;
     const bonusDanoBuffs = bonusDanoBuffsPorTipo(
       ehBarbaroAtacante || ehCavaleiroAtacante || ehBandidoAtacante || ehSamuraiAtacante
@@ -3399,6 +3400,7 @@ function turnoDeCombateInterno(
           : resistenciaRacialDefensor?.danoMagicoPercentual ?? 0) +
         reducaoDanoPassivasMonstro(defensor, hpAtual, sobreescudoAtual, ehDanoFisico) +
         bonusDosGatilhos(defensor.gatilhosEmblema, numeroTurno).reducao +
+        (atacante.chefe === true ? defensor.equipamento?.contraChefes?.reducaoPercentual ?? 0 : 0) +
         reducaoDanoDeEmblemas(defensor.equipamento?.emblemas, ehDanoFisico, atacante.chefe === true, {
           veneno: atacante.statusAtivos?.includes('veneno') === true,
           negativo: (atacante.statusAtivos?.length ?? 0) > 0 || condicoesDoAlvo(atacante).length > 0,

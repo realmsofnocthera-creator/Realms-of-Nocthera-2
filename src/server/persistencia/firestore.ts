@@ -21,6 +21,7 @@ import { entradaDoDocumento, participacoesDoDocumento, type EntradaDoChefeSemana
 import { chavesDoDocumento, partyDoDocumento, type PartyDocumento } from '@/rules/testeEquipe';
 import { colecionaveisDoDocumento, contadorPorSeloDoDocumento } from '@/rules/colecionaveis';
 import { expedicoesDoDocumento } from '@/rules/expedicao';
+import { maestriasDoDocumento } from '@/rules/maestrias';
 import { correioGeralDoDocumento, mensagemDoDocumento, mensagensDoDocumento, type MensagemGeral } from '@/rules/correio';
 import { entradaMundialDoDocumento, participacoesMundiaisDoDocumento, type EntradaDoChefeMundial } from '@/rules/chefeMundial';
 import { bonusDeGuildaDoDocumento } from '@/rules/pesquisa';
@@ -400,6 +401,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(quantidadePositiva(data.pedrasDaRecordacao) ? { pedrasDaRecordacao: quantidadePositiva(data.pedrasDaRecordacao) } : {}),
     ...(expedicoesDoDocumento(data.expedicoes) ? { expedicoes: expedicoesDoDocumento(data.expedicoes) } : {}),
     ...(quantidadePositiva(data.avancosDeExpedicao) ? { avancosDeExpedicao: quantidadePositiva(data.avancosDeExpedicao) } : {}),
+    ...(maestriasDoDocumento(data.maestrias) ? { maestrias: maestriasDoDocumento(data.maestrias) } : {}),
     ...(quantidadePositiva(data.essenciaDeSoberano) ? { essenciaDeSoberano: quantidadePositiva(data.essenciaDeSoberano) } : {}),
     ...(mensagensDoDocumento(data.correio) ? { correio: mensagensDoDocumento(data.correio) } : {}),
     ...(correioGeralDoDocumento(data.correioGeral) ? { correioGeral: correioGeralDoDocumento(data.correioGeral) } : {}),
@@ -479,6 +481,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.pedrasDaRecordacao ? { pedrasDaRecordacao: char.pedrasDaRecordacao } : {}),
     ...(char.expedicoes?.length ? { expedicoes: semUndefined(char.expedicoes) } : {}),
     ...(char.avancosDeExpedicao ? { avancosDeExpedicao: char.avancosDeExpedicao } : {}),
+    ...(char.maestrias && Object.keys(char.maestrias).length ? { maestrias: semUndefined(char.maestrias) } : {}),
     ...(char.essenciaDeSoberano ? { essenciaDeSoberano: char.essenciaDeSoberano } : {}),
     ...(char.correio?.length ? { correio: semUndefined(char.correio) } : {}),
     ...(char.correioGeral && Object.keys(char.correioGeral).length ? { correioGeral: char.correioGeral } : {}),

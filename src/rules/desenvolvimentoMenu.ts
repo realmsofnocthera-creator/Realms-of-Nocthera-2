@@ -43,7 +43,7 @@ export const DESENVOLVIMENTO_MENU: readonly DesenvolvimentoMenuItem[] = [
     id: 'maestrias',
     label: 'Maestrias',
     icone: DESENVOLVIMENTO_ASSETS.iconeMaestrias,
-    disponivel: false,
+    disponivel: true,
   },
 ] as const;
 

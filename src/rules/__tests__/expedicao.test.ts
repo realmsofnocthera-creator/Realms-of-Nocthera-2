@@ -20,7 +20,7 @@ describe('Expedição: regras', () => {
   it('a leitura do banco descarta vagas repetidas ou fora do limite, turnos que não existem e datas quebradas', () => {
     const ok = { vaga: 1, horas: 6, inicio: '2026-10-22T10:00:00.000Z', fim: '2026-10-22T15:00:00.000Z', avancos: 1 };
     expect(
-      expedicoesDoDocumento([ok, { ...ok, avancos: 0 }, { ...ok, vaga: 3 }, { ...ok, vaga: 0, horas: 5 }, { ...ok, vaga: 2, fim: 'ontem' }, { vaga: 0, horas: 2, inicio: ok.inicio, fim: ok.fim }])
+      expedicoesDoDocumento([ok, { ...ok, avancos: 0 }, { ...ok, vaga: 5 }, { ...ok, vaga: 0, horas: 5 }, { ...ok, vaga: 2, fim: 'ontem' }, { vaga: 0, horas: 2, inicio: ok.inicio, fim: ok.fim }])
     ).toEqual([{ vaga: 0, horas: 2, inicio: ok.inicio, fim: ok.fim }, ok]);
     expect(expedicoesDoDocumento([])).toBeUndefined();
     expect(expedicoesDoDocumento('x')).toBeUndefined();
