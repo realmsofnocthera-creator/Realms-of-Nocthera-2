@@ -3,13 +3,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, logoutUser } from '@/lib/firebase';
 import type { SessaoDoPainel } from '@/components/mestre/MestrePainel';
 import { NOCTHERA_THEME } from '@/theme/theme';
 
 export type EstadoDoAcesso =
   | { tipo: 'carregando' }
   | { tipo: 'semLogin' }
+  | { tipo: 'sessaoExpirada' }
   | { tipo: 'negado'; uid: string }
   | { tipo: 'erro'; mensagem: string }
   | { tipo: 'ok'; sessao: SessaoDoPainel };
@@ -35,6 +36,7 @@ export function useSessaoDoMestre(): { estado: EstadoDoAcesso; tokenFresco: () =
         const dados = await res.json().catch(() => ({}));
         if (res.ok) setEstado({ tipo: 'ok', sessao: dados as SessaoDoPainel });
         else if (res.status === 403) setEstado({ tipo: 'negado', uid: String(dados.uid ?? usuario.uid) });
+        else if (res.status === 401 && dados.sessaoExpirada === true) setEstado({ tipo: 'sessaoExpirada' });
         else if (res.status === 401) setEstado({ tipo: 'semLogin' });
         else setEstado({ tipo: 'erro', mensagem: String(dados.error ?? 'Não foi possível abrir o painel.') });
       } catch {
@@ -58,6 +60,13 @@ export function TelaDeAcesso({ estado }: { estado: Exclude<EstadoDoAcesso, { tip
           <>
             <span className="text-sm">Faça login para entrar no painel.</span>
             <Link href="/login" className="px-3 py-1.5 rounded font-cinzel font-bold text-xs" style={{ backgroundColor: colors.accent.primary, color: colors.background.secondary }}>Ir para o login</Link>
+          </>
+        )}
+        {estado.tipo === 'sessaoExpirada' && (
+          <>
+            <span className="text-sm font-cinzel font-bold">Sessão do painel expirada</span>
+            <span className="text-xs" style={{ color: colors.text.secondary }}>O painel só aceita um login feito nos últimos 30 minutos. Entre de novo para continuar.</span>
+            <button type="button" onClick={() => void logoutUser().then(() => window.location.assign('/login'))} className="px-3 py-1.5 rounded font-cinzel font-bold text-xs" style={{ backgroundColor: colors.accent.primary, color: colors.background.secondary }}>Entrar de novo</button>
           </>
         )}
         {estado.tipo === 'negado' && (

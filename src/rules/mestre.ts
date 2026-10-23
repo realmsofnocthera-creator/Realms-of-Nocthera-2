@@ -2,6 +2,16 @@
  * Papéis do Painel do Mestre (3.5.1). Quem tem papel entra em /mestre; o que cada um pode fazer vem desta tabela.
  * Dono só existe pelo ambiente do servidor (variável MESTRE_DONO_UIDS), nunca por concessão no painel.
  */
+/**
+ * Sessão curta do painel (3.5.1.3, decidido pelo Yuri em 23/10/2026): o painel só aceita um login feito há no máximo
+ * 30 minutos; depois disso, o login precisa ser refeito. Vale para todo papel (hoje só o Dono usa o painel).
+ */
+export const SESSAO_DO_PAINEL_SEGUNDOS = 30 * 60;
+
+/** O login (auth_time, em segundos) ainda vale para o painel? Login sem data (0) nunca vale. */
+export const sessaoDoPainelValida = (loginEmSegundos: number, agoraMs: number): boolean =>
+  loginEmSegundos > 0 && agoraMs / 1000 - loginEmSegundos <= SESSAO_DO_PAINEL_SEGUNDOS;
+
 export const PAPEIS_MESTRE = ['dono', 'mestre', 'moderador', 'suporte'] as const;
 export type PapelMestre = (typeof PAPEIS_MESTRE)[number];
 

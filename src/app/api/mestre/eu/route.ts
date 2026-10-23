@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { identificar, papelDoUsuario, respostaErroMestre } from '@/server/mestre';
+import { exigirSessaoRecente, identificar, papelDoUsuario, respostaErroMestre } from '@/server/mestre';
 import { limitarPorConta, limitarPorIp } from '@/server/rateLimit';
 import { DESCRICAO_DO_PAPEL, NOME_DO_PAPEL, permissoesDoPapel } from '@/rules/mestre';
 
@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
     if (!papel) {
       return NextResponse.json({ error: 'Acesso restrito aos Mestres.', uid: user.uid }, { status: 403 });
     }
+    exigirSessaoRecente(user);
     return NextResponse.json({
       uid: user.uid,
       email: user.email,

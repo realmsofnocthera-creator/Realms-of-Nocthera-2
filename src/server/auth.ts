@@ -6,6 +6,8 @@ import { exigirContaLivre } from '@/server/sancoes';
 export interface AuthenticatedUser {
   uid: string;
   email: string;
+  /** Quando o login foi feito (auth_time, em segundos). O painel do Mestre só aceita logins recentes (3.5.1.3). */
+  loginEm: number;
 }
 
 /**
@@ -87,7 +89,7 @@ export async function verifyAuthToken(authHeader: string | null): Promise<Authen
   // Manutenção (3.5.5.2): lança ErroManutencao (503) para quem não tem papel no painel
   await exigirJogoAberto(decoded.uid);
 
-  return { uid: decoded.uid, email: decoded.email || '' };
+  return { uid: decoded.uid, email: decoded.email || '', loginEm };
 }
 
 /**

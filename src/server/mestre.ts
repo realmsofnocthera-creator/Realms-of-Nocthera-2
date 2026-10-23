@@ -10,6 +10,7 @@ import {
   papelTem,
   type PapelMestre,
   type PermissaoMestre,
+  sessaoDoPainelValida,
 } from '@/rules/mestre';
 
 /**
@@ -23,9 +24,18 @@ import {
 export class ErroMestre extends Error {
   constructor(
     readonly status: 400 | 401 | 403 | 404 | 409 | 503,
-    mensagem: string
+    mensagem: string,
+    /** O login é antigo demais para o painel: a tela pede para entrar de novo (3.5.1.3). */
+    readonly sessaoExpirada = false
   ) {
     super(mensagem);
+  }
+}
+
+/** Só aceita logins feitos nos últimos 30 minutos (sessão curta do painel). */
+export function exigirSessaoRecente(user: Pick<AuthenticatedUser, 'loginEm'>, agoraMs = Date.now()): void {
+  if (!sessaoDoPainelValida(user.loginEm, agoraMs)) {
+    throw new ErroMestre(401, 'A sessão do painel expirou (dura 30 minutos). Entre de novo para continuar.', true);
   }
 }
 
@@ -70,6 +80,7 @@ export async function exigirPermissao(authHeader: string | null, permissao: Perm
   const papel = await papelDoUsuario(user.uid);
   if (!papel) throw new ErroMestre(403, 'Acesso restrito aos Mestres.');
   if (!papelTem(papel.papel, permissao)) throw new ErroMestre(403, 'Seu papel não permite esta ação.');
+  exigirSessaoRecente(user);
   return { uid: user.uid, email: user.email, papel: papel.papel, origem: papel.origem };
 }
 
@@ -214,6 +225,6 @@ export async function listarLog(sessao: SessaoMestre, limite?: unknown): Promise
 
 /** Resposta HTTP para os erros das rotas do painel (ErroMestre ou falha do banco); null se for outro erro. */
 export function respostaErroMestre(error: unknown): NextResponse | null {
-  if (error instanceof ErroMestre) return NextResponse.json({ error: error.message }, { status: error.status });
+  if (error instanceof ErroMestre) return NextResponse.json({ error: error.message, ...(error.sessaoExpirada ? { sessaoExpirada: true } : {}) }, { status: error.status });
   return respostaErroPersistencia(error);
 }
