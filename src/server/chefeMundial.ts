@@ -13,7 +13,7 @@ import {
   type FaixaDoChefeMundial,
 } from '@/rules/chefeMundial';
 import { somarEstatisticas } from '@/rules/conquistas';
-import { carregarPersonagem, combatenteDoPersonagem, salvarPersonagem } from '@/server/characterService';
+import { carregarPersonagem, combatenteDoPersonagem, progressoDoDia, salvarPersonagem } from '@/server/characterService';
 import { gerarSementeCombate } from '@/server/combateSemente';
 import { mandarRecompensasDoChefeMundial } from '@/server/correio';
 import { repositorio } from '@/server/persistencia';
@@ -108,6 +108,7 @@ export async function lutarChefeMundial(uid: string, semente = gerarSementeComba
       salvarPersonagem(ctx, eu, {
         chefeMundial: [...(eu.chefeMundial ?? []), { dia }].slice(-DIAS_GUARDADOS),
         estatisticas: somarEstatisticas(eu.estatisticas, { diasDeChefeMundial: 1 }),
+        ...progressoDoDia(eu, { chefeMundial: 1 }, agora),
       });
     }
     rankingGuardado.delete(dia);

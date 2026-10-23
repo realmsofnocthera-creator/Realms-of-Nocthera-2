@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { NOME_DO_TIPO_DE_ANUNCIO, validarAnuncio, type AnuncioDados, type TipoDeAnuncio } from '@/rules/anuncio';
 import { descreverJanela } from '@/lib/anunciosTela';
+import { marcarAnunciosComoVistos } from '@/lib/useAnunciosNovos';
 import { NOCTHERA_THEME } from '@/theme/theme';
 
 const COR_DO_TIPO: Readonly<Record<TipoDeAnuncio, string>> = { novidade: '#7BC47F', aviso: '#E6C775', manutencao: '#E5484D', evento: '#5AA7F0' };
@@ -32,7 +33,10 @@ export function AnunciosScreen({ tokenFresco }: { tokenFresco: () => Promise<str
           const v = validarAnuncio(i.dados);
           return v.ok ? [{ id: i.id, dados: v.dados }] : [];
         });
-        if (!cancelado) setItens(validos);
+        if (!cancelado) {
+          setItens(validos);
+          marcarAnunciosComoVistos(validos.map((v) => v.id));
+        }
       } catch {
         if (!cancelado) setErro(true);
       }

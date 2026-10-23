@@ -18,6 +18,7 @@ export const SISTEMAS = [
   { id: 'expedicao', nome: 'Expedição' },
   { id: 'chefeMundial', nome: 'Provação de Chefe Mundial' },
   { id: 'conquistas', nome: 'Conquistas' },
+  { id: 'diario', nome: 'Missões diárias e semanais e Check-in' },
 ] as const;
 export type SistemaId = (typeof SISTEMAS)[number]['id'];
 

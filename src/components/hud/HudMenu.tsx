@@ -2,9 +2,11 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock } from 'lucide-react';
+import { ClipboardList, Lock } from 'lucide-react';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { HUD_ICONS } from '@/assets/hud';
+import { useAvisos } from '@/lib/useAvisos';
+import { NotificationBadge } from './NotificationBadge';
 
 export interface HudMenuProps {
   onNavigatePersonagem: () => void;
@@ -23,6 +25,9 @@ export function HudMenu({
 }: HudMenuProps) {
   const router = useRouter();
   const { colors } = NOCTHERA_THEME;
+  // Pontos de aviso: baú de missões, expedição pronta (Provações) e recompensa do Chefe de guildas (Guilda)
+  const avisos = useAvisos();
+  const pontoDe = (id: string) => (id === 'provacoes' ? avisos.expedicao : id === 'guilda' ? avisos.guilda : false);
 
   const handleProvacoesClick = () => {
     if (onNavigateProvacoes) {
@@ -143,6 +148,19 @@ export function HudMenu({
           </span>
         </button>
 
+        {/* Missões diárias e semanais e Check-in (ícone provisório; o ponto aparece com baú pronto ou check-in por fazer) */}
+        <button
+          type="button"
+          onClick={() => router.push('/missoes')}
+          aria-label={avisos.missoes || avisos.checkin ? 'Missões (há algo para resgatar)' : 'Missões'}
+          className="pointer-events-auto relative flex flex-col items-center gap-0.5 px-2 sm:px-3 py-1 rounded-md border sm:border-2 shadow-lg cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-150"
+          style={{ background: 'linear-gradient(135deg, rgba(20,26,48,0.92) 0%, rgba(42,36,78,0.88) 100%)', borderColor: '#C8A656', color: colors.text.primary }}
+        >
+          <ClipboardList className="w-5 h-5 sm:w-7 sm:h-7" style={{ color: '#F5E3B3' }} aria-hidden="true" />
+          <span className="font-cinzel font-bold text-[9px] sm:text-[11px] leading-none tracking-wide">Missões</span>
+          {(avisos.missoes > 0 || avisos.checkin) && <NotificationBadge />}
+        </button>
+
         {/* Direita abaixo das moedas: Eventos / Temporada (travados) */}
         <div className="pointer-events-auto flex items-center">
           <button
@@ -204,6 +222,7 @@ export function HudMenu({
                       {item.label}
                     </span>
                   </div>
+                  {pontoDe(item.id) && <NotificationBadge />}
                 </button>
               );
             }
@@ -278,6 +297,7 @@ export function HudMenu({
                         aria-hidden="true"
                         className="w-full h-full object-contain drop-shadow select-none pointer-events-none"
                       />
+                      {pontoDe(item.id) && <NotificationBadge />}
                     </div>
                     <span
                       className="mt-0.5 font-cinzel font-bold text-[9px] sm:text-[11px] leading-none tracking-wide"

@@ -236,12 +236,11 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
           </span>
         </div>
 
-        {/* Pílula de Diamante (travado, sem valor numérico) */}
+        {/* Pílula de Diamantes, com o saldo (a loja de Diamantes ainda não existe) */}
         <div
-          aria-disabled="true"
-          title="Em breve"
-          aria-label="Diamantes (Em breve)"
-          className="relative flex items-center gap-1 sm:gap-1.5 pl-1 pr-1.5 sm:pr-2 py-0.5 rounded-full border backdrop-blur-md shadow-md opacity-60 cursor-not-allowed select-none"
+          title="Diamantes"
+          aria-label={`Diamantes: ${personagem.diamantes ?? 0}`}
+          className="relative flex items-center gap-1 sm:gap-1.5 pl-1 pr-1.5 sm:pr-2 py-0.5 rounded-full border backdrop-blur-md shadow-md select-none"
           style={{
             backgroundColor: 'rgba(14, 20, 30, 0.88)',
             borderColor: `${colors.border.default}66`,
@@ -255,16 +254,11 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
             className="w-3.5 h-3.5 sm:w-5 sm:h-5 object-contain shrink-0 select-none pointer-events-none"
           />
           <span
-            className="text-[9px] sm:text-[11px] font-cinzel uppercase tracking-wider"
-            style={{ color: colors.text.secondary }}
+            className="text-[10px] sm:text-xs font-bold"
+            style={{ color: colors.text.primary }}
           >
-            ---
+            {personagem.diamantes ?? 0}
           </span>
-          <Lock
-            className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0"
-            style={{ color: colors.text.muted }}
-            aria-hidden="true"
-          />
         </div>
 
         {/* Botão do Correio (o ponto aparece quando há presente para resgatar) */}
