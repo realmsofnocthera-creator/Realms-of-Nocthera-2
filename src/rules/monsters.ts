@@ -68,6 +68,12 @@ export interface MonsterDefinition {
   ouroConcedido: OuroIntervalo;
   modificadoresElementais?: ModificadoresElementais;
   elementoAtaque?: Elemento;
+  /** Segundo elemento: os golpes alternam com o elementoAtaque, um por rodada (subespécies de dois elementos). */
+  elementoAlternado?: Elemento;
+  /** % a mais no dano dos golpes elementais (subespécie de elemento intensificado). */
+  danoElementalPercentual?: number;
+  /** Enfurece abaixo desta % de vida (padrão: ENFURECIDO_LIMIAR_HP_PERCENTUAL). */
+  enfurecidoLimiarPercentual?: number;
   efeitosAplicados?: EfeitoStatus[];
   /** Habilidades próprias do monstro, a cada N ataques (Caçada). */
   habilidades?: readonly HabilidadeMonstro[];

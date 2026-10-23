@@ -55,6 +55,12 @@ export interface MonstroCacadaDados {
   fraquezasProprias?: TipoGolpe[];
   resistenciasProprias?: TipoGolpe[];
   elementoAtaque?: Elemento;
+  /** Segundo elemento: os golpes alternam com o elementoAtaque, um por rodada. */
+  elementoAlternado?: Elemento;
+  /** % a mais no dano dos golpes elementais (o intensificado: 50). */
+  danoElementalPercentual?: number;
+  /** Enfurece abaixo desta % de vida (padrão: a regra geral, 50%). */
+  enfurecidoLimiarPercentual?: number;
   fracoA?: Elemento[];
   resisteA?: Elemento[];
   efeitosAplicados?: EfeitoStatus[];
@@ -1321,6 +1327,9 @@ const ELEMENTO_OPOSTO: Readonly<Record<Elemento, Elemento>> = {
   sombrio: 'sagrado',
 };
 
+/** Subespécie de elemento intensificado: +50% no dano dos golpes elementais (Yuri, 23/10/2026). */
+export const DANO_DO_ELEMENTO_INTENSIFICADO = 50;
+
 /**
  * Monta os dados de uma subespécie a partir do original: herda tipo, região, perfil, categoria corporal,
  * habilidades, Enfurecido e imunidades. Com elementos novos, resiste a eles e fica fraca aos opostos;
@@ -1349,6 +1358,9 @@ export function montarSubespecie(original: MonstroCacadaDados, s: SubespecieCaca
     ...(original.fraquezasProprias ? { fraquezasProprias: original.fraquezasProprias } : {}),
     ...(original.resistenciasProprias ? { resistenciasProprias: original.resistenciasProprias } : {}),
     ...(elementoAtaque ? { elementoAtaque } : {}),
+    ...(elementos[1] ? { elementoAlternado: elementos[1] } : {}),
+    ...(s.intensificado ? { danoElementalPercentual: DANO_DO_ELEMENTO_INTENSIFICADO } : {}),
+    ...(s.enfurecidoLimiarPercentual ? { enfurecidoLimiarPercentual: s.enfurecidoLimiarPercentual } : {}),
     ...(fracoA && fracoA.length > 0 ? { fracoA } : {}),
     ...(resisteA && resisteA.length > 0 ? { resisteA } : {}),
     ...(efeitos.length > 0 ? { efeitosAplicados: efeitos } : {}),
@@ -1416,6 +1428,9 @@ export function montarMonstroCacada(d: MonstroCacadaDados): MonsterDefinition {
     ouroConcedido: { min: 8 * nivel, max: 15 * nivel },
     modificadoresElementais,
     ...(d.elementoAtaque ? { elementoAtaque: d.elementoAtaque } : {}),
+    ...(d.elementoAlternado ? { elementoAlternado: d.elementoAlternado } : {}),
+    ...(d.danoElementalPercentual ? { danoElementalPercentual: d.danoElementalPercentual } : {}),
+    ...(d.enfurecidoLimiarPercentual ? { enfurecidoLimiarPercentual: d.enfurecidoLimiarPercentual } : {}),
     ...(d.efeitosAplicados ? { efeitosAplicados: d.efeitosAplicados } : {}),
     ...(d.habilidades ? { habilidades: d.habilidades } : {}),
     ...(d.enfurecido ? { enfurecido: true } : {}),

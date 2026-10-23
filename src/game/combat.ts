@@ -375,14 +375,22 @@ export interface Combatente {
   ascensaoHabilidade?: number;
   modificadoresElementais?: ModificadoresElementais;
   elementoAtaque?: Elemento;
+  /** Segundo elemento do monstro: os golpes alternam com o elementoAtaque, um por rodada (subespécies). */
+  elementoAlternado?: Elemento;
+  /** % a mais no dano dos golpes elementais (subespécie de elemento intensificado). */
+  danoElementalPercentual?: number;
+  /** Elemento escolhido pelo Feiticeiro: vale nas habilidades da classe que não têm elemento próprio (1.5.2). */
+  elementoDaClasse?: Elemento;
   /** Status a que o combatente é imune (chefes: Sono, Paralisia e Congelamento; e os que o monstro define). */
   imunidadesStatus?: EfeitoStatus[];
   /** Habilidades do monstro (a cada N ataques) e os contadores delas na luta. */
   habilidadesMonstro?: readonly HabilidadeMonstro[];
   contadoresHabilidadeMonstro?: number[];
   alternanciaHabilidadeMonstro?: number[];
-  /** Enfurecido: abaixo de 50% de HP ganha +20% de dano. */
+  /** Enfurecido: abaixo de 50% de HP (ou do limiar próprio) ganha +20% de dano. */
   enfurecido?: boolean;
+  /** Limiar próprio do Enfurecido (% da vida). Ex.: o Urso Colérico enfurece com 60%. */
+  enfurecidoLimiarPercentual?: number;
   /** Passivas dos chefes Especiais da Batalha Sangrenta. */
   passivasMonstro?: PassivasMonstro;
   /** Mecânica única de um chefe da Provação do Guerreiro (estado da luta). */
@@ -517,6 +525,8 @@ export interface AtaqueLog {
   danoRedirecionado?: number;
   /** Espinhos de Dravakhar: dano devolvido ao atacante pela armadura de quem se defendeu. */
   danoRefletido?: number;
+  /** Retaliação do Juramento do Guardião: dano devolvido ao atacante pelo Cavaleiro. */
+  danoRetaliado?: number;
   /** Bônus de Dano Acumulativo (%) usado neste golpe. */
   danoAcumulativoPercentual?: number;
   /** Habilidade racial que disparou nesta ação (HP abaixo de 50%). */
@@ -953,8 +963,12 @@ export function calcularUltimoBastiao(
  * A cada 7 ataques básicos (7º, 14º...), ativa "Juramento do Guardião" para o próximo
  * turno defensivo (+5 Vitalidade, +3 Vigor, +20% Defesa Física, +20% Sobreescudo, -25% dano recebido)
  * e reinicie o contador para 0.
- * (Nota: transferência de dano de aliados aguarda sistema de grupo/aliados — combate atual é 1x1).
+ * Retaliação (decidida pelo Yuri em 23/10/2026, no lugar da transferência de dano de aliados): enquanto o Juramento
+ * vale, o Cavaleiro devolve RETALIACAO_DO_JURAMENTO_PERCENTUAL do dano recebido ao atacante.
  */
+/** Retaliação do Juramento do Guardião: % do dano recebido que volta ao atacante. */
+export const RETALIACAO_DO_JURAMENTO_PERCENTUAL = 30;
+
 export function processarJuramentoDoGuardiao(
   contadorAtual: number,
   nivel: number = 30
@@ -2712,7 +2726,7 @@ function turnoDeCombateInterno(
     const enfurecidoNesteAtaque =
       atacante.enfurecido === true &&
       atacante.hpMax > 0 &&
-      hpAtacanteAtual < (atacante.hpMax * GAME_CONFIG.ENFURECIDO_LIMIAR_HP_PERCENTUAL) / 100;
+      hpAtacanteAtual < (atacante.hpMax * (atacante.enfurecidoLimiarPercentual ?? GAME_CONFIG.ENFURECIDO_LIMIAR_HP_PERCENTUAL)) / 100;
     // Habilidades de armadura que dependem do estado da luta (HP de quem ataca, HP e Enfurecido do alvo)
     const estadoArmadura: EstadoGolpeArmadura = {
       hpAtacante: hpAtacanteAtual,
@@ -2724,7 +2738,7 @@ function turnoDeCombateInterno(
       alvoEnfurecido:
         defensor.enfurecido === true &&
         defensor.hpMax > 0 &&
-        hpAtual < (defensor.hpMax * GAME_CONFIG.ENFURECIDO_LIMIAR_HP_PERCENTUAL) / 100,
+        hpAtual < (defensor.hpMax * (defensor.enfurecidoLimiarPercentual ?? GAME_CONFIG.ENFURECIDO_LIMIAR_HP_PERCENTUAL)) / 100,
       rodada: numeroTurno,
       primeiraAcao: numeroTurno === 1 && i === 0,
       frenesiAtivo: (atacante.frenesiRestante ?? 0) > 0,
@@ -3205,11 +3219,18 @@ function turnoDeCombateInterno(
           }
         }
       }
+      // Elemento escolhido pelo Feiticeiro: nas habilidades da classe sem elemento próprio (1.5.2)
+      if (elementoGolpe === undefined && atacante.elementoDaClasse !== undefined) {
+        elementoGolpe = atacante.elementoDaClasse;
+      }
       if (elementoGolpe === undefined && elementoRacial !== undefined) {
         elementoGolpe = elementoRacial;
       }
       if (elementoGolpe === undefined && atacante.elementoAtaque !== undefined) {
-        elementoGolpe = atacante.elementoAtaque;
+        // Subespécie de dois elementos: alternam por rodada (o primeiro na 1ª rodada)
+        elementoGolpe = atacante.elementoAlternado
+          ? elementoDaArmaNaRodada([atacante.elementoAtaque, atacante.elementoAlternado], numeroTurno)
+          : atacante.elementoAtaque;
       }
       // Elemento da arma equipada (com dois elementos, alternam por rodada)
       if (elementoGolpe === undefined && atacante.equipamento) {
@@ -3263,7 +3284,9 @@ function turnoDeCombateInterno(
           estadoArmadura
         ) +
         (atacante.equipamento?.emblemas?.danoElemental[elementoGolpe] ?? 0) +
-        bonusElementalCondicionalDeEmblemas(atacante.equipamento?.emblemas, elementoGolpe, contextoEmblema);
+        bonusElementalCondicionalDeEmblemas(atacante.equipamento?.emblemas, elementoGolpe, contextoEmblema) +
+        // Subespécie de elemento intensificado: +50% nos golpes elementais (1.11.3)
+        (atacante.danoElementalPercentual ?? 0);
       if (bonusElementalAtacante > 0) {
         const aplicarBonus = (v: number): number => Math.floor((v * (100 + bonusElementalAtacante)) / 100);
         danoBruto = aplicarBonus(danoBruto);
@@ -3708,6 +3731,14 @@ function turnoDeCombateInterno(
       atacante.sobreescudo = resRefletido.sobreescudo;
       hpAtacanteAtual = resRefletido.hp;
     }
+    // Retaliação do Juramento do Guardião: com o Juramento valendo, 30% do dano recebido volta para o atacante, sem defesa
+    const danoRetaliado =
+      acaoCausaDano && juramentoDefensivoAplicado ? Math.floor((danoEfetivo * RETALIACAO_DO_JURAMENTO_PERCENTUAL) / 100) : 0;
+    if (danoRetaliado > 0) {
+      const resRetaliado = aplicarDano(danoRetaliado, 0, atacante.sobreescudo, hpAtacanteAtual);
+      atacante.sobreescudo = resRetaliado.sobreescudo;
+      hpAtacanteAtual = resRetaliado.hp;
+    }
     let ressurreicaoAtacante = false;
     if (hpAtacanteAtual <= 0 && atacante.ressurreicaoParcial) {
       const rev = tentarRessurreicaoParcial(atacante.ressurreicaoParcial, hpAtacanteAtual, atacante.hpMax);
@@ -3825,6 +3856,7 @@ function turnoDeCombateInterno(
         ? ` ${defensor.nome} devolve ${danoRedirecionado} de dano (Redirecionamento)!`
         : '') +
       (danoRefletido > 0 ? ` ${defensor.nome} devolve ${danoRefletido} de dano (Espinhos)!` : '') +
+      (danoRetaliado > 0 ? ` ${defensor.nome} devolve ${danoRetaliado} de dano (Retaliação)!` : '') +
       (ressurreicaoDefensor ? ` ${defensor.nome} volta à luta (Ressurreição Parcial)!` : '') +
       (ressurreicaoAtacante ? ` ${atacante.nome} volta à luta (Ressurreição Parcial)!` : '') +
       (curaHabilidade !== undefined && curaHabilidade > 0
@@ -3894,6 +3926,7 @@ function turnoDeCombateInterno(
       ...(defensorImortal ? { imortalidadeBreve: true } : {}),
       ...(danoRedirecionado > 0 ? { danoRedirecionado } : {}),
       ...(danoRefletido > 0 ? { danoRefletido } : {}),
+      ...(danoRetaliado > 0 ? { danoRetaliado } : {}),
       ...(danoAcumulativoUsado !== undefined ? { danoAcumulativoPercentual: danoAcumulativoUsado } : {}),
       ...(impetoNesteAtaque ? { impetoImprudenteAtivo: true } : {}),
       ...(acaoCausaDano && focoNesteAtaque > 0 ? { focoPercentual: focoNesteAtaque } : {}),
@@ -4015,6 +4048,9 @@ export function montarCombatenteDoMonstro(monstro: MonsterDefinition): Combatent
       ...(monstro.modificadoresElementais ?? {}),
     },
     elementoAtaque: monstro.elementoAtaque,
+    ...(monstro.elementoAlternado ? { elementoAlternado: monstro.elementoAlternado } : {}),
+    ...(monstro.danoElementalPercentual ? { danoElementalPercentual: monstro.danoElementalPercentual } : {}),
+    ...(monstro.enfurecidoLimiarPercentual ? { enfurecidoLimiarPercentual: monstro.enfurecidoLimiarPercentual } : {}),
     imunidadesStatus:
       monstro.chefe || monstro.imunidadesStatus
         ? [...new Set([...(monstro.chefe ? imunidadesDeChefe() : []), ...(monstro.imunidadesStatus ?? [])])]
@@ -4092,6 +4128,7 @@ export function* motorDeCombate(
       ? { ...personagem.modificadoresElementais }
       : undefined,
     elementoAtaque: personagem.elementoAtaque,
+    ...(personagem.elementoDaClasse ? { elementoDaClasse: personagem.elementoDaClasse } : {}),
     tipoDanoFisico: personagem.tipoDanoFisico,
     equipamento: personagem.equipamento
       ? {
