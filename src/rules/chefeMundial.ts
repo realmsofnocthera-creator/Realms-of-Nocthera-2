@@ -90,11 +90,13 @@ export interface FaixaDoChefeMundial {
   diamantes: number;
   selos: SelosDoJogador;
   essenciaDeSoberano: number;
+  /** Título que vem junto (o 1º lugar ganha o Campeão do Chefe Mundial). */
+  titulo?: string;
 }
 
 /** Faixas iguais às do Chefe de guildas (Yuri); as quantidades são proposta, a confirmar. */
 export const FAIXAS_DO_CHEFE_MUNDIAL: readonly FaixaDoChefeMundial[] = [
-  { de: 1, ate: 1, nome: '1º lugar', ouro: 20000, diamantes: 100, selos: { origem: 10, eternidade: 20 }, essenciaDeSoberano: 100 },
+  { de: 1, ate: 1, nome: '1º lugar', ouro: 20000, diamantes: 100, selos: { origem: 10, eternidade: 20 }, essenciaDeSoberano: 100, titulo: 'campeao-do-chefe-mundial' },
   { de: 2, ate: 2, nome: '2º lugar', ouro: 15000, diamantes: 80, selos: { origem: 5, eternidade: 20 }, essenciaDeSoberano: 80 },
   { de: 3, ate: 3, nome: '3º lugar', ouro: 12000, diamantes: 60, selos: { origem: 3, eternidade: 15 }, essenciaDeSoberano: 60 },
   { de: 4, ate: 10, nome: '4º ao 10º', ouro: 8000, diamantes: 40, selos: { eternidade: 10, encantado: 20 }, essenciaDeSoberano: 40 },
@@ -105,7 +107,13 @@ export const FAIXAS_DO_CHEFE_MUNDIAL: readonly FaixaDoChefeMundial[] = [
 
 export const faixaDoChefeMundial = (posicao: number) => FAIXAS_DO_CHEFE_MUNDIAL.find((f) => posicao >= f.de && (f.ate === null || posicao <= f.ate))!;
 
-export const presenteDaFaixa = (f: FaixaDoChefeMundial): PresenteDoCorreio => ({ ouro: f.ouro, diamantes: f.diamantes, selos: { ...f.selos }, essenciaDeSoberano: f.essenciaDeSoberano });
+export const presenteDaFaixa = (f: FaixaDoChefeMundial): PresenteDoCorreio => ({
+  ouro: f.ouro,
+  diamantes: f.diamantes,
+  selos: { ...f.selos },
+  essenciaDeSoberano: f.essenciaDeSoberano,
+  ...(f.titulo ? { titulos: [f.titulo] } : {}),
+});
 
 /** O melhor dano de um jogador num dia: chefeMundial/{dia}/jogadores/{uid}. */
 export interface EntradaDoChefeMundial {

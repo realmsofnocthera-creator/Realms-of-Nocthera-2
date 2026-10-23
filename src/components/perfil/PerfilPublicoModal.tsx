@@ -22,7 +22,8 @@ import { calcularPoderTotal } from '@/game';
 import { getRaceById } from '@/rules/races';
 import { getClassById } from '@/rules/classes';
 import { MOLDURAS_DISPONIVEIS } from '@/rules/molduras';
-import { TITULOS_DISPONIVEIS } from '@/rules/titulos';
+import { TITULO_MAP } from '@/rules/titulos';
+import { conquistasEmDestaque, DEGRAUS } from '@/rules/conquistas';
 import { CharacterDocument, PublicCharacterProfile } from '@/server/characterService';
 import { getAvatarFaceStyle, resolveAvatarSrc } from '@/assets/avatars';
 import { HUD_IMAGES } from '@/assets/hud';
@@ -73,6 +74,8 @@ function characterToPublicProfile(char: CharacterDocument): PublicCharacterProfi
     sobre: typeof char.sobre === 'string' ? char.sobre : '',
     equipamentosPrincipais: equipamentosDoPerfil(char),
     ...(char.guildaId && char.guildaNome ? { guilda: char.guildaNome } : {}),
+    ...(char.tituloId && TITULO_MAP[char.tituloId] ? { titulo: TITULO_MAP[char.tituloId].nome } : {}),
+    conquistasEmDestaque: conquistasEmDestaque(char.conquistas),
   };
 }
 
@@ -101,11 +104,38 @@ export function PerfilPublicoModal({
 
   const [trocaStep, setTrocaStep] = useState<TrocaMenuStep>('closed');
   const [localOwnAvatarId, setLocalOwnAvatarId] = useState<string | null>(null);
+  /** Título escolhido nesta abertura (undefined = o do personagem; '' = sem título). */
+  const [localTituloId, setLocalTituloId] = useState<string | undefined>(undefined);
+  const [salvandoTitulo, setSalvandoTitulo] = useState(false);
+  const [tituloError, setTituloError] = useState<string | null>(null);
 
-  const effectiveOwnCharacter: CharacterDocument =
-    localOwnAvatarId !== null
-      ? { ...ownCharacter, avatarId: localOwnAvatarId }
-      : ownCharacter;
+  const effectiveOwnCharacter: CharacterDocument = {
+    ...ownCharacter,
+    ...(localOwnAvatarId !== null ? { avatarId: localOwnAvatarId } : {}),
+    ...(localTituloId !== undefined ? { tituloId: localTituloId || undefined } : {}),
+  };
+  const meusTitulos = (ownCharacter.titulos ?? []).filter((id) => TITULO_MAP[id]);
+
+  const escolherTitulo = async (id: string) => {
+    setSalvandoTitulo(true);
+    setTituloError(null);
+    try {
+      const token = await resolveCurrentToken();
+      const res = await fetch('/api/conquistas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}` },
+        body: JSON.stringify({ acao: 'titulo', titulo: id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Não foi possível trocar o título.');
+      setLocalTituloId(id);
+      setTrocaStep('closed');
+    } catch (err) {
+      setTituloError(err instanceof Error ? err.message : 'Não foi possível trocar o título.');
+    } finally {
+      setSalvandoTitulo(false);
+    }
+  };
 
   const ownPublicProfile = characterToPublicProfile(effectiveOwnCharacter);
   const viewedProfile = searchedProfile ?? ownPublicProfile;
@@ -472,7 +502,7 @@ export function PerfilPublicoModal({
                             <Crown className="w-3.5 h-3.5 text-[#ED8A0C]" />
                             Título
                           </span>
-                          <span className="text-[10px] text-[#D5C7A4]">Ver →</span>
+                          <span className="text-[10px] text-[#D5C7A4]">Trocar →</span>
                         </button>
                       </div>
                     </div>
@@ -580,20 +610,32 @@ export function PerfilPublicoModal({
                         </button>
                       </div>
 
-                      {TITULOS_DISPONIVEIS.length === 0 ? (
+                      {tituloError && <p role="alert" className="text-[10px] text-[#F87171]">{tituloError}</p>}
+                      {meusTitulos.length === 0 ? (
                         <p className="py-4 text-center text-xs text-[#D5C7A4] italic">
-                          Nenhum título disponível ainda
+                          Nenhum título ainda. Eles vêm das Conquistas, do ranking e dos eventos.
                         </p>
                       ) : (
-                        <div className="flex flex-col gap-1.5">
-                          {TITULOS_DISPONIVEIS.map((titulo) => (
-                            <div
-                              key={titulo.id}
-                              className="px-2.5 py-1.5 rounded border border-[#C8A656]/40 text-xs"
-                            >
-                              {titulo.nome}
-                            </div>
-                          ))}
+                        <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto">
+                          {[{ id: '', nome: 'Sem título', origem: 'Não mostrar título no perfil' }, ...meusTitulos.map((id) => TITULO_MAP[id])].map((titulo) => {
+                            const ativo = (effectiveOwnCharacter.tituloId ?? '') === titulo.id;
+                            return (
+                              <button
+                                key={titulo.id || 'nenhum'}
+                                type="button"
+                                disabled={salvandoTitulo}
+                                onClick={() => void escolherTitulo(titulo.id)}
+                                aria-pressed={ativo}
+                                className={`px-2.5 py-1.5 rounded border text-left text-xs cursor-pointer disabled:opacity-50 ${ativo ? 'border-[#ED8A0C] bg-[#2E251D]' : 'border-[#C8A656]/40 bg-[#221C16] hover:border-[#ED8A0C]'}`}
+                              >
+                                <span className="flex items-center justify-between gap-2 font-cinzel font-semibold text-[#F5F3E0]">
+                                  {titulo.nome}
+                                  {ativo && <Check className="w-3 h-3 text-[#ED8A0C]" />}
+                                </span>
+                                <span className="block text-[9px] text-[#D5C7A4]">{titulo.origem}</span>
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -606,13 +648,12 @@ export function PerfilPublicoModal({
                   {viewedProfile.nome}
                 </h3>
 
-                {/* Badge de Título (travado - Em breve) exatamente abaixo do nome como na referência */}
+                {/* Badge do título escolhido, logo abaixo do nome como na referência */}
                 <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#3E245B] via-[#54337A] to-[#3E245B] border border-[#D4AF37] text-[#F5E7B8] shadow-sm max-w-full">
                   <Sparkles className="w-2.5 h-2.5 text-[#F7E396] shrink-0" />
                   <span className="text-[9px] sm:text-[10px] font-cinzel font-semibold truncate">
-                    Título: Em breve
+                    {viewedProfile.titulo ?? 'Sem título'}
                   </span>
-                  <Lock className="w-2.5 h-2.5 text-[#D4AF37] shrink-0" />
                 </div>
               </div>
             </div>
@@ -764,16 +805,26 @@ export function PerfilPublicoModal({
               </div>
 
               <div className="grid grid-cols-4 gap-1.5 text-center">
-                {[1, 2, 3, 4].map((badge) => (
-                  <div key={badge} className="flex flex-col items-center gap-0.5 opacity-85">
-                    <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg rotate-45 bg-gradient-to-br from-[#3E245B] to-[#1F1230] border border-[#D4AF37] flex items-center justify-center shadow-sm my-1">
-                      <Lock className="-rotate-45 w-3.5 h-3.5 text-[#F7E396]" />
+                {/* As 4 conquistas mais avançadas; os espaços vazios ficam travados */}
+                {[0, 1, 2, 3].map((i) => {
+                  const c = viewedProfile.conquistasEmDestaque?.[i];
+                  return (
+                    <div key={i} className={`flex flex-col items-center gap-0.5 ${c ? '' : 'opacity-60'}`}>
+                      <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg rotate-45 bg-gradient-to-br from-[#3E245B] to-[#1F1230] border border-[#D4AF37] flex items-center justify-center shadow-sm my-1">
+                        {c ? (
+                          <span className="-rotate-45 font-cinzel font-extrabold text-[10px] text-[#F7E396]">
+                            {c.degraus}/{DEGRAUS}
+                          </span>
+                        ) : (
+                          <Lock className="-rotate-45 w-3.5 h-3.5 text-[#F7E396]" />
+                        )}
+                      </div>
+                      <span className="text-[8px] sm:text-[9px] font-cinzel font-semibold text-[#5C4D3C] leading-tight">
+                        {c ? c.nome : '—'}
+                      </span>
                     </div>
-                    <span className="text-[8px] sm:text-[9px] font-cinzel font-semibold text-[#5C4D3C] leading-tight">
-                      Em breve
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

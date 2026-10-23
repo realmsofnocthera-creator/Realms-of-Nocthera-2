@@ -183,6 +183,14 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(antigo).not.toHaveProperty('avancosDeExpedicao');
   });
 
+  it('guarda os totais, as conquistas e os títulos; o título escolhido só vale se o jogador tiver', () => {
+    const extra = { estatisticas: { vitorias: 12, buscas: 10 }, conquistas: { nivel: 3 }, titulos: ['maestre'], tituloId: 'maestre' };
+    expect(personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, ...extra }))).toMatchObject(extra);
+    expect(personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, titulos: ['maestre'], tituloId: 'sanguinario' }))).not.toHaveProperty('tituloId');
+    const antigo = personagemParaFirestore(PERSONAGEM);
+    for (const campo of ['estatisticas', 'conquistas', 'titulos', 'tituloId']) expect(antigo).not.toHaveProperty(campo);
+  });
+
   it('guarda as maestrias (XP e o XP do dia)', () => {
     const maestrias = { 'arma:katana': { xp: 120, dia: '2026-10-23', hoje: 40 }, forja: { xp: 15 } };
     const doc = personagemParaFirestore({ ...PERSONAGEM, maestrias });

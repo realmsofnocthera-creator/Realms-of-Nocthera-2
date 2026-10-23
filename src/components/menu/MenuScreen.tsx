@@ -9,6 +9,8 @@ import { MENU_PRINCIPAL } from '@/rules/menuPrincipal';
 import { MENU_PRINCIPAL_IMAGES } from '@/assets/menuPrincipal';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { AtalhoMestre } from '@/components/mestre/AtalhoMestre';
+import { NotificationBadge } from '@/components/hud/NotificationBadge';
+import { degrausProntos } from '@/rules/conquistas';
 
 export interface MenuScreenProps {
   personagem?: CharacterDocument | null;
@@ -138,6 +140,8 @@ export function MenuScreen({ personagem }: MenuScreenProps) {
         >
           {MENU_PRINCIPAL.map((item) => {
             const imgSrc = MENU_PRINCIPAL_IMAGES[item.assetKey];
+            // Conquistas: o ponto aparece quando há degrau batido para resgatar
+            const comPonto = item.id === 'conquistas' && !!personagem && degrausProntos(personagem, personagem.conquistas) > 0;
 
             return (
               <article
@@ -150,6 +154,7 @@ export function MenuScreen({ personagem }: MenuScreenProps) {
                   if (item.id === 'anuncios') router.push('/anuncios');
                   if (item.id === 'buscar') router.push('/buscar');
                   if (item.id === 'colecao') router.push('/colecao');
+                  if (item.id === 'conquistas') router.push('/conquistas');
                   if (item.id === 'ranking') router.push('/ranking');
                 }}
                 style={{
@@ -168,6 +173,7 @@ export function MenuScreen({ personagem }: MenuScreenProps) {
                   alt={item.nome}
                   className="absolute inset-0 w-full h-full object-cover object-center select-none pointer-events-none"
                 />
+                {comPonto && <NotificationBadge className="!top-2 !right-2 z-30" />}
               </article>
             );
           })}

@@ -35,7 +35,7 @@ import {
   type PartyDocumento,
   type ResultadoDaParty,
 } from '@/rules/testeEquipe';
-import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, maestriasDasVitorias, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
+import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, progressoDasVitorias, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { gerarSementeCombate } from '@/server/combateSemente';
 import { entregarCartas, sorteadorDaSemente, sortearTipoDaRaridade } from '@/server/almas';
 import { sortearRaridadePorPesos } from '@/rules/almas';
@@ -336,7 +336,7 @@ export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificu
         diamantes: doc.diamantes,
         ...(primeira ? { testeEquipeConcluidas: [...(doc.testeEquipeConcluidas ?? []), conclusao] } : {}),
         ...(contratos ? { contratos } : {}),
-        ...maestriasDasVitorias(doc, [true], agora()),
+        ...progressoDasVitorias(doc, [true], agora()),
       });
     }
     const resultado: ResultadoDaParty = { categoria, dificuldade, venceu, rodadas: r.rodadas, em: new Date().toISOString(), aliados: r.aliados };

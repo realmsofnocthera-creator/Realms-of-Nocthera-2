@@ -13,6 +13,7 @@ import {
   type TurnoDeExpedicao,
 } from '@/rules/expedicao';
 import { bonusDaMaestriaDeExpedicao, ganharXpDeMaestria, XP_POR_HORA_DE_EXPEDICAO } from '@/rules/maestrias';
+import { somarEstatisticas } from '@/rules/conquistas';
 import { diaDeBrasilia } from '@/game/batalhaSangrenta';
 import { alterarSaldoEm, carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { gerarSementeCombate } from '@/server/combateSemente';
@@ -194,6 +195,7 @@ export async function agirNaExpedicao(uid: string, acao: unknown, pedido: Pedido
         const maestrias = ganharXpDeMaestria(eu.maestrias, { expedicao: alvo.reduce((t, x) => t + x.horas, 0) * XP_POR_HORA_DE_EXPEDICAO }, diaDeBrasilia(agora));
         const salvo = salvarPersonagem(ctx, eu, {
           ...(maestrias ? { maestrias } : {}),
+          estatisticas: somarEstatisticas(eu.estatisticas, { expedicoes: alvo.length }),
           selosDeBusca: selos,
           fragmentosDeMemoria: memoria || undefined,
           pedrasDaRecordacao: pedras || undefined,
