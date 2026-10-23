@@ -36,8 +36,11 @@ describe('0.5-A1/A4 — verifyAuthToken (Firebase Auth via firebase-admin + revo
   });
 
   it('aceita um ID Token válido e devolve uid e email', async () => {
+    const antes = Math.floor(Date.now() / 1000);
     const user = await verifyAuthToken(`Bearer ${tokenDeTeste('jogador_a1')}`);
-    expect(user).toEqual({ uid: 'jogador_a1', email: 'jogador_a1@test.com' });
+    expect(user).toMatchObject({ uid: 'jogador_a1', email: 'jogador_a1@test.com' });
+    // o instante do login (auth_time) vai junto: o painel do Mestre usa para a sessão curta
+    expect(user!.loginEm).toBeGreaterThanOrEqual(antes);
   });
 
   describe('logout no servidor', () => {

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PAPEIS_MESTRE, PERMISSOES_MESTRE, ehPapelMestre, papelTem, permissoesDoPapel } from '@/rules/mestre';
+import { SESSAO_DO_PAINEL_SEGUNDOS, sessaoDoPainelValida } from '@/rules/mestre';
 
 describe('Papéis do Painel do Mestre', () => {
   it('são quatro: Dono, Mestre, Moderador e Suporte', () => {
@@ -40,5 +41,17 @@ describe('Papéis do Painel do Mestre', () => {
     for (const perm of escrita) expect(papelTem('suporte', perm), perm).toBe(false);
     expect(papelTem('suporte', 'jogadores.ler')).toBe(true);
     expect(papelTem('suporte', 'conteudo.ler')).toBe(true);
+  });
+});
+
+describe('Sessão curta do painel (3.5.1.3)', () => {
+  const agora = Date.UTC(2026, 9, 23, 12, 0, 0);
+  const segundos = Math.floor(agora / 1000);
+  it('dura 30 minutos; login sem data nunca vale', () => {
+    expect(SESSAO_DO_PAINEL_SEGUNDOS).toBe(1800);
+    expect(sessaoDoPainelValida(segundos, agora)).toBe(true);
+    expect(sessaoDoPainelValida(segundos - 1800, agora)).toBe(true);
+    expect(sessaoDoPainelValida(segundos - 1801, agora)).toBe(false);
+    expect(sessaoDoPainelValida(0, agora)).toBe(false);
   });
 });

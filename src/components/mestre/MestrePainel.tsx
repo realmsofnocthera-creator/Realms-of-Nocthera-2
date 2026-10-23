@@ -8,7 +8,8 @@ import { dataDoLog, descreverAcao } from '@/lib/mestreTela';
 import type { EntradaLogAdmin } from '@/server/persistencia';
 import type { PapelListado } from '@/server/mestre';
 import { NOCTHERA_THEME } from '@/theme/theme';
-import { Cartao, chamar, OURO, VERMELHO } from '@/components/mestre/comum';
+import { Cartao, chamar, EVENTO_SESSAO_EXPIRADA, OURO, VERMELHO } from '@/components/mestre/comum';
+import { logoutUser } from '@/lib/firebase';
 import { ConteudoPainel } from '@/components/mestre/ConteudoPainel';
 import { JogadoresPainel } from '@/components/mestre/JogadoresPainel';
 import { SistemasPainel } from '@/components/mestre/SistemasPainel';
@@ -38,6 +39,12 @@ export function MestrePainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel; 
   const podeConteudo = sessao.permissoes.includes('conteudo.ler');
   const podeJogadores = sessao.permissoes.includes('jogadores.ler');
   const [aba, setAba] = useState<Aba>('geral');
+  const [sessaoExpirou, setSessaoExpirou] = useState(false);
+  useEffect(() => {
+    const avisar = () => setSessaoExpirou(true);
+    window.addEventListener(EVENTO_SESSAO_EXPIRADA, avisar);
+    return () => window.removeEventListener(EVENTO_SESSAO_EXPIRADA, avisar);
+  }, []);
   const abas: { id: Aba; nome: string; icone: React.ReactNode }[] = [
     { id: 'geral', nome: 'Visão geral', icone: <ShieldCheck className="w-3.5 h-3.5" /> },
     ...(podeConteudo ? [{ id: 'conteudo' as const, nome: 'Mapas', icone: <Layers className="w-3.5 h-3.5" /> }] : []),
@@ -56,6 +63,19 @@ export function MestrePainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel; 
           </Link>
           <span className="text-xs font-cinzel" style={{ color: colors.text.secondary }}>{sessao.email}</span>
         </header>
+        {sessaoExpirou && (
+          <div role="alert" className="rounded-sm border-2 px-3 py-2 flex flex-col gap-1.5 items-center text-center" style={{ borderColor: VERMELHO, backgroundColor: colors.background.secondary }}>
+            <span className="text-sm font-semibold">A sessão do painel expirou (dura 30 minutos). Entre de novo para continuar.</span>
+            <button
+              type="button"
+              onClick={() => void logoutUser().then(() => window.location.assign('/login'))}
+              className="rounded-sm border px-3 py-1 text-xs font-bold"
+              style={{ borderColor: OURO, backgroundColor: '#3A2F18', color: '#F5E3B3' }}
+            >
+              Entrar de novo
+            </button>
+          </div>
+        )}
         <h1 className="text-center text-2xl font-cinzel font-extrabold tracking-widest uppercase" style={{ color: '#F5E3B3' }}>Painel do Mestre</h1>
         <p className="text-center text-xs" style={{ color: colors.text.secondary }}>
           Seu papel: <strong style={{ color: '#F5E3B3' }}>{sessao.nomeDoPapel}</strong>

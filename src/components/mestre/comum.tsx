@@ -15,6 +15,9 @@ export function Cartao({ titulo, children }: { titulo: string; children: React.R
   );
 }
 
+/** Evento que as chamadas do painel disparam quando o servidor diz que a sessão curta expirou. */
+export const EVENTO_SESSAO_EXPIRADA = 'mestre:sessaoExpirada';
+
 /** Chama uma rota do painel com o token atual; devolve se deu certo e o JSON da resposta. */
 export async function chamar(
   tokenFresco: () => Promise<string>,
@@ -25,6 +28,8 @@ export async function chamar(
     const token = await tokenFresco();
     const res = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}), Authorization: `Bearer ${token}` } });
     const dados = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    // Sessão curta do painel (3.5.1.3): avisa a tela inteira, sem recarregar (o que está aberto não se perde)
+    if (res.status === 401 && dados.sessaoExpirada === true && typeof window !== 'undefined') window.dispatchEvent(new Event(EVENTO_SESSAO_EXPIRADA));
     return { ok: res.ok, status: res.status, dados };
   } catch (error) {
     return { ok: false, status: 0, dados: { error: error instanceof Error ? error.message : 'Sem conexão. Tente de novo.' } };

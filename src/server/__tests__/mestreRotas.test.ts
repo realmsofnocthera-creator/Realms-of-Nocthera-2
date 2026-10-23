@@ -56,6 +56,26 @@ describe('Rotas do Painel do Mestre', () => {
     expect(dados.permissoes).toContain('papeis.gerir');
   });
 
+  it('sessão curta (3.5.1.3): só logins dos últimos 30 minutos entram no painel; os mais antigos recebem 401 com sessaoExpirada', async () => {
+    const comLogin = (url: string, uid: string, minutosAtras: number) =>
+      new NextRequest(`http://localhost${url}`, {
+        headers: {
+          authorization: `Bearer ${tokenDeTeste(uid, Math.floor(Date.now() / 1000) - minutosAtras * 60)}`,
+          'x-forwarded-for': `10.1.0.${++ipSeq % 250}`,
+        },
+      });
+    // 29 minutos: vale, no /eu e numa rota com permissão
+    expect((await eu(comLogin('/api/mestre/eu', 'dono1', 29))).status).toBe(200);
+    expect((await lerLog(comLogin('/api/mestre/log', 'dono1', 29))).status).toBe(200);
+    // 31 minutos: expirou, nas duas
+    for (const resposta of [await eu(comLogin('/api/mestre/eu', 'dono1', 31)), await lerLog(comLogin('/api/mestre/log', 'dono1', 31))]) {
+      expect(resposta.status).toBe(401);
+      expect(await resposta.json()).toMatchObject({ sessaoExpirada: true, error: expect.stringMatching(/expirou/) });
+    }
+    // quem não tem papel não fica sabendo da regra: continua 403
+    expect((await eu(comLogin('/api/mestre/eu', 'estranho', 120))).status).toBe(403);
+  });
+
   it('/papeis e /log: 401 sem login e 403 sem papel, antes de qualquer leitura', async () => {
     for (const [nome, rota] of [['papeis', listarPapeis], ['log', lerLog]] as const) {
       expect((await rota(pedido(`/api/mestre/${nome}`, null))).status, `${nome} sem login`).toBe(401);
