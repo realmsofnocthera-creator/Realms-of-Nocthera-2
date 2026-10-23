@@ -1414,6 +1414,7 @@ export function montarMonstroCacada(d: MonstroCacadaDados): MonsterDefinition {
     nivel,
     hp: Math.round(p * perfil.hp * multHp),
     chefe: d.chave === true,
+    ...(d.perfil === 'blindado' ? { blindado: true } : {}),
     categoriaCorporal: d.categoriaCorporal,
     ...(d.fraquezasProprias ? { fraquezasProprias: d.fraquezasProprias } : {}),
     ...(d.resistenciasProprias

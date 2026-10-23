@@ -54,8 +54,10 @@ export interface MonsterDefinition {
   nome: string;
   nivel: number;
   hp: number;
-  /** DEF do monstro (pontos de mitigação por golpe, como a armadura de um personagem). Sem ela, vale 0. */
+  /** DEF do monstro (pontos de mitigação por golpe, como a armadura de um personagem). Sem ela, vale a DEF automática (`defDoMonstro`). */
   mitigacao?: number;
+  /** Blindado (perfil da Caçada): ganha DEF automática, como os chefes. */
+  blindado?: boolean;
   /** Chefe: imune a Sono, Paralisia e Congelamento (recebe dano contínuo e debuffs). */
   chefe?: boolean;
   /** Todo monstro pertence a uma categoria corporal (define fraquezas e resistências a tipos de dano). */
@@ -178,3 +180,16 @@ export const MONSTERS: readonly MonsterDefinition[] = [
 export const MONSTERS_MAP: Readonly<Record<string, MonsterDefinition>> = Object.fromEntries(
   MONSTERS.map((m) => [m.id, m])
 );
+
+/**
+ * DEF dos monstros (5.1.11, opção 3, decidida pelo Yuri em 23/10/2026): só os blindados e os chefes têm DEF, e ela
+ * vale metade da Vitalidade. Os monstros comuns continuam sem DEF. Valor inicial, a calibrar no simulador (4.13).
+ */
+export const DEF_DO_MONSTRO_PERCENTUAL_DA_VITALIDADE = 50;
+
+/** A DEF que o combate usa: a definida no monstro, ou a automática (blindados e chefes), ou 0. */
+export function defDoMonstro(m: Pick<MonsterDefinition, 'mitigacao' | 'blindado' | 'chefe' | 'atributos'>): number {
+  if (m.mitigacao !== undefined && m.mitigacao > 0) return m.mitigacao;
+  if (m.blindado === true || m.chefe === true) return Math.floor((m.atributos.vitalidade * DEF_DO_MONSTRO_PERCENTUAL_DA_VITALIDADE) / 100);
+  return 0;
+}

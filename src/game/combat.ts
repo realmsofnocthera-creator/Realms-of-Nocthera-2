@@ -2,7 +2,7 @@ import { Attributes } from '@/rules/attributes';
 import { getClassById } from '@/rules/classes';
 import { GAME_CONFIG } from '@/rules/config';
 import { Elemento, ModificadoresElementais } from '@/rules/elements';
-import { MonsterDefinition } from '@/rules/monsters';
+import { defDoMonstro, MonsterDefinition } from '@/rules/monsters';
 import { getRaceById } from '@/rules/races';
 import {
   EFEITOS_STATUS,
@@ -4040,8 +4040,8 @@ export function montarCombatenteDoMonstro(monstro: MonsterDefinition): Combatent
     sobreescudo: monstro.sobreescudoInicial ?? sobreescudoInicialDoMonstro(monstro.hp),
     atributos: { ...monstro.atributos },
     ouro: 0,
-    // DEF do monstro (como a mitigação de um personagem): 0 até a fórmula ser definida
-    mitigacao: monstro.mitigacao ?? 0,
+    // DEF do monstro (como a mitigação de um personagem): a definida nele, ou metade da Vitalidade nos blindados e chefes
+    mitigacao: defDoMonstro(monstro),
     // Categoria corporal dá fraquezas elementais (Sombrio → Sagrado); o que o monstro define explicitamente vale mais
     modificadoresElementais: {
       ...modificadoresElementaisDaCategoria(monstro.categoriaCorporal),
