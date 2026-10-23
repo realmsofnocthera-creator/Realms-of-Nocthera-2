@@ -82,9 +82,11 @@ describe('Regras da armadura', () => {
 });
 
 describe('Habilidades de armadura', () => {
-  it('88 habilidades com ids únicos, sem a Parte 6 original, e 4 exclusivas dos 9★', () => {
-    expect(HABILIDADES_ARMADURA).toHaveLength(88);
-    expect(new Set(HABILIDADES_ARMADURA.map((h) => h.id)).size).toBe(88);
+  it('86 habilidades com ids únicos, sem a Parte 6 original, e 4 exclusivas dos 9★', () => {
+    expect(HABILIDADES_ARMADURA).toHaveLength(86);
+    // sem itens consumíveis no combate (decidido pelo Yuri em 23/10/2026): Prolongar Item e Perícia em Ferramentas saíram
+    expect(HABILIDADES_ARMADURA.some((h) => h.id === 'prolongar-item' || h.id === 'pericia-em-ferramentas')).toBe(false);
+    expect(new Set(HABILIDADES_ARMADURA.map((h) => h.id)).size).toBe(86);
     expect(HABILIDADES_ARMADURA.filter((h) => h.exclusivaDe).map((h) => h.exclusivaDe)).toEqual(['oryndrak', 'reydras', 'dravakhar', 'urdumor']);
     for (const h of HABILIDADES_ARMADURA) {
       expect(h.niveis[h.nivelMaximo], h.id).toBeTruthy();
