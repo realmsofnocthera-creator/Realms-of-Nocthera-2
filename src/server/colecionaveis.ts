@@ -9,7 +9,7 @@ import {
   type SelosDoJogador,
 } from '@/rules/colecionaveis';
 import { somarEstatisticas } from '@/rules/conquistas';
-import { carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
+import { carregarPersonagem, progressoDoDia, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { gerarSementeCombate } from '@/server/combateSemente';
 import { sorteadorDaSemente } from '@/server/almas';
 import { repositorio } from '@/server/persistencia';
@@ -94,6 +94,7 @@ export async function agirNosColecionaveis(uid: string, acao: unknown, pedido: P
           garantiaDaBusca: vazioParaUndefined(r.garantia),
           colecionaveis: vazioParaUndefined(r.colecionaveis),
           estatisticas: somarEstatisticas(eu.estatisticas, { buscas: vezes }),
+          ...progressoDoDia(eu, { buscas: vezes }, new Date()),
         });
         const ativados = r.resultados.filter((x) => x.ativou).length;
         return {

@@ -11,6 +11,8 @@ import { NOCTHERA_THEME } from '@/theme/theme';
 import { AtalhoMestre } from '@/components/mestre/AtalhoMestre';
 import { NotificationBadge } from '@/components/hud/NotificationBadge';
 import { degrausProntos } from '@/rules/conquistas';
+import { useAvisos } from '@/lib/useAvisos';
+import { useAnunciosNovos } from '@/lib/useAnunciosNovos';
 
 export interface MenuScreenProps {
   personagem?: CharacterDocument | null;
@@ -53,6 +55,9 @@ const MENU_BENTO_GRID_AREAS = `
 `;
 
 export function MenuScreen({ personagem }: MenuScreenProps) {
+  // Pontos de aviso do Menu: check-in por fazer e anúncio novo
+  const avisos = useAvisos();
+  const anuncioNovo = useAnunciosNovos();
   const { colors } = NOCTHERA_THEME;
   const router = useRouter();
 
@@ -141,7 +146,10 @@ export function MenuScreen({ personagem }: MenuScreenProps) {
           {MENU_PRINCIPAL.map((item) => {
             const imgSrc = MENU_PRINCIPAL_IMAGES[item.assetKey];
             // Conquistas: o ponto aparece quando há degrau batido para resgatar
-            const comPonto = item.id === 'conquistas' && !!personagem && degrausProntos(personagem, personagem.conquistas) > 0;
+            const comPonto =
+              (item.id === 'conquistas' && !!personagem && degrausProntos(personagem, personagem.conquistas) > 0) ||
+              (item.id === 'checkin' && avisos.checkin) ||
+              (item.id === 'anuncios' && anuncioNovo);
 
             return (
               <article
@@ -155,6 +163,7 @@ export function MenuScreen({ personagem }: MenuScreenProps) {
                   if (item.id === 'buscar') router.push('/buscar');
                   if (item.id === 'colecao') router.push('/colecao');
                   if (item.id === 'conquistas') router.push('/conquistas');
+                  if (item.id === 'checkin') router.push('/missoes?aba=checkin');
                   if (item.id === 'ranking') router.push('/ranking');
                 }}
                 style={{

@@ -144,6 +144,8 @@ import {
   type MaestriasDoJogador,
 } from '@/rules/maestrias';
 import { CATEGORIAS_ARMA_MAP } from '@/rules/armas';
+import { somarDiario, type CheckinDoJogador, type DiarioDoJogador, type ProgressoDeMissoes } from '@/rules/diario';
+import { semanaDe } from '@/rules/chefeSemanal';
 import { conquistasEmDestaque, somarEstatisticas, type ConquistasDoJogador, type EstatisticasDoJogador } from '@/rules/conquistas';
 import { TITULO_MAP } from '@/rules/titulos';
 import { ELEMENTOS, type Elemento } from '@/rules/elements';
@@ -265,6 +267,9 @@ export interface CharacterDocument {
   avancosDeExpedicao?: number;
   /** Maestrias: XP acumulado por trilha e o XP do dia (teto diário). */
   maestrias?: MaestriasDoJogador;
+  /** Missões diárias e semanais (contadores e baús) e o Check-in de 30 dias. */
+  diario?: DiarioDoJogador;
+  checkin?: CheckinDoJogador;
   /** Feiticeiro (1.5.2): o elemento escolhido, usado nas habilidades da classe que não têm elemento próprio. */
   elementoDaClasse?: Elemento;
   /** Conquistas: os totais contados (vitórias, forjas…), os degraus já resgatados, os títulos e o título escolhido. */
@@ -540,20 +545,30 @@ function bonusDeAlmaDe(
 }
 
 /**
+ * Soma o que o jogador fez às missões do dia e da semana (devolve o patch para salvar junto). `agora` define o dia e
+ * a semana de Brasília.
+ */
+export function progressoDoDia(char: Pick<CharacterDocument, 'diario'>, ganhos: ProgressoDeMissoes, agora: Date): { diario: DiarioDoJogador } {
+  return { diario: somarDiario(char.diario, ganhos, diaDeBrasilia(agora), semanaDe(agora)) };
+}
+
+/**
  * Depois de vitórias (true = contra chefe): XP de maestria na trilha da categoria da arma equipada e, contra chefe, na
- * de Chefes (com o teto do dia), e os totais das conquistas. Devolve o patch para salvar junto.
+ * de Chefes (com o teto do dia), os totais das conquistas e as missões do dia. Devolve o patch para salvar junto.
  */
 export function progressoDasVitorias(
-  char: Pick<CharacterDocument, 'maestrias' | 'equipamento' | 'armas' | 'estatisticas'>,
+  char: Pick<CharacterDocument, 'maestrias' | 'equipamento' | 'armas' | 'estatisticas' | 'diario'>,
   vitorias: readonly boolean[],
   agora: Date
-): { maestrias?: MaestriasDoJogador; estatisticas?: EstatisticasDoJogador } {
+): { maestrias?: MaestriasDoJogador; estatisticas?: EstatisticasDoJogador; diario?: DiarioDoJogador } {
   if (!vitorias.length) return {};
   const arma = char.equipamento?.armaId ? char.armas?.find((a) => a.id === char.equipamento!.armaId) : undefined;
   const novas = ganharXpDeMaestria(char.maestrias, xpDasVitorias(arma?.categoria, vitorias), diaDeBrasilia(agora));
+  const chefes = vitorias.filter(Boolean).length;
   return {
     ...(novas ? { maestrias: novas } : {}),
-    estatisticas: somarEstatisticas(char.estatisticas, { vitorias: vitorias.length, vitoriasContraChefes: vitorias.filter(Boolean).length }),
+    estatisticas: somarEstatisticas(char.estatisticas, { vitorias: vitorias.length, vitoriasContraChefes: chefes }),
+    ...progressoDoDia(char, { vitorias: vitorias.length, chefes }, agora),
   };
 }
 
@@ -2321,7 +2336,7 @@ export async function executarTorre(uid: string, opcoes: OpcoesCombate): Promise
       if (recompensa.fragmentosAscensao > 0) {
         character = alterarSaldoEm(ctx, character, 'fragmentosAscensao', recompensa.fragmentosAscensao, motivo).character;
       }
-      character = salvarPersonagem(ctx, character, { torreAndar: andar });
+      character = salvarPersonagem(ctx, character, { torreAndar: andar, ...progressoDoDia(character, { torre: 1 }, new Date()) });
 
       mensagens.push(
         `Torre Celestial: andar ${andar} vencido${identidade.chefe ? ` (chefe ${identidade.nome})` : ''}.`
@@ -2535,9 +2550,20 @@ function estadoForja(char: CharacterDocument): EstadoForja {
 }
 
 /** XP na maestria de Forja (com o teto do dia) e, ao fabricar, o total da conquista de Forja, para salvar junto. */
-function maestriaDaForja(current: CharacterDocument, xp: number, fabricou = false): { maestrias?: MaestriasDoJogador; estatisticas?: EstatisticasDoJogador } {
-  const novas = ganharXpDeMaestria(current.maestrias, { forja: xp }, diaDeBrasilia(new Date()));
-  return { ...(novas ? { maestrias: novas } : {}), ...(fabricou ? { estatisticas: somarEstatisticas(current.estatisticas, { forjas: 1 }) } : {}) };
+function maestriaDaForja(
+  current: CharacterDocument,
+  xp: number,
+  fabricou = false,
+  /** Fabricar e reforjar contam na missão do dia; usar orbes não. */
+  contaNaMissao = true
+): { maestrias?: MaestriasDoJogador; estatisticas?: EstatisticasDoJogador; diario?: DiarioDoJogador } {
+  const agora = new Date();
+  const novas = ganharXpDeMaestria(current.maestrias, { forja: xp }, diaDeBrasilia(agora));
+  return {
+    ...(novas ? { maestrias: novas } : {}),
+    ...(fabricou ? { estatisticas: somarEstatisticas(current.estatisticas, { forjas: 1 }) } : {}),
+    ...(contaNaMissao ? progressoDoDia(current, { forja: 1 }, agora) : {}),
+  };
 }
 
 /**
@@ -2676,7 +2702,7 @@ export async function usarOrbesArmadura(
     const character = salvarPersonagem(ctx, current, {
       inventario: plano.inventario,
       armaduras: plano.armaduras,
-      ...maestriaDaForja(current, itensGastos(current.inventario ?? {}, plano.inventario) * XP_POR_ORBE),
+      ...maestriaDaForja(current, itensGastos(current.inventario ?? {}, plano.inventario) * XP_POR_ORBE, false, false),
     });
     return { character, armadura: plano.armadura, xpGanho: plano.xpGanho, nivelAntes: plano.nivelAntes, nivelDepois: plano.nivelDepois };
   });

@@ -15,7 +15,7 @@ import {
 import { bonusDaMaestriaDeExpedicao, ganharXpDeMaestria, XP_POR_HORA_DE_EXPEDICAO } from '@/rules/maestrias';
 import { somarEstatisticas } from '@/rules/conquistas';
 import { diaDeBrasilia } from '@/game/batalhaSangrenta';
-import { alterarSaldoEm, carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
+import { alterarSaldoEm, carregarPersonagem, progressoDoDia, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { gerarSementeCombate } from '@/server/combateSemente';
 import { sorteadorDaSemente } from '@/server/almas';
 import { repositorio } from '@/server/persistencia';
@@ -196,6 +196,7 @@ export async function agirNaExpedicao(uid: string, acao: unknown, pedido: Pedido
         const salvo = salvarPersonagem(ctx, eu, {
           ...(maestrias ? { maestrias } : {}),
           estatisticas: somarEstatisticas(eu.estatisticas, { expedicoes: alvo.length }),
+          ...progressoDoDia(eu, { expedicoes: alvo.length }, agora),
           selosDeBusca: selos,
           fragmentosDeMemoria: memoria || undefined,
           pedrasDaRecordacao: pedras || undefined,
