@@ -11,6 +11,8 @@ import type { RaridadeMaterial } from './raridades';
 
 export const NIVEL_DA_EXPEDICAO = 15;
 export const VAGAS_DE_EXPEDICAO = 3;
+/** Com a maestria de Expedição (marcos 50 e 100), até 5 vagas. */
+export const VAGAS_MAXIMAS_DE_EXPEDICAO = 5;
 export const HORA_MS = 60 * 60_000;
 /** Quanto um Avanço de expedição tira do tempo. */
 export const AVANCO_MS = HORA_MS;
@@ -65,7 +67,7 @@ export function expedicoesDoDocumento(bruto: unknown): ExpedicaoEmAndamento[] | 
     const o = item as Record<string, unknown> | null;
     if (!o || typeof o !== 'object') continue;
     const { vaga, horas, inicio, fim, avancos } = o;
-    if (typeof vaga !== 'number' || !Number.isInteger(vaga) || vaga < 0 || vaga >= VAGAS_DE_EXPEDICAO || vistas.has(vaga)) continue;
+    if (typeof vaga !== 'number' || !Number.isInteger(vaga) || vaga < 0 || vaga >= VAGAS_MAXIMAS_DE_EXPEDICAO || vistas.has(vaga)) continue;
     if (!turnoDeHoras(horas) || typeof inicio !== 'string' || typeof fim !== 'string' || Number.isNaN(Date.parse(inicio)) || Number.isNaN(Date.parse(fim))) continue;
     vistas.add(vaga);
     lista.push({ vaga, horas: horas as number, inicio, fim, ...(typeof avancos === 'number' && Number.isInteger(avancos) && avancos > 0 ? { avancos } : {}) });

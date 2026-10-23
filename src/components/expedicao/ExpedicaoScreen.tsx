@@ -126,7 +126,7 @@ export function ExpedicaoScreen({ tokenFresco }: { tokenFresco: Token }) {
           <h1 className="text-2xl font-cinzel font-extrabold italic tracking-widest uppercase" style={{ color: '#F5E3B3' }}>Expedição</h1>
         </header>
         <p className="text-xs" style={{ color: colors.text.secondary }}>
-          Pague o ouro e mande uma expedição de 2, 6, 8 ou 12 horas. Até {VAGAS_DE_EXPEDICAO} ao mesmo tempo. Ela nunca falha: quando voltar, colete selos de busca, Fragmentos de Memória, Pedras da Recordação e materiais de mundo. Cada Avanço de expedição tira 1 hora de uma expedição já enviada.
+          Pague o ouro e mande uma expedição de 2, 6, 8 ou 12 horas. Até {estado?.vagas ?? VAGAS_DE_EXPEDICAO} ao mesmo tempo. Ela nunca falha: quando voltar, colete selos de busca, Fragmentos de Memória, Pedras da Recordação e materiais de mundo. Cada Avanço de expedição tira 1 hora de uma expedição já enviada.
         </p>
         {aviso && <p role={aviso.erro ? 'alert' : 'status'} className="text-sm font-semibold" style={{ color: aviso.erro ? VERMELHO : VERDE }}>{aviso.texto}</p>}
         {erroAoCarregar ? (
@@ -137,9 +137,15 @@ export function ExpedicaoScreen({ tokenFresco }: { tokenFresco: Token }) {
           <>
             {bloqueado && <p className="text-sm font-semibold" style={{ color: VERMELHO }}>A Expedição abre no nível {estado.nivelNecessario} (agora: {estado.meuNivel}).</p>}
             <p className="text-sm">Ouro: <strong>{estado.ouro}</strong> · Avanços de expedição: <strong>{estado.avancos}</strong></p>
+            {((estado.reducaoDeTempoPercentual ?? 0) > 0 || (estado.materiaisExtras ?? 0) > 0) && (
+              <p className="text-[11px]" style={{ color: VERDE }}>
+                Maestria de Expedição: −{estado.reducaoDeTempoPercentual.toLocaleString('pt-BR')}% no tempo
+                {estado.materiaisExtras > 0 ? ` · +${estado.materiaisExtras} material comum por expedição` : ''}
+              </p>
+            )}
 
             <section aria-label="Vagas" className="flex flex-col gap-2">
-              {[...Array(VAGAS_DE_EXPEDICAO).keys()].map((vaga) => {
+              {[...Array(estado.vagas ?? VAGAS_DE_EXPEDICAO).keys()].map((vaga) => {
                 const e = estado.expedicoes.find((x) => x.vaga === vaga);
                 const falta = e ? Date.parse(e.fim) - horaDoServidor : 0;
                 return (
@@ -193,10 +199,10 @@ export function ExpedicaoScreen({ tokenFresco }: { tokenFresco: Token }) {
               </ul>
               <div>
                 <Botao
-                  disabled={ocupado || bloqueado || estado.expedicoes.length >= VAGAS_DE_EXPEDICAO || estado.ouro < turno.custoOuro}
+                  disabled={ocupado || bloqueado || estado.expedicoes.length >= (estado.vagas ?? VAGAS_DE_EXPEDICAO) || estado.ouro < turno.custoOuro}
                   onClick={() => void agir('enviar', { horas: turno.horas })}
                 >
-                  {estado.expedicoes.length >= VAGAS_DE_EXPEDICAO ? 'Vagas ocupadas' : `Enviar ${turno.horas} h (${turno.custoOuro} ouro)`}
+                  {estado.expedicoes.length >= (estado.vagas ?? VAGAS_DE_EXPEDICAO) ? 'Vagas ocupadas' : `Enviar ${turno.horas} h (${turno.custoOuro} ouro)`}
                 </Botao>
               </div>
             </section>

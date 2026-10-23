@@ -131,6 +131,20 @@ import {
 } from '@/game/torreCelestial';
 import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
 import { CHEFES_ESPECIAIS_MAP } from '@/rules/chefesEspeciais';
+import {
+  bonusDaMaestriaDeArma,
+  bonusDaMaestriaDeChefes,
+  descontoDaForja,
+  ganharXpDeMaestria,
+  itensGastos,
+  xpDasVitorias,
+  xpDeForjaAoFabricar,
+  xpDeForjaAoReforjar,
+  XP_POR_ORBE,
+  type MaestriasDoJogador,
+} from '@/rules/maestrias';
+import { CATEGORIAS_ARMA_MAP } from '@/rules/armas';
+import { ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
 import { equipamentosDoPerfil, validarEscolhaDoPerfil, type EquipamentoPerfil } from '@/lib/perfilEquipamentos';
 import { randomInt, randomUUID } from 'node:crypto';
 import { registrarLog } from './log';
@@ -246,6 +260,8 @@ export interface CharacterDocument {
   /** Expedição: as expedições nas vagas (até 3) e os Avanços de expedição guardados. */
   expedicoes?: ExpedicaoEmAndamento[];
   avancosDeExpedicao?: number;
+  /** Maestrias: XP acumulado por trilha e o XP do dia (teto diário). */
+  maestrias?: MaestriasDoJogador;
   /** Teste de Equipe (7.4): as dificuldades concluídas de cada teste ("alma:3"), as chaves da provação e os selos do abismo. */
   testeEquipeConcluidas?: string[];
   chavesDaProvacao?: ChavesDaProvacao;
@@ -486,21 +502,43 @@ function mesclarPersonagem(
  * O bônus passivo da Alma (cartas equipadas e coleção, só a partir do nível da Alma) somado aos atributos dos
  * colecionáveis ativados; undefined se não há nada.
  */
-function bonusDeAlmaDe(char: Partial<Pick<CharacterDocument, 'cartasItens' | 'cartasEquipadas' | 'cartasDescobertas' | 'nivel' | 'colecionaveis'>>): BonusDeAlma | undefined {
+function bonusDeAlmaDe(
+  char: Partial<Pick<CharacterDocument, 'cartasItens' | 'cartasEquipadas' | 'cartasDescobertas' | 'nivel' | 'colecionaveis' | 'maestrias' | 'equipamento' | 'armas'>>
+): BonusDeAlma | undefined {
   const temCartas = !!char.cartasItens?.length || !!char.cartasDescobertas?.length;
   const temColecionaveis = !!char.colecionaveis && Object.keys(char.colecionaveis).length > 0;
-  if (!temCartas && !temColecionaveis) return undefined;
+  // Maestria da categoria da arma equipada: % de dano (do tipo da arma) e pontos de crítico
+  const arma = char.equipamento?.armaId ? char.armas?.find((a) => a.id === char.equipamento!.armaId) : undefined;
+  const daMaestria = bonusDaMaestriaDeArma(char.maestrias, arma?.categoria);
+  const temMaestria = daMaestria.danoPercentual > 0 || daMaestria.criticoPontos > 0;
+  if (!temCartas && !temColecionaveis && !temMaestria) return undefined;
   const bonus = temCartas ? bonusDasCartas(char.cartasItens ?? [], char.cartasEquipadas ?? [], char.cartasDescobertas ?? [], char.nivel ?? 1) : bonusVazio();
-  if (!temColecionaveis) return bonus;
-  const dosColecionaveis = atributosDosColecionaveis(char.colecionaveis);
-  for (const a of ATTRIBUTES) bonus.atributos[a] += dosColecionaveis[a];
+  if (temColecionaveis) {
+    const dosColecionaveis = atributosDosColecionaveis(char.colecionaveis);
+    for (const a of ATTRIBUTES) bonus.atributos[a] += dosColecionaveis[a];
+  }
+  if (arma && temMaestria) {
+    if (CATEGORIAS_ARMA_MAP[arma.categoria]?.tipoDano === 'magico') bonus.atqMagico += daMaestria.danoPercentual;
+    else bonus.atqFisico += daMaestria.danoPercentual;
+    bonus.chanceCritico += daMaestria.criticoPontos;
+  }
   return bonus;
+}
+
+/**
+ * Maestrias depois de vitórias (true = contra chefe): XP na trilha da categoria da arma equipada e, contra chefe, na de
+ * Chefes, com o teto do dia. Devolve o patch para salvar junto (ou vazio se nada mudou).
+ */
+export function maestriasDasVitorias(char: Pick<CharacterDocument, 'maestrias' | 'equipamento' | 'armas'>, vitorias: readonly boolean[], agora: Date): { maestrias?: MaestriasDoJogador } {
+  const arma = char.equipamento?.armaId ? char.armas?.find((a) => a.id === char.equipamento!.armaId) : undefined;
+  const novas = ganharXpDeMaestria(char.maestrias, xpDasVitorias(arma?.categoria, vitorias), diaDeBrasilia(agora));
+  return novas ? { maestrias: novas } : {};
 }
 
 /** Atributos que valem em combate e nos derivados: os gravados, o Reforço de Habilidade e o equipamento equipado. */
 export function atributosEfetivos(
   char: Pick<CharacterDocument, 'atributos' | 'reforcoHabilidade'> &
-    Partial<Pick<CharacterDocument, 'equipamento' | 'armas' | 'armaduras' | 'emblemasItens' | 'emblemasEquipados' | 'cartasItens' | 'cartasEquipadas' | 'cartasDescobertas' | 'nivel' | 'colecionaveis'>>
+    Partial<Pick<CharacterDocument, 'equipamento' | 'armas' | 'armaduras' | 'emblemasItens' | 'emblemasEquipados' | 'cartasItens' | 'cartasEquipadas' | 'cartasDescobertas' | 'nivel' | 'colecionaveis' | 'maestrias'>>
 ): Attributes {
   const comReforco = aplicarReforcoAtributos(char.atributos, char.reforcoHabilidade);
   const emblemas = emblemasEquipadosDe(char);
@@ -1425,7 +1463,9 @@ function aplicarResultadoCombateEm(
   resultado: ResultadoCombate,
   monstroNome: string,
   /** Para contar a vitória nos contratos de guilda do dia (7.3). */
-  monstroId?: string
+  monstroId?: string,
+  /** O monstro era chefe (XP de maestria de Chefes). */
+  contraChefe = false
 ): ResultadoPosCombate {
   const mensagens: string[] = [...resultado.mensagens];
   let transaction: TransactionDocument | undefined;
@@ -1486,6 +1526,7 @@ function aplicarResultadoCombateEm(
       pontosDisponiveis,
       ouro: novoOuro,
       ...(contratos ? { contratos } : {}),
+      ...maestriasDasVitorias(current, [contraChefe], new Date()),
     });
     return { character, levelUps, transaction, mensagens };
   }
@@ -1562,6 +1603,8 @@ export function combatenteDoPersonagem(current: CharacterDocument): Combatente {
   const habilidadesNoMotor = Object.fromEntries(
     Object.entries(ficha.habilidades).filter(([id]) => HABILIDADES_ARMADURA_NO_MOTOR.has(id))
   );
+  const contraChefes = bonusDaMaestriaDeChefes(current.maestrias);
+  const temContraChefes = contraChefes.danoPercentual > 0 || contraChefes.reducaoPercentual > 0;
   return {
     nome: current.nome,
     racaId: current.racaId,
@@ -1587,7 +1630,7 @@ export function combatenteDoPersonagem(current: CharacterDocument): Combatente {
         }
       : {}),
     ...(arma?.subtipoFisico ? { tipoDanoFisico: arma.subtipoFisico } : {}),
-    ...(arma || Object.keys(habilidadesNoMotor).length > 0 || emblemasCombate || temPercentuais(ficha)
+    ...(arma || Object.keys(habilidadesNoMotor).length > 0 || emblemasCombate || temPercentuais(ficha) || temContraChefes
       ? {
           equipamento: {
             bonusDanoFisicoPercentual: ficha.percentuais.danoFisico,
@@ -1599,6 +1642,7 @@ export function combatenteDoPersonagem(current: CharacterDocument): Combatente {
             habilidadesArmadura: habilidadesNoMotor,
             ...(emblemasCombate ? { emblemas: emblemasCombate } : {}),
             sobreescudoMaximo: current.sobreescudoMax,
+            ...(temContraChefes ? { contraChefes } : {}),
           },
         }
       : {}),
@@ -1660,7 +1704,7 @@ export async function executarCombate(
       }
     }
 
-    const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id);
+    const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id, monstro.chefe === true);
 
     const registro: RegistroCombate = {
       id: idRegistro,
@@ -1773,7 +1817,7 @@ export async function executarCacada(
       resultado.xpGanho = 0;
     }
 
-    const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id);
+    const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id, monstro.chefe === true);
     let character = pos.character;
     const mensagens = [...pos.mensagens];
 
@@ -1912,7 +1956,7 @@ export async function campanhaLutar(
     if (venceu) {
       // só XP e ouro, sem a trava da Caçada (o descanso da área faz esse papel); a passiva racial de XP entra por cima
       resultado.xpGanho = calcularXpComBonusRacial(monstro.xpConcedido, current.racaId);
-      pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id);
+      pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id, monstro.chefe === true);
     } else {
       // derrota sem penalidade: nada de ouro perdido; a vida volta ao máximo na próxima luta, como sempre
       resultado.xpGanho = 0;
@@ -2105,7 +2149,14 @@ export async function executarBatalhaSangrenta(
       : character.batalhaSangrentaVencidas ?? [];
     // Cada onda vencida conta nos contratos de guilda do dia
     const contratos = contarVitorias(character.contratos, ondas.filter((o) => o.vencedor === 'personagem').map((o) => o.monstroId), diaDeBrasilia(agora));
-    character = salvarPersonagem(ctx, character, { fragmentosSubclasse, batalhaSangrenta: estadoTentativas, batalhaSangrentaVencidas: vencidas, ...(contratos ? { contratos } : {}) });
+    const vitoriasDasOndas = ondas.flatMap((o, i) => (o.vencedor === 'personagem' ? [plano[i]?.chefe === true] : []));
+    character = salvarPersonagem(ctx, character, {
+      fragmentosSubclasse,
+      batalhaSangrenta: estadoTentativas,
+      batalhaSangrentaVencidas: vencidas,
+      ...(contratos ? { contratos } : {}),
+      ...maestriasDasVitorias(character, vitoriasDasOndas, agora),
+    });
 
     const nomeSubclasse = recompensa.fragmentosSubclasse
       ? SUBCLASSES.find((sc) => sc.id === recompensa.fragmentosSubclasse?.subclasseId)?.nome ?? recompensa.fragmentosSubclasse.subclasseId
@@ -2220,7 +2271,7 @@ export async function executarTorre(uid: string, opcoes: OpcoesCombate): Promise
     const motivo = `Torre Celestial (andar ${andar})`;
 
     if (venceu) {
-      const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id);
+      const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id, monstro.chefe === true);
       character = pos.character;
       levelUps = pos.levelUps;
       transaction = pos.transaction;
@@ -2352,6 +2403,7 @@ export async function executarGuerreiro(uid: string, dificuldadeId: unknown, opc
       guerreiroVencidas: primeiraVitoria ? [...(current.guerreiroVencidas ?? []), dificuldade].sort((a, b) => a - b) : current.guerreiroVencidas ?? [],
       emblemasItens: [...(current.emblemasItens ?? []), ...novosEmblemas],
       ...(contratosDoGuerreiro ? { contratos: contratosDoGuerreiro } : {}),
+      ...(venceu ? maestriasDasVitorias(current, [true], agora) : {}),
     });
 
     const mensagens: string[] = [
@@ -2447,18 +2499,31 @@ function estadoForja(char: CharacterDocument): EstadoForja {
   return { inventario: char.inventario ?? {}, ouro: char.ouro, armas: char.armas ?? [] };
 }
 
-/** Grava o resultado da Forja: inventário, armas e o ouro gasto (com a transação de moeda). */
+/** XP na maestria de Forja (com o teto do dia), para salvar junto. */
+function maestriaDaForja(current: CharacterDocument, xp: number): { maestrias?: MaestriasDoJogador } {
+  const novas = ganharXpDeMaestria(current.maestrias, { forja: xp }, diaDeBrasilia(new Date()));
+  return novas ? { maestrias: novas } : {};
+}
+
+/**
+ * Grava o resultado da Forja: inventário, armas e o ouro gasto (com a transação de moeda). A maestria de Forja
+ * desconta parte do ouro e (fora da Customização) devolve parte dos materiais; `xpDeForja` sobe a maestria.
+ */
 function gravarForja(
   ctx: ContextoTransacao,
   current: CharacterDocument,
   plano: { inventario: Record<string, number>; ouroGasto: number; armas: ArmaPersonagem[]; arma: ArmaPersonagem },
-  motivo: string
+  motivo: string,
+  xpDeForja = 0,
+  descontaMateriais = true
 ): RespostaForja {
-  const pago = alterarSaldoEm(ctx, current, 'ouro', -plano.ouroGasto, motivo);
+  const { inventario, ouroGasto } = descontoDaForja(current.maestrias, current.inventario ?? {}, plano, descontaMateriais);
+  const pago = alterarSaldoEm(ctx, current, 'ouro', -ouroGasto, motivo);
   const character = salvarPersonagem(ctx, current, {
     ouro: pago.character.ouro,
-    inventario: plano.inventario,
+    inventario,
     armas: plano.armas,
+    ...(xpDeForja > 0 ? maestriaDaForja(current, xpDeForja) : {}),
   });
   return { character, arma: plano.arma, transaction: pago.transaction };
 }
@@ -2479,7 +2544,7 @@ export async function fabricarArma(
     });
     if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_FORJA[plano.motivo]);
     const nome = plano.base.nomes[plano.arma.categoria];
-    return gravarForja(ctx, current, plano, `Forja: ${plano.base.consome ? 'evoluir para' : 'fabricar'} ${nome}`);
+    return gravarForja(ctx, current, plano, `Forja: ${plano.base.consome ? 'evoluir para' : 'fabricar'} ${nome}`, xpDeForjaAoFabricar(plano.base.estrela));
   });
 }
 
@@ -2490,7 +2555,7 @@ export async function reforjarArma(uid: string, armaId: unknown, opcoes: OpcoesF
     const current = await carregarPersonagem(ctx, uid);
     const plano = planejarReforja(estadoForja(current), armaId, { aleatorio: opcoes.aleatorio ?? aleatorioDoServidor });
     if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_FORJA[plano.motivo]);
-    return gravarForja(ctx, current, plano, `Forja: reforjar (${plano.percentual}% da receita)`);
+    return gravarForja(ctx, current, plano, `Forja: reforjar (${plano.percentual}% da receita)`, xpDeForjaAoReforjar(ARMAS_BASE_MAP[plano.arma.baseId]?.estrela ?? 1));
   });
 }
 
@@ -2501,7 +2566,7 @@ export async function customizarArma(uid: string, armaId: unknown, opcao: unknow
     const current = await carregarPersonagem(ctx, uid);
     const plano = planejarCustomizacao(estadoForja(current), armaId, opcao);
     if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_FORJA[plano.motivo]);
-    return gravarForja(ctx, current, plano, `Forja: Customização (${String(opcao)})`);
+    return gravarForja(ctx, current, plano, `Forja: Customização (${String(opcao)})`, 0, false);
   });
 }
 
@@ -2530,8 +2595,14 @@ export async function fabricarArmadura(uid: string, pecaId: unknown, opcoes: Opc
       agora: new Date().toISOString(),
     });
     if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_ARMADURA[plano.motivo]);
-    const pago = alterarSaldoEm(ctx, current, 'ouro', -plano.ouroGasto, `Ferreiro: fabricar ${plano.peca.nome}`);
-    const character = salvarPersonagem(ctx, current, { ouro: pago.character.ouro, inventario: plano.inventario, armaduras: plano.armaduras });
+    const { inventario, ouroGasto } = descontoDaForja(current.maestrias, current.inventario ?? {}, plano);
+    const pago = alterarSaldoEm(ctx, current, 'ouro', -ouroGasto, `Ferreiro: fabricar ${plano.peca.nome}`);
+    const character = salvarPersonagem(ctx, current, {
+      ouro: pago.character.ouro,
+      inventario,
+      armaduras: plano.armaduras,
+      ...maestriaDaForja(current, xpDeForjaAoFabricar(plano.peca.estrela)),
+    });
     return { character, armadura: plano.armadura, transaction: pago.transaction };
   });
 }
@@ -2543,8 +2614,14 @@ export async function reforjarArmadura(uid: string, armaduraId: unknown, opcoes:
     const current = await carregarPersonagem(ctx, uid);
     const plano = planejarReforjaArmadura(estadoArmaduras(current), armaduraId, { aleatorio: opcoes.aleatorio ?? aleatorioDoServidor });
     if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_ARMADURA[plano.motivo]);
-    const pago = alterarSaldoEm(ctx, current, 'ouro', -plano.ouroGasto, `Ferreiro: reforjar ${plano.peca.nome} (${plano.percentual}% da receita)`);
-    const character = salvarPersonagem(ctx, current, { ouro: pago.character.ouro, inventario: plano.inventario, armaduras: plano.armaduras });
+    const { inventario, ouroGasto } = descontoDaForja(current.maestrias, current.inventario ?? {}, plano);
+    const pago = alterarSaldoEm(ctx, current, 'ouro', -ouroGasto, `Ferreiro: reforjar ${plano.peca.nome} (${plano.percentual}% da receita)`);
+    const character = salvarPersonagem(ctx, current, {
+      ouro: pago.character.ouro,
+      inventario,
+      armaduras: plano.armaduras,
+      ...maestriaDaForja(current, xpDeForjaAoReforjar(plano.peca.estrela)),
+    });
     return { character, armadura: plano.armadura, transaction: pago.transaction };
   });
 }
@@ -2560,7 +2637,11 @@ export async function usarOrbesArmadura(
     const current = await carregarPersonagem(ctx, uid);
     const plano = planejarUsoDeOrbes(estadoArmaduras(current), armaduraId, orbes);
     if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_ARMADURA[plano.motivo]);
-    const character = salvarPersonagem(ctx, current, { inventario: plano.inventario, armaduras: plano.armaduras });
+    const character = salvarPersonagem(ctx, current, {
+      inventario: plano.inventario,
+      armaduras: plano.armaduras,
+      ...maestriaDaForja(current, itensGastos(current.inventario ?? {}, plano.inventario) * XP_POR_ORBE),
+    });
     return { character, armadura: plano.armadura, xpGanho: plano.xpGanho, nivelAntes: plano.nivelAntes, nivelDepois: plano.nivelDepois };
   });
 }

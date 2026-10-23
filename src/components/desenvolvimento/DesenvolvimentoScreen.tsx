@@ -26,6 +26,7 @@ import { AtributosPanel } from './AtributosPanel';
 import { SubclassePanel } from './SubclassePanel';
 import { ReforcoPanel } from './ReforcoPanel';
 import { AscensaoPanel } from './AscensaoPanel';
+import { MaestriasPanel } from './MaestriasPanel';
 
 export function DesenvolvimentoScreen() {
   const router = useRouter();
@@ -319,6 +320,7 @@ export function DesenvolvimentoScreen() {
               className="h-full"
             />
           )}
+          {secaoAtiva === 'maestrias' && <MaestriasPanel character={character} className="h-full" />}
         </section>
       </div>
 

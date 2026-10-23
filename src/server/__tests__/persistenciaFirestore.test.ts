@@ -183,6 +183,13 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(antigo).not.toHaveProperty('avancosDeExpedicao');
   });
 
+  it('guarda as maestrias (XP e o XP do dia)', () => {
+    const maestrias = { 'arma:katana': { xp: 120, dia: '2026-10-23', hoje: 40 }, forja: { xp: 15 } };
+    const doc = personagemParaFirestore({ ...PERSONAGEM, maestrias });
+    expect(personagemDoFirestore('u1', doc)).toMatchObject({ maestrias });
+    expect(personagemParaFirestore(PERSONAGEM)).not.toHaveProperty('maestrias');
+  });
+
   it('guarda os selos de busca, a garantia, os colecionáveis e as moedas deles; descarta o que é inválido', () => {
     const doc = personagemParaFirestore({
       ...PERSONAGEM,

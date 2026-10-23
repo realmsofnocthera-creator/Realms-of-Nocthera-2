@@ -12,6 +12,8 @@ import {
   type ExpedicaoEmAndamento,
   type TurnoDeExpedicao,
 } from '@/rules/expedicao';
+import { bonusDaMaestriaDeExpedicao, ganharXpDeMaestria, XP_POR_HORA_DE_EXPEDICAO } from '@/rules/maestrias';
+import { diaDeBrasilia } from '@/game/batalhaSangrenta';
 import { alterarSaldoEm, carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { gerarSementeCombate } from '@/server/combateSemente';
 import { sorteadorDaSemente } from '@/server/almas';
@@ -39,16 +41,36 @@ export interface EstadoDaExpedicao {
   ouro: number;
   avancos: number;
   expedicoes: ExpedicaoEmAndamento[];
+  /** Vagas do jogador: 3, mais as da maestria de Expedição. */
+  vagas: number;
+  /** Maestria de Expedição: % a menos no tempo e materiais comuns a mais por expedição. */
+  reducaoDeTempoPercentual: number;
+  materiaisExtras: number;
 }
 
-export const estadoDe = (char: CharacterDocument, agora: Date): EstadoDaExpedicao => ({
-  nivelNecessario: NIVEL_DA_EXPEDICAO,
-  meuNivel: char.nivel,
-  agora: agora.toISOString(),
-  ouro: char.ouro ?? 0,
-  avancos: char.avancosDeExpedicao ?? 0,
-  expedicoes: char.expedicoes ?? [],
-});
+/** As vagas do jogador (3 + as da maestria de Expedição). */
+export const vagasDe = (char: Pick<CharacterDocument, 'maestrias'>) => VAGAS_DE_EXPEDICAO + bonusDaMaestriaDeExpedicao(char.maestrias).vagasExtras;
+
+/** Duração de um turno com a maestria de Expedição (arredondada para o minuto). */
+export function duracaoDoTurno(horas: number, reducaoPercentual: number): number {
+  const minutos = Math.round((horas * 60 * (100 - reducaoPercentual)) / 100);
+  return minutos * 60_000;
+}
+
+export const estadoDe = (char: CharacterDocument, agora: Date): EstadoDaExpedicao => {
+  const maestria = bonusDaMaestriaDeExpedicao(char.maestrias);
+  return {
+    nivelNecessario: NIVEL_DA_EXPEDICAO,
+    meuNivel: char.nivel,
+    agora: agora.toISOString(),
+    ouro: char.ouro ?? 0,
+    avancos: char.avancosDeExpedicao ?? 0,
+    expedicoes: char.expedicoes ?? [],
+    vagas: VAGAS_DE_EXPEDICAO + maestria.vagasExtras,
+    reducaoDeTempoPercentual: maestria.reducaoDeTempoPercentual,
+    materiaisExtras: maestria.materiaisExtras,
+  };
+};
 
 export async function estadoDaExpedicao(uid: string, agora = new Date()): Promise<EstadoDaExpedicao> {
   const char = await repositorio.lerPersonagem(uid);
@@ -81,12 +103,16 @@ export interface RespostaDaExpedicao {
   estado: EstadoDaExpedicao;
 }
 
-const vagaValida = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < VAGAS_DE_EXPEDICAO;
+const vagaValida = (v: unknown, vagas: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < vagas;
 
-/** Sorteia os materiais do turno: a quantidade de cada raridade é fixa; o tipo, sorteado entre os da raridade. */
-function sortearMateriais(turno: TurnoDeExpedicao, sorteio: () => number): Record<string, number> {
+/**
+ * Sorteia os materiais do turno: a quantidade de cada raridade é fixa (mais os comuns extras da maestria de
+ * Expedição); o tipo, sorteado entre os da raridade.
+ */
+function sortearMateriais(turno: TurnoDeExpedicao, sorteio: () => number, comunsExtras = 0): Record<string, number> {
   const saida: Record<string, number> = {};
-  for (const [raridade, qtd] of Object.entries(turno.materiais) as [RaridadeMaterial, number][]) {
+  const quantidades = { ...turno.materiais, ...(comunsExtras > 0 ? { comum: (turno.materiais.comum ?? 0) + comunsExtras } : {}) };
+  for (const [raridade, qtd] of Object.entries(quantidades) as [RaridadeMaterial, number][]) {
     const opcoes = MATERIAIS_MUNDO.filter((m) => m.raridade === raridade);
     for (let i = 0; i < qtd; i++) {
       const m = opcoes[Math.min(opcoes.length - 1, Math.floor(sorteio() * opcoes.length))];
@@ -103,21 +129,23 @@ export async function agirNaExpedicao(uid: string, acao: unknown, pedido: Pedido
     const eu = await carregarPersonagem(ctx, uid);
     if (eu.nivel < NIVEL_DA_EXPEDICAO) throw new ErroDeExpedicao(`A Expedição abre no nível ${NIVEL_DA_EXPEDICAO}.`);
     const expedicoes = eu.expedicoes ?? [];
+    const maestria = bonusDaMaestriaDeExpedicao(eu.maestrias);
+    const vagas = VAGAS_DE_EXPEDICAO + maestria.vagasExtras;
     switch (acao as AcaoDaExpedicao) {
       case 'enviar': {
         const turno = turnoDeHoras(pedido.horas);
         if (!turno) throw new ErroDeExpedicao(`Escolha o turno: ${TURNOS_DE_EXPEDICAO.map((t) => `${t.horas} h`).join(', ')}.`);
         const ocupadas = new Set(expedicoes.map((e) => e.vaga));
-        const vaga = vagaValida(pedido.vaga) ? pedido.vaga : [...Array(VAGAS_DE_EXPEDICAO).keys()].find((v) => !ocupadas.has(v));
-        if (vaga === undefined || ocupadas.has(vaga)) throw new ErroDeExpedicao(`As ${VAGAS_DE_EXPEDICAO} vagas estão ocupadas. Colete uma expedição primeiro.`);
+        const vaga = vagaValida(pedido.vaga, vagas) ? pedido.vaga : [...Array(vagas).keys()].find((v) => !ocupadas.has(v));
+        if (vaga === undefined || ocupadas.has(vaga)) throw new ErroDeExpedicao(`As ${vagas} vagas estão ocupadas. Colete uma expedição primeiro.`);
         if ((eu.ouro ?? 0) < turno.custoOuro) throw new ErroDeExpedicao(`Você precisa de ${turno.custoOuro} de ouro.`);
         const doc = alterarSaldoEm(ctx, eu, 'ouro', -turno.custoOuro, `Expedição de ${turno.horas} h`).character;
-        const nova: ExpedicaoEmAndamento = { vaga, horas: turno.horas, inicio: agora.toISOString(), fim: new Date(agora.getTime() + turno.horas * HORA_MS).toISOString() };
+        const nova: ExpedicaoEmAndamento = { vaga, horas: turno.horas, inicio: agora.toISOString(), fim: new Date(agora.getTime() + duracaoDoTurno(turno.horas, maestria.reducaoDeTempoPercentual)).toISOString() };
         const salvo = salvarPersonagem(ctx, doc, { ouro: doc.ouro, expedicoes: [...expedicoes, nova].sort((a, b) => a.vaga - b.vaga) });
         return { mensagem: `Expedição de ${turno.horas} h enviada.`, estado: estadoDe(salvo, agora) };
       }
       case 'avancar': {
-        const e = vagaValida(pedido.vaga) ? expedicoes.find((x) => x.vaga === pedido.vaga) : undefined;
+        const e = vagaValida(pedido.vaga, vagas) ? expedicoes.find((x) => x.vaga === pedido.vaga) : undefined;
         if (!e) throw new ErroDeExpedicao('Não há expedição nessa vaga.');
         if (expedicaoPronta(e, agora)) throw new ErroDeExpedicao('Essa expedição já terminou. É só coletar.');
         const quantidade = typeof pedido.quantidade === 'number' && Number.isInteger(pedido.quantidade) && pedido.quantidade >= 1 ? pedido.quantidade : 1;
@@ -135,7 +163,7 @@ export async function agirNaExpedicao(uid: string, acao: unknown, pedido: Pedido
       }
       case 'coletar': {
         // Uma vaga, ou todas as prontas se a vaga não vier
-        const alvo = vagaValida(pedido.vaga) ? expedicoes.filter((x) => x.vaga === pedido.vaga) : expedicoes.filter((x) => expedicaoPronta(x, agora));
+        const alvo = vagaValida(pedido.vaga, vagas) ? expedicoes.filter((x) => x.vaga === pedido.vaga) : expedicoes.filter((x) => expedicaoPronta(x, agora));
         if (!alvo.length) throw new ErroDeExpedicao('Não há expedição pronta para coletar.');
         if (alvo.some((x) => !expedicaoPronta(x, agora))) throw new ErroDeExpedicao('Essa expedição ainda não voltou.');
         const sorteio = sorteadorDaSemente(semente);
@@ -149,7 +177,7 @@ export async function agirNaExpedicao(uid: string, acao: unknown, pedido: Pedido
           for (const selo of SELOS_DE_BUSCA) if (turno.selos[selo]) selos[selo] = (selos[selo] ?? 0) + turno.selos[selo]!;
           memoria += turno.fragmentosDeMemoria;
           pedras += turno.pedrasDaRecordacao;
-          const materiais = sortearMateriais(turno, sorteio);
+          const materiais = sortearMateriais(turno, sorteio, maestria.materiaisExtras);
           for (const [id, qtd] of Object.entries(materiais)) inventario[id] = (inventario[id] ?? 0) + qtd;
           coletadas.push({
             vaga: e.vaga,
@@ -162,7 +190,10 @@ export async function agirNaExpedicao(uid: string, acao: unknown, pedido: Pedido
         }
         const coletadasVagas = new Set(alvo.map((x) => x.vaga));
         const restantes = expedicoes.filter((x) => !coletadasVagas.has(x.vaga));
+        // Maestria de Expedição: XP pelas horas coletadas (com o teto do dia)
+        const maestrias = ganharXpDeMaestria(eu.maestrias, { expedicao: alvo.reduce((t, x) => t + x.horas, 0) * XP_POR_HORA_DE_EXPEDICAO }, diaDeBrasilia(agora));
         const salvo = salvarPersonagem(ctx, eu, {
+          ...(maestrias ? { maestrias } : {}),
           selosDeBusca: selos,
           fragmentosDeMemoria: memoria || undefined,
           pedrasDaRecordacao: pedras || undefined,

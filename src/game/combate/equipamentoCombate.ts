@@ -25,6 +25,8 @@ export interface EquipamentoCombate {
   emblemas?: EmblemasNoCombate;
   /** Sobreescudo máximo do personagem (o Poder Máximo nível 5 vale até o primeiro golpe sofrido). */
   sobreescudoMaximo?: number;
+  /** Maestria de Chefes: % de dano a mais contra chefes e % a menos do dano recebido deles. */
+  contraChefes?: { danoPercentual: number; reducaoPercentual: number };
 }
 
 /** Elemento do golpe da arma na rodada: com dois elementos, alternam (1ª rodada no primeiro). */
