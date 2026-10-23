@@ -140,7 +140,7 @@ export const CLASSES: readonly ClassDefinition[] = [
         tipo: 'ultimate',
         nome: 'Juramento do Guardião',
         descricao:
-          'Acionada a cada 7 ataques básicos para o próximo turno defensivo: concede +5 Vitalidade, +3 Vigor, +20% Defesa Física, +20% Sobreescudo, -25% dano recebido e absorve parte do dano direcionado a aliados (aguardando sistema de grupo/aliados — combate atual é 1x1).',
+          'Acionada a cada 7 ataques básicos para o próximo turno defensivo: concede +5 Vitalidade, +3 Vigor, +20% Defesa Física, +20% Sobreescudo, -25% dano recebido e Retaliação: devolve 30% do dano recebido nesse turno ao atacante.',
       },
     },
   },

@@ -15,8 +15,12 @@ export interface SubespecieCacada {
   /** Estrela em que a subespécie aparece (define o nível e os atributos). */
   estrela: number;
   descricao: string;
-  /** Troca o elemento do original. Com dois, o golpe usa o primeiro (a alternância entra no motor depois). */
+  /** Troca o elemento do original. Com dois, os golpes alternam entre eles (um por rodada). */
   elementos?: Elemento[];
+  /** Elemento intensificado: o dano dos golpes elementais sobe 50% (decidido pelo Yuri em 23/10/2026). */
+  intensificado?: boolean;
+  /** Enfurece com menos vida que o normal (%). Ex.: o Urso Colérico enfurece com 60%. */
+  enfurecidoLimiarPercentual?: number;
   /** Soma aos status do original. */
   status?: EfeitoStatus;
   forcaPercentual?: number;
@@ -132,6 +136,7 @@ export const SUBESPECIES_CACADA: readonly SubespecieCacada[] = [
     estrela: 5,
     descricao: 'Urso tomado pela fúria; quanto mais ferido, mais violento.',
     forcaPercentual: 15,
+    enfurecidoLimiarPercentual: 60,
     drops: ['garra-furiosa', 'gordura-fervente', 'coracao-colerico'],
   },
   {
@@ -286,6 +291,7 @@ export const SUBESPECIES_CACADA: readonly SubespecieCacada[] = [
     estrela: 7,
     descricao: 'Abysskar das fossas mais fundas, de relâmpago intensificado.',
     elementos: ['relampago'],
+    intensificado: true,
     drops: ['barbatana-carregada', 'orgao-voltaico-profundo', 'perola-fulminante'],
   },
   {
@@ -313,6 +319,7 @@ export const SUBESPECIES_CACADA: readonly SubespecieCacada[] = [
     estrela: 8,
     descricao: 'Zaryth das tempestades profundas, de relâmpago intensificado.',
     elementos: ['relampago'],
+    intensificado: true,
     drops: ['espinho-fulminante', 'glandula-tempestuosa', 'gema-abissal-do-raio', 'olho-da-tormenta-negra'],
   },
   {
@@ -376,6 +383,7 @@ export const SUBESPECIES_CACADA: readonly SubespecieCacada[] = [
     estrela: 8,
     descricao: 'Raizark de relâmpago intensificado, o trovão em pessoa.',
     elementos: ['relampago'],
+    intensificado: true,
     drops: ['chifre-fulminante', 'pelo-de-raio', 'gema-do-raio-eterno', 'furia-do-trovao'],
   },
   {

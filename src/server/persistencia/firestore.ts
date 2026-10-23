@@ -24,6 +24,7 @@ import { expedicoesDoDocumento } from '@/rules/expedicao';
 import { maestriasDoDocumento } from '@/rules/maestrias';
 import { conquistasDoDocumento, estatisticasDoDocumento } from '@/rules/conquistas';
 import { ehTitulo, titulosDoDocumento } from '@/rules/titulos';
+import { ELEMENTOS, type Elemento } from '@/rules/elements';
 import { correioGeralDoDocumento, mensagemDoDocumento, mensagensDoDocumento, type MensagemGeral } from '@/rules/correio';
 import { entradaMundialDoDocumento, participacoesMundiaisDoDocumento, type EntradaDoChefeMundial } from '@/rules/chefeMundial';
 import { bonusDeGuildaDoDocumento } from '@/rules/pesquisa';
@@ -404,6 +405,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(expedicoesDoDocumento(data.expedicoes) ? { expedicoes: expedicoesDoDocumento(data.expedicoes) } : {}),
     ...(quantidadePositiva(data.avancosDeExpedicao) ? { avancosDeExpedicao: quantidadePositiva(data.avancosDeExpedicao) } : {}),
     ...(maestriasDoDocumento(data.maestrias) ? { maestrias: maestriasDoDocumento(data.maestrias) } : {}),
+    ...(typeof data.elementoDaClasse === 'string' && (ELEMENTOS as readonly string[]).includes(data.elementoDaClasse) ? { elementoDaClasse: data.elementoDaClasse as Elemento } : {}),
     ...(estatisticasDoDocumento(data.estatisticas) ? { estatisticas: estatisticasDoDocumento(data.estatisticas) } : {}),
     ...(conquistasDoDocumento(data.conquistas) ? { conquistas: conquistasDoDocumento(data.conquistas) } : {}),
     ...(titulosDoDocumento(data.titulos) ? { titulos: titulosDoDocumento(data.titulos) } : {}),
@@ -488,6 +490,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.expedicoes?.length ? { expedicoes: semUndefined(char.expedicoes) } : {}),
     ...(char.avancosDeExpedicao ? { avancosDeExpedicao: char.avancosDeExpedicao } : {}),
     ...(char.maestrias && Object.keys(char.maestrias).length ? { maestrias: semUndefined(char.maestrias) } : {}),
+    ...(char.elementoDaClasse ? { elementoDaClasse: char.elementoDaClasse } : {}),
     ...(char.estatisticas && Object.keys(char.estatisticas).length ? { estatisticas: semUndefined(char.estatisticas) } : {}),
     ...(char.conquistas && Object.keys(char.conquistas).length ? { conquistas: char.conquistas } : {}),
     ...(char.titulos?.length ? { titulos: char.titulos } : {}),

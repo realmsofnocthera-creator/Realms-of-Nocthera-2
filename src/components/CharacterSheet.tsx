@@ -21,6 +21,7 @@ import {
 } from '@/components/ficha';
 import type { SlotEquipamento } from '@/lib/equipamentoTela';
 import { NIVEL_DA_ALMA } from '@/rules/almas';
+import { ElementoDoFeiticeiro } from '@/components/ficha/ElementoDoFeiticeiro';
 
 interface CharacterSheetProps {
   character: CharacterDocument;
@@ -100,6 +101,8 @@ export function CharacterSheet({
             <ArrowLeft className="w-3.5 h-3.5 text-[#F5C542] shrink-0" />
             <span>Voltar ao Hub</span>
           </button>
+
+          <ElementoDoFeiticeiro character={character} />
 
           <button
             type="button"

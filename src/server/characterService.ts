@@ -146,6 +146,7 @@ import {
 import { CATEGORIAS_ARMA_MAP } from '@/rules/armas';
 import { conquistasEmDestaque, somarEstatisticas, type ConquistasDoJogador, type EstatisticasDoJogador } from '@/rules/conquistas';
 import { TITULO_MAP } from '@/rules/titulos';
+import { ELEMENTOS, type Elemento } from '@/rules/elements';
 import { ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
 import { equipamentosDoPerfil, validarEscolhaDoPerfil, type EquipamentoPerfil } from '@/lib/perfilEquipamentos';
 import { randomInt, randomUUID } from 'node:crypto';
@@ -264,6 +265,8 @@ export interface CharacterDocument {
   avancosDeExpedicao?: number;
   /** Maestrias: XP acumulado por trilha e o XP do dia (teto diário). */
   maestrias?: MaestriasDoJogador;
+  /** Feiticeiro (1.5.2): o elemento escolhido, usado nas habilidades da classe que não têm elemento próprio. */
+  elementoDaClasse?: Elemento;
   /** Conquistas: os totais contados (vitórias, forjas…), os degraus já resgatados, os títulos e o título escolhido. */
   estatisticas?: EstatisticasDoJogador;
   conquistas?: ConquistasDoJogador;
@@ -958,6 +961,16 @@ export async function updateCharacterSobre(
   });
 }
 
+/** Feiticeiro (1.5.2, decidido pelo Yuri em 23/10/2026): escolhe 1 dos 7 elementos; pode trocar quando quiser. */
+export async function escolherElementoDaClasse(uid: string, elemento: unknown): Promise<CharacterDocument> {
+  if (typeof elemento !== 'string' || !(ELEMENTOS as readonly string[]).includes(elemento)) throw new Error('Escolha um dos 7 elementos.');
+  return repositorio.executarTransacao('elementoDaClasse', async (ctx) => {
+    const current = await carregarPersonagem(ctx, uid);
+    if (current.classeId !== 'feiticeiro') throw new Error('Só o Feiticeiro escolhe um elemento.');
+    return salvarPersonagem(ctx, current, { elementoDaClasse: elemento as Elemento });
+  });
+}
+
 /** Escolhe os até 4 itens equipados que aparecem nos "Equipamentos principais" do perfil público. */
 export async function definirEquipamentosDoPerfil(uid: string, itens: unknown): Promise<CharacterDocument> {
   return repositorio.executarTransacao('perfilEquipamentos', async (ctx) => {
@@ -1632,6 +1645,7 @@ export function combatenteDoPersonagem(current: CharacterDocument): Combatente {
     classeId: current.classeId,
     linhagem: current.linhagem,
     nivel: current.nivel,
+    ...(current.classeId === 'feiticeiro' && current.elementoDaClasse ? { elementoDaClasse: current.elementoDaClasse } : {}),
     hp: current.hpMax,
     hpMax: current.hpMax,
     sobreescudo: current.sobreescudoMax,
