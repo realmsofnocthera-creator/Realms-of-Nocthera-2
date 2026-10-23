@@ -144,6 +144,8 @@ import {
   type MaestriasDoJogador,
 } from '@/rules/maestrias';
 import { CATEGORIAS_ARMA_MAP } from '@/rules/armas';
+import { conquistasEmDestaque, somarEstatisticas, type ConquistasDoJogador, type EstatisticasDoJogador } from '@/rules/conquistas';
+import { TITULO_MAP } from '@/rules/titulos';
 import { ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
 import { equipamentosDoPerfil, validarEscolhaDoPerfil, type EquipamentoPerfil } from '@/lib/perfilEquipamentos';
 import { randomInt, randomUUID } from 'node:crypto';
@@ -262,6 +264,11 @@ export interface CharacterDocument {
   avancosDeExpedicao?: number;
   /** Maestrias: XP acumulado por trilha e o XP do dia (teto diário). */
   maestrias?: MaestriasDoJogador;
+  /** Conquistas: os totais contados (vitórias, forjas…), os degraus já resgatados, os títulos e o título escolhido. */
+  estatisticas?: EstatisticasDoJogador;
+  conquistas?: ConquistasDoJogador;
+  titulos?: string[];
+  tituloId?: string;
   /** Teste de Equipe (7.4): as dificuldades concluídas de cada teste ("alma:3"), as chaves da provação e os selos do abismo. */
   testeEquipeConcluidas?: string[];
   chavesDaProvacao?: ChavesDaProvacao;
@@ -306,6 +313,10 @@ export interface PublicCharacterProfile {
   equipamentosPrincipais: EquipamentoPerfil[];
   /** O nome da guilda do personagem, se ele estiver numa (7.3). */
   guilda?: string;
+  /** O título que o jogador escolheu mostrar (o nome). */
+  titulo?: string;
+  /** As 4 conquistas mais avançadas (degraus resgatados), para a vitrine do perfil. */
+  conquistasEmDestaque?: { nome: string; degraus: number }[];
 }
 
 export interface CreateCharacterInput {
@@ -526,13 +537,21 @@ function bonusDeAlmaDe(
 }
 
 /**
- * Maestrias depois de vitórias (true = contra chefe): XP na trilha da categoria da arma equipada e, contra chefe, na de
- * Chefes, com o teto do dia. Devolve o patch para salvar junto (ou vazio se nada mudou).
+ * Depois de vitórias (true = contra chefe): XP de maestria na trilha da categoria da arma equipada e, contra chefe, na
+ * de Chefes (com o teto do dia), e os totais das conquistas. Devolve o patch para salvar junto.
  */
-export function maestriasDasVitorias(char: Pick<CharacterDocument, 'maestrias' | 'equipamento' | 'armas'>, vitorias: readonly boolean[], agora: Date): { maestrias?: MaestriasDoJogador } {
+export function progressoDasVitorias(
+  char: Pick<CharacterDocument, 'maestrias' | 'equipamento' | 'armas' | 'estatisticas'>,
+  vitorias: readonly boolean[],
+  agora: Date
+): { maestrias?: MaestriasDoJogador; estatisticas?: EstatisticasDoJogador } {
+  if (!vitorias.length) return {};
   const arma = char.equipamento?.armaId ? char.armas?.find((a) => a.id === char.equipamento!.armaId) : undefined;
   const novas = ganharXpDeMaestria(char.maestrias, xpDasVitorias(arma?.categoria, vitorias), diaDeBrasilia(agora));
-  return novas ? { maestrias: novas } : {};
+  return {
+    ...(novas ? { maestrias: novas } : {}),
+    estatisticas: somarEstatisticas(char.estatisticas, { vitorias: vitorias.length, vitoriasContraChefes: vitorias.filter(Boolean).length }),
+  };
 }
 
 /** Atributos que valem em combate e nos derivados: os gravados, o Reforço de Habilidade e o equipamento equipado. */
@@ -686,6 +705,8 @@ function toPublicCharacterProfile(char: CharacterDocument): PublicCharacterProfi
     sobre: typeof char.sobre === 'string' ? char.sobre : '',
     equipamentosPrincipais: equipamentosDoPerfil(char),
     ...(char.guildaId && char.guildaNome ? { guilda: char.guildaNome } : {}),
+    ...(char.tituloId && TITULO_MAP[char.tituloId] && char.titulos?.includes(char.tituloId) ? { titulo: TITULO_MAP[char.tituloId].nome } : {}),
+    conquistasEmDestaque: conquistasEmDestaque(char.conquistas),
   };
 }
 
@@ -1526,7 +1547,7 @@ function aplicarResultadoCombateEm(
       pontosDisponiveis,
       ouro: novoOuro,
       ...(contratos ? { contratos } : {}),
-      ...maestriasDasVitorias(current, [contraChefe], new Date()),
+      ...progressoDasVitorias(current, [contraChefe], new Date()),
     });
     return { character, levelUps, transaction, mensagens };
   }
@@ -2155,7 +2176,7 @@ export async function executarBatalhaSangrenta(
       batalhaSangrenta: estadoTentativas,
       batalhaSangrentaVencidas: vencidas,
       ...(contratos ? { contratos } : {}),
-      ...maestriasDasVitorias(character, vitoriasDasOndas, agora),
+      ...progressoDasVitorias(character, vitoriasDasOndas, agora),
     });
 
     const nomeSubclasse = recompensa.fragmentosSubclasse
@@ -2403,7 +2424,7 @@ export async function executarGuerreiro(uid: string, dificuldadeId: unknown, opc
       guerreiroVencidas: primeiraVitoria ? [...(current.guerreiroVencidas ?? []), dificuldade].sort((a, b) => a - b) : current.guerreiroVencidas ?? [],
       emblemasItens: [...(current.emblemasItens ?? []), ...novosEmblemas],
       ...(contratosDoGuerreiro ? { contratos: contratosDoGuerreiro } : {}),
-      ...(venceu ? maestriasDasVitorias(current, [true], agora) : {}),
+      ...(venceu ? progressoDasVitorias(current, [true], agora) : {}),
     });
 
     const mensagens: string[] = [
@@ -2499,10 +2520,10 @@ function estadoForja(char: CharacterDocument): EstadoForja {
   return { inventario: char.inventario ?? {}, ouro: char.ouro, armas: char.armas ?? [] };
 }
 
-/** XP na maestria de Forja (com o teto do dia), para salvar junto. */
-function maestriaDaForja(current: CharacterDocument, xp: number): { maestrias?: MaestriasDoJogador } {
+/** XP na maestria de Forja (com o teto do dia) e, ao fabricar, o total da conquista de Forja, para salvar junto. */
+function maestriaDaForja(current: CharacterDocument, xp: number, fabricou = false): { maestrias?: MaestriasDoJogador; estatisticas?: EstatisticasDoJogador } {
   const novas = ganharXpDeMaestria(current.maestrias, { forja: xp }, diaDeBrasilia(new Date()));
-  return novas ? { maestrias: novas } : {};
+  return { ...(novas ? { maestrias: novas } : {}), ...(fabricou ? { estatisticas: somarEstatisticas(current.estatisticas, { forjas: 1 }) } : {}) };
 }
 
 /**
@@ -2515,7 +2536,8 @@ function gravarForja(
   plano: { inventario: Record<string, number>; ouroGasto: number; armas: ArmaPersonagem[]; arma: ArmaPersonagem },
   motivo: string,
   xpDeForja = 0,
-  descontaMateriais = true
+  descontaMateriais = true,
+  fabricou = false
 ): RespostaForja {
   const { inventario, ouroGasto } = descontoDaForja(current.maestrias, current.inventario ?? {}, plano, descontaMateriais);
   const pago = alterarSaldoEm(ctx, current, 'ouro', -ouroGasto, motivo);
@@ -2523,7 +2545,7 @@ function gravarForja(
     ouro: pago.character.ouro,
     inventario,
     armas: plano.armas,
-    ...(xpDeForja > 0 ? maestriaDaForja(current, xpDeForja) : {}),
+    ...(xpDeForja > 0 ? maestriaDaForja(current, xpDeForja, fabricou) : {}),
   });
   return { character, arma: plano.arma, transaction: pago.transaction };
 }
@@ -2544,7 +2566,7 @@ export async function fabricarArma(
     });
     if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_FORJA[plano.motivo]);
     const nome = plano.base.nomes[plano.arma.categoria];
-    return gravarForja(ctx, current, plano, `Forja: ${plano.base.consome ? 'evoluir para' : 'fabricar'} ${nome}`, xpDeForjaAoFabricar(plano.base.estrela));
+    return gravarForja(ctx, current, plano, `Forja: ${plano.base.consome ? 'evoluir para' : 'fabricar'} ${nome}`, xpDeForjaAoFabricar(plano.base.estrela), true, true);
   });
 }
 
@@ -2601,7 +2623,7 @@ export async function fabricarArmadura(uid: string, pecaId: unknown, opcoes: Opc
       ouro: pago.character.ouro,
       inventario,
       armaduras: plano.armaduras,
-      ...maestriaDaForja(current, xpDeForjaAoFabricar(plano.peca.estrela)),
+      ...maestriaDaForja(current, xpDeForjaAoFabricar(plano.peca.estrela), true),
     });
     return { character, armadura: plano.armadura, transaction: pago.transaction };
   });

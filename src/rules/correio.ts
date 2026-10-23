@@ -1,6 +1,7 @@
 import { SELOS_DE_BUSCA, NOME_DO_SELO, type SelosDoJogador } from './colecionaveis';
 import { MATERIAIS_MUNDO_MAP } from './materiaisArmas';
 import { MATERIAIS_MAP } from './materiais';
+import { TITULO_MAP, titulosDoDocumento } from './titulos';
 
 /**
  * Correio (decidido pelo Yuri em 22/10/2026): mensagens com presentes para o jogador resgatar. Cada mensagem fica 30
@@ -26,6 +27,8 @@ export interface PresenteDoCorreio {
   avancosDeExpedicao?: number;
   /** Materiais (de monstro ou de mundo): id → quantidade. */
   materiais?: Record<string, number>;
+  /** Títulos do perfil (ranking e eventos). */
+  titulos?: string[];
 }
 
 export interface MensagemDoCorreio {
@@ -57,7 +60,8 @@ export const presenteVazio = (p: PresenteDoCorreio | undefined) =>
     !p.pedrasDaRecordacao &&
     !p.avancosDeExpedicao &&
     !Object.keys(p.selos ?? {}).length &&
-    !Object.keys(p.materiais ?? {}).length);
+    !Object.keys(p.materiais ?? {}).length &&
+    !p.titulos?.length);
 
 /** Lê um presente, descartando valores inválidos e materiais que não existem. */
 export function presenteDoDocumento(bruto: unknown): PresenteDoCorreio | undefined {
@@ -84,6 +88,8 @@ export function presenteDoDocumento(bruto: unknown): PresenteDoCorreio | undefin
     }
     if (Object.keys(materiais).length) p.materiais = materiais;
   }
+  const titulos = titulosDoDocumento(o.titulos);
+  if (titulos) p.titulos = titulos;
   return presenteVazio(p) ? undefined : p;
 }
 
@@ -126,5 +132,6 @@ export function textoDoPresente(p: PresenteDoCorreio | undefined): string[] {
   if (p.pedrasDaRecordacao) linhas.push(`${n(p.pedrasDaRecordacao)} Pedras da Recordação`);
   if (p.avancosDeExpedicao) linhas.push(`${n(p.avancosDeExpedicao)} Avanços de expedição`);
   for (const [id, q] of Object.entries(p.materiais ?? {})) linhas.push(`${n(q)}× ${MATERIAIS_MAP[id]?.nome ?? MATERIAIS_MUNDO_MAP[id]?.nome ?? id}`);
+  for (const t of p.titulos ?? []) linhas.push(`Título: ${TITULO_MAP[t]?.nome ?? t}`);
   return linhas;
 }

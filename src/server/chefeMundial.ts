@@ -12,6 +12,7 @@ import {
   type EntradaDoChefeMundial,
   type FaixaDoChefeMundial,
 } from '@/rules/chefeMundial';
+import { somarEstatisticas } from '@/rules/conquistas';
 import { carregarPersonagem, combatenteDoPersonagem, salvarPersonagem } from '@/server/characterService';
 import { gerarSementeCombate } from '@/server/combateSemente';
 import { mandarRecompensasDoChefeMundial } from '@/server/correio';
@@ -104,7 +105,10 @@ export async function lutarChefeMundial(uid: string, semente = gerarSementeComba
     const anterior = entrada?.dano ?? 0;
     if (!entrada || dano > anterior) ctx.gravarEntradaChefeMundial({ dia, uid, nome: eu.nome, dano: Math.max(dano, anterior) });
     if (!(eu.chefeMundial ?? []).some((p) => p.dia === dia)) {
-      salvarPersonagem(ctx, eu, { chefeMundial: [...(eu.chefeMundial ?? []), { dia }].slice(-DIAS_GUARDADOS) });
+      salvarPersonagem(ctx, eu, {
+        chefeMundial: [...(eu.chefeMundial ?? []), { dia }].slice(-DIAS_GUARDADOS),
+        estatisticas: somarEstatisticas(eu.estatisticas, { diasDeChefeMundial: 1 }),
+      });
     }
     rankingGuardado.delete(dia);
     const melhor = Math.max(dano, anterior);

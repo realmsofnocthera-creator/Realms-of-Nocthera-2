@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { NOME_DO_CAMPO, type CampoDeAjuste } from '@/rules/ajustes';
 import { TEXTO_MAXIMO, TITULO_MAXIMO } from '@/rules/correio';
+import { TITULOS } from '@/rules/titulos';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { Cartao, chamar, OURO, VERMELHO } from './comum';
 
@@ -29,6 +30,7 @@ export function CorreioDoMestre({ tokenFresco, jogador }: { tokenFresco: Token; 
   const [titulo, setTitulo] = useState('');
   const [texto, setTexto] = useState('');
   const [valores, setValores] = useState<Partial<Record<CampoDeAjuste, string>>>({});
+  const [tituloDoPerfil, setTituloDoPerfil] = useState('');
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
   const campo = 'rounded-sm border px-2 py-1 text-[12px] w-full';
@@ -43,7 +45,7 @@ export function CorreioDoMestre({ tokenFresco, jogador }: { tokenFresco: Token; 
     const campos = Object.fromEntries(Object.entries(valores).filter(([, v]) => v && v.trim()).map(([k, v]) => [k, Number(v)]));
     const r = await chamar(tokenFresco, '/api/mestre/correio', {
       method: 'POST',
-      body: JSON.stringify({ destino: paraTodos ? 'todos' : jogador!.uid, titulo, texto, campos }),
+      body: JSON.stringify({ destino: paraTodos ? 'todos' : jogador!.uid, titulo, texto, campos, ...(tituloDoPerfil ? { titulos: [tituloDoPerfil] } : {}) }),
     });
     setOcupado(false);
     if (!r.ok) {
@@ -54,6 +56,7 @@ export function CorreioDoMestre({ tokenFresco, jogador }: { tokenFresco: Token; 
     setTitulo('');
     setTexto('');
     setValores({});
+    setTituloDoPerfil('');
   }
 
   return (
@@ -86,6 +89,17 @@ export function CorreioDoMestre({ tokenFresco, jogador }: { tokenFresco: Token; 
             </label>
           ))}
         </div>
+        <label className="text-[11px] flex flex-col gap-0.5">
+          Título do perfil (ranking e eventos)
+          <select className={campo} style={estiloCampo} value={tituloDoPerfil} onChange={(e) => setTituloDoPerfil(e.target.value)}>
+            <option value="">Nenhum</option>
+            {TITULOS.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.nome}
+              </option>
+            ))}
+          </select>
+        </label>
         {aviso && <p role={aviso.erro ? 'alert' : 'status'} className="text-[12px]" style={{ color: aviso.erro ? VERMELHO : '#7BC47F' }}>{aviso.texto}</p>}
         <div>
           <button type="submit" disabled={ocupado || titulo.trim().length < 3 || texto.trim().length < 3} className="rounded-sm border px-3 py-1 text-[12px] font-bold disabled:opacity-50" style={{ borderColor: OURO, backgroundColor: '#3A2F18', color: '#F5E3B3' }}>

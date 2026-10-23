@@ -17,6 +17,7 @@ import {
 } from '@/rules/correio';
 import { MATERIAIS_MAP } from '@/rules/materiais';
 import { MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
+import { comTitulos, ehTitulo } from '@/rules/titulos';
 import { alterarSaldoEm, carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { comRegistro, ErroMestre, exigir, type SessaoMestre } from '@/server/mestre';
 import { repositorio, type ContextoTransacao } from '@/server/persistencia';
@@ -162,6 +163,7 @@ export function entregarPresente(ctx: ContextoTransacao, char: CharacterDocument
     for (const [id, q] of Object.entries(presente.materiais)) inventario[id] = (inventario[id] ?? 0) + q;
     patch.inventario = inventario;
   }
+  if (presente.titulos?.length) patch.titulos = comTitulos(doc.titulos, presente.titulos);
   return { doc, patch };
 }
 
@@ -236,13 +238,15 @@ export interface PedidoDeMensagemDoMestre {
   /** Os mesmos campos dos ajustes: ouro, diamantes, essenciaDeSoberano, seloDesgastado… */
   campos?: unknown;
   materiais?: unknown;
+  /** Ids de títulos do perfil que vão junto. */
+  titulos?: unknown;
 }
 
 const ID_VALIDO = /^[a-zA-Z0-9_-]{1,128}$/;
 const LIMITE_DO_PRESENTE = 1_000_000;
 
 /** Monta o presente a partir dos campos do painel (os nomes dos ajustes do Mestre). */
-function presenteDoPedido(campos: unknown, materiais: unknown): PresenteDoCorreio | undefined {
+function presenteDoPedido(campos: unknown, materiais: unknown, titulos?: unknown): PresenteDoCorreio | undefined {
   const c = campos && typeof campos === 'object' && !Array.isArray(campos) ? (campos as Record<string, unknown>) : {};
   const bruto: Record<string, unknown> = { selos: {} };
   for (const [campo, valor] of Object.entries(c)) {
@@ -264,6 +268,10 @@ function presenteDoPedido(campos: unknown, materiais: unknown): PresenteDoCorrei
     if (typeof v !== 'number' || !Number.isInteger(v) || v <= 0 || v > LIMITE_DE_MATERIAL_POR_PEDIDO) throw new ErroMestre(400, `Material ${id}: informe um inteiro positivo, até ${LIMITE_DE_MATERIAL_POR_PEDIDO}.`);
   }
   if (ids.length) bruto.materiais = Object.fromEntries(ids.map((id) => [id, m[id]]));
+  if (titulos !== undefined && titulos !== null) {
+    if (!Array.isArray(titulos) || titulos.some((t) => !ehTitulo(t))) throw new ErroMestre(400, 'Título desconhecido.');
+    if (titulos.length) bruto.titulos = titulos;
+  }
   return presenteDoDocumento(bruto);
 }
 
@@ -274,7 +282,7 @@ export async function enviarMensagemDoMestre(sessao: SessaoMestre, pedido: Pedid
   const texto = typeof pedido.texto === 'string' ? pedido.texto.trim() : '';
   if (titulo.length < 3 || titulo.length > TITULO_MAXIMO) throw new ErroMestre(400, `O título precisa ter de 3 a ${TITULO_MAXIMO} caracteres.`);
   if (texto.length < 3 || texto.length > TEXTO_MAXIMO) throw new ErroMestre(400, `O texto precisa ter de 3 a ${TEXTO_MAXIMO} caracteres.`);
-  const presente = presenteDoPedido(pedido.campos, pedido.materiais);
+  const presente = presenteDoPedido(pedido.campos, pedido.materiais, pedido.titulos);
   const destino = pedido.destino === 'todos' ? 'todos' : typeof pedido.destino === 'string' && ID_VALIDO.test(pedido.destino) ? pedido.destino : '';
   if (!destino) throw new ErroMestre(400, 'Escolha o destino: "todos" ou o uid do jogador.');
   if (destino === 'todos') {

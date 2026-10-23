@@ -22,6 +22,8 @@ import { chavesDoDocumento, partyDoDocumento, type PartyDocumento } from '@/rule
 import { colecionaveisDoDocumento, contadorPorSeloDoDocumento } from '@/rules/colecionaveis';
 import { expedicoesDoDocumento } from '@/rules/expedicao';
 import { maestriasDoDocumento } from '@/rules/maestrias';
+import { conquistasDoDocumento, estatisticasDoDocumento } from '@/rules/conquistas';
+import { ehTitulo, titulosDoDocumento } from '@/rules/titulos';
 import { correioGeralDoDocumento, mensagemDoDocumento, mensagensDoDocumento, type MensagemGeral } from '@/rules/correio';
 import { entradaMundialDoDocumento, participacoesMundiaisDoDocumento, type EntradaDoChefeMundial } from '@/rules/chefeMundial';
 import { bonusDeGuildaDoDocumento } from '@/rules/pesquisa';
@@ -402,6 +404,10 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(expedicoesDoDocumento(data.expedicoes) ? { expedicoes: expedicoesDoDocumento(data.expedicoes) } : {}),
     ...(quantidadePositiva(data.avancosDeExpedicao) ? { avancosDeExpedicao: quantidadePositiva(data.avancosDeExpedicao) } : {}),
     ...(maestriasDoDocumento(data.maestrias) ? { maestrias: maestriasDoDocumento(data.maestrias) } : {}),
+    ...(estatisticasDoDocumento(data.estatisticas) ? { estatisticas: estatisticasDoDocumento(data.estatisticas) } : {}),
+    ...(conquistasDoDocumento(data.conquistas) ? { conquistas: conquistasDoDocumento(data.conquistas) } : {}),
+    ...(titulosDoDocumento(data.titulos) ? { titulos: titulosDoDocumento(data.titulos) } : {}),
+    ...(ehTitulo(data.tituloId) && titulosDoDocumento(data.titulos)?.includes(data.tituloId) ? { tituloId: data.tituloId } : {}),
     ...(quantidadePositiva(data.essenciaDeSoberano) ? { essenciaDeSoberano: quantidadePositiva(data.essenciaDeSoberano) } : {}),
     ...(mensagensDoDocumento(data.correio) ? { correio: mensagensDoDocumento(data.correio) } : {}),
     ...(correioGeralDoDocumento(data.correioGeral) ? { correioGeral: correioGeralDoDocumento(data.correioGeral) } : {}),
@@ -482,6 +488,10 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.expedicoes?.length ? { expedicoes: semUndefined(char.expedicoes) } : {}),
     ...(char.avancosDeExpedicao ? { avancosDeExpedicao: char.avancosDeExpedicao } : {}),
     ...(char.maestrias && Object.keys(char.maestrias).length ? { maestrias: semUndefined(char.maestrias) } : {}),
+    ...(char.estatisticas && Object.keys(char.estatisticas).length ? { estatisticas: semUndefined(char.estatisticas) } : {}),
+    ...(char.conquistas && Object.keys(char.conquistas).length ? { conquistas: char.conquistas } : {}),
+    ...(char.titulos?.length ? { titulos: char.titulos } : {}),
+    ...(char.tituloId ? { tituloId: char.tituloId } : {}),
     ...(char.essenciaDeSoberano ? { essenciaDeSoberano: char.essenciaDeSoberano } : {}),
     ...(char.correio?.length ? { correio: semUndefined(char.correio) } : {}),
     ...(char.correioGeral && Object.keys(char.correioGeral).length ? { correioGeral: char.correioGeral } : {}),

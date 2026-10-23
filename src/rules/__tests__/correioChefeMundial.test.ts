@@ -47,7 +47,9 @@ describe('Chefe Mundial: regras', () => {
     expect(faixaDoChefeMundial(7).nome).toBe('4º ao 10º');
     expect(faixaDoChefeMundial(5000).nome).toBe('101º em diante');
     for (const f of FAIXAS_DO_CHEFE_MUNDIAL) expect(f.ouro > 0 && f.diamantes > 0 && f.essenciaDeSoberano > 0 && Object.keys(f.selos).length > 0).toBe(true);
-    expect(presenteDaFaixa(FAIXAS_DO_CHEFE_MUNDIAL[0])).toEqual({ ouro: 20000, diamantes: 100, selos: { origem: 10, eternidade: 20 }, essenciaDeSoberano: 100 });
+    expect(presenteDaFaixa(FAIXAS_DO_CHEFE_MUNDIAL[0])).toEqual({ ouro: 20000, diamantes: 100, selos: { origem: 10, eternidade: 20 }, essenciaDeSoberano: 100, titulos: ['campeao-do-chefe-mundial'] });
+    // só o 1º lugar leva o título
+    expect(FAIXAS_DO_CHEFE_MUNDIAL.filter((f) => f.titulo).map((f) => f.nome)).toEqual(['1º lugar']);
   });
 
   it('lê as participações e guarda só os 30 últimos dias', () => {

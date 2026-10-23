@@ -17,6 +17,7 @@ export const SISTEMAS = [
   { id: 'colecionaveis', nome: 'Buscar e Colecionáveis' },
   { id: 'expedicao', nome: 'Expedição' },
   { id: 'chefeMundial', nome: 'Provação de Chefe Mundial' },
+  { id: 'conquistas', nome: 'Conquistas' },
 ] as const;
 export type SistemaId = (typeof SISTEMAS)[number]['id'];
 
