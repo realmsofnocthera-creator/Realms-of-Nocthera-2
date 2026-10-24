@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Search, ShieldAlert } from 'lucide-react';
 import { ACOES_DE_SANCAO, DIAS_MAXIMOS_DE_SUSPENSAO, DIAS_MINIMOS_DE_SUSPENSAO, NOME_DA_ACAO, type AcaoDeSancao } from '@/rules/sancoes';
 import { CAMPOS_DE_AJUSTE, NOME_DO_CAMPO, type CampoDeAjuste } from '@/rules/ajustes';
 import { NOME_DO_PAPEL } from '@/rules/mestre';
+import { NOME_DO_SINAL, type EntradaDeRevisao } from '@/rules/integridade';
 import { dataDoLog } from '@/lib/mestreTela';
-import { descreverTransacao, situacaoDaConta } from '@/lib/jogadoresTela';
+import { descreverTransacao, saldoDaTransacao, situacaoDaConta } from '@/lib/jogadoresTela';
 import type { FichaDoJogador } from '@/server/jogadores';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { Cartao, chamar, OURO, VERMELHO } from '@/components/mestre/comum';
@@ -33,11 +34,11 @@ export function JogadoresPainel({ sessao, tokenFresco }: { sessao: SessaoDoPaine
   const campo = 'rounded-sm border px-2 py-1 text-[12px] w-full';
   const estiloCampo = { backgroundColor: colors.background.primary, borderColor: `${OURO}66`, color: colors.text.primary };
 
-  const procurar = async () => {
+  const procurar = async (termo = busca) => {
     setOcupado(true);
     setErro(null);
     setAviso(null);
-    const r = await chamar(tokenFresco, `/api/mestre/jogadores?busca=${encodeURIComponent(busca.trim())}`);
+    const r = await chamar(tokenFresco, `/api/mestre/jogadores?busca=${encodeURIComponent(termo.trim())}`);
     setOcupado(false);
     if (r.ok) setFicha(r.dados.jogador as FichaDoJogador);
     else {
@@ -48,6 +49,14 @@ export function JogadoresPainel({ sessao, tokenFresco }: { sessao: SessaoDoPaine
 
   return (
     <div className="flex flex-col gap-3">
+      <FilaDeRevisao
+        tokenFresco={tokenFresco}
+        podeMarcar={podeSancionar}
+        abrir={(uid) => {
+          setBusca(uid);
+          void procurar(uid);
+        }}
+      />
       <Cartao titulo="Buscar jogador">
         <form
           className="flex gap-2 items-end"
@@ -72,6 +81,16 @@ export function JogadoresPainel({ sessao, tokenFresco }: { sessao: SessaoDoPaine
         <Sancoes
           ficha={ficha}
           podeSancionar={podeSancionar}
+          responder={async (corpo) => {
+            setAviso(null);
+            const r = await chamar(tokenFresco, `/api/mestre/jogadores/${ficha.uid}/apelacao`, { method: 'POST', body: JSON.stringify(corpo) });
+            if (r.ok) {
+              setFicha(r.dados.jogador as FichaDoJogador);
+              setAviso('Resposta enviada. O jogador vê na tela da conta.');
+              return null;
+            }
+            return String(r.dados.error ?? 'Não foi possível responder.');
+          }}
           aplicar={async (corpo) => {
             setAviso(null);
             const r = await chamar(tokenFresco, `/api/mestre/jogadores/${ficha.uid}/sancoes`, { method: 'POST', body: JSON.stringify(corpo) });
@@ -173,7 +192,19 @@ function Ficha({ ficha }: { ficha: FichaDoJogador }) {
   );
 }
 
-function Sancoes({ ficha, podeSancionar, aplicar, aviso }: { ficha: FichaDoJogador; podeSancionar: boolean; aplicar: (corpo: Record<string, unknown>) => Promise<string | null>; aviso: string | null }) {
+function Sancoes({
+  ficha,
+  podeSancionar,
+  aplicar,
+  responder,
+  aviso,
+}: {
+  ficha: FichaDoJogador;
+  podeSancionar: boolean;
+  aplicar: (corpo: Record<string, unknown>) => Promise<string | null>;
+  responder: (corpo: Record<string, unknown>) => Promise<string | null>;
+  aviso: string | null;
+}) {
   const { colors } = NOCTHERA_THEME;
   const [acao, setAcao] = useState<AcaoDeSancao>('advertir');
   const [dias, setDias] = useState(3);
@@ -203,6 +234,12 @@ function Sancoes({ ficha, podeSancionar, aplicar, aviso }: { ficha: FichaDoJogad
           Em vigor: {situacaoDaConta(ficha.sancao).texto}. Motivo: {ficha.sancao.motivo}
         </p>
       )}
+      {ficha.limiteSilencioso && (
+        <p className="text-[12px]" style={{ color: COR_DO_TOM.aviso }}>
+          Limite silencioso desde {dataDoLog(ficha.limiteSilencioso.aplicadoEm)}: fora dos rankings e só a recompensa mínima dos chefes. Motivo: {ficha.limiteSilencioso.motivo}
+        </p>
+      )}
+      {ficha.apelacao && <ApelacaoNaFicha apelacao={ficha.apelacao} podeResponder={podeSancionar && !!ficha.sancao} responder={responder} />}
       {!podeSancionar ? (
         <p className="text-[11px]" style={{ color: colors.text.secondary }}>Seu papel só consulta. Quem sanciona é o Moderador ou o Dono.</p>
       ) : bloqueado ? null : (
@@ -237,7 +274,7 @@ function Sancoes({ ficha, podeSancionar, aplicar, aviso }: { ficha: FichaDoJogad
             </button>
           </div>
           <p className="text-[11px]" style={{ color: colors.text.secondary }}>
-            Advertir só registra. Suspender e banir bloqueiam a conta na hora; o banimento não tem prazo e a suspensão termina sozinha. Tudo fica no log.
+            Advertir só registra. Suspender e banir bloqueiam a conta na hora; o banimento não tem prazo e a suspensão termina sozinha. O limite silencioso não bloqueia: tira dos rankings e dá só a recompensa mínima dos chefes, sem avisar o jogador. Tudo fica no log.
           </p>
         </form>
       )}
@@ -388,10 +425,133 @@ function Ajustes({ ajustar }: { ajustar: (corpo: Record<string, unknown>) => Pro
   );
 }
 
+/** O pedido de apelação (6.5-7) na ficha, com a resposta do Mestre (aceitar levanta a sanção). */
+function ApelacaoNaFicha({ apelacao, podeResponder, responder }: { apelacao: NonNullable<FichaDoJogador['apelacao']>; podeResponder: boolean; responder: (corpo: Record<string, unknown>) => Promise<string | null> }) {
+  const { colors } = NOCTHERA_THEME;
+  const [resposta, setResposta] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const situacao = { pendente: 'esperando resposta', aceita: 'aceita', recusada: 'recusada' }[apelacao.situacao];
+  const enviar = async (decisao: 'aceitar' | 'recusar') => {
+    setOcupado(true);
+    setErro(null);
+    const falha = await responder({ decisao, resposta });
+    setOcupado(false);
+    if (falha) setErro(falha);
+    else setResposta('');
+  };
+  const campo = 'rounded-sm border px-2 py-1 text-[12px] w-full';
+  const estiloCampo = { backgroundColor: colors.background.primary, borderColor: `${OURO}66`, color: colors.text.primary };
+  return (
+    <div className="flex flex-col gap-1 text-[12px] border rounded-sm px-2 py-1.5" style={{ borderColor: `${OURO}44` }}>
+      <span className="font-semibold">
+        Pedido de apelação ({situacao}) · <span style={{ color: colors.text.secondary }}>{dataDoLog(apelacao.em)}</span>
+      </span>
+      <span className="whitespace-pre-wrap">{apelacao.texto}</span>
+      {apelacao.resposta && <span style={{ color: colors.text.secondary }}>Resposta: {apelacao.resposta}</span>}
+      {apelacao.situacao === 'pendente' && podeResponder && (
+        <>
+          <label className="text-[11px] flex flex-col gap-0.5">Resposta ao jogador (ele lê na tela da conta)
+            <textarea value={resposta} onChange={(e) => setResposta(e.target.value)} className={campo} style={estiloCampo} rows={2} maxLength={500} />
+          </label>
+          <span className="flex gap-2">
+            <button type="button" disabled={ocupado} onClick={() => void enviar('aceitar')} className="px-3 py-1 rounded font-cinzel font-bold text-xs disabled:opacity-50" style={{ backgroundColor: colors.accent.primary, color: colors.background.secondary }}>
+              Aceitar (levanta a sanção)
+            </button>
+            <button type="button" disabled={ocupado} onClick={() => void enviar('recusar')} className="px-3 py-1 rounded font-cinzel font-bold text-xs disabled:opacity-50" style={{ backgroundColor: VERMELHO, color: colors.background.secondary }}>
+              Recusar
+            </button>
+          </span>
+          {erro && <span role="alert" className="font-semibold" style={{ color: VERMELHO }}>{erro}</span>}
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Fila de revisão (6.5-4): os sinais de anomalia (ritmo, ouro e níveis por hora, contas na mesma rede, extrato sem
+ * registro) que ainda não foram revisados. Um sinal não pune ninguém: o Mestre abre a ficha e decide.
+ */
+function FilaDeRevisao({ tokenFresco, podeMarcar, abrir }: { tokenFresco: Token; podeMarcar: boolean; abrir: (uid: string) => void }) {
+  const { colors } = NOCTHERA_THEME;
+  const [fila, setFila] = useState<EntradaDeRevisao[] | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const carregar = useCallback(async () => {
+    const r = await chamar(tokenFresco, '/api/mestre/revisao');
+    if (r.ok) {
+      setFila(r.dados.fila as EntradaDeRevisao[]);
+      setErro(null);
+    } else setErro(String(r.dados.error ?? 'Não foi possível carregar a fila.'));
+  }, [tokenFresco]);
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+  const marcar = async (ids: string[]) => {
+    const r = await chamar(tokenFresco, '/api/mestre/revisao', { method: 'POST', body: JSON.stringify({ ids }) });
+    if (r.ok) setFila(r.dados.fila as EntradaDeRevisao[]);
+    else setErro(String(r.dados.error ?? 'Não foi possível marcar.'));
+  };
+  const botao = 'px-2 py-0.5 rounded-sm border text-[11px] font-semibold';
+  return (
+    <Cartao titulo={`Fila de revisão${fila?.length ? ` (${fila.length})` : ''}`}>
+      {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
+      {fila === null && !erro && <p className="text-[12px]" style={{ color: colors.text.secondary }}>Carregando…</p>}
+      {fila?.length === 0 && <p className="text-[12px]" style={{ color: colors.text.secondary }}>Nenhum sinal para revisar.</p>}
+      {!!fila?.length && (
+        <ul className="flex flex-col gap-2">
+          {fila.map((e) => (
+            <li key={e.id} className="text-[12px] flex flex-col gap-0.5 border-b pb-1.5" style={{ borderColor: `${OURO}33` }}>
+              <span className="font-semibold" style={{ color: e.tipo === 'extratoSemRegistro' ? VERMELHO : '#E6C775' }}>{NOME_DO_SINAL[e.tipo]}</span>
+              <span>
+                {e.nome} <span style={{ color: colors.text.secondary }}>({e.uid})</span> · <span style={{ color: colors.text.secondary }}>{dataDoLog(e.criadaEm)}</span>
+              </span>
+              <span style={{ color: colors.text.secondary }}>{e.descricao}</span>
+              {!!e.contasDaRede?.length && <span style={{ color: colors.text.secondary }}>Contas da mesma rede: {e.contasDaRede.join(', ')}</span>}
+              <span className="flex gap-2 mt-0.5">
+                <button type="button" className={botao} style={{ borderColor: `${OURO}66`, color: colors.text.primary }} onClick={() => abrir(e.uid)}>
+                  Abrir ficha
+                </button>
+                {podeMarcar && (
+                  <button type="button" className={botao} style={{ borderColor: `${OURO}66`, color: colors.text.primary }} onClick={() => void marcar([e.id])}>
+                    Revisado
+                  </button>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="text-[11px]" style={{ color: colors.text.secondary }}>Um sinal não pune ninguém: abra a ficha, confira o extrato e decida. Os tetos são iniciais e serão calibrados no beta.</p>
+    </Cartao>
+  );
+}
+
+/** Conferência do extrato com o saldo (6.5-3): confere ou lista o que não bate. */
+function ConferenciaDoExtratoNaTela({ ficha }: { ficha: FichaDoJogador }) {
+  const { colors } = NOCTHERA_THEME;
+  const c = ficha.conferenciaDoExtrato;
+  if (!c || c.linhasConferidas === 0) return null;
+  if (c.confere)
+    return <p className="text-[12px] mb-2" style={{ color: '#7BC47F' }}>Extrato confere com o saldo ({c.linhasConferidas} linhas conferidas).</p>;
+  return (
+    <div role="alert" className="text-[12px] mb-2 flex flex-col gap-0.5" style={{ color: VERMELHO }}>
+      <span className="font-semibold">O extrato não confere com o saldo.</span>
+      {c.semRegistro > 0 && <span>{c.semRegistro === 1 ? '1 linha foi criada' : `${c.semRegistro} linhas foram criadas`} para acertar moeda mexida sem registro.</span>}
+      {c.problemas.map((p, i) => (
+        <span key={i} style={{ color: colors.text.secondary }}>
+          {p.chave}: {p.descricao}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function Transacoes({ ficha }: { ficha: FichaDoJogador }) {
   const { colors } = NOCTHERA_THEME;
   return (
     <Cartao titulo={`Transações (as ${ficha.transacoes.length} mais recentes)`}>
+      <ConferenciaDoExtratoNaTela ficha={ficha} />
       {ficha.transacoes.length === 0 ? (
         <p className="text-[12px]" style={{ color: colors.text.secondary }}>Nenhuma transação de moeda.</p>
       ) : (
@@ -399,7 +559,8 @@ function Transacoes({ ficha }: { ficha: FichaDoJogador }) {
           {ficha.transacoes.map((t, i) => (
             <li key={t.id ?? i} className="text-[12px] flex flex-col md:flex-row md:gap-2">
               <span className="font-semibold" style={{ color: t.tipo === 'ganho' ? '#7BC47F' : VERMELHO }}>{descreverTransacao(t)}</span>
-              <span>{t.motivo}</span>
+              <span style={t.semRegistro ? { color: VERMELHO, fontWeight: 600 } : undefined}>{t.motivo}</span>
+              {saldoDaTransacao(t) && <span className="text-[10px]" style={{ color: colors.text.secondary }}>{saldoDaTransacao(t)}</span>}
               <span className="text-[10px] md:ml-auto" style={{ color: colors.text.secondary }}>{dataDoLog(t.timestamp)}</span>
             </li>
           ))}

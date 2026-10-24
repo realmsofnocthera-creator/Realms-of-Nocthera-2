@@ -26,6 +26,13 @@ interface SessionUser {
 }
 
 
+/** A resposta diz que a conta está suspensa ou banida (3.5.4.3)? Aí vai para a tela da apelação (6.5-7). */
+async function contaSancionada(res: Response): Promise<boolean> {
+  if (res.status !== 403) return false;
+  const corpo = (await res.json().catch(() => null)) as { contaSancionada?: boolean } | null;
+  return corpo?.contaSancionada === true;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [user, setUser] = useState<SessionUser | null>(null);
@@ -68,6 +75,8 @@ export default function LoginPage() {
         if (loadedChar) {
           router.replace('/hub');
         }
+      } else if (await contaSancionada(res)) {
+        router.replace('/conta-sancionada');
       } else {
         setCharacter(null);
       }
@@ -98,6 +107,9 @@ export default function LoginPage() {
             if (loadedChar) {
               router.replace('/hub');
             }
+          } else if (await contaSancionada(res)) {
+            router.replace('/conta-sancionada');
+            return;
           } else {
             setCharacter(null);
           }

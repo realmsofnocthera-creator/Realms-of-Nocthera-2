@@ -10,6 +10,8 @@ import { lerCartasPersonagem } from '@/rules/almas';
 import type { Attributes } from '@/rules/attributes';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import { descreverErro, registrarLog } from '@/server/log';
+import { fecharExtrato, tratarDivergencias } from '@/server/extrato';
+import { cadastrosDaRedeDoDocumento, observarJogadores, type CadastrosDaRede } from '@/server/integridade';
 import { ehPapelMestre } from '@/rules/mestre';
 import { ehTipoDeConteudo } from '@/rules/conteudo';
 import type { ProgressoDaCampanha } from '@/game/campanha';
@@ -25,13 +27,14 @@ import { maestriasDoDocumento } from '@/rules/maestrias';
 import { conquistasDoDocumento, estatisticasDoDocumento } from '@/rules/conquistas';
 import { ehTitulo, titulosDoDocumento } from '@/rules/titulos';
 import { checkinDoDocumento, diarioDoDocumento } from '@/rules/diario';
+import { revisaoDoDocumento, ritmoDoDocumento, type EntradaDeRevisao } from '@/rules/integridade';
 import { ELEMENTOS, type Elemento } from '@/rules/elements';
 import { correioGeralDoDocumento, mensagemDoDocumento, mensagensDoDocumento, type MensagemGeral } from '@/rules/correio';
 import { entradaMundialDoDocumento, participacoesMundiaisDoDocumento, type EntradaDoChefeMundial } from '@/rules/chefeMundial';
 import { bonusDeGuildaDoDocumento } from '@/rules/pesquisa';
 import { chaveDoNomeDaGuilda, guildaDoDocumento, type GuildaDocumento } from '@/rules/guilda';
 import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
-import { MAXIMO_DE_ADVERTENCIAS, sancaoDocumentoVazio, type Advertencia, type SancaoDocumento } from '@/rules/sancoes';
+import { apelacaoDoDocumento, limiteDoDocumento, MAXIMO_DE_ADVERTENCIAS, sancaoDocumentoVazio, type Advertencia, type SancaoDocumento } from '@/rules/sancoes';
 import {
   ConteudoDocumento,
   ContextoTransacao,
@@ -55,7 +58,7 @@ function descansosDoDocumento(bruto: unknown): Record<string, number> | undefine
 const CAMPOS_DO_RESUMO_PUBLICO = ['nome', 'avatarId', 'classeId', 'racaId', 'nivel', 'xpAtual', 'escondidoNoRanking', 'escondidoNaBusca'];
 
 /** Um personagem para ranking e busca (só o público), com tolerância a dado estranho. */
-function resumoPublicoDoDocumento(data: DocumentData, campo?: CampoDoRanking): ResumoDePersonagem | null {
+function resumoPublicoDoDocumento(data: DocumentData, campo?: CampoDoRanking, uid?: string): ResumoDePersonagem | null {
   if (typeof data.nome !== 'string' || !data.nome) return null;
   const numero = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
   return {
@@ -68,6 +71,7 @@ function resumoPublicoDoDocumento(data: DocumentData, campo?: CampoDoRanking): R
     ...(campo ? { valor: numero(data[campo]) } : {}),
     ...(data.escondidoNoRanking === true ? { escondidoNoRanking: true } : {}),
     ...(data.escondidoNaBusca === true ? { escondidoNaBusca: true } : {}),
+    ...(uid ? { uid } : {}),
   };
 }
 
@@ -137,6 +141,8 @@ function sancaoDoDocumento(uid: string, data: DocumentData | undefined): SancaoD
     aplicadaPor: texto(data.aplicadaPor),
     aplicadaEm: texto(data.aplicadaEm),
     advertencias,
+    ...(limiteDoDocumento(data.limiteSilencioso) ? { limiteSilencioso: limiteDoDocumento(data.limiteSilencioso) } : {}),
+    ...(apelacaoDoDocumento(data.apelacao) ? { apelacao: apelacaoDoDocumento(data.apelacao) } : {}),
   };
 }
 
@@ -409,6 +415,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(typeof data.elementoDaClasse === 'string' && (ELEMENTOS as readonly string[]).includes(data.elementoDaClasse) ? { elementoDaClasse: data.elementoDaClasse as Elemento } : {}),
     ...(diarioDoDocumento(data.diario) ? { diario: diarioDoDocumento(data.diario) } : {}),
     ...(checkinDoDocumento(data.checkin) ? { checkin: checkinDoDocumento(data.checkin) } : {}),
+    ...(ritmoDoDocumento(data.ritmo) ? { ritmo: ritmoDoDocumento(data.ritmo) } : {}),
     ...(estatisticasDoDocumento(data.estatisticas) ? { estatisticas: estatisticasDoDocumento(data.estatisticas) } : {}),
     ...(conquistasDoDocumento(data.conquistas) ? { conquistas: conquistasDoDocumento(data.conquistas) } : {}),
     ...(titulosDoDocumento(data.titulos) ? { titulos: titulosDoDocumento(data.titulos) } : {}),
@@ -496,6 +503,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.elementoDaClasse ? { elementoDaClasse: char.elementoDaClasse } : {}),
     ...(char.diario ? { diario: semUndefined(char.diario) } : {}),
     ...(char.checkin ? { checkin: char.checkin } : {}),
+    ...(char.ritmo ? { ritmo: semUndefined(char.ritmo) } : {}),
     ...(char.estatisticas && Object.keys(char.estatisticas).length ? { estatisticas: semUndefined(char.estatisticas) } : {}),
     ...(char.conquistas && Object.keys(char.conquistas).length ? { conquistas: char.conquistas } : {}),
     ...(char.titulos?.length ? { titulos: char.titulos } : {}),
@@ -525,6 +533,12 @@ function transacaoParaFirestore(tx: TransactionDocument): DocumentData {
     moeda: tx.moeda || 'ouro',
     motivo: tx.motivo,
     timestamp: tx.timestamp,
+    ...(tx.chave ? { chave: tx.chave } : {}),
+    ...(typeof tx.saldoAntes === 'number' ? { saldoAntes: tx.saldoAntes } : {}),
+    ...(typeof tx.saldoDepois === 'number' ? { saldoDepois: tx.saldoDepois } : {}),
+    ...(tx.operacao ? { operacao: tx.operacao } : {}),
+    ...(typeof tx.ordem === 'number' ? { ordem: tx.ordem } : {}),
+    ...(tx.semRegistro ? { semRegistro: true } : {}),
   };
 }
 
@@ -540,6 +554,9 @@ export function guildaParaFirestore(g: GuildaDocumento): DocumentData {
 
 class ContextoFirestore implements ContextoTransacao {
   private personagens = new Map<string, CharacterDocument>();
+  /** Como cada personagem estava no banco antes desta transação (para fechar o extrato, 6.5-3). */
+  private lidos = new Map<string, CharacterDocument | null>();
+  private cadastrosDaRede = new Map<string, CadastrosDaRede>();
   private nomes = new Map<string, { uid: string; nome: string }>();
   private transacoes: TransactionDocument[] = [];
   private combates = new Map<string, RegistroCombate>();
@@ -561,7 +578,9 @@ class ContextoFirestore implements ContextoTransacao {
     if (pendente) return structuredClone(pendente);
     const snap = await this.tx.get(this.db.collection('characters').doc(uid));
     const data = snap.exists ? snap.data() : undefined;
-    return data ? personagemDoFirestore(uid, data) : null;
+    const lido = data ? personagemDoFirestore(uid, data) : null;
+    if (!this.lidos.has(uid)) this.lidos.set(uid, lido ? structuredClone(lido) : null);
+    return lido;
   }
 
   gravarPersonagem(personagem: CharacterDocument): void {
@@ -602,20 +621,31 @@ class ContextoFirestore implements ContextoTransacao {
     this.chefeSemanal.set(`${entrada.semana}/${entrada.guildaId}`, structuredClone(entrada));
   }
 
-  async lerEntradaChefeMundial(dia: string, uid: string): Promise<EntradaDoChefeMundial | null> {
-    const pendente = this.chefeMundial.get(`${dia}/${uid}`);
+  async lerEntradaChefeMundial(dia: string, uid: string, oculto = false): Promise<EntradaDoChefeMundial | null> {
+    const pendente = this.chefeMundial.get(`${dia}/${uid}/${oculto ? 'o' : 'p'}`);
     if (pendente) return structuredClone(pendente);
-    const snap = await this.tx.get(this.db.collection('chefeMundial').doc(dia).collection('jogadores').doc(uid));
+    const snap = await this.tx.get(this.db.collection('chefeMundial').doc(dia).collection(oculto ? 'ocultos' : 'jogadores').doc(uid));
     return snap.exists ? entradaMundialDoDocumento(snap.data()) : null;
   }
 
   gravarEntradaChefeMundial(entrada: EntradaDoChefeMundial): void {
-    this.chefeMundial.set(`${entrada.dia}/${entrada.uid}`, structuredClone(entrada));
+    this.chefeMundial.set(`${entrada.dia}/${entrada.uid}/${entrada.oculto ? 'o' : 'p'}`, structuredClone(entrada));
   }
 
   async lerMensagemGeral(id: string): Promise<MensagemGeral | null> {
     const snap = await this.tx.get(this.db.collection('correioGeral').doc(id));
     return snap.exists ? mensagemDoDocumento(snap.data()) : null;
+  }
+
+  async lerCadastrosDaRede(marca: string): Promise<CadastrosDaRede | null> {
+    const pendente = this.cadastrosDaRede.get(marca);
+    if (pendente) return structuredClone(pendente);
+    const snap = await this.tx.get(this.db.collection('cadastrosDaRede').doc(marca));
+    return snap.exists ? cadastrosDaRedeDoDocumento(marca, snap.data()) : null;
+  }
+
+  gravarCadastrosDaRede(c: CadastrosDaRede): void {
+    this.cadastrosDaRede.set(c.marca, structuredClone(c));
   }
 
   async lerParty(id: string): Promise<PartyDocumento | null> {
@@ -672,7 +702,12 @@ class ContextoFirestore implements ContextoTransacao {
   }
 
   /** Aplica todas as gravações pendentes na transação (depois de todas as leituras). */
-  aplicar(): void {
+  aplicar(operacao: string): void {
+    const extrato = fecharExtrato(operacao, this.lidos, this.personagens, this.transacoes);
+    tratarDivergencias(operacao, extrato.divergencias);
+    const revisoes = observarJogadores(operacao, this.lidos, this.personagens, extrato.transacoes, extrato.divergencias);
+    for (const r of revisoes) this.tx.set(this.db.collection('revisao').doc(r.id), semUndefined(r));
+    for (const c of this.cadastrosDaRede.values()) this.tx.set(this.db.collection('cadastrosDaRede').doc(c.marca), { contas: c.contas });
     for (const [uid, personagem] of this.personagens) {
       this.tx.set(this.db.collection('characters').doc(uid), personagemParaFirestore(personagem));
     }
@@ -683,7 +718,7 @@ class ContextoFirestore implements ContextoTransacao {
         criadoEm: new Date().toISOString(),
       });
     }
-    for (const transacao of this.transacoes) {
+    for (const transacao of extrato.transacoes) {
       const id = transacao.id || `tx_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       this.tx.create(this.db.collection('transactions').doc(id), transacaoParaFirestore(transacao));
     }
@@ -704,7 +739,7 @@ class ContextoFirestore implements ContextoTransacao {
       this.tx.set(this.db.collection('chefeSemanal').doc(e.semana).collection('guildas').doc(e.guildaId), semUndefined(e));
     }
     for (const e of this.chefeMundial.values()) {
-      this.tx.set(this.db.collection('chefeMundial').doc(e.dia).collection('jogadores').doc(e.uid), semUndefined(e));
+      this.tx.set(this.db.collection('chefeMundial').doc(e.dia).collection(e.oculto ? 'ocultos' : 'jogadores').doc(e.uid), semUndefined(e));
     }
     for (const [chave, dono] of this.nomesDeGuilda) {
       const ref = this.db.collection('nomesDeGuilda').doc(chave);
@@ -755,7 +790,7 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
             db.runTransaction(async (tx) => {
               const ctx = new ContextoFirestore(db, tx);
               const valor = await fn(ctx);
-              ctx.aplicar();
+              ctx.aplicar(operacao);
               return valor;
             })
           ),
@@ -837,9 +872,9 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
       });
     },
 
-    async lerEntradaChefeMundial(dia: string, uid: string) {
+    async lerEntradaChefeMundial(dia: string, uid: string, oculto = false) {
       return lerComRetry(`lerChefeMundial:${dia}`, async () => {
-        const snap = await db.collection('chefeMundial').doc(dia).collection('jogadores').doc(uid).get();
+        const snap = await db.collection('chefeMundial').doc(dia).collection(oculto ? 'ocultos' : 'jogadores').doc(uid).get();
         return snap.exists ? entradaMundialDoDocumento(snap.data()) : null;
       });
     },
@@ -853,6 +888,34 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
 
     async gravarMensagemGeral(mensagem: MensagemGeral) {
       await gravarSimples(`gravarMensagemGeral:${mensagem.id}`, () => db.collection('correioGeral').doc(mensagem.id).set(semUndefined(mensagem)));
+    },
+
+    async listarRevisoesPendentes(limite: number) {
+      return lerComRetry('listarRevisoesPendentes', async () => {
+        // sem orderBy: ordenar no banco pediria um índice composto; a fila é pequena
+        const snap = await db.collection('revisao').where('revisada', '==', false).get();
+        return snap.docs
+          .map((d) => revisaoDoDocumento(d.id, d.data()))
+          .filter((r): r is EntradaDeRevisao => r !== null)
+          .sort((a, b) => b.criadaEm.localeCompare(a.criadaEm))
+          .slice(0, limite);
+      });
+    },
+
+    async gravarRevisao(entrada: EntradaDeRevisao) {
+      await gravarSimples(`gravarRevisao:${entrada.id}`, () => db.collection('revisao').doc(entrada.id).set(semUndefined(entrada)));
+    },
+
+    async marcarRevisoes(ids: readonly string[], por: string, em: string) {
+      let n = 0;
+      for (const id of ids) {
+        const ref = db.collection('revisao').doc(id);
+        const snap = await lerComRetry(`lerRevisao:${id}`, () => ref.get());
+        if (!snap.exists) continue;
+        await gravarSimples(`marcarRevisao:${id}`, () => ref.set({ revisada: true, revisadaPor: por, revisadaEm: em }, { merge: true }));
+        n++;
+      }
+      return n;
     },
 
     async listarGuildas(limite: number) {
@@ -873,7 +936,7 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
       return lerComRetry(`consultarTopo:${campo}`, async () => {
         const snap = await db.collection('characters').orderBy(campo, 'desc').limit(limite).select(...CAMPOS_DO_RESUMO_PUBLICO, campo).get();
         return snap.docs.flatMap((d) => {
-          const r = resumoPublicoDoDocumento(d.data(), campo);
+          const r = resumoPublicoDoDocumento(d.data(), campo, d.id);
           return r ? [r] : [];
         });
       });
@@ -1075,9 +1138,17 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
       });
     },
 
+    async listarComLimiteSilencioso() {
+      return lerComRetry('listarComLimiteSilencioso', async () => {
+        // documentos sem o campo ou com null ficam de fora; são poucos
+        const snap = await db.collection('sancoes').where('limiteSilencioso', '!=', null).get();
+        return snap.docs.filter((d) => limiteDoDocumento(d.data().limiteSilencioso)).map((d) => d.id);
+      });
+    },
+
     async gravarSancao(doc: SancaoDocumento) {
       const { uid, ...dados } = doc;
-      await gravarSimples(`gravarSancao:${uid}`, () => db.collection('sancoes').doc(uid).set(dados));
+      await gravarSimples(`gravarSancao:${uid}`, () => db.collection('sancoes').doc(uid).set(semUndefined(dados)));
     },
 
     async listarTransacoes(uid: string, limite: number) {
@@ -1095,9 +1166,15 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
               moeda: typeof t.moeda === 'string' ? (t.moeda as TransactionDocument['moeda']) : 'ouro',
               motivo: texto(t.motivo),
               timestamp: texto(t.timestamp),
+              ...(typeof t.chave === 'string' ? { chave: t.chave } : {}),
+              ...(typeof t.saldoAntes === 'number' ? { saldoAntes: t.saldoAntes } : {}),
+              ...(typeof t.saldoDepois === 'number' ? { saldoDepois: t.saldoDepois } : {}),
+              ...(typeof t.operacao === 'string' ? { operacao: t.operacao } : {}),
+              ...(typeof t.ordem === 'number' ? { ordem: t.ordem } : {}),
+              ...(t.semRegistro === true ? { semRegistro: true } : {}),
             };
           })
-          .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+          .sort((a, b) => b.timestamp.localeCompare(a.timestamp) || (b.ordem ?? 0) - (a.ordem ?? 0))
           .slice(0, limite);
       });
     },
@@ -1128,7 +1205,8 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
         const refs = [db.collection('characters').doc(uid), db.collection('sancoes').doc(uid), db.collection('revogacoes').doc(uid)];
         // O nome do jogador no ranking do Chefe Mundial (os dias em que ele lutou)
         const personagem = await db.collection('characters').doc(uid).get();
-        for (const p of participacoesMundiaisDoDocumento(personagem.data()?.chefeMundial) ?? []) refs.push(db.collection('chefeMundial').doc(p.dia).collection('jogadores').doc(uid));
+        for (const p of participacoesMundiaisDoDocumento(personagem.data()?.chefeMundial) ?? [])
+          refs.push(db.collection('chefeMundial').doc(p.dia).collection('jogadores').doc(uid), db.collection('chefeMundial').doc(p.dia).collection('ocultos').doc(uid));
         if (chaveNome) {
           const nome = await db.collection('nomes').doc(chaveNome).get();
           if (nome.exists && nome.data()?.uid === uid) refs.push(nome.ref);

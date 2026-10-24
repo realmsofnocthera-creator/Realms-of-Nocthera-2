@@ -14,12 +14,13 @@ function securityHeaders(dev: boolean) {
   const frameAncestors = process.env.CSP_FRAME_ANCESTORS?.trim();
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''} https://apis.google.com https://www.gstatic.com`,
+    `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''} https://apis.google.com https://www.gstatic.com https://challenges.cloudflare.com`,
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: https://i.ibb.co https://i.supaimg.com https://picsum.photos https://lh3.googleusercontent.com ${origensDeImagemDoArmazenamento(process.env.R2_PUBLIC_URL).join(' ')}`,
     "font-src 'self' data:",
-    `connect-src 'self' https://*.googleapis.com https://apis.google.com wss://*.firebaseio.com https://*.firebaseio.com${dev ? ' ws: wss:' : ''}`,
-    `frame-src 'self' https://${firebaseConfig.authDomain} https://accounts.google.com https://apis.google.com`,
+    `connect-src 'self' https://*.googleapis.com https://apis.google.com wss://*.firebaseio.com https://*.firebaseio.com https://challenges.cloudflare.com${dev ? ' ws: wss:' : ''}`,
+    // challenges.cloudflare.com: o anti-bot da criação de personagem (Turnstile, 6.5-5)
+    `frame-src 'self' https://${firebaseConfig.authDomain} https://accounts.google.com https://apis.google.com https://challenges.cloudflare.com`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

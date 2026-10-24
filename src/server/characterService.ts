@@ -145,6 +145,8 @@ import {
 } from '@/rules/maestrias';
 import { CATEGORIAS_ARMA_MAP } from '@/rules/armas';
 import { somarDiario, type CheckinDoJogador, type DiarioDoJogador, type ProgressoDeMissoes } from '@/rules/diario';
+import type { RitmoDoJogador } from '@/rules/integridade';
+import { cadastrarNaRede } from '@/server/integridade';
 import { semanaDe } from '@/rules/chefeSemanal';
 import { conquistasEmDestaque, somarEstatisticas, type ConquistasDoJogador, type EstatisticasDoJogador } from '@/rules/conquistas';
 import { TITULO_MAP } from '@/rules/titulos';
@@ -270,6 +272,8 @@ export interface CharacterDocument {
   /** Missões diárias e semanais (contadores e baús) e o Check-in de 30 dias. */
   diario?: DiarioDoJogador;
   checkin?: CheckinDoJogador;
+  /** Integridade (6.5-4): as contas da hora corrente e os instantes das últimas ações, para a fila de revisão. */
+  ritmo?: RitmoDoJogador;
   /** Feiticeiro (1.5.2): o elemento escolhido, usado nas habilidades da classe que não têm elemento próprio. */
   elementoDaClasse?: Elemento;
   /** Conquistas: os totais contados (vitórias, forjas…), os degraus já resgatados, os títulos e o título escolhido. */
@@ -348,9 +352,22 @@ export interface TransactionDocument {
     | 'fragmentosSubclasse'
     | 'essenciaHabilidade'
     | 'fragmentosAscensao'
-    | 'essenciaDeSoberano';
+    | 'essenciaDeSoberano'
+    /** Cartas da Alma e emblemas (6.5-3): o saldo é a quantidade de itens; o extrato é feito sozinho no fim da transação. */
+    | 'cartas'
+    | 'emblemas';
   motivo: string;
   timestamp: string;
+  /** Fragmentos de subclasse: a subclasse (o saldo é por subclasse). */
+  chave?: string;
+  /** Saldo antes e depois desta linha (6.5-3), preenchidos no fim da transação; não existem nas linhas antigas. */
+  saldoAntes?: number;
+  saldoDepois?: number;
+  /** A transação do banco que gerou a linha (ex.: "diario:checkin") e a ordem dentro dela. */
+  operacao?: string;
+  ordem?: number;
+  /** A moeda mudou sem registro e o fechamento do extrato criou esta linha para acertar (6.5-3): investigar. */
+  semRegistro?: boolean;
 }
 
 /**
@@ -438,7 +455,9 @@ export function calcularAtributosDerivados(
  * Completa os campos opcionais e recalcula os derivados com src/game/
  * (Resistência Bárbara, Muralha de Ferro, Fluxo Arcano, Passos Rápidos etc.).
  */
-function normalizarPersonagem(char: CharacterDocument): CharacterDocument {
+function normalizarPersonagem(bruto: CharacterDocument): CharacterDocument {
+  // O ritmo (6.5-4) é só do fechamento da transação: nunca chega às regras nem ao navegador (o jogador não vê os sinais)
+  const { ritmo: _ritmo, ...char } = bruto;
   const equipamento = lerEquipamentoPersonagem(char.equipamento, char.armas ?? [], char.armaduras ?? []);
   return {
     ...char,
@@ -739,7 +758,8 @@ function toPublicCharacterProfile(char: CharacterDocument): PublicCharacterProfi
  */
 export async function createCharacter(
   uid: string,
-  input: CreateCharacterInput
+  input: CreateCharacterInput,
+  opcoes: { rede?: string | null; agora?: Date } = {}
 ): Promise<CharacterDocument> {
   const existing = await getCharacterByUid(uid);
   if (existing) {
@@ -909,6 +929,8 @@ export async function createCharacter(
     if (dono && dono !== uid) {
       throw new Error('Esse nome já está em uso.');
     }
+    // Limite de contas novas por rede (6.5-6): lança ErroDeMulticonta na 4ª em 24 horas
+    if (opcoes.rede) ctx.gravarCadastrosDaRede(cadastrarNaRede(await ctx.lerCadastrosDaRede(opcoes.rede), opcoes.rede, uid, opcoes.agora ?? new Date()));
     ctx.reservarNome(chaveNome, uid, nomeLimpo);
     ctx.gravarPersonagem(character);
     return character;
@@ -1113,6 +1135,10 @@ export async function zerarProgressaoPorMestre(uid: string, motivo: string): Pro
     for (const moeda of moedas) {
       const saldo = (corrente[moeda] as number | undefined) ?? 0;
       if (saldo > 0) corrente = alterarSaldoEm(ctx, corrente, moeda, -saldo, motivo).character;
+    }
+    for (const [subclasseId, saldo] of Object.entries(atual.fragmentosSubclasse ?? {})) {
+      if (saldo > 0)
+        ctx.registrarTransacao({ id: novoIdTransacao(), uid, tipo: 'perda', quantidade: saldo, moeda: 'fragmentosSubclasse', chave: subclasseId, motivo, timestamp: new Date().toISOString() });
     }
 
     // monta do zero a partir da identidade: nenhum campo de progresso escapa
@@ -1416,6 +1442,7 @@ export async function subirTierSubclasse(
         tipo: 'perda',
         quantidade: custo.fragmentosSubclasse,
         moeda: 'fragmentosSubclasse',
+        chave: subclasse.id,
         motivo,
         timestamp: new Date().toISOString(),
       });
@@ -2190,6 +2217,7 @@ export async function executarBatalhaSangrenta(
         tipo: 'ganho',
         quantidade,
         moeda: 'fragmentosSubclasse',
+        chave: subclasseId,
         motivo: `${motivo}: ${SUBCLASSES.find((sc) => sc.id === subclasseId)?.nome ?? subclasseId}`,
         timestamp: new Date().toISOString(),
       });

@@ -88,4 +88,15 @@ describe('Sanções e transações no Firestore', () => {
     expect((await repo.listarTransacoes('u1', 2)).map((t) => t.motivo)).toEqual(['m3', 'm2']);
     expect(await repo.listarTransacoes('sem-transacoes', 10)).toEqual([]);
   });
+
+  it('lê o saldo antes e depois, a chave, a operação e a ordem (6.5-3); empate de hora segue a ordem', async () => {
+    const quando = '2026-10-24T10:00:00.000Z';
+    fs.docs.set('transactions/a', { uid: 'u1', tipo: 'ganho', quantidade: 5, moeda: 'fragmentosSubclasse', chave: 'colosso', motivo: 'm1', timestamp: quando, saldoAntes: 0, saldoDepois: 5, operacao: 'batalhaSangrenta', ordem: 0 });
+    fs.docs.set('transactions/b', { uid: 'u1', tipo: 'perda', quantidade: 2, moeda: 'cartas', motivo: 'm2', timestamp: quando, saldoAntes: 3, saldoDepois: 1, operacao: 'alma:destruir', ordem: 1, semRegistro: true });
+    fs.docs.set('transactions/c', { uid: 'u1', tipo: 'ganho', quantidade: 1, moeda: 'ouro', motivo: 'm3', timestamp: quando, saldoAntes: 'x' });
+    const [b, a, c] = await repo.listarTransacoes('u1', 10);
+    expect(a).toMatchObject({ id: 'a', chave: 'colosso', saldoAntes: 0, saldoDepois: 5, operacao: 'batalhaSangrenta', ordem: 0 });
+    expect(b).toMatchObject({ id: 'b', moeda: 'cartas', saldoAntes: 3, saldoDepois: 1, semRegistro: true });
+    expect(c).not.toHaveProperty('saldoAntes');
+  });
 });

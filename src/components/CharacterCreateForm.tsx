@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import {
@@ -28,6 +28,7 @@ import {
   WIZARD_RACE_IMAGES,
 } from '@/assets/wizard';
 import { resolveAvatarSrc } from '@/assets/avatars';
+import { CaixaDoTurnstile } from '@/components/CaixaDoTurnstile';
 import { SkillIcon } from '@/components/skills';
 import { getRaceSkillIcon, getClassSkillIcon } from '@/rules/skillIcons';
 import { auth } from '@/lib/firebase';
@@ -559,6 +560,23 @@ export function CharacterCreateForm({
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Anti-bot (6.5-5): a chave pública vem de /api/status; sem ela, a caixa não aparece e nada é pedido
+  const [chaveDoTurnstile, setChaveDoTurnstile] = useState<string | null>(null);
+  const [tokenDoTurnstile, setTokenDoTurnstile] = useState<string | null>(null);
+  const [reiniciarTurnstile, setReiniciarTurnstile] = useState(0);
+  useEffect(() => {
+    let cancelado = false;
+    fetch('/api/status')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s: { turnstile?: unknown } | null) => {
+        if (!cancelado && typeof s?.turnstile === 'string') setChaveDoTurnstile(s.turnstile);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+  const faltaTurnstile = !!chaveDoTurnstile && !tokenDoTurnstile;
 
   const selectedRace: RaceDefinition =
     RACES.find((r) => r.id === selectedRaceId) || RACES[0];
@@ -680,6 +698,11 @@ export function CharacterCreateForm({
       return;
     }
 
+    if (faltaTurnstile) {
+      setError('Confirme que você não é um robô (a caixa acima do botão).');
+      return;
+    }
+
     setLoading(true);
     try {
       // 1. Garante o token mais recente e válido
@@ -710,6 +733,7 @@ export function CharacterCreateForm({
             ? { linhagem: selectedLinhagem }
             : {}),
           pontos,
+          ...(tokenDoTurnstile ? { turnstile: tokenDoTurnstile } : {}),
         }),
       });
 
@@ -724,6 +748,8 @@ export function CharacterCreateForm({
       }
 
       if (!res.ok) {
+        // o token do anti-bot vale uma vez: pede outro para a próxima tentativa
+        if (chaveDoTurnstile) setReiniciarTurnstile((n) => n + 1);
         throw new Error(
           data?.error ||
             (res.status === 401
@@ -1747,6 +1773,8 @@ export function CharacterCreateForm({
                       </span>
                     </div>
 
+                    <CaixaDoTurnstile chave={chaveDoTurnstile} aoMudar={setTokenDoTurnstile} reiniciar={reiniciarTurnstile} />
+
                     <div className="flex items-center justify-between gap-2.5">
                       <motion.button
                         type="button"
@@ -1767,6 +1795,7 @@ export function CharacterCreateForm({
                           !isStep1Valid ||
                           !isStep2Valid ||
                           !isStep3Valid ||
+                          faltaTurnstile ||
                           loading
                         }
                         whileHover={

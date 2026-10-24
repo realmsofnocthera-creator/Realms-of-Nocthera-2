@@ -6,6 +6,9 @@
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
+import { fecharExtrato, tratarDivergencias } from '@/server/extrato';
+import { observarJogadores, type CadastrosDaRede } from '@/server/integridade';
+import type { EntradaDeRevisao } from '@/rules/integridade';
 import type { SancaoDocumento } from '@/rules/sancoes';
 import { chaveDeBusca, type CampoDoRanking, type CriterioDeRanking, type RankingGuardado, type ResumoDePersonagem } from '@/rules/social';
 import type { ConfiguracaoDeSistemas } from '@/rules/sistemas';
@@ -47,6 +50,8 @@ interface Estado {
   partys: Map<string, PartyDocumento>;
   chefeMundial: Map<string, EntradaDoChefeMundial>;
   correioGeral: Map<string, MensagemGeral>;
+  revisoes: Map<string, EntradaDeRevisao>;
+  cadastrosDaRede: Map<string, CadastrosDaRede>;
 }
 
 const estado: Estado = {
@@ -68,7 +73,12 @@ const estado: Estado = {
   partys: new Map(),
   chefeMundial: new Map(),
   correioGeral: new Map(),
+  revisoes: new Map(),
+  cadastrosDaRede: new Map(),
 };
+
+/** Chefe Mundial: a entrada de quem está com limite silencioso fica à parte (como chefeMundial/{dia}/ocultos). */
+const chaveMundial = (dia: string, uid: string, oculto: boolean) => `${dia}/${uid}${oculto ? '/oculto' : ''}`;
 
 function valorDoCampo(c: CharacterDocument, campo: CampoDoRanking): number {
   switch (campo) {
@@ -116,6 +126,8 @@ const transacaoAtiva = new AsyncLocalStorage<string>();
 
 class ContextoMemoria implements ContextoTransacao {
   personagens = new Map<string, CharacterDocument>();
+  /** Como cada personagem estava no banco antes desta transação (para fechar o extrato). */
+  lidos = new Map<string, CharacterDocument | null>();
   nomes = new Map<string, { uid: string; nome: string }>();
   transacoes: TransactionDocument[] = [];
   combates = new Map<string, RegistroCombate>();
@@ -126,6 +138,10 @@ class ContextoMemoria implements ContextoTransacao {
   chefeMundial = new Map<string, EntradaDoChefeMundial>();
 
   async lerPersonagem(uid: string) {
+    if (!this.lidos.has(uid)) {
+      const doBanco = estado.personagens.get(uid);
+      this.lidos.set(uid, doBanco ? structuredClone(doBanco) : null);
+    }
     const valor = this.personagens.get(uid) ?? estado.personagens.get(uid);
     return valor ? structuredClone(valor) : null;
   }
@@ -187,16 +203,25 @@ class ContextoMemoria implements ContextoTransacao {
   gravarEntradaChefeSemanal(entrada: EntradaDoChefeSemanal) {
     this.chefeSemanal.set(`${entrada.semana}/${entrada.guildaId}`, structuredClone(entrada));
   }
-  async lerEntradaChefeMundial(dia: string, uid: string) {
-    const e = this.chefeMundial.get(`${dia}/${uid}`) ?? estado.chefeMundial.get(`${dia}/${uid}`);
+  async lerEntradaChefeMundial(dia: string, uid: string, oculto = false) {
+    const k = chaveMundial(dia, uid, oculto);
+    const e = this.chefeMundial.get(k) ?? estado.chefeMundial.get(k);
     return e ? structuredClone(e) : null;
   }
   gravarEntradaChefeMundial(entrada: EntradaDoChefeMundial) {
-    this.chefeMundial.set(`${entrada.dia}/${entrada.uid}`, structuredClone(entrada));
+    this.chefeMundial.set(chaveMundial(entrada.dia, entrada.uid, entrada.oculto === true), structuredClone(entrada));
   }
   async lerMensagemGeral(id: string) {
     const m = estado.correioGeral.get(id);
     return m ? structuredClone(m) : null;
+  }
+  cadastrosDaRede = new Map<string, CadastrosDaRede>();
+  async lerCadastrosDaRede(marca: string) {
+    const c = this.cadastrosDaRede.get(marca) ?? estado.cadastrosDaRede.get(marca);
+    return c ? structuredClone(c) : null;
+  }
+  gravarCadastrosDaRede(c: CadastrosDaRede) {
+    this.cadastrosDaRede.set(c.marca, structuredClone(c));
   }
 }
 
@@ -213,6 +238,9 @@ export const repositorio: Repositorio = {
       transacaoAtiva.run(operacao, async () => {
         const ctx = new ContextoMemoria();
         const valor = await fn(ctx);
+        const extrato = fecharExtrato(operacao, ctx.lidos, ctx.personagens, ctx.transacoes);
+        tratarDivergencias(operacao, extrato.divergencias);
+        const revisoes = observarJogadores(operacao, ctx.lidos, ctx.personagens, extrato.transacoes, extrato.divergencias);
         // Ponto em que o Firestore faria o commit: uma falha aqui não aplica nada
         falhaAoGravar?.(operacao);
         for (const [uid, p] of ctx.personagens) estado.personagens.set(uid, p);
@@ -223,7 +251,9 @@ export const repositorio: Repositorio = {
         for (const [k, e] of ctx.chefeMundial) estado.chefeMundial.set(k, e);
         for (const [id, pt] of ctx.partys) (pt ? estado.partys.set(id, pt) : estado.partys.delete(id));
         for (const [chave, n] of ctx.nomesDeGuilda) (n ? estado.nomesDeGuilda.set(chave, n) : estado.nomesDeGuilda.delete(chave));
-        estado.transacoes.push(...ctx.transacoes);
+        estado.transacoes.push(...extrato.transacoes);
+        for (const r of revisoes) estado.revisoes.set(r.id, structuredClone(r));
+        for (const [marca, c] of ctx.cadastrosDaRede) estado.cadastrosDaRede.set(marca, c);
         return valor;
       })
     );
@@ -330,6 +360,10 @@ export const repositorio: Repositorio = {
     return doc ? structuredClone(doc) : null;
   },
 
+  async listarComLimiteSilencioso() {
+    return [...estado.sancoes.values()].filter((d) => d.limiteSilencioso).map((d) => d.uid);
+  },
+
   async gravarSancao(doc: SancaoDocumento) {
     estado.sancoes.set(doc.uid, structuredClone(doc));
   },
@@ -338,13 +372,13 @@ export const repositorio: Repositorio = {
     return estado.transacoes
       .filter((t) => t.uid === uid)
       .map((t) => ({ ...t }))
-      .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+      .sort((a, b) => b.timestamp.localeCompare(a.timestamp) || (b.ordem ?? 0) - (a.ordem ?? 0))
       .slice(0, limite);
   },
 
   async consultarTopo(campo: CampoDoRanking, limite: number) {
     return [...estado.personagens.values()]
-      .map((c) => resumoPublico(c, valorDoCampo(c, campo)))
+      .map((c) => ({ ...resumoPublico(c, valorDoCampo(c, campo)), uid: c.uid }))
       .filter((r) => (r.valor ?? 0) > 0)
       .sort((a, b) => (b.valor ?? 0) - (a.valor ?? 0))
       .slice(0, limite);
@@ -412,15 +446,15 @@ export const repositorio: Repositorio = {
   },
 
   async listarChefeMundial(dia: string, limite: number) {
-    return [...estado.chefeMundial.values()].filter((e) => e.dia === dia).sort((a, b) => b.dano - a.dano).slice(0, limite).map((e) => structuredClone(e));
+    return [...estado.chefeMundial.values()].filter((e) => e.dia === dia && !e.oculto).sort((a, b) => b.dano - a.dano).slice(0, limite).map((e) => structuredClone(e));
   },
 
   async contarAcimaNoChefeMundial(dia: string, dano: number) {
-    return [...estado.chefeMundial.values()].filter((e) => e.dia === dia && e.dano > dano).length;
+    return [...estado.chefeMundial.values()].filter((e) => e.dia === dia && !e.oculto && e.dano > dano).length;
   },
 
-  async lerEntradaChefeMundial(dia: string, uid: string) {
-    const e = estado.chefeMundial.get(`${dia}/${uid}`);
+  async lerEntradaChefeMundial(dia: string, uid: string, oculto = false) {
+    const e = estado.chefeMundial.get(chaveMundial(dia, uid, oculto));
     return e ? structuredClone(e) : null;
   },
 
@@ -430,6 +464,29 @@ export const repositorio: Repositorio = {
 
   async gravarMensagemGeral(mensagem: MensagemGeral) {
     estado.correioGeral.set(mensagem.id, structuredClone(mensagem));
+  },
+
+  async listarRevisoesPendentes(limite: number) {
+    return [...estado.revisoes.values()]
+      .filter((r) => !r.revisada)
+      .map((r) => structuredClone(r))
+      .sort((a, b) => b.criadaEm.localeCompare(a.criadaEm))
+      .slice(0, limite);
+  },
+
+  async gravarRevisao(entrada: EntradaDeRevisao) {
+    estado.revisoes.set(entrada.id, structuredClone(entrada));
+  },
+
+  async marcarRevisoes(ids: readonly string[], por: string, em: string) {
+    let n = 0;
+    for (const id of ids) {
+      const r = estado.revisoes.get(id);
+      if (!r) continue;
+      estado.revisoes.set(id, { ...r, revisada: true, revisadaPor: por, revisadaEm: em });
+      n++;
+    }
+    return n;
   },
 
   async lerParty(id: string) {
@@ -480,6 +537,8 @@ export function resetCharacterStore(): void {
   estado.partys.clear();
   estado.chefeMundial.clear();
   estado.correioGeral.clear();
+  estado.revisoes.clear();
+  estado.cadastrosDaRede.clear();
   falhaNaConfiguracao = null;
   falhaNoLogAdmin = null;
   falhaAoGravar = null;

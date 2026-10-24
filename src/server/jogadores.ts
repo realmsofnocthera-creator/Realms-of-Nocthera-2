@@ -4,10 +4,13 @@ import {
   DIAS_MAXIMOS_DE_SUSPENSAO,
   DIAS_MINIMOS_DE_SUSPENSAO,
   MAXIMO_DE_ADVERTENCIAS,
+  RESPOSTA_MAXIMA,
   sancaoDocumentoVazio,
   sancaoEmVigor,
   type AcaoDeSancao,
   type Advertencia,
+  type Apelacao,
+  type LimiteSilencioso,
   type SancaoDocumento,
   type SancaoEmVigor,
 } from '@/rules/sancoes';
@@ -17,11 +20,13 @@ import { CAMPOS_DOS_COLECIONAVEIS, ehCampoDeAjuste, ehCampoDosColecionaveis, LIM
 import { MATERIAIS_MAP } from '@/rules/materiais';
 import { MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
 import { adminAuth } from '@/server/firebaseAdmin';
+import { conferirExtrato, type ConferenciaDoExtrato } from '@/server/extrato';
 import { registrarLog } from '@/server/log';
+import { LIMITE_DA_FILA } from '@/server/revisao';
 import { comRegistro, donosDoAmbiente, ErroMestre, exigir, motivoValido, papelDoUsuario, type SessaoMestre } from '@/server/mestre';
 import { repositorio } from '@/server/persistencia';
 import { chaveDoNome } from '@/server/persistencia/tipos';
-import { atualizarCacheDeSancao } from '@/server/sancoes';
+import { atualizarCacheDeSancao, esquecerLimitados } from '@/server/sancoes';
 import type { RegistroCombate } from '@/server/persistencia/tipos';
 
 /**
@@ -71,7 +76,13 @@ export interface FichaDoJogador {
   sancao: SancaoEmVigor | null;
   advertencias: Advertencia[];
   papelNoPainel: PapelMestre | null;
+  /** Limite silencioso em vigor (6.5-7), ou null. */
+  limiteSilencioso: LimiteSilencioso | null;
+  /** O pedido de apelação mais recente (6.5-7), ou null. */
+  apelacao: Apelacao | null;
   transacoes: TransactionDocument[];
+  /** A conferência das transações recentes com o saldo de agora (6.5-3). */
+  conferenciaDoExtrato: ConferenciaDoExtrato;
 }
 
 export function resumoDoPersonagem(c: CharacterDocument): ResumoDoPersonagem {
@@ -148,7 +159,10 @@ async function montarFicha(uid: string): Promise<FichaDoJogador> {
     sancao: sancaoEmVigor(sancaoDoc, new Date()),
     advertencias: sancaoDoc?.advertencias ?? [],
     papelNoPainel: papel?.papel ?? null,
+    limiteSilencioso: sancaoDoc?.limiteSilencioso ?? null,
+    apelacao: sancaoDoc?.apelacao ?? null,
     transacoes,
+    conferenciaDoExtrato: conferirExtrato(personagem, transacoes),
   };
 }
 
@@ -210,19 +224,59 @@ export async function aplicarSancao(sessao: SessaoMestre, uidAlvo: unknown, pedi
   } else if (acao === 'banir') {
     if (emVigor?.tipo === 'banimento') throw new ErroMestre(400, 'Esse jogador já está banido.');
     Object.assign(proximo, { tipo: 'banimento', ate: null, motivo, aplicadaPor: sessao.uid, aplicadaEm: agora.toISOString() });
+  } else if (acao === 'limitar') {
+    if (atual.limiteSilencioso) throw new ErroMestre(400, 'Esse jogador já está com limite silencioso.');
+    proximo.limiteSilencioso = { motivo, aplicadoPor: sessao.uid, aplicadoEm: agora.toISOString() };
+  } else if (acao === 'tirarLimite') {
+    if (!atual.limiteSilencioso) throw new ErroMestre(400, 'Esse jogador não está com limite silencioso.');
+    proximo.limiteSilencioso = null;
   } else {
     if (!emVigor) throw new ErroMestre(400, 'Esse jogador não está suspenso nem banido.');
     Object.assign(proximo, { tipo: null, ate: null, motivo: '', aplicadaPor: sessao.uid, aplicadaEm: agora.toISOString() });
   }
 
-  const depois = acao === 'advertir' ? antes : { tipo: proximo.tipo, ate: proximo.ate };
+  const depois = acao === 'advertir' || acao === 'limitar' || acao === 'tirarLimite' ? { ...antes, limiteSilencioso: !!proximo.limiteSilencioso } : { tipo: proximo.tipo, ate: proximo.ate };
   await comRegistro(
     sessao,
     { acao: `jogador.${acao}`, alvo: uidAlvo, antes, depois: { ...depois, ...(dias !== null ? { dias } : {}), advertencias: proximo.advertencias.length }, motivo, ip },
     () => repositorio.gravarSancao(proximo)
   );
   atualizarCacheDeSancao(proximo);
+  if (acao === 'limitar' || acao === 'tirarLimite') esquecerLimitados();
 
+  return montarFicha(uidAlvo);
+}
+
+export interface PedidoDeRespostaDaApelacao {
+  decisao: unknown;
+  resposta: unknown;
+}
+
+/**
+ * Responde o pedido de apelação (6.5-7): aceitar levanta a suspensão ou o banimento; recusar mantém. A resposta
+ * aparece para o jogador na tela da conta sancionada. Fica no log, e o pedido sai da fila de revisão.
+ */
+export async function responderApelacao(sessao: SessaoMestre, uidAlvo: unknown, pedido: PedidoDeRespostaDaApelacao, ip?: string): Promise<FichaDoJogador> {
+  exigir(sessao, 'jogadores.sancionar');
+  if (typeof uidAlvo !== 'string' || !ID_VALIDO.test(uidAlvo)) throw new ErroMestre(400, 'Informe o identificador (uid) do jogador.');
+  if (pedido.decisao !== 'aceitar' && pedido.decisao !== 'recusar') throw new ErroMestre(400, 'Escolha aceitar ou recusar.');
+  const resposta = typeof pedido.resposta === 'string' ? pedido.resposta.trim() : '';
+  if (resposta.length < 3 || resposta.length > RESPOSTA_MAXIMA) throw new ErroMestre(400, `Escreva a resposta ao jogador (de 3 a ${RESPOSTA_MAXIMA} caracteres).`);
+  const atual = await repositorio.lerSancao(uidAlvo);
+  if (!atual?.apelacao || atual.apelacao.situacao !== 'pendente' || atual.apelacao.daSancaoDe !== atual.aplicadaEm) throw new ErroMestre(400, 'Esse jogador não tem pedido de apelação esperando resposta.');
+  const agora = new Date();
+  const aceita = pedido.decisao === 'aceitar';
+  const proximo: SancaoDocumento = {
+    ...atual,
+    ...(aceita ? { tipo: null, ate: null, motivo: '', aplicadaPor: sessao.uid, aplicadaEm: agora.toISOString() } : {}),
+    apelacao: { ...atual.apelacao, situacao: aceita ? 'aceita' : 'recusada', resposta, respondidaPor: sessao.uid, respondidaEm: agora.toISOString() },
+  };
+  await comRegistro(sessao, { acao: aceita ? 'jogador.apelacaoAceita' : 'jogador.apelacaoRecusada', alvo: uidAlvo, antes: { tipo: atual.tipo, ate: atual.ate }, depois: { tipo: proximo.tipo, ate: proximo.ate }, motivo: resposta, ip }, () =>
+    repositorio.gravarSancao(proximo)
+  );
+  atualizarCacheDeSancao(proximo);
+  const pendentes = (await repositorio.listarRevisoesPendentes(LIMITE_DA_FILA)).filter((r) => r.uid === uidAlvo && r.tipo === 'apelacao').map((r) => r.id);
+  if (pendentes.length) await repositorio.marcarRevisoes(pendentes, sessao.uid, agora.toISOString());
   return montarFicha(uidAlvo);
 }
 

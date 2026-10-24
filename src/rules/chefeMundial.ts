@@ -121,13 +121,15 @@ export interface EntradaDoChefeMundial {
   uid: string;
   nome: string;
   dano: number;
+  /** Limite silencioso (6.5-7): a entrada fica à parte (chefeMundial/{dia}/ocultos) e não entra no ranking. */
+  oculto?: boolean;
 }
 
 export function entradaMundialDoDocumento(bruto: unknown): EntradaDoChefeMundial | null {
   const d = bruto as Record<string, unknown> | null;
   if (!d || typeof d !== 'object' || typeof d.dia !== 'string' || typeof d.uid !== 'string') return null;
   const dano = typeof d.dano === 'number' && Number.isFinite(d.dano) && d.dano >= 0 ? Math.floor(d.dano) : 0;
-  return { dia: d.dia, uid: d.uid, nome: typeof d.nome === 'string' ? d.nome : '', dano };
+  return { dia: d.dia, uid: d.uid, nome: typeof d.nome === 'string' ? d.nome : '', dano, ...(d.oculto === true ? { oculto: true } : {}) };
 }
 
 /** Os dias em que o personagem lutou e se a recompensa já foi mandada ao Correio. */

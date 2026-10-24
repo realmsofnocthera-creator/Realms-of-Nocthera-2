@@ -28,10 +28,13 @@ O servidor é a fonte da verdade para o estado e as mecânicas; o navegador apen
 │   │   ├── characterService.ts# Regras de personagem; cada operação é uma transação
 │   │   ├── persistencia/      # Repositório Firestore (transações, timeout, retry de leitura)
 │   │   ├── rateLimit.ts       # Limite por IP e por conta com bloqueio progressivo (429)
+│   │   ├── extrato.ts         # Ledger: saldo antes e depois, cartas e emblemas, conferência com o saldo
+│   │   ├── integridade.ts     # Ritmo por hora, sinais da fila de revisão e limite de contas por rede
 │   │   ├── log.ts             # Log estruturado em JSON
 │   │   └── combateSemente.ts  # Semente do combate gerada no servidor
 │   ├── test/                  # Só para o Vitest: mocks do Firebase Admin e repositório em memória
 │   └── theme/                 # Tema visual
+├── docs/MODELO_DE_AMEACAS.md   # Ameaças, o que já as cobre e o que falta (roadmap 6.5)
 ├── firebase-applet-config.json # Configuração pública do app Firebase
 ├── firebase-blueprint.json     # Esquema das coleções
 └── firestore.rules             # Regras de segurança do Firestore
@@ -43,10 +46,12 @@ O servidor é a fonte da verdade para o estado e as mecânicas; o navegador apen
 | --- | --- | --- |
 | `users/{uid}` | e-mail e data de criação | cliente (só criação) |
 | `characters/{uid}` | personagem | só o servidor |
-| `transactions/{id}` | ganhos e gastos de ouro, diamantes e fragmentos | só o servidor |
+| `transactions/{id}` | extrato: ganhos e gastos de moedas, cartas e emblemas, com o saldo antes e depois | só o servidor |
 | `nomes/{chave}` | índice de nome único do personagem | só o servidor |
 | `combates/{uid}__{id}` | semente, entrada e resultado de cada combate | só o servidor |
 | `revogacoes/{uid}` | instante do último logout no servidor (tokens de logins anteriores são recusados) | só o servidor |
+| `revisao/{id}` | fila de revisão do Painel do Mestre: sinais de anomalia por jogador (6.5-4) | só o servidor |
+| `cadastrosDaRede/{marca}` | contas criadas na mesma rede nas últimas 24 horas, pela marca curta do IP (6.5-6) | só o servidor |
 
 ## Desenvolvimento
 

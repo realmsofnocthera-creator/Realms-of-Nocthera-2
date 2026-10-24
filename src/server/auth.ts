@@ -8,6 +8,22 @@ export interface AuthenticatedUser {
   email: string;
   /** Quando o login foi feito (auth_time, em segundos). O painel do Mestre só aceita logins recentes (3.5.1.3). */
   loginEm: number;
+  /** O e-mail do login foi confirmado (email_verified do Firebase). Obrigatório para o comércio (6.5-6). */
+  emailVerificado: boolean;
+}
+
+/** Erro de quem tenta uma ação que pede e-mail confirmado (6.5-6). As rotas respondem 403. */
+export class ErroEmailNaoVerificado extends Error {
+  readonly status = 403;
+  constructor() {
+    super('Confirme o seu e-mail para usar o comércio. Procure a mensagem de confirmação na sua caixa de entrada.');
+    this.name = 'ErroEmailNaoVerificado';
+  }
+}
+
+/** Para as ações de comércio entre jogadores (6.5-6): só com o e-mail confirmado. */
+export function exigirEmailVerificado(user: Pick<AuthenticatedUser, 'emailVerificado'>): void {
+  if (!user.emailVerificado) throw new ErroEmailNaoVerificado();
 }
 
 /**
@@ -61,6 +77,18 @@ async function instanteDaRevogacao(uid: string): Promise<number | null> {
  * ErroPersistencia (as rotas respondem 503); conta sancionada lança ErroContaSancionada (403).
  */
 export async function verifyAuthToken(authHeader: string | null): Promise<AuthenticatedUser | null> {
+  return verificarLogin(authHeader, true);
+}
+
+/**
+ * Como verifyAuthToken, mas deixa passar a conta suspensa ou banida: só para a apelação (6.5-7), que é justamente o
+ * que o jogador sancionado pode fazer.
+ */
+export async function verificarLoginDaApelacao(authHeader: string | null): Promise<AuthenticatedUser | null> {
+  return verificarLogin(authHeader, false);
+}
+
+async function verificarLogin(authHeader: string | null, exigirSemSancao: boolean): Promise<AuthenticatedUser | null> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null;
   }
@@ -70,7 +98,7 @@ export async function verifyAuthToken(authHeader: string | null): Promise<Authen
     return null;
   }
 
-  let decoded: { uid: string; email?: string; auth_time?: number };
+  let decoded: { uid: string; email?: string; auth_time?: number; email_verified?: boolean };
   try {
     decoded = await adminAuth.verifyIdToken(idToken);
   } catch {
@@ -84,12 +112,12 @@ export async function verifyAuthToken(authHeader: string | null): Promise<Authen
   }
 
   // Conta suspensa ou banida (3.5.4.3): lança ErroContaSancionada, que as rotas respondem com 403
-  await exigirContaLivre(decoded.uid);
+  if (exigirSemSancao) await exigirContaLivre(decoded.uid);
 
   // Manutenção (3.5.5.2): lança ErroManutencao (503) para quem não tem papel no painel
   await exigirJogoAberto(decoded.uid);
 
-  return { uid: decoded.uid, email: decoded.email || '', loginEm };
+  return { uid: decoded.uid, email: decoded.email || '', loginEm, emailVerificado: decoded.email_verified === true };
 }
 
 /**

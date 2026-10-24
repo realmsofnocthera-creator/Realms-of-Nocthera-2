@@ -84,6 +84,8 @@ export interface ResumoDePersonagem {
   valor?: number;
   escondidoNoRanking?: boolean;
   escondidoNaBusca?: boolean;
+  /** O uid (só no servidor: para tirar do ranking quem está com limite silencioso, 6.5-7). */
+  uid?: string;
 }
 
 /** O valor do personagem em cada ranking, ou undefined se ele não entra (ainda não venceu nada ali). */

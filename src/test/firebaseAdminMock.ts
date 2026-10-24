@@ -39,7 +39,8 @@ export const adminAuth = {
     if (!decoded || !decoded.uid) {
       throw Object.assign(new Error('Token inválido.'), { code: 'auth/argument-error' });
     }
-    return { uid: decoded.uid, email: `${decoded.uid}@test.com`, auth_time: decoded.authTime };
+    // uids que começam com "naoverificado" simulam o e-mail ainda não confirmado
+    return { uid: decoded.uid, email: `${decoded.uid}@test.com`, auth_time: decoded.authTime, email_verified: !decoded.uid.startsWith('naoverificado') };
   },
   /** Usuário do Auth pelo uid (o e-mail de teste é <uid>@test.com). */
   async getUser(uid: string) {

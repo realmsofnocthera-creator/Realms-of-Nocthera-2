@@ -2,7 +2,7 @@
  * Sanções contra jogadores (3.5.4.3): advertir, suspender com prazo, banir e desbanir.
  * Só a suspensão e o banimento bloqueiam a conta; a advertência fica registrada no histórico do jogador.
  */
-export const ACOES_DE_SANCAO = ['advertir', 'suspender', 'banir', 'desbanir'] as const;
+export const ACOES_DE_SANCAO = ['advertir', 'suspender', 'banir', 'desbanir', 'limitar', 'tirarLimite'] as const;
 export type AcaoDeSancao = (typeof ACOES_DE_SANCAO)[number];
 
 export const NOME_DA_ACAO: Readonly<Record<AcaoDeSancao, string>> = {
@@ -10,6 +10,8 @@ export const NOME_DA_ACAO: Readonly<Record<AcaoDeSancao, string>> = {
   suspender: 'Suspender',
   banir: 'Banir',
   desbanir: 'Levantar suspensão ou banimento',
+  limitar: 'Limite silencioso (tirar dos rankings)',
+  tirarLimite: 'Tirar o limite silencioso',
 };
 
 export const DIAS_MINIMOS_DE_SUSPENSAO = 1;
@@ -25,6 +27,34 @@ export interface Advertencia {
   motivo: string;
 }
 
+/**
+ * Limite silencioso (6.5-7, decisão do Yuri em 24/10/2026): a conta joga normalmente, mas sai dos rankings e só
+ * recebe a recompensa mínima do Chefe Mundial e do Chefe de guildas. O jogador não é avisado.
+ */
+export interface LimiteSilencioso {
+  motivo: string;
+  aplicadoPor: string;
+  aplicadoEm: string;
+}
+
+export type SituacaoDaApelacao = 'pendente' | 'aceita' | 'recusada';
+
+/** Pedido de apelação feito pelo jogo (6.5-7): um por sanção. */
+export interface Apelacao {
+  texto: string;
+  em: string;
+  /** A sanção a que o pedido se refere (o aplicadaEm dela). */
+  daSancaoDe: string;
+  situacao: SituacaoDaApelacao;
+  resposta?: string;
+  respondidaPor?: string;
+  respondidaEm?: string;
+}
+
+export const APELACAO_MINIMA = 20;
+export const APELACAO_MAXIMA = 1000;
+export const RESPOSTA_MAXIMA = 500;
+
 /** sancoes/{uid}: o estado atual da conta e o histórico de advertências. */
 export interface SancaoDocumento {
   uid: string;
@@ -36,6 +66,8 @@ export interface SancaoDocumento {
   aplicadaPor: string;
   aplicadaEm: string;
   advertencias: Advertencia[];
+  limiteSilencioso?: LimiteSilencioso | null;
+  apelacao?: Apelacao | null;
 }
 
 export interface SancaoEmVigor {
@@ -71,4 +103,33 @@ export function mensagemDaSancao(s: SancaoEmVigor): string {
   const motivo = s.motivo ? ` Motivo: ${s.motivo}` : '';
   if (s.tipo === 'banimento') return `Sua conta foi banida.${motivo}`;
   return `Sua conta está suspensa até ${s.ate ? dataEmBrasilia(s.ate) : 'nova ordem'} (horário de Brasília).${motivo}`;
+}
+
+/** O jogador ainda pode pedir apelação da sanção em vigor (um pedido por sanção). */
+export function podeApelar(doc: SancaoDocumento | null, agora: Date): boolean {
+  if (!doc || !sancaoEmVigor(doc, agora)) return false;
+  return !doc.apelacao || doc.apelacao.daSancaoDe !== doc.aplicadaEm;
+}
+
+export function apelacaoDoDocumento(bruto: unknown): Apelacao | null {
+  if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto)) return null;
+  const o = bruto as Record<string, unknown>;
+  if (typeof o.texto !== 'string' || typeof o.em !== 'string' || typeof o.daSancaoDe !== 'string') return null;
+  const situacao: SituacaoDaApelacao = o.situacao === 'aceita' || o.situacao === 'recusada' ? o.situacao : 'pendente';
+  return {
+    texto: o.texto,
+    em: o.em,
+    daSancaoDe: o.daSancaoDe,
+    situacao,
+    ...(typeof o.resposta === 'string' ? { resposta: o.resposta } : {}),
+    ...(typeof o.respondidaPor === 'string' ? { respondidaPor: o.respondidaPor } : {}),
+    ...(typeof o.respondidaEm === 'string' ? { respondidaEm: o.respondidaEm } : {}),
+  };
+}
+
+export function limiteDoDocumento(bruto: unknown): LimiteSilencioso | null {
+  if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto)) return null;
+  const o = bruto as Record<string, unknown>;
+  if (typeof o.aplicadoEm !== 'string') return null;
+  return { motivo: typeof o.motivo === 'string' ? o.motivo : '', aplicadoPor: typeof o.aplicadoPor === 'string' ? o.aplicadoPor : '', aplicadoEm: o.aplicadoEm };
 }

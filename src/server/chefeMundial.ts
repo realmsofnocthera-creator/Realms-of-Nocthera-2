@@ -18,6 +18,7 @@ import { gerarSementeCombate } from '@/server/combateSemente';
 import { mandarRecompensasDoChefeMundial } from '@/server/correio';
 import { repositorio } from '@/server/persistencia';
 import { exigirSistemaLigado } from '@/server/sistemasLeitura';
+import { comLimiteSilencioso } from '@/server/sancoes';
 
 /**
  * Provação de Chefe Mundial: um chefe por dia, lutas solo e ilimitadas, vale o maior dano do dia. O melhor de cada
@@ -67,8 +68,10 @@ export async function estadoDoChefeMundial(uid: string, agora = new Date()): Pro
   const char = await repositorio.lerPersonagem(uid);
   if (!char) throw new Error('Personagem não encontrado.');
   const dia = diaDeBrasilia(agora);
-  const [minha, top] = await Promise.all([repositorio.lerEntradaChefeMundial(dia, uid), rankingDoDia(dia, agora)]);
-  const minhaPosicao = minha ? (await repositorio.contarAcimaNoChefeMundial(dia, minha.dano)) + 1 : null;
+  // Limite silencioso (6.5-7): o jogador vê o próprio dano, mas não entra no ranking
+  const oculto = await comLimiteSilencioso(uid);
+  const [minha, top] = await Promise.all([repositorio.lerEntradaChefeMundial(dia, uid, oculto), rankingDoDia(dia, agora)]);
+  const minhaPosicao = minha && !oculto ? (await repositorio.contarAcimaNoChefeMundial(dia, minha.dano)) + 1 : null;
   let anterior = { dano: -1, posicao: 0 };
   const ranking = top.map((e, i) => {
     // Empate divide a posição
@@ -93,6 +96,7 @@ export async function estadoDoChefeMundial(uid: string, agora = new Date()): Pro
 export async function lutarChefeMundial(uid: string, semente = gerarSementeCombate(), agora = new Date()): Promise<{ mensagem: string; dano: number; melhor: number }> {
   await exigirSistemaLigado(uid, 'chefeMundial');
   const dia = diaDeBrasilia(agora);
+  const oculto = await comLimiteSilencioso(uid);
   return repositorio.executarTransacao('chefeMundial:lutar', async (ctx) => {
     const eu = await carregarPersonagem(ctx, uid);
     if (eu.nivel < NIVEL_DO_CHEFE_MUNDIAL) throw new ErroDoChefeMundial(`O Chefe Mundial abre no nível ${NIVEL_DO_CHEFE_MUNDIAL}.`);
@@ -101,9 +105,9 @@ export async function lutarChefeMundial(uid: string, semente = gerarSementeComba
     // Conta também o que foi tirado do Sobreescudo do chefe
     const final = resultado.monstroFinal;
     const dano = final ? Math.max(0, VIDA_DO_CHEFE_MUNDIAL + (chefe.sobreescudoInicial ?? 0) - final.hp - final.sobreescudo) : 0;
-    const entrada = await ctx.lerEntradaChefeMundial(dia, uid);
+    const entrada = await ctx.lerEntradaChefeMundial(dia, uid, oculto);
     const anterior = entrada?.dano ?? 0;
-    if (!entrada || dano > anterior) ctx.gravarEntradaChefeMundial({ dia, uid, nome: eu.nome, dano: Math.max(dano, anterior) });
+    if (!entrada || dano > anterior) ctx.gravarEntradaChefeMundial({ dia, uid, nome: eu.nome, dano: Math.max(dano, anterior), ...(oculto ? { oculto: true } : {}) });
     if (!(eu.chefeMundial ?? []).some((p) => p.dia === dia)) {
       salvarPersonagem(ctx, eu, {
         chefeMundial: [...(eu.chefeMundial ?? []), { dia }].slice(-DIAS_GUARDADOS),

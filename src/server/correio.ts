@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { diaDeBrasilia } from '@/game/batalhaSangrenta';
 import { CAMPOS_DOS_COLECIONAVEIS, ehCampoDosColecionaveis, LIMITE_DE_MATERIAL_POR_PEDIDO, MAXIMO_DE_MATERIAIS_POR_PEDIDO } from '@/rules/ajustes';
-import { chefeDoDia, faixaDoChefeMundial, presenteDaFaixa } from '@/rules/chefeMundial';
+import { chefeDoDia, FAIXAS_DO_CHEFE_MUNDIAL, faixaDoChefeMundial, presenteDaFaixa } from '@/rules/chefeMundial';
 import { SELOS_DE_BUSCA, type SelosDoJogador } from '@/rules/colecionaveis';
 import {
   MENSAGENS_MAXIMAS,
@@ -21,6 +21,7 @@ import { comTitulos, ehTitulo } from '@/rules/titulos';
 import { alterarSaldoEm, carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { comRegistro, ErroMestre, exigir, type SessaoMestre } from '@/server/mestre';
 import { repositorio, type ContextoTransacao } from '@/server/persistencia';
+import { comLimiteSilencioso } from '@/server/sancoes';
 
 /**
  * Correio: as mensagens com presentes. As do jogador ficam no personagem; as para todos, em correioGeral (lidas com um
@@ -90,11 +91,14 @@ export async function mandarRecompensasDoChefeMundial(uid: string, agora = new D
   const hoje = diaDeBrasilia(agora);
   const pendentes = (char?.chefeMundial ?? []).filter((p) => !p.enviada && p.dia < hoje);
   if (!char || !pendentes.length) return;
+  // Limite silencioso (6.5-7): a recompensa é a da última faixa, sem aviso
+  const oculto = await comLimiteSilencioso(uid);
   const resultados = await Promise.all(
     pendentes.map(async (p) => {
-      const entrada = await repositorio.lerEntradaChefeMundial(p.dia, uid);
+      const entrada = (oculto ? await repositorio.lerEntradaChefeMundial(p.dia, uid, true) : null) ?? (await repositorio.lerEntradaChefeMundial(p.dia, uid));
       if (!entrada) return { dia: p.dia, mensagem: null };
-      const posicao = (await repositorio.contarAcimaNoChefeMundial(p.dia, entrada.dano)) + 1;
+      const contada = (await repositorio.contarAcimaNoChefeMundial(p.dia, entrada.dano)) + 1;
+      const posicao = oculto ? Math.max(contada, FAIXAS_DO_CHEFE_MUNDIAL[FAIXAS_DO_CHEFE_MUNDIAL.length - 1].de) : contada;
       const faixa = faixaDoChefeMundial(posicao);
       const [ano, mes, d] = p.dia.split('-');
       return {
