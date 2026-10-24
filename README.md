@@ -35,6 +35,7 @@ O servidor é a fonte da verdade para o estado e as mecânicas; o navegador apen
 │   ├── test/                  # Só para o Vitest: mocks do Firebase Admin e repositório em memória
 │   └── theme/                 # Tema visual
 ├── docs/MODELO_DE_AMEACAS.md   # Ameaças, o que já as cobre e o que falta (roadmap 6.5)
+├── docs/SEGREDOS_E_CUSTOS.md   # Inventário de segredos, teto de instâncias e alerta de orçamento
 ├── firebase-applet-config.json # Configuração pública do app Firebase
 ├── firebase-blueprint.json     # Esquema das coleções
 └── firestore.rules             # Regras de segurança do Firestore

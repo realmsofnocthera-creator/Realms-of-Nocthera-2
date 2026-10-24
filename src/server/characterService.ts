@@ -146,6 +146,7 @@ import {
 import { CATEGORIAS_ARMA_MAP } from '@/rules/armas';
 import { somarDiario, type CheckinDoJogador, type DiarioDoJogador, type ProgressoDeMissoes } from '@/rules/diario';
 import type { RitmoDoJogador } from '@/rules/integridade';
+import { MENSAGEM_DE_NOME_PROIBIDO, MENSAGEM_DE_TEXTO_PROIBIDO, temOfensa } from '@/rules/nomesProibidos';
 import { cadastrarNaRede } from '@/server/integridade';
 import { semanaDe } from '@/rules/chefeSemanal';
 import { conquistasEmDestaque, somarEstatisticas, type ConquistasDoJogador, type EstatisticasDoJogador } from '@/rules/conquistas';
@@ -773,6 +774,8 @@ export async function createCharacter(
   if (nomeLimpo.length < 2 || nomeLimpo.length > 32) {
     throw new Error('O nome do personagem deve ter entre 2 e 32 caracteres.');
   }
+  // Filtro de ofensas pesadas (6.5-13)
+  if (temOfensa(nomeLimpo)) throw new Error(MENSAGEM_DE_NOME_PROIBIDO);
 
   // Checagem antecipada (mantém a ordem das mensagens); a garantia vem da transação abaixo
   const donoDoNome = await repositorio.lerDonoDoNome(chaveDoNome(nomeLimpo));
@@ -991,6 +994,7 @@ export async function updateCharacterSobre(
   if (sobreNormalizado.length > 150) {
     throw new Error('O campo "Sobre" deve ter no máximo 150 caracteres.');
   }
+  if (temOfensa(sobreNormalizado)) throw new Error(MENSAGEM_DE_TEXTO_PROIBIDO);
 
   return repositorio.executarTransacao('atualizarSobre', async (ctx) => {
     const current = await carregarPersonagem(ctx, uid);
