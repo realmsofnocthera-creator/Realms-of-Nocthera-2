@@ -1,4 +1,5 @@
 import { incursaoDoDocumento, type IncursaoDaGuilda } from './incursao';
+import { MENSAGEM_DE_NOME_PROIBIDO, MENSAGEM_DE_TEXTO_PROIBIDO, temOfensa } from './nomesProibidos';
 import { pesquisaDoDocumento, type PesquisaDaGuilda } from './pesquisa';
 
 /**
@@ -175,6 +176,7 @@ export function validarNomeDaGuilda(bruto: unknown): { ok: true; nome: string } 
     return { ok: false, erro: `O nome da guilda deve ter entre ${NOME_MINIMO_DA_GUILDA} e ${NOME_MAXIMO_DA_GUILDA} caracteres.` };
   }
   if (!NOME_PERMITIDO.test(nome)) return { ok: false, erro: 'Use só letras, números, espaço, hífen e apóstrofo no nome da guilda.' };
+  if (temOfensa(nome)) return { ok: false, erro: MENSAGEM_DE_NOME_PROIBIDO };
   return { ok: true, nome };
 }
 
@@ -183,6 +185,7 @@ export function validarDescricaoDaGuilda(bruto: unknown): { ok: true; descricao:
   if (typeof bruto !== 'string') return { ok: false, erro: 'A descrição deve ser um texto.' };
   const descricao = bruto.trim();
   if (descricao.length > DESCRICAO_MAXIMA_DA_GUILDA) return { ok: false, erro: `A descrição deve ter no máximo ${DESCRICAO_MAXIMA_DA_GUILDA} caracteres.` };
+  if (temOfensa(descricao)) return { ok: false, erro: MENSAGEM_DE_TEXTO_PROIBIDO };
   return { ok: true, descricao };
 }
 

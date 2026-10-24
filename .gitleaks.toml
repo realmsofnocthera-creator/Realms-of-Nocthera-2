@@ -1,0 +1,7 @@
+# 6.5-14: busca de segredos no CI. Usa as regras padrão do gitleaks.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Configuração pública do app Firebase (a apiKey da web é pública por desenho; a proteção vem das regras do Firestore)"
+paths = ['''firebase-applet-config\.json''']
