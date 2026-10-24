@@ -8,6 +8,22 @@ export interface AuthenticatedUser {
   email: string;
   /** Quando o login foi feito (auth_time, em segundos). O painel do Mestre só aceita logins recentes (3.5.1.3). */
   loginEm: number;
+  /** O e-mail do login foi confirmado (email_verified do Firebase). Obrigatório para o comércio (6.5-6). */
+  emailVerificado: boolean;
+}
+
+/** Erro de quem tenta uma ação que pede e-mail confirmado (6.5-6). As rotas respondem 403. */
+export class ErroEmailNaoVerificado extends Error {
+  readonly status = 403;
+  constructor() {
+    super('Confirme o seu e-mail para usar o comércio. Procure a mensagem de confirmação na sua caixa de entrada.');
+    this.name = 'ErroEmailNaoVerificado';
+  }
+}
+
+/** Para as ações de comércio entre jogadores (6.5-6): só com o e-mail confirmado. */
+export function exigirEmailVerificado(user: Pick<AuthenticatedUser, 'emailVerificado'>): void {
+  if (!user.emailVerificado) throw new ErroEmailNaoVerificado();
 }
 
 /**
@@ -70,7 +86,7 @@ export async function verifyAuthToken(authHeader: string | null): Promise<Authen
     return null;
   }
 
-  let decoded: { uid: string; email?: string; auth_time?: number };
+  let decoded: { uid: string; email?: string; auth_time?: number; email_verified?: boolean };
   try {
     decoded = await adminAuth.verifyIdToken(idToken);
   } catch {
@@ -89,7 +105,7 @@ export async function verifyAuthToken(authHeader: string | null): Promise<Authen
   // Manutenção (3.5.5.2): lança ErroManutencao (503) para quem não tem papel no painel
   await exigirJogoAberto(decoded.uid);
 
-  return { uid: decoded.uid, email: decoded.email || '', loginEm };
+  return { uid: decoded.uid, email: decoded.email || '', loginEm, emailVerificado: decoded.email_verified === true };
 }
 
 /**

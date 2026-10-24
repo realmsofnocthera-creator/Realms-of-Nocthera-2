@@ -29,6 +29,7 @@ O servidor é a fonte da verdade para o estado e as mecânicas; o navegador apen
 │   │   ├── persistencia/      # Repositório Firestore (transações, timeout, retry de leitura)
 │   │   ├── rateLimit.ts       # Limite por IP e por conta com bloqueio progressivo (429)
 │   │   ├── extrato.ts         # Ledger: saldo antes e depois, cartas e emblemas, conferência com o saldo
+│   │   ├── integridade.ts     # Ritmo por hora, sinais da fila de revisão e limite de contas por rede
 │   │   ├── log.ts             # Log estruturado em JSON
 │   │   └── combateSemente.ts  # Semente do combate gerada no servidor
 │   ├── test/                  # Só para o Vitest: mocks do Firebase Admin e repositório em memória
@@ -49,6 +50,8 @@ O servidor é a fonte da verdade para o estado e as mecânicas; o navegador apen
 | `nomes/{chave}` | índice de nome único do personagem | só o servidor |
 | `combates/{uid}__{id}` | semente, entrada e resultado de cada combate | só o servidor |
 | `revogacoes/{uid}` | instante do último logout no servidor (tokens de logins anteriores são recusados) | só o servidor |
+| `revisao/{id}` | fila de revisão do Painel do Mestre: sinais de anomalia por jogador (6.5-4) | só o servidor |
+| `cadastrosDaRede/{marca}` | contas criadas na mesma rede nas últimas 24 horas, pela marca curta do IP (6.5-6) | só o servidor |
 
 ## Desenvolvimento
 

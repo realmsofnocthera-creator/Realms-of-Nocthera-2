@@ -10,6 +10,8 @@ import type { EntradaDoChefeSemanal } from '@/rules/chefeSemanal';
 import type { PartyDocumento } from '@/rules/testeEquipe';
 import type { EntradaDoChefeMundial } from '@/rules/chefeMundial';
 import type { MensagemGeral } from '@/rules/correio';
+import type { EntradaDeRevisao } from '@/rules/integridade';
+import type { CadastrosDaRede } from '@/server/integridade';
 
 /**
  * Registro de um combate resolvido (0.5-B1/B3): guarda a semente e a entrada para
@@ -132,6 +134,9 @@ export interface ContextoTransacao {
   gravarEntradaChefeMundial(entrada: EntradaDoChefeMundial): void;
   /** Correio: uma mensagem para todos (para resgatar o presente dela). */
   lerMensagemGeral(id: string): Promise<MensagemGeral | null>;
+  /** Contas criadas numa rede nas últimas 24 horas (6.5-6). */
+  lerCadastrosDaRede(marca: string): Promise<CadastrosDaRede | null>;
+  gravarCadastrosDaRede(c: CadastrosDaRede): void;
 }
 
 /** Papel de Mestre concedido pelo painel (o Dono vem do ambiente e não é gravado aqui). */
@@ -288,6 +293,12 @@ export interface Repositorio {
   /** Correio: as mensagens para todos criadas a partir de `desde` (ISO), das mais novas para as mais antigas. */
   listarMensagensGerais(desde: string, limite: number): Promise<MensagemGeral[]>;
   gravarMensagemGeral(mensagem: MensagemGeral): Promise<void>;
+  /** Fila de revisão (6.5-4): as entradas ainda não revisadas, das mais novas para as mais antigas. */
+  listarRevisoesPendentes(limite: number): Promise<EntradaDeRevisao[]>;
+  /** Grava uma entrada fora de transação (ex.: a conta barrada pelo limite da rede). */
+  gravarRevisao(entrada: EntradaDeRevisao): Promise<void>;
+  /** Marca as entradas como revisadas; devolve quantas existiam. */
+  marcarRevisoes(ids: readonly string[], por: string, em: string): Promise<number>;
 }
 
 /**

@@ -145,6 +145,8 @@ import {
 } from '@/rules/maestrias';
 import { CATEGORIAS_ARMA_MAP } from '@/rules/armas';
 import { somarDiario, type CheckinDoJogador, type DiarioDoJogador, type ProgressoDeMissoes } from '@/rules/diario';
+import type { RitmoDoJogador } from '@/rules/integridade';
+import { cadastrarNaRede } from '@/server/integridade';
 import { semanaDe } from '@/rules/chefeSemanal';
 import { conquistasEmDestaque, somarEstatisticas, type ConquistasDoJogador, type EstatisticasDoJogador } from '@/rules/conquistas';
 import { TITULO_MAP } from '@/rules/titulos';
@@ -270,6 +272,8 @@ export interface CharacterDocument {
   /** Missões diárias e semanais (contadores e baús) e o Check-in de 30 dias. */
   diario?: DiarioDoJogador;
   checkin?: CheckinDoJogador;
+  /** Integridade (6.5-4): as contas da hora corrente e os instantes das últimas ações, para a fila de revisão. */
+  ritmo?: RitmoDoJogador;
   /** Feiticeiro (1.5.2): o elemento escolhido, usado nas habilidades da classe que não têm elemento próprio. */
   elementoDaClasse?: Elemento;
   /** Conquistas: os totais contados (vitórias, forjas…), os degraus já resgatados, os títulos e o título escolhido. */
@@ -752,7 +756,8 @@ function toPublicCharacterProfile(char: CharacterDocument): PublicCharacterProfi
  */
 export async function createCharacter(
   uid: string,
-  input: CreateCharacterInput
+  input: CreateCharacterInput,
+  opcoes: { rede?: string | null; agora?: Date } = {}
 ): Promise<CharacterDocument> {
   const existing = await getCharacterByUid(uid);
   if (existing) {
@@ -922,6 +927,8 @@ export async function createCharacter(
     if (dono && dono !== uid) {
       throw new Error('Esse nome já está em uso.');
     }
+    // Limite de contas novas por rede (6.5-6): lança ErroDeMulticonta na 4ª em 24 horas
+    if (opcoes.rede) ctx.gravarCadastrosDaRede(cadastrarNaRede(await ctx.lerCadastrosDaRede(opcoes.rede), opcoes.rede, uid, opcoes.agora ?? new Date()));
     ctx.reservarNome(chaveNome, uid, nomeLimpo);
     ctx.gravarPersonagem(character);
     return character;

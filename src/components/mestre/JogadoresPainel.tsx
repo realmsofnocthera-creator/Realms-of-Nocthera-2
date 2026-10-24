@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Search, ShieldAlert } from 'lucide-react';
 import { ACOES_DE_SANCAO, DIAS_MAXIMOS_DE_SUSPENSAO, DIAS_MINIMOS_DE_SUSPENSAO, NOME_DA_ACAO, type AcaoDeSancao } from '@/rules/sancoes';
 import { CAMPOS_DE_AJUSTE, NOME_DO_CAMPO, type CampoDeAjuste } from '@/rules/ajustes';
 import { NOME_DO_PAPEL } from '@/rules/mestre';
+import { NOME_DO_SINAL, type EntradaDeRevisao } from '@/rules/integridade';
 import { dataDoLog } from '@/lib/mestreTela';
 import { descreverTransacao, saldoDaTransacao, situacaoDaConta } from '@/lib/jogadoresTela';
 import type { FichaDoJogador } from '@/server/jogadores';
@@ -33,11 +34,11 @@ export function JogadoresPainel({ sessao, tokenFresco }: { sessao: SessaoDoPaine
   const campo = 'rounded-sm border px-2 py-1 text-[12px] w-full';
   const estiloCampo = { backgroundColor: colors.background.primary, borderColor: `${OURO}66`, color: colors.text.primary };
 
-  const procurar = async () => {
+  const procurar = async (termo = busca) => {
     setOcupado(true);
     setErro(null);
     setAviso(null);
-    const r = await chamar(tokenFresco, `/api/mestre/jogadores?busca=${encodeURIComponent(busca.trim())}`);
+    const r = await chamar(tokenFresco, `/api/mestre/jogadores?busca=${encodeURIComponent(termo.trim())}`);
     setOcupado(false);
     if (r.ok) setFicha(r.dados.jogador as FichaDoJogador);
     else {
@@ -48,6 +49,14 @@ export function JogadoresPainel({ sessao, tokenFresco }: { sessao: SessaoDoPaine
 
   return (
     <div className="flex flex-col gap-3">
+      <FilaDeRevisao
+        tokenFresco={tokenFresco}
+        podeMarcar={podeSancionar}
+        abrir={(uid) => {
+          setBusca(uid);
+          void procurar(uid);
+        }}
+      />
       <Cartao titulo="Buscar jogador">
         <form
           className="flex gap-2 items-end"
@@ -384,6 +393,64 @@ function Ajustes({ ajustar }: { ajustar: (corpo: Record<string, unknown>) => Pro
         </button>
         {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
       </form>
+    </Cartao>
+  );
+}
+
+/**
+ * Fila de revisão (6.5-4): os sinais de anomalia (ritmo, ouro e níveis por hora, contas na mesma rede, extrato sem
+ * registro) que ainda não foram revisados. Um sinal não pune ninguém: o Mestre abre a ficha e decide.
+ */
+function FilaDeRevisao({ tokenFresco, podeMarcar, abrir }: { tokenFresco: Token; podeMarcar: boolean; abrir: (uid: string) => void }) {
+  const { colors } = NOCTHERA_THEME;
+  const [fila, setFila] = useState<EntradaDeRevisao[] | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const carregar = useCallback(async () => {
+    const r = await chamar(tokenFresco, '/api/mestre/revisao');
+    if (r.ok) {
+      setFila(r.dados.fila as EntradaDeRevisao[]);
+      setErro(null);
+    } else setErro(String(r.dados.error ?? 'Não foi possível carregar a fila.'));
+  }, [tokenFresco]);
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+  const marcar = async (ids: string[]) => {
+    const r = await chamar(tokenFresco, '/api/mestre/revisao', { method: 'POST', body: JSON.stringify({ ids }) });
+    if (r.ok) setFila(r.dados.fila as EntradaDeRevisao[]);
+    else setErro(String(r.dados.error ?? 'Não foi possível marcar.'));
+  };
+  const botao = 'px-2 py-0.5 rounded-sm border text-[11px] font-semibold';
+  return (
+    <Cartao titulo={`Fila de revisão${fila?.length ? ` (${fila.length})` : ''}`}>
+      {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
+      {fila === null && !erro && <p className="text-[12px]" style={{ color: colors.text.secondary }}>Carregando…</p>}
+      {fila?.length === 0 && <p className="text-[12px]" style={{ color: colors.text.secondary }}>Nenhum sinal para revisar.</p>}
+      {!!fila?.length && (
+        <ul className="flex flex-col gap-2">
+          {fila.map((e) => (
+            <li key={e.id} className="text-[12px] flex flex-col gap-0.5 border-b pb-1.5" style={{ borderColor: `${OURO}33` }}>
+              <span className="font-semibold" style={{ color: e.tipo === 'extratoSemRegistro' ? VERMELHO : '#E6C775' }}>{NOME_DO_SINAL[e.tipo]}</span>
+              <span>
+                {e.nome} <span style={{ color: colors.text.secondary }}>({e.uid})</span> · <span style={{ color: colors.text.secondary }}>{dataDoLog(e.criadaEm)}</span>
+              </span>
+              <span style={{ color: colors.text.secondary }}>{e.descricao}</span>
+              {!!e.contasDaRede?.length && <span style={{ color: colors.text.secondary }}>Contas da mesma rede: {e.contasDaRede.join(', ')}</span>}
+              <span className="flex gap-2 mt-0.5">
+                <button type="button" className={botao} style={{ borderColor: `${OURO}66`, color: colors.text.primary }} onClick={() => abrir(e.uid)}>
+                  Abrir ficha
+                </button>
+                {podeMarcar && (
+                  <button type="button" className={botao} style={{ borderColor: `${OURO}66`, color: colors.text.primary }} onClick={() => void marcar([e.id])}>
+                    Revisado
+                  </button>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="text-[11px]" style={{ color: colors.text.secondary }}>Um sinal não pune ninguém: abra a ficha, confira o extrato e decida. Os tetos são iniciais e serão calibrados no beta.</p>
     </Cartao>
   );
 }

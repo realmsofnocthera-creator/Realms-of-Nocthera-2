@@ -105,10 +105,17 @@ const REGRAS: Record<GrupoLimite, { porIp: RegraLimite; porConta: RegraLimite }>
 
 const limitador = criarLimitador();
 
+/**
+ * O IP de quem fez a requisição. No Cloud Run, a borda do Google acrescenta o IP de quem conectou no FIM do
+ * X-Forwarded-For; o que vem antes é o que o cliente mandou e pode ser inventado (6.5-5). Por isso vale o último.
+ * Hoje o jogo é servido direto pelo Cloud Run (*.run.app). Se um dia entrar outro proxy na frente (Cloudflare, um
+ * balanceador de carga), o último passa a ser o IP dele: rever esta função antes de ligar o proxy.
+ */
 export function ipDaRequisicao(req: NextRequest): string {
   const encaminhado = req.headers.get('x-forwarded-for');
   if (encaminhado) {
-    return encaminhado.split(',')[0].trim() || 'desconhecido';
+    const partes = encaminhado.split(',').map((p) => p.trim()).filter(Boolean);
+    return partes.at(-1) || 'desconhecido';
   }
   return req.headers.get('x-real-ip') || 'desconhecido';
 }

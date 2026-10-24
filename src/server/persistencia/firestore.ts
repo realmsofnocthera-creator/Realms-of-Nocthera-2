@@ -11,6 +11,7 @@ import type { Attributes } from '@/rules/attributes';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import { descreverErro, registrarLog } from '@/server/log';
 import { fecharExtrato, tratarDivergencias } from '@/server/extrato';
+import { cadastrosDaRedeDoDocumento, observarJogadores, type CadastrosDaRede } from '@/server/integridade';
 import { ehPapelMestre } from '@/rules/mestre';
 import { ehTipoDeConteudo } from '@/rules/conteudo';
 import type { ProgressoDaCampanha } from '@/game/campanha';
@@ -26,6 +27,7 @@ import { maestriasDoDocumento } from '@/rules/maestrias';
 import { conquistasDoDocumento, estatisticasDoDocumento } from '@/rules/conquistas';
 import { ehTitulo, titulosDoDocumento } from '@/rules/titulos';
 import { checkinDoDocumento, diarioDoDocumento } from '@/rules/diario';
+import { revisaoDoDocumento, ritmoDoDocumento, type EntradaDeRevisao } from '@/rules/integridade';
 import { ELEMENTOS, type Elemento } from '@/rules/elements';
 import { correioGeralDoDocumento, mensagemDoDocumento, mensagensDoDocumento, type MensagemGeral } from '@/rules/correio';
 import { entradaMundialDoDocumento, participacoesMundiaisDoDocumento, type EntradaDoChefeMundial } from '@/rules/chefeMundial';
@@ -410,6 +412,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(typeof data.elementoDaClasse === 'string' && (ELEMENTOS as readonly string[]).includes(data.elementoDaClasse) ? { elementoDaClasse: data.elementoDaClasse as Elemento } : {}),
     ...(diarioDoDocumento(data.diario) ? { diario: diarioDoDocumento(data.diario) } : {}),
     ...(checkinDoDocumento(data.checkin) ? { checkin: checkinDoDocumento(data.checkin) } : {}),
+    ...(ritmoDoDocumento(data.ritmo) ? { ritmo: ritmoDoDocumento(data.ritmo) } : {}),
     ...(estatisticasDoDocumento(data.estatisticas) ? { estatisticas: estatisticasDoDocumento(data.estatisticas) } : {}),
     ...(conquistasDoDocumento(data.conquistas) ? { conquistas: conquistasDoDocumento(data.conquistas) } : {}),
     ...(titulosDoDocumento(data.titulos) ? { titulos: titulosDoDocumento(data.titulos) } : {}),
@@ -497,6 +500,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.elementoDaClasse ? { elementoDaClasse: char.elementoDaClasse } : {}),
     ...(char.diario ? { diario: semUndefined(char.diario) } : {}),
     ...(char.checkin ? { checkin: char.checkin } : {}),
+    ...(char.ritmo ? { ritmo: semUndefined(char.ritmo) } : {}),
     ...(char.estatisticas && Object.keys(char.estatisticas).length ? { estatisticas: semUndefined(char.estatisticas) } : {}),
     ...(char.conquistas && Object.keys(char.conquistas).length ? { conquistas: char.conquistas } : {}),
     ...(char.titulos?.length ? { titulos: char.titulos } : {}),
@@ -549,6 +553,7 @@ class ContextoFirestore implements ContextoTransacao {
   private personagens = new Map<string, CharacterDocument>();
   /** Como cada personagem estava no banco antes desta transação (para fechar o extrato, 6.5-3). */
   private lidos = new Map<string, CharacterDocument | null>();
+  private cadastrosDaRede = new Map<string, CadastrosDaRede>();
   private nomes = new Map<string, { uid: string; nome: string }>();
   private transacoes: TransactionDocument[] = [];
   private combates = new Map<string, RegistroCombate>();
@@ -629,6 +634,17 @@ class ContextoFirestore implements ContextoTransacao {
     return snap.exists ? mensagemDoDocumento(snap.data()) : null;
   }
 
+  async lerCadastrosDaRede(marca: string): Promise<CadastrosDaRede | null> {
+    const pendente = this.cadastrosDaRede.get(marca);
+    if (pendente) return structuredClone(pendente);
+    const snap = await this.tx.get(this.db.collection('cadastrosDaRede').doc(marca));
+    return snap.exists ? cadastrosDaRedeDoDocumento(marca, snap.data()) : null;
+  }
+
+  gravarCadastrosDaRede(c: CadastrosDaRede): void {
+    this.cadastrosDaRede.set(c.marca, structuredClone(c));
+  }
+
   async lerParty(id: string): Promise<PartyDocumento | null> {
     if (this.partys.has(id)) {
       const pendente = this.partys.get(id);
@@ -686,6 +702,9 @@ class ContextoFirestore implements ContextoTransacao {
   aplicar(operacao: string): void {
     const extrato = fecharExtrato(operacao, this.lidos, this.personagens, this.transacoes);
     tratarDivergencias(operacao, extrato.divergencias);
+    const revisoes = observarJogadores(operacao, this.lidos, this.personagens, extrato.transacoes, extrato.divergencias);
+    for (const r of revisoes) this.tx.set(this.db.collection('revisao').doc(r.id), semUndefined(r));
+    for (const c of this.cadastrosDaRede.values()) this.tx.set(this.db.collection('cadastrosDaRede').doc(c.marca), { contas: c.contas });
     for (const [uid, personagem] of this.personagens) {
       this.tx.set(this.db.collection('characters').doc(uid), personagemParaFirestore(personagem));
     }
@@ -866,6 +885,34 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
 
     async gravarMensagemGeral(mensagem: MensagemGeral) {
       await gravarSimples(`gravarMensagemGeral:${mensagem.id}`, () => db.collection('correioGeral').doc(mensagem.id).set(semUndefined(mensagem)));
+    },
+
+    async listarRevisoesPendentes(limite: number) {
+      return lerComRetry('listarRevisoesPendentes', async () => {
+        // sem orderBy: ordenar no banco pediria um índice composto; a fila é pequena
+        const snap = await db.collection('revisao').where('revisada', '==', false).get();
+        return snap.docs
+          .map((d) => revisaoDoDocumento(d.id, d.data()))
+          .filter((r): r is EntradaDeRevisao => r !== null)
+          .sort((a, b) => b.criadaEm.localeCompare(a.criadaEm))
+          .slice(0, limite);
+      });
+    },
+
+    async gravarRevisao(entrada: EntradaDeRevisao) {
+      await gravarSimples(`gravarRevisao:${entrada.id}`, () => db.collection('revisao').doc(entrada.id).set(semUndefined(entrada)));
+    },
+
+    async marcarRevisoes(ids: readonly string[], por: string, em: string) {
+      let n = 0;
+      for (const id of ids) {
+        const ref = db.collection('revisao').doc(id);
+        const snap = await lerComRetry(`lerRevisao:${id}`, () => ref.get());
+        if (!snap.exists) continue;
+        await gravarSimples(`marcarRevisao:${id}`, () => ref.set({ revisada: true, revisadaPor: por, revisadaEm: em }, { merge: true }));
+        n++;
+      }
+      return n;
     },
 
     async listarGuildas(limite: number) {
