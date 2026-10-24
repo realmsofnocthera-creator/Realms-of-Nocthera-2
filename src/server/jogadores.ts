@@ -17,6 +17,7 @@ import { CAMPOS_DOS_COLECIONAVEIS, ehCampoDeAjuste, ehCampoDosColecionaveis, LIM
 import { MATERIAIS_MAP } from '@/rules/materiais';
 import { MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
 import { adminAuth } from '@/server/firebaseAdmin';
+import { conferirExtrato, type ConferenciaDoExtrato } from '@/server/extrato';
 import { registrarLog } from '@/server/log';
 import { comRegistro, donosDoAmbiente, ErroMestre, exigir, motivoValido, papelDoUsuario, type SessaoMestre } from '@/server/mestre';
 import { repositorio } from '@/server/persistencia';
@@ -72,6 +73,8 @@ export interface FichaDoJogador {
   advertencias: Advertencia[];
   papelNoPainel: PapelMestre | null;
   transacoes: TransactionDocument[];
+  /** A conferência das transações recentes com o saldo de agora (6.5-3). */
+  conferenciaDoExtrato: ConferenciaDoExtrato;
 }
 
 export function resumoDoPersonagem(c: CharacterDocument): ResumoDoPersonagem {
@@ -149,6 +152,7 @@ async function montarFicha(uid: string): Promise<FichaDoJogador> {
     advertencias: sancaoDoc?.advertencias ?? [],
     papelNoPainel: papel?.papel ?? null,
     transacoes,
+    conferenciaDoExtrato: conferirExtrato(personagem, transacoes),
   };
 }
 

@@ -11,12 +11,20 @@ const NOME_DA_MOEDA: Readonly<Record<string, string>> = {
   essenciaHabilidade: 'essência de habilidade',
   fragmentosAscensao: 'fragmentos de ascensão',
   essenciaDeSoberano: 'Essência de Soberano',
+  cartas: 'cartas da Alma',
+  emblemas: 'emblemas',
 };
 
 /** "+250 ouro" ou "−3 Diamantes". */
 export function descreverTransacao(t: Pick<TransactionDocument, 'tipo' | 'quantidade' | 'moeda'>): string {
   const sinal = t.tipo === 'ganho' ? '+' : '−';
   return `${sinal}${t.quantidade.toLocaleString('pt-BR')} ${NOME_DA_MOEDA[t.moeda ?? 'ouro'] ?? t.moeda}`;
+}
+
+/** "saldo 1.250 → 1.500" (só nas linhas que guardam o saldo, 6.5-3). */
+export function saldoDaTransacao(t: Pick<TransactionDocument, 'saldoAntes' | 'saldoDepois'>): string | null {
+  if (typeof t.saldoAntes !== 'number' || typeof t.saldoDepois !== 'number') return null;
+  return `saldo ${t.saldoAntes.toLocaleString('pt-BR')} → ${t.saldoDepois.toLocaleString('pt-BR')}`;
 }
 
 /** A situação da conta numa frase curta, com a cor de aviso: livre, suspensa (com o prazo) ou banida. */

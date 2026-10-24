@@ -6,7 +6,7 @@ import { ACOES_DE_SANCAO, DIAS_MAXIMOS_DE_SUSPENSAO, DIAS_MINIMOS_DE_SUSPENSAO, 
 import { CAMPOS_DE_AJUSTE, NOME_DO_CAMPO, type CampoDeAjuste } from '@/rules/ajustes';
 import { NOME_DO_PAPEL } from '@/rules/mestre';
 import { dataDoLog } from '@/lib/mestreTela';
-import { descreverTransacao, situacaoDaConta } from '@/lib/jogadoresTela';
+import { descreverTransacao, saldoDaTransacao, situacaoDaConta } from '@/lib/jogadoresTela';
 import type { FichaDoJogador } from '@/server/jogadores';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { Cartao, chamar, OURO, VERMELHO } from '@/components/mestre/comum';
@@ -388,10 +388,31 @@ function Ajustes({ ajustar }: { ajustar: (corpo: Record<string, unknown>) => Pro
   );
 }
 
+/** Conferência do extrato com o saldo (6.5-3): confere ou lista o que não bate. */
+function ConferenciaDoExtratoNaTela({ ficha }: { ficha: FichaDoJogador }) {
+  const { colors } = NOCTHERA_THEME;
+  const c = ficha.conferenciaDoExtrato;
+  if (!c || c.linhasConferidas === 0) return null;
+  if (c.confere)
+    return <p className="text-[12px] mb-2" style={{ color: '#7BC47F' }}>Extrato confere com o saldo ({c.linhasConferidas} linhas conferidas).</p>;
+  return (
+    <div role="alert" className="text-[12px] mb-2 flex flex-col gap-0.5" style={{ color: VERMELHO }}>
+      <span className="font-semibold">O extrato não confere com o saldo.</span>
+      {c.semRegistro > 0 && <span>{c.semRegistro === 1 ? '1 linha foi criada' : `${c.semRegistro} linhas foram criadas`} para acertar moeda mexida sem registro.</span>}
+      {c.problemas.map((p, i) => (
+        <span key={i} style={{ color: colors.text.secondary }}>
+          {p.chave}: {p.descricao}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function Transacoes({ ficha }: { ficha: FichaDoJogador }) {
   const { colors } = NOCTHERA_THEME;
   return (
     <Cartao titulo={`Transações (as ${ficha.transacoes.length} mais recentes)`}>
+      <ConferenciaDoExtratoNaTela ficha={ficha} />
       {ficha.transacoes.length === 0 ? (
         <p className="text-[12px]" style={{ color: colors.text.secondary }}>Nenhuma transação de moeda.</p>
       ) : (
@@ -399,7 +420,8 @@ function Transacoes({ ficha }: { ficha: FichaDoJogador }) {
           {ficha.transacoes.map((t, i) => (
             <li key={t.id ?? i} className="text-[12px] flex flex-col md:flex-row md:gap-2">
               <span className="font-semibold" style={{ color: t.tipo === 'ganho' ? '#7BC47F' : VERMELHO }}>{descreverTransacao(t)}</span>
-              <span>{t.motivo}</span>
+              <span style={t.semRegistro ? { color: VERMELHO, fontWeight: 600 } : undefined}>{t.motivo}</span>
+              {saldoDaTransacao(t) && <span className="text-[10px]" style={{ color: colors.text.secondary }}>{saldoDaTransacao(t)}</span>}
               <span className="text-[10px] md:ml-auto" style={{ color: colors.text.secondary }}>{dataDoLog(t.timestamp)}</span>
             </li>
           ))}

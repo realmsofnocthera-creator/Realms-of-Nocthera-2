@@ -6,6 +6,7 @@
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
+import { fecharExtrato, tratarDivergencias } from '@/server/extrato';
 import type { SancaoDocumento } from '@/rules/sancoes';
 import { chaveDeBusca, type CampoDoRanking, type CriterioDeRanking, type RankingGuardado, type ResumoDePersonagem } from '@/rules/social';
 import type { ConfiguracaoDeSistemas } from '@/rules/sistemas';
@@ -116,6 +117,8 @@ const transacaoAtiva = new AsyncLocalStorage<string>();
 
 class ContextoMemoria implements ContextoTransacao {
   personagens = new Map<string, CharacterDocument>();
+  /** Como cada personagem estava no banco antes desta transação (para fechar o extrato). */
+  lidos = new Map<string, CharacterDocument | null>();
   nomes = new Map<string, { uid: string; nome: string }>();
   transacoes: TransactionDocument[] = [];
   combates = new Map<string, RegistroCombate>();
@@ -126,6 +129,10 @@ class ContextoMemoria implements ContextoTransacao {
   chefeMundial = new Map<string, EntradaDoChefeMundial>();
 
   async lerPersonagem(uid: string) {
+    if (!this.lidos.has(uid)) {
+      const doBanco = estado.personagens.get(uid);
+      this.lidos.set(uid, doBanco ? structuredClone(doBanco) : null);
+    }
     const valor = this.personagens.get(uid) ?? estado.personagens.get(uid);
     return valor ? structuredClone(valor) : null;
   }
@@ -213,6 +220,8 @@ export const repositorio: Repositorio = {
       transacaoAtiva.run(operacao, async () => {
         const ctx = new ContextoMemoria();
         const valor = await fn(ctx);
+        const extrato = fecharExtrato(operacao, ctx.lidos, ctx.personagens, ctx.transacoes);
+        tratarDivergencias(operacao, extrato.divergencias);
         // Ponto em que o Firestore faria o commit: uma falha aqui não aplica nada
         falhaAoGravar?.(operacao);
         for (const [uid, p] of ctx.personagens) estado.personagens.set(uid, p);
@@ -223,7 +232,7 @@ export const repositorio: Repositorio = {
         for (const [k, e] of ctx.chefeMundial) estado.chefeMundial.set(k, e);
         for (const [id, pt] of ctx.partys) (pt ? estado.partys.set(id, pt) : estado.partys.delete(id));
         for (const [chave, n] of ctx.nomesDeGuilda) (n ? estado.nomesDeGuilda.set(chave, n) : estado.nomesDeGuilda.delete(chave));
-        estado.transacoes.push(...ctx.transacoes);
+        estado.transacoes.push(...extrato.transacoes);
         return valor;
       })
     );
@@ -338,7 +347,7 @@ export const repositorio: Repositorio = {
     return estado.transacoes
       .filter((t) => t.uid === uid)
       .map((t) => ({ ...t }))
-      .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+      .sort((a, b) => b.timestamp.localeCompare(a.timestamp) || (b.ordem ?? 0) - (a.ordem ?? 0))
       .slice(0, limite);
   },
 

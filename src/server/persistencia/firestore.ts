@@ -10,6 +10,7 @@ import { lerCartasPersonagem } from '@/rules/almas';
 import type { Attributes } from '@/rules/attributes';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import { descreverErro, registrarLog } from '@/server/log';
+import { fecharExtrato, tratarDivergencias } from '@/server/extrato';
 import { ehPapelMestre } from '@/rules/mestre';
 import { ehTipoDeConteudo } from '@/rules/conteudo';
 import type { ProgressoDaCampanha } from '@/game/campanha';
@@ -525,6 +526,12 @@ function transacaoParaFirestore(tx: TransactionDocument): DocumentData {
     moeda: tx.moeda || 'ouro',
     motivo: tx.motivo,
     timestamp: tx.timestamp,
+    ...(tx.chave ? { chave: tx.chave } : {}),
+    ...(typeof tx.saldoAntes === 'number' ? { saldoAntes: tx.saldoAntes } : {}),
+    ...(typeof tx.saldoDepois === 'number' ? { saldoDepois: tx.saldoDepois } : {}),
+    ...(tx.operacao ? { operacao: tx.operacao } : {}),
+    ...(typeof tx.ordem === 'number' ? { ordem: tx.ordem } : {}),
+    ...(tx.semRegistro ? { semRegistro: true } : {}),
   };
 }
 
@@ -540,6 +547,8 @@ export function guildaParaFirestore(g: GuildaDocumento): DocumentData {
 
 class ContextoFirestore implements ContextoTransacao {
   private personagens = new Map<string, CharacterDocument>();
+  /** Como cada personagem estava no banco antes desta transação (para fechar o extrato, 6.5-3). */
+  private lidos = new Map<string, CharacterDocument | null>();
   private nomes = new Map<string, { uid: string; nome: string }>();
   private transacoes: TransactionDocument[] = [];
   private combates = new Map<string, RegistroCombate>();
@@ -561,7 +570,9 @@ class ContextoFirestore implements ContextoTransacao {
     if (pendente) return structuredClone(pendente);
     const snap = await this.tx.get(this.db.collection('characters').doc(uid));
     const data = snap.exists ? snap.data() : undefined;
-    return data ? personagemDoFirestore(uid, data) : null;
+    const lido = data ? personagemDoFirestore(uid, data) : null;
+    if (!this.lidos.has(uid)) this.lidos.set(uid, lido ? structuredClone(lido) : null);
+    return lido;
   }
 
   gravarPersonagem(personagem: CharacterDocument): void {
@@ -672,7 +683,9 @@ class ContextoFirestore implements ContextoTransacao {
   }
 
   /** Aplica todas as gravações pendentes na transação (depois de todas as leituras). */
-  aplicar(): void {
+  aplicar(operacao: string): void {
+    const extrato = fecharExtrato(operacao, this.lidos, this.personagens, this.transacoes);
+    tratarDivergencias(operacao, extrato.divergencias);
     for (const [uid, personagem] of this.personagens) {
       this.tx.set(this.db.collection('characters').doc(uid), personagemParaFirestore(personagem));
     }
@@ -683,7 +696,7 @@ class ContextoFirestore implements ContextoTransacao {
         criadoEm: new Date().toISOString(),
       });
     }
-    for (const transacao of this.transacoes) {
+    for (const transacao of extrato.transacoes) {
       const id = transacao.id || `tx_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       this.tx.create(this.db.collection('transactions').doc(id), transacaoParaFirestore(transacao));
     }
@@ -755,7 +768,7 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
             db.runTransaction(async (tx) => {
               const ctx = new ContextoFirestore(db, tx);
               const valor = await fn(ctx);
-              ctx.aplicar();
+              ctx.aplicar(operacao);
               return valor;
             })
           ),
@@ -1095,9 +1108,15 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
               moeda: typeof t.moeda === 'string' ? (t.moeda as TransactionDocument['moeda']) : 'ouro',
               motivo: texto(t.motivo),
               timestamp: texto(t.timestamp),
+              ...(typeof t.chave === 'string' ? { chave: t.chave } : {}),
+              ...(typeof t.saldoAntes === 'number' ? { saldoAntes: t.saldoAntes } : {}),
+              ...(typeof t.saldoDepois === 'number' ? { saldoDepois: t.saldoDepois } : {}),
+              ...(typeof t.operacao === 'string' ? { operacao: t.operacao } : {}),
+              ...(typeof t.ordem === 'number' ? { ordem: t.ordem } : {}),
+              ...(t.semRegistro === true ? { semRegistro: true } : {}),
             };
           })
-          .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+          .sort((a, b) => b.timestamp.localeCompare(a.timestamp) || (b.ordem ?? 0) - (a.ordem ?? 0))
           .slice(0, limite);
       });
     },

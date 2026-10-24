@@ -348,9 +348,22 @@ export interface TransactionDocument {
     | 'fragmentosSubclasse'
     | 'essenciaHabilidade'
     | 'fragmentosAscensao'
-    | 'essenciaDeSoberano';
+    | 'essenciaDeSoberano'
+    /** Cartas da Alma e emblemas (6.5-3): o saldo é a quantidade de itens; o extrato é feito sozinho no fim da transação. */
+    | 'cartas'
+    | 'emblemas';
   motivo: string;
   timestamp: string;
+  /** Fragmentos de subclasse: a subclasse (o saldo é por subclasse). */
+  chave?: string;
+  /** Saldo antes e depois desta linha (6.5-3), preenchidos no fim da transação; não existem nas linhas antigas. */
+  saldoAntes?: number;
+  saldoDepois?: number;
+  /** A transação do banco que gerou a linha (ex.: "diario:checkin") e a ordem dentro dela. */
+  operacao?: string;
+  ordem?: number;
+  /** A moeda mudou sem registro e o fechamento do extrato criou esta linha para acertar (6.5-3): investigar. */
+  semRegistro?: boolean;
 }
 
 /**
@@ -1114,6 +1127,10 @@ export async function zerarProgressaoPorMestre(uid: string, motivo: string): Pro
       const saldo = (corrente[moeda] as number | undefined) ?? 0;
       if (saldo > 0) corrente = alterarSaldoEm(ctx, corrente, moeda, -saldo, motivo).character;
     }
+    for (const [subclasseId, saldo] of Object.entries(atual.fragmentosSubclasse ?? {})) {
+      if (saldo > 0)
+        ctx.registrarTransacao({ id: novoIdTransacao(), uid, tipo: 'perda', quantidade: saldo, moeda: 'fragmentosSubclasse', chave: subclasseId, motivo, timestamp: new Date().toISOString() });
+    }
 
     // monta do zero a partir da identidade: nenhum campo de progresso escapa
     const limpo: CharacterDocument = {
@@ -1416,6 +1433,7 @@ export async function subirTierSubclasse(
         tipo: 'perda',
         quantidade: custo.fragmentosSubclasse,
         moeda: 'fragmentosSubclasse',
+        chave: subclasse.id,
         motivo,
         timestamp: new Date().toISOString(),
       });
@@ -2190,6 +2208,7 @@ export async function executarBatalhaSangrenta(
         tipo: 'ganho',
         quantidade,
         moeda: 'fragmentosSubclasse',
+        chave: subclasseId,
         motivo: `${motivo}: ${SUBCLASSES.find((sc) => sc.id === subclasseId)?.nome ?? subclasseId}`,
         timestamp: new Date().toISOString(),
       });
