@@ -24,8 +24,8 @@ export const MARCAS_DO_RITMO = 20;
 export const INTERVALO_MAXIMO_DO_ROBO_MS = 20_000;
 export const VARIACAO_MAXIMA_DO_ROBO = 0.08;
 
-export type TipoDeSinal = 'acoesPorHora' | 'ouroPorHora' | 'niveisPorHora' | 'ritmoDeRobo' | 'contasNoMesmoIp' | 'extratoSemRegistro';
-export const TIPOS_DE_SINAL: readonly TipoDeSinal[] = ['acoesPorHora', 'ouroPorHora', 'niveisPorHora', 'ritmoDeRobo', 'contasNoMesmoIp', 'extratoSemRegistro'];
+export type TipoDeSinal = 'acoesPorHora' | 'ouroPorHora' | 'niveisPorHora' | 'ritmoDeRobo' | 'contasNoMesmoIp' | 'extratoSemRegistro' | 'apelacao';
+export const TIPOS_DE_SINAL: readonly TipoDeSinal[] = ['acoesPorHora', 'ouroPorHora', 'niveisPorHora', 'ritmoDeRobo', 'contasNoMesmoIp', 'extratoSemRegistro', 'apelacao'];
 
 export const NOME_DO_SINAL: Readonly<Record<TipoDeSinal, string>> = {
   acoesPorHora: 'Muitas ações em uma hora',
@@ -34,6 +34,7 @@ export const NOME_DO_SINAL: Readonly<Record<TipoDeSinal, string>> = {
   ritmoDeRobo: 'Ritmo regular demais (possível automação)',
   contasNoMesmoIp: 'Muitas contas na mesma rede',
   extratoSemRegistro: 'Moeda mexida sem registro no extrato',
+  apelacao: 'Pedido de apelação de sanção',
 };
 
 /** O que fica no personagem: as contas da hora corrente e os instantes das últimas ações. */

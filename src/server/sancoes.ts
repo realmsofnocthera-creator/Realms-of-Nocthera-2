@@ -25,6 +25,7 @@ export class ErroContaSancionada extends Error {
 /** Só para testes: esquece o cache. */
 export function limparCacheDeSancoes(): void {
   cache.clear();
+  limitadosEmCache = null;
 }
 
 /** Guarda no cache (usado por quem acabou de gravar uma sanção). */
@@ -46,4 +47,28 @@ export async function lerSancaoComCache(uid: string): Promise<SancaoDocumento | 
 export async function exigirContaLivre(uid: string): Promise<void> {
   const vigor = sancaoEmVigor(await lerSancaoComCache(uid), new Date());
   if (vigor) throw new ErroContaSancionada(vigor);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Limite silencioso (6.5-7): fora dos rankings e só a recompensa mínima dos chefes, sem o jogador saber
+// ---------------------------------------------------------------------------------------------------------------
+
+/** A conta está com limite silencioso? Usa o mesmo cache da checagem de sanção (que o login já leu). */
+export async function comLimiteSilencioso(uid: string): Promise<boolean> {
+  return !!(await lerSancaoComCache(uid))?.limiteSilencioso;
+}
+
+let limitadosEmCache: { em: number; uids: Set<string> } | null = null;
+
+/** Os uids com limite silencioso, para tirar dos rankings (lido no máximo uma vez por TTL). */
+export async function uidsComLimiteSilencioso(agora = Date.now()): Promise<Set<string>> {
+  if (limitadosEmCache && agora - limitadosEmCache.em < TTL_CACHE_SANCOES_MS) return limitadosEmCache.uids;
+  const uids = new Set(await repositorio.listarComLimiteSilencioso());
+  limitadosEmCache = { em: agora, uids };
+  return uids;
+}
+
+/** Quem acabou de mudar o limite: a lista é lida de novo na próxima vez. */
+export function esquecerLimitados(): void {
+  limitadosEmCache = null;
 }

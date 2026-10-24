@@ -38,6 +38,14 @@ export function usePersonagemLogado() {
               return;
             }
           }
+          // conta suspensa ou banida (3.5.4.3): a tela que mostra o motivo e deixa pedir apelação (6.5-7)
+          if (!res.ok && res.status === 403) {
+            const corpo = await res.json().catch(() => null);
+            if (corpo?.contaSancionada && !cancelado) {
+              router.replace('/conta-sancionada');
+              return;
+            }
+          }
           if (cancelado) return;
           if (data?.character) {
             setCharacter(data.character);

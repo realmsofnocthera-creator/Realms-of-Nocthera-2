@@ -1,6 +1,7 @@
 import { CAMPO_DO_RANKING, chaveDeBusca, CRITERIOS_DE_RANKING, LEITURA_DA_BUSCA, LEITURA_DO_RANKING, LIMITE_DA_BUSCA, montarRanking, PREFIXO_MAXIMO_DA_BUSCA, PREFIXO_MINIMO_DA_BUSCA, VALIDADE_DO_RANKING_MS, type CriterioDeRanking, type EntradaDoRanking, type RankingGuardado, type ResumoDePersonagem } from '@/rules/social';
 import { getCharacterByUid, updateCharacter } from '@/server/characterService';
 import { repositorio } from '@/server/persistencia';
+import { uidsComLimiteSilencioso } from '@/server/sancoes';
 
 /**
  * Social (7.1). O ranking NÃO é calculado a cada visita: há um retrato por ranking no banco (ranking/{critério}),
@@ -16,8 +17,10 @@ export function limparCacheDoRanking(): void {
 }
 
 async function montarERegravar(criterio: CriterioDeRanking, agora: Date): Promise<RankingGuardado> {
-  const lidos = await repositorio.consultarTopo(CAMPO_DO_RANKING[criterio], LEITURA_DO_RANKING);
-  const ranking: RankingGuardado = { criterio, atualizadoEm: agora.toISOString(), entradas: montarRanking(lidos) };
+  const [lidos, limitados] = await Promise.all([repositorio.consultarTopo(CAMPO_DO_RANKING[criterio], LEITURA_DO_RANKING), uidsComLimiteSilencioso()]);
+  // Limite silencioso (6.5-7): quem está com ele não entra no ranking
+  const entradas = montarRanking(lidos.filter((l) => !l.uid || !limitados.has(l.uid)));
+  const ranking: RankingGuardado = { criterio, atualizadoEm: agora.toISOString(), entradas };
   try {
     await repositorio.gravarRanking(ranking);
   } catch {

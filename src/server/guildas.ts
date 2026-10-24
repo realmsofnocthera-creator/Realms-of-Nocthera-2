@@ -75,6 +75,7 @@ import { PREFIXO_MAXIMO_DA_BUSCA, PREFIXO_MINIMO_DA_BUSCA } from '@/rules/social
 import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, ganharXp, progressoDasVitorias, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { xpParaProximoNivel } from '@/game';
 import { chaveDoNome, chaveDoNomeDeGuilda, repositorio, type ContextoTransacao } from '@/server/persistencia';
+import { comLimiteSilencioso } from '@/server/sancoes';
 import { exigirSistemaLigado, lerConfiguracaoDeSistemas } from '@/server/sistemasLeitura';
 
 /**
@@ -997,6 +998,8 @@ async function chefeSemanalNaTela(g: GuildaDocumento, nivelDaGuildaAtual: number
  */
 export async function lutarChefeSemanal(uid: string, r: RegrasDeGuilda, semente: number, agora = new Date()): Promise<{ mensagem: string }> {
   const semana = semanaDe(agora);
+  // Limite silencioso (6.5-7): o dano fica registrado, mas não soma no total da guilda
+  const oculto = await comLimiteSilencioso(uid);
   return repositorio.executarTransacao('guilda:chefeSemanal', async (ctx) => {
     const eu = await carregarPersonagem(ctx, uid);
     const { guilda } = await minhaGuildaNoContexto(ctx, eu);
@@ -1009,7 +1012,7 @@ export async function lutarChefeSemanal(uid: string, r: RegrasDeGuilda, semente:
     const dano = final ? Math.max(0, VIDA_DO_CHEFE_SEMANAL + (chefe.sobreescudoInicial ?? 0) - final.hp - final.sobreescudo) : 0;
     const anterior = entrada.membros[uid]?.dano ?? 0;
     if (dano > anterior) {
-      const membros = { ...entrada.membros, [uid]: { nome: eu.nome, dano } };
+      const membros = { ...entrada.membros, [uid]: { nome: eu.nome, dano, ...(oculto ? { oculto: true } : {}) } };
       ctx.gravarEntradaChefeSemanal({ ...entrada, nomeDaGuilda: guilda.nome, membros, total: totalDosMembros(membros) });
     }
     if (!(eu.chefeSemanal ?? []).some((p) => p.semana === semana && p.guildaId === guilda.id)) {
@@ -1038,7 +1041,9 @@ export async function resgatarChefeSemanal(uid: string, semanaPedida: unknown, a
   if (!entradaAntes || !entradaAntes.membros[uid]) throw new ErroDeGuilda('O registro da sua guilda nessa semana não foi encontrado.', 404);
   // A semana acabou: ninguém muda mais os totais, então a contagem fora da transação é a posição final
   const posicao = (await repositorio.contarGuildasAcimaNoChefeSemanal(semana, entradaAntes.total)) + 1;
-  const faixa = faixaDaPosicao(posicao);
+  const faixaDaGuilda = faixaDaPosicao(posicao);
+  // Limite silencioso (6.5-7): o jogador recebe a última faixa; o XP da guilda segue a posição dela
+  const faixa = (await comLimiteSilencioso(uid)) ? FAIXAS_DO_CHEFE_SEMANAL[FAIXAS_DO_CHEFE_SEMANAL.length - 1] : faixaDaGuilda;
   const semente = gerarSementeCombate();
   return repositorio.executarTransacao('guilda:resgatarChefeSemanal', async (ctx) => {
     let eu = await carregarPersonagem(ctx, uid);
@@ -1047,7 +1052,7 @@ export async function resgatarChefeSemanal(uid: string, semanaPedida: unknown, a
     const { guilda } = await minhaGuildaNoContexto(ctx, eu);
     if (guilda.id !== p.guildaId) throw new ErroDeGuilda('A recompensa é de quem ainda está na guilda com que lutou.', 409);
     const entrada = (await ctx.lerEntradaChefeSemanal(semana, guilda.id))!;
-    const motivo = `Chefe de guildas (${faixa.nome})`;
+    const motivo = `Chefe de guildas (${faixaDaGuilda.nome})`;
     if (faixa.ouro > 0) eu = alterarSaldoEm(ctx, eu, 'ouro', faixa.ouro, motivo).character;
     const novos: EmblemaItem[] = [];
     let i = 0;
@@ -1068,12 +1073,12 @@ export async function resgatarChefeSemanal(uid: string, semanaPedida: unknown, a
     });
     let xpDaGuilda = '';
     if (!entrada.xpEntregue) {
-      ctx.gravarGuilda({ ...guilda, xp: guilda.xp + faixa.xpGuilda });
+      ctx.gravarGuilda({ ...guilda, xp: guilda.xp + faixaDaGuilda.xpGuilda });
       ctx.gravarEntradaChefeSemanal({ ...entrada, xpEntregue: true });
-      xpDaGuilda = ` A guilda ganhou ${faixa.xpGuilda} de XP.`;
+      xpDaGuilda = ` A guilda ganhou ${faixaDaGuilda.xpGuilda} de XP.`;
     }
     const baus = faixa.baus.map((b) => `${b.quantidade} baú(s) ${EMBLEMA_RARIDADE_MAP[b.raridade].nome.toLowerCase()}(s)`).join(', ');
-    return { mensagem: `Sua guilda ficou em ${posicao}º (${faixa.nome}). Você recebeu ${faixa.ouro} de ouro${baus ? ` e ${baus} de emblemas` : ''}. Mais ${cartas.criadas.length} ${cartas.criadas.length === 1 ? 'carta da Alma' : 'cartas da Alma'}.${xpDaGuilda}` };
+    return { mensagem: `Sua guilda ficou em ${posicao}º (${faixaDaGuilda.nome}). Você recebeu ${faixa.ouro} de ouro${baus ? ` e ${baus} de emblemas` : ''}. Mais ${cartas.criadas.length} ${cartas.criadas.length === 1 ? 'carta da Alma' : 'cartas da Alma'}.${xpDaGuilda}` };
   });
 }
 

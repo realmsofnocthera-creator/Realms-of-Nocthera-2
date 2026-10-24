@@ -130,7 +130,8 @@ export interface ContextoTransacao {
   gravarParty(party: PartyDocumento): void;
   apagarParty(id: string): void;
   /** Chefe Mundial: o melhor dano do jogador no dia. */
-  lerEntradaChefeMundial(dia: string, uid: string): Promise<EntradaDoChefeMundial | null>;
+  /** `oculto`: a entrada à parte de quem está com limite silencioso (6.5-7). */
+  lerEntradaChefeMundial(dia: string, uid: string, oculto?: boolean): Promise<EntradaDoChefeMundial | null>;
   gravarEntradaChefeMundial(entrada: EntradaDoChefeMundial): void;
   /** Correio: uma mensagem para todos (para resgatar o presente dela). */
   lerMensagemGeral(id: string): Promise<MensagemGeral | null>;
@@ -254,6 +255,8 @@ export interface Repositorio {
   /** Sanção da conta (3.5.4.3), ou null se o jogador nunca foi sancionado. */
   lerSancao(uid: string): Promise<SancaoDocumento | null>;
   gravarSancao(doc: SancaoDocumento): Promise<void>;
+  /** Os uids com limite silencioso ligado (6.5-7). */
+  listarComLimiteSilencioso(): Promise<string[]>;
   /** As transações de moeda do jogador, da mais recente para a mais antiga (3.5.4.1). */
   listarTransacoes(uid: string, limite: number): Promise<TransactionDocument[]>;
   /** Sistemas desligados e modo manutenção (3.5.5.2), ou null se nunca foi configurado (tudo ligado). */
@@ -289,7 +292,8 @@ export interface Repositorio {
   listarChefeMundial(dia: string, limite: number): Promise<EntradaDoChefeMundial[]>;
   /** Quantos jogadores do dia têm mais dano (a posição é isso + 1). */
   contarAcimaNoChefeMundial(dia: string, dano: number): Promise<number>;
-  lerEntradaChefeMundial(dia: string, uid: string): Promise<EntradaDoChefeMundial | null>;
+  /** `oculto`: a entrada à parte de quem está com limite silencioso (6.5-7). */
+  lerEntradaChefeMundial(dia: string, uid: string, oculto?: boolean): Promise<EntradaDoChefeMundial | null>;
   /** Correio: as mensagens para todos criadas a partir de `desde` (ISO), das mais novas para as mais antigas. */
   listarMensagensGerais(desde: string, limite: number): Promise<MensagemGeral[]>;
   gravarMensagemGeral(mensagem: MensagemGeral): Promise<void>;

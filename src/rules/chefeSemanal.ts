@@ -133,12 +133,13 @@ export interface EntradaDoChefeSemanal {
   /** Soma dos maiores danos dos membros. */
   total: number;
   /** O maior dano de cada membro na semana. */
-  membros: Record<string, { nome: string; dano: number }>;
+  membros: Record<string, { nome: string; dano: number; oculto?: boolean }>;
   /** O XP de guilda da faixa já foi entregue (no primeiro resgate). */
   xpEntregue?: boolean;
 }
 
-export const totalDosMembros = (membros: EntradaDoChefeSemanal['membros']) => Object.values(membros).reduce((s, m) => s + m.dano, 0);
+/** O total da guilda: o dano de quem está com limite silencioso (6.5-7, `oculto`) não conta. */
+export const totalDosMembros = (membros: EntradaDoChefeSemanal['membros']) => Object.values(membros).reduce((s, m) => s + (m.oculto ? 0 : m.dano), 0);
 
 export function entradaDoDocumento(bruto: unknown): EntradaDoChefeSemanal | null {
   if (typeof bruto !== 'object' || bruto === null) return null;
@@ -148,7 +149,7 @@ export function entradaDoDocumento(bruto: unknown): EntradaDoChefeSemanal | null
   if (typeof d.membros === 'object' && d.membros !== null) {
     for (const [uid, m] of Object.entries(d.membros as Record<string, unknown>)) {
       const o = m as Record<string, unknown> | null;
-      if (o && typeof o.nome === 'string' && typeof o.dano === 'number' && Number.isFinite(o.dano) && o.dano >= 0) membros[uid] = { nome: o.nome, dano: Math.floor(o.dano) };
+      if (o && typeof o.nome === 'string' && typeof o.dano === 'number' && Number.isFinite(o.dano) && o.dano >= 0) membros[uid] = { nome: o.nome, dano: Math.floor(o.dano), ...(o.oculto === true ? { oculto: true } : {}) };
     }
   }
   return { semana: d.semana, guildaId: d.guildaId, nomeDaGuilda: typeof d.nomeDaGuilda === 'string' ? d.nomeDaGuilda : '', total: totalDosMembros(membros), membros, ...(d.xpEntregue === true ? { xpEntregue: true } : {}) };

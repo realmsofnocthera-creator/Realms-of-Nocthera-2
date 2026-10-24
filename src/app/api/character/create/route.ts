@@ -5,6 +5,7 @@ import { ErroDeMulticonta, marcaDaRede, revisaoDeMulticonta } from '@/server/int
 import { descreverErro, registrarLog } from '@/server/log';
 import { repositorio } from '@/server/persistencia';
 import { respostaErroPersistencia } from '@/server/respostaErro';
+import { ErroDoTurnstile, exigirHumano } from '@/server/turnstile';
 import { ipDaRequisicao, limitarPorConta, limitarPorIp } from '@/server/rateLimit';
 
 export async function POST(req: NextRequest) {
@@ -26,6 +27,14 @@ export async function POST(req: NextRequest) {
     if (limiteConta) return limiteConta;
 
     const body = await req.json();
+
+    // Anti-bot (6.5-5): só quando o Turnstile está ligado no Cloud Run
+    try {
+      await exigirHumano(body?.turnstile, ipDaRequisicao(req));
+    } catch (error) {
+      if (error instanceof ErroDoTurnstile) return NextResponse.json({ error: error.message, turnstile: true }, { status: 400 });
+      throw error;
+    }
 
     let character;
     try {

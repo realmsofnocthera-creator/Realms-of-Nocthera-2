@@ -34,7 +34,7 @@ import { entradaMundialDoDocumento, participacoesMundiaisDoDocumento, type Entra
 import { bonusDeGuildaDoDocumento } from '@/rules/pesquisa';
 import { chaveDoNomeDaGuilda, guildaDoDocumento, type GuildaDocumento } from '@/rules/guilda';
 import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
-import { MAXIMO_DE_ADVERTENCIAS, sancaoDocumentoVazio, type Advertencia, type SancaoDocumento } from '@/rules/sancoes';
+import { apelacaoDoDocumento, limiteDoDocumento, MAXIMO_DE_ADVERTENCIAS, sancaoDocumentoVazio, type Advertencia, type SancaoDocumento } from '@/rules/sancoes';
 import {
   ConteudoDocumento,
   ContextoTransacao,
@@ -58,7 +58,7 @@ function descansosDoDocumento(bruto: unknown): Record<string, number> | undefine
 const CAMPOS_DO_RESUMO_PUBLICO = ['nome', 'avatarId', 'classeId', 'racaId', 'nivel', 'xpAtual', 'escondidoNoRanking', 'escondidoNaBusca'];
 
 /** Um personagem para ranking e busca (só o público), com tolerância a dado estranho. */
-function resumoPublicoDoDocumento(data: DocumentData, campo?: CampoDoRanking): ResumoDePersonagem | null {
+function resumoPublicoDoDocumento(data: DocumentData, campo?: CampoDoRanking, uid?: string): ResumoDePersonagem | null {
   if (typeof data.nome !== 'string' || !data.nome) return null;
   const numero = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
   return {
@@ -71,6 +71,7 @@ function resumoPublicoDoDocumento(data: DocumentData, campo?: CampoDoRanking): R
     ...(campo ? { valor: numero(data[campo]) } : {}),
     ...(data.escondidoNoRanking === true ? { escondidoNoRanking: true } : {}),
     ...(data.escondidoNaBusca === true ? { escondidoNaBusca: true } : {}),
+    ...(uid ? { uid } : {}),
   };
 }
 
@@ -140,6 +141,8 @@ function sancaoDoDocumento(uid: string, data: DocumentData | undefined): SancaoD
     aplicadaPor: texto(data.aplicadaPor),
     aplicadaEm: texto(data.aplicadaEm),
     advertencias,
+    ...(limiteDoDocumento(data.limiteSilencioso) ? { limiteSilencioso: limiteDoDocumento(data.limiteSilencioso) } : {}),
+    ...(apelacaoDoDocumento(data.apelacao) ? { apelacao: apelacaoDoDocumento(data.apelacao) } : {}),
   };
 }
 
@@ -618,15 +621,15 @@ class ContextoFirestore implements ContextoTransacao {
     this.chefeSemanal.set(`${entrada.semana}/${entrada.guildaId}`, structuredClone(entrada));
   }
 
-  async lerEntradaChefeMundial(dia: string, uid: string): Promise<EntradaDoChefeMundial | null> {
-    const pendente = this.chefeMundial.get(`${dia}/${uid}`);
+  async lerEntradaChefeMundial(dia: string, uid: string, oculto = false): Promise<EntradaDoChefeMundial | null> {
+    const pendente = this.chefeMundial.get(`${dia}/${uid}/${oculto ? 'o' : 'p'}`);
     if (pendente) return structuredClone(pendente);
-    const snap = await this.tx.get(this.db.collection('chefeMundial').doc(dia).collection('jogadores').doc(uid));
+    const snap = await this.tx.get(this.db.collection('chefeMundial').doc(dia).collection(oculto ? 'ocultos' : 'jogadores').doc(uid));
     return snap.exists ? entradaMundialDoDocumento(snap.data()) : null;
   }
 
   gravarEntradaChefeMundial(entrada: EntradaDoChefeMundial): void {
-    this.chefeMundial.set(`${entrada.dia}/${entrada.uid}`, structuredClone(entrada));
+    this.chefeMundial.set(`${entrada.dia}/${entrada.uid}/${entrada.oculto ? 'o' : 'p'}`, structuredClone(entrada));
   }
 
   async lerMensagemGeral(id: string): Promise<MensagemGeral | null> {
@@ -736,7 +739,7 @@ class ContextoFirestore implements ContextoTransacao {
       this.tx.set(this.db.collection('chefeSemanal').doc(e.semana).collection('guildas').doc(e.guildaId), semUndefined(e));
     }
     for (const e of this.chefeMundial.values()) {
-      this.tx.set(this.db.collection('chefeMundial').doc(e.dia).collection('jogadores').doc(e.uid), semUndefined(e));
+      this.tx.set(this.db.collection('chefeMundial').doc(e.dia).collection(e.oculto ? 'ocultos' : 'jogadores').doc(e.uid), semUndefined(e));
     }
     for (const [chave, dono] of this.nomesDeGuilda) {
       const ref = this.db.collection('nomesDeGuilda').doc(chave);
@@ -869,9 +872,9 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
       });
     },
 
-    async lerEntradaChefeMundial(dia: string, uid: string) {
+    async lerEntradaChefeMundial(dia: string, uid: string, oculto = false) {
       return lerComRetry(`lerChefeMundial:${dia}`, async () => {
-        const snap = await db.collection('chefeMundial').doc(dia).collection('jogadores').doc(uid).get();
+        const snap = await db.collection('chefeMundial').doc(dia).collection(oculto ? 'ocultos' : 'jogadores').doc(uid).get();
         return snap.exists ? entradaMundialDoDocumento(snap.data()) : null;
       });
     },
@@ -933,7 +936,7 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
       return lerComRetry(`consultarTopo:${campo}`, async () => {
         const snap = await db.collection('characters').orderBy(campo, 'desc').limit(limite).select(...CAMPOS_DO_RESUMO_PUBLICO, campo).get();
         return snap.docs.flatMap((d) => {
-          const r = resumoPublicoDoDocumento(d.data(), campo);
+          const r = resumoPublicoDoDocumento(d.data(), campo, d.id);
           return r ? [r] : [];
         });
       });
@@ -1135,9 +1138,17 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
       });
     },
 
+    async listarComLimiteSilencioso() {
+      return lerComRetry('listarComLimiteSilencioso', async () => {
+        // documentos sem o campo ou com null ficam de fora; são poucos
+        const snap = await db.collection('sancoes').where('limiteSilencioso', '!=', null).get();
+        return snap.docs.filter((d) => limiteDoDocumento(d.data().limiteSilencioso)).map((d) => d.id);
+      });
+    },
+
     async gravarSancao(doc: SancaoDocumento) {
       const { uid, ...dados } = doc;
-      await gravarSimples(`gravarSancao:${uid}`, () => db.collection('sancoes').doc(uid).set(dados));
+      await gravarSimples(`gravarSancao:${uid}`, () => db.collection('sancoes').doc(uid).set(semUndefined(dados)));
     },
 
     async listarTransacoes(uid: string, limite: number) {
@@ -1194,7 +1205,8 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
         const refs = [db.collection('characters').doc(uid), db.collection('sancoes').doc(uid), db.collection('revogacoes').doc(uid)];
         // O nome do jogador no ranking do Chefe Mundial (os dias em que ele lutou)
         const personagem = await db.collection('characters').doc(uid).get();
-        for (const p of participacoesMundiaisDoDocumento(personagem.data()?.chefeMundial) ?? []) refs.push(db.collection('chefeMundial').doc(p.dia).collection('jogadores').doc(uid));
+        for (const p of participacoesMundiaisDoDocumento(personagem.data()?.chefeMundial) ?? [])
+          refs.push(db.collection('chefeMundial').doc(p.dia).collection('jogadores').doc(uid), db.collection('chefeMundial').doc(p.dia).collection('ocultos').doc(uid));
         if (chaveNome) {
           const nome = await db.collection('nomes').doc(chaveNome).get();
           if (nome.exists && nome.data()?.uid === uid) refs.push(nome.ref);

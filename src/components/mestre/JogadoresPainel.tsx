@@ -81,6 +81,16 @@ export function JogadoresPainel({ sessao, tokenFresco }: { sessao: SessaoDoPaine
         <Sancoes
           ficha={ficha}
           podeSancionar={podeSancionar}
+          responder={async (corpo) => {
+            setAviso(null);
+            const r = await chamar(tokenFresco, `/api/mestre/jogadores/${ficha.uid}/apelacao`, { method: 'POST', body: JSON.stringify(corpo) });
+            if (r.ok) {
+              setFicha(r.dados.jogador as FichaDoJogador);
+              setAviso('Resposta enviada. O jogador vê na tela da conta.');
+              return null;
+            }
+            return String(r.dados.error ?? 'Não foi possível responder.');
+          }}
           aplicar={async (corpo) => {
             setAviso(null);
             const r = await chamar(tokenFresco, `/api/mestre/jogadores/${ficha.uid}/sancoes`, { method: 'POST', body: JSON.stringify(corpo) });
@@ -182,7 +192,19 @@ function Ficha({ ficha }: { ficha: FichaDoJogador }) {
   );
 }
 
-function Sancoes({ ficha, podeSancionar, aplicar, aviso }: { ficha: FichaDoJogador; podeSancionar: boolean; aplicar: (corpo: Record<string, unknown>) => Promise<string | null>; aviso: string | null }) {
+function Sancoes({
+  ficha,
+  podeSancionar,
+  aplicar,
+  responder,
+  aviso,
+}: {
+  ficha: FichaDoJogador;
+  podeSancionar: boolean;
+  aplicar: (corpo: Record<string, unknown>) => Promise<string | null>;
+  responder: (corpo: Record<string, unknown>) => Promise<string | null>;
+  aviso: string | null;
+}) {
   const { colors } = NOCTHERA_THEME;
   const [acao, setAcao] = useState<AcaoDeSancao>('advertir');
   const [dias, setDias] = useState(3);
@@ -212,6 +234,12 @@ function Sancoes({ ficha, podeSancionar, aplicar, aviso }: { ficha: FichaDoJogad
           Em vigor: {situacaoDaConta(ficha.sancao).texto}. Motivo: {ficha.sancao.motivo}
         </p>
       )}
+      {ficha.limiteSilencioso && (
+        <p className="text-[12px]" style={{ color: COR_DO_TOM.aviso }}>
+          Limite silencioso desde {dataDoLog(ficha.limiteSilencioso.aplicadoEm)}: fora dos rankings e só a recompensa mínima dos chefes. Motivo: {ficha.limiteSilencioso.motivo}
+        </p>
+      )}
+      {ficha.apelacao && <ApelacaoNaFicha apelacao={ficha.apelacao} podeResponder={podeSancionar && !!ficha.sancao} responder={responder} />}
       {!podeSancionar ? (
         <p className="text-[11px]" style={{ color: colors.text.secondary }}>Seu papel só consulta. Quem sanciona é o Moderador ou o Dono.</p>
       ) : bloqueado ? null : (
@@ -246,7 +274,7 @@ function Sancoes({ ficha, podeSancionar, aplicar, aviso }: { ficha: FichaDoJogad
             </button>
           </div>
           <p className="text-[11px]" style={{ color: colors.text.secondary }}>
-            Advertir só registra. Suspender e banir bloqueiam a conta na hora; o banimento não tem prazo e a suspensão termina sozinha. Tudo fica no log.
+            Advertir só registra. Suspender e banir bloqueiam a conta na hora; o banimento não tem prazo e a suspensão termina sozinha. O limite silencioso não bloqueia: tira dos rankings e dá só a recompensa mínima dos chefes, sem avisar o jogador. Tudo fica no log.
           </p>
         </form>
       )}
@@ -394,6 +422,50 @@ function Ajustes({ ajustar }: { ajustar: (corpo: Record<string, unknown>) => Pro
         {erro && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{erro}</p>}
       </form>
     </Cartao>
+  );
+}
+
+/** O pedido de apelação (6.5-7) na ficha, com a resposta do Mestre (aceitar levanta a sanção). */
+function ApelacaoNaFicha({ apelacao, podeResponder, responder }: { apelacao: NonNullable<FichaDoJogador['apelacao']>; podeResponder: boolean; responder: (corpo: Record<string, unknown>) => Promise<string | null> }) {
+  const { colors } = NOCTHERA_THEME;
+  const [resposta, setResposta] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const situacao = { pendente: 'esperando resposta', aceita: 'aceita', recusada: 'recusada' }[apelacao.situacao];
+  const enviar = async (decisao: 'aceitar' | 'recusar') => {
+    setOcupado(true);
+    setErro(null);
+    const falha = await responder({ decisao, resposta });
+    setOcupado(false);
+    if (falha) setErro(falha);
+    else setResposta('');
+  };
+  const campo = 'rounded-sm border px-2 py-1 text-[12px] w-full';
+  const estiloCampo = { backgroundColor: colors.background.primary, borderColor: `${OURO}66`, color: colors.text.primary };
+  return (
+    <div className="flex flex-col gap-1 text-[12px] border rounded-sm px-2 py-1.5" style={{ borderColor: `${OURO}44` }}>
+      <span className="font-semibold">
+        Pedido de apelação ({situacao}) · <span style={{ color: colors.text.secondary }}>{dataDoLog(apelacao.em)}</span>
+      </span>
+      <span className="whitespace-pre-wrap">{apelacao.texto}</span>
+      {apelacao.resposta && <span style={{ color: colors.text.secondary }}>Resposta: {apelacao.resposta}</span>}
+      {apelacao.situacao === 'pendente' && podeResponder && (
+        <>
+          <label className="text-[11px] flex flex-col gap-0.5">Resposta ao jogador (ele lê na tela da conta)
+            <textarea value={resposta} onChange={(e) => setResposta(e.target.value)} className={campo} style={estiloCampo} rows={2} maxLength={500} />
+          </label>
+          <span className="flex gap-2">
+            <button type="button" disabled={ocupado} onClick={() => void enviar('aceitar')} className="px-3 py-1 rounded font-cinzel font-bold text-xs disabled:opacity-50" style={{ backgroundColor: colors.accent.primary, color: colors.background.secondary }}>
+              Aceitar (levanta a sanção)
+            </button>
+            <button type="button" disabled={ocupado} onClick={() => void enviar('recusar')} className="px-3 py-1 rounded font-cinzel font-bold text-xs disabled:opacity-50" style={{ backgroundColor: VERMELHO, color: colors.background.secondary }}>
+              Recusar
+            </button>
+          </span>
+          {erro && <span role="alert" className="font-semibold" style={{ color: VERMELHO }}>{erro}</span>}
+        </>
+      )}
+    </div>
   );
 }
 

@@ -32,7 +32,7 @@ toda regra, sorteio, recompensa e saldo é decidido e gravado no servidor, numa 
 | **Corpo da requisição manipulado** | Mandar `diamantes: 9999`, quantidades negativas, tipos trocados, `__proto__` | As rotas só leem os campos esperados e validam tipo e faixa; valores de recompensa nunca vêm do cliente. Testes de corpo manipulado no CI (6.5-8). | — |
 | **Manipulação de semente** | Escolher a semente do sorteio para sempre ganhar | A semente é sempre do servidor; a do cliente é ignorada (0.5-B1) e fica gravada para replay. | — |
 | **Manipulação de relógio** | Adiantar o relógio do aparelho para coletar expedição ou zerar o dia | Todo tempo (dia de Brasília, semana, expedições, Check-in) é a hora do servidor. | — |
-| **Automação de requisições (bots)** | Script que luta e busca sem parar | Limite por IP e por conta com bloqueio progressivo (0.5-A3), com o IP tirado do fim do `X-Forwarded-For` (o que o cliente põe na frente não vale). Detecção de anomalias (6.5-4): ações, ouro e níveis por hora acima do teto e ritmo regular demais mandam o jogador para a fila de revisão do Painel do Mestre. | O limite é por instância do Cloud Run e some ao reiniciar; anti-bot no cadastro (6.5-5). Calibrar os tetos no beta. |
+| **Automação de requisições (bots)** | Script que luta e busca sem parar | Limite por IP e por conta com bloqueio progressivo (0.5-A3), com o IP tirado do fim do `X-Forwarded-For` (o que o cliente põe na frente não vale). Detecção de anomalias (6.5-4): ações, ouro e níveis por hora acima do teto e ritmo regular demais mandam o jogador para a fila de revisão do Painel do Mestre. Anti-bot na criação do personagem com Cloudflare Turnstile (6.5-5), grátis e sem limite: liga quando as chaves estão no Cloud Run. | O limite de requisições é por instância do Cloud Run e some ao reiniciar. Calibrar os tetos no beta. |
 | **Multiconta** | Várias contas para pegar recompensas de início | No máximo 3 contas novas por rede em 24 horas (6.5-6); a 4ª é barrada e vai para a fila de revisão com as contas da mesma rede. Só se guarda uma marca curta do IP (não o IP), por 24 horas. O e-mail confirmado já vem no login, pronto para ser exigido no comércio. | Exigir o e-mail confirmado quando o comércio existir. |
 | **Token forjado ou roubado** | JWT assinado por outro, token antigo depois do logout | Validação da assinatura do Firebase, projeto e expiração; revogação por logout; testes de token antigo, HS256 e de outro projeto no CI. | — |
 | **Acesso direto ao banco** | Usar o SDK do Firebase no navegador para gravar no Firestore | Regras do Firestore: o cliente nunca grava `characters` nem `transactions`; só lê o próprio documento. | — |
@@ -43,6 +43,10 @@ toda regra, sorteio, recompensa e saldo é decidido e gravado no servidor, numa 
 ## Resposta a incidentes
 
 1. Confirmar pelo extrato (ficha do jogador no Painel do Mestre) e pelo log.
-2. Sancionar a conta (advertir, suspender ou banir), sempre com motivo; fica no log administrativo.
+2. Sancionar a conta, sempre com motivo; fica no log administrativo:
+   - advertir;
+   - suspender ou banir;
+   - limite silencioso (6.5-7): a conta joga, mas sai dos rankings e só recebe a recompensa mínima do Chefe Mundial e do Chefe de guildas, sem aviso. Serve para a suspeita que ainda não justifica suspender.
+   - O jogador suspenso ou banido pode pedir apelação pelo jogo (um pedido por sanção). O pedido vai para a fila de revisão, e a resposta (aceitar levanta a sanção) aparece para ele na tela da conta.
 3. Corrigir o saldo pelo ajuste do Mestre (gera linha no extrato com o motivo).
 4. Se for defeito do jogo, corrigir o código com teste que reproduz o ataque antes de publicar.

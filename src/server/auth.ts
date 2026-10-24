@@ -77,6 +77,18 @@ async function instanteDaRevogacao(uid: string): Promise<number | null> {
  * ErroPersistencia (as rotas respondem 503); conta sancionada lança ErroContaSancionada (403).
  */
 export async function verifyAuthToken(authHeader: string | null): Promise<AuthenticatedUser | null> {
+  return verificarLogin(authHeader, true);
+}
+
+/**
+ * Como verifyAuthToken, mas deixa passar a conta suspensa ou banida: só para a apelação (6.5-7), que é justamente o
+ * que o jogador sancionado pode fazer.
+ */
+export async function verificarLoginDaApelacao(authHeader: string | null): Promise<AuthenticatedUser | null> {
+  return verificarLogin(authHeader, false);
+}
+
+async function verificarLogin(authHeader: string | null, exigirSemSancao: boolean): Promise<AuthenticatedUser | null> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null;
   }
@@ -100,7 +112,7 @@ export async function verifyAuthToken(authHeader: string | null): Promise<Authen
   }
 
   // Conta suspensa ou banida (3.5.4.3): lança ErroContaSancionada, que as rotas respondem com 403
-  await exigirContaLivre(decoded.uid);
+  if (exigirSemSancao) await exigirContaLivre(decoded.uid);
 
   // Manutenção (3.5.5.2): lança ErroManutencao (503) para quem não tem papel no painel
   await exigirJogoAberto(decoded.uid);

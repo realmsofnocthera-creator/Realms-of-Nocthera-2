@@ -77,6 +77,9 @@ const estado: Estado = {
   cadastrosDaRede: new Map(),
 };
 
+/** Chefe Mundial: a entrada de quem está com limite silencioso fica à parte (como chefeMundial/{dia}/ocultos). */
+const chaveMundial = (dia: string, uid: string, oculto: boolean) => `${dia}/${uid}${oculto ? '/oculto' : ''}`;
+
 function valorDoCampo(c: CharacterDocument, campo: CampoDoRanking): number {
   switch (campo) {
     case 'nivel':
@@ -200,12 +203,13 @@ class ContextoMemoria implements ContextoTransacao {
   gravarEntradaChefeSemanal(entrada: EntradaDoChefeSemanal) {
     this.chefeSemanal.set(`${entrada.semana}/${entrada.guildaId}`, structuredClone(entrada));
   }
-  async lerEntradaChefeMundial(dia: string, uid: string) {
-    const e = this.chefeMundial.get(`${dia}/${uid}`) ?? estado.chefeMundial.get(`${dia}/${uid}`);
+  async lerEntradaChefeMundial(dia: string, uid: string, oculto = false) {
+    const k = chaveMundial(dia, uid, oculto);
+    const e = this.chefeMundial.get(k) ?? estado.chefeMundial.get(k);
     return e ? structuredClone(e) : null;
   }
   gravarEntradaChefeMundial(entrada: EntradaDoChefeMundial) {
-    this.chefeMundial.set(`${entrada.dia}/${entrada.uid}`, structuredClone(entrada));
+    this.chefeMundial.set(chaveMundial(entrada.dia, entrada.uid, entrada.oculto === true), structuredClone(entrada));
   }
   async lerMensagemGeral(id: string) {
     const m = estado.correioGeral.get(id);
@@ -356,6 +360,10 @@ export const repositorio: Repositorio = {
     return doc ? structuredClone(doc) : null;
   },
 
+  async listarComLimiteSilencioso() {
+    return [...estado.sancoes.values()].filter((d) => d.limiteSilencioso).map((d) => d.uid);
+  },
+
   async gravarSancao(doc: SancaoDocumento) {
     estado.sancoes.set(doc.uid, structuredClone(doc));
   },
@@ -370,7 +378,7 @@ export const repositorio: Repositorio = {
 
   async consultarTopo(campo: CampoDoRanking, limite: number) {
     return [...estado.personagens.values()]
-      .map((c) => resumoPublico(c, valorDoCampo(c, campo)))
+      .map((c) => ({ ...resumoPublico(c, valorDoCampo(c, campo)), uid: c.uid }))
       .filter((r) => (r.valor ?? 0) > 0)
       .sort((a, b) => (b.valor ?? 0) - (a.valor ?? 0))
       .slice(0, limite);
@@ -438,15 +446,15 @@ export const repositorio: Repositorio = {
   },
 
   async listarChefeMundial(dia: string, limite: number) {
-    return [...estado.chefeMundial.values()].filter((e) => e.dia === dia).sort((a, b) => b.dano - a.dano).slice(0, limite).map((e) => structuredClone(e));
+    return [...estado.chefeMundial.values()].filter((e) => e.dia === dia && !e.oculto).sort((a, b) => b.dano - a.dano).slice(0, limite).map((e) => structuredClone(e));
   },
 
   async contarAcimaNoChefeMundial(dia: string, dano: number) {
-    return [...estado.chefeMundial.values()].filter((e) => e.dia === dia && e.dano > dano).length;
+    return [...estado.chefeMundial.values()].filter((e) => e.dia === dia && !e.oculto && e.dano > dano).length;
   },
 
-  async lerEntradaChefeMundial(dia: string, uid: string) {
-    const e = estado.chefeMundial.get(`${dia}/${uid}`);
+  async lerEntradaChefeMundial(dia: string, uid: string, oculto = false) {
+    const e = estado.chefeMundial.get(chaveMundial(dia, uid, oculto));
     return e ? structuredClone(e) : null;
   },
 
