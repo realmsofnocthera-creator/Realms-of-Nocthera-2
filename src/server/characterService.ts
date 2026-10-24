@@ -455,7 +455,9 @@ export function calcularAtributosDerivados(
  * Completa os campos opcionais e recalcula os derivados com src/game/
  * (Resistência Bárbara, Muralha de Ferro, Fluxo Arcano, Passos Rápidos etc.).
  */
-function normalizarPersonagem(char: CharacterDocument): CharacterDocument {
+function normalizarPersonagem(bruto: CharacterDocument): CharacterDocument {
+  // O ritmo (6.5-4) é só do fechamento da transação: nunca chega às regras nem ao navegador (o jogador não vê os sinais)
+  const { ritmo: _ritmo, ...char } = bruto;
   const equipamento = lerEquipamentoPersonagem(char.equipamento, char.armas ?? [], char.armaduras ?? []);
   return {
     ...char,

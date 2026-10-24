@@ -70,16 +70,22 @@ describe('Integridade: regras do ritmo (6.5-4)', () => {
     expect(regularidade(robo.slice(0, 5))).toBeNull();
   });
 
-  it('cada sinal vai para a fila uma vez por hora', () => {
-    const gravados = new Map([['u1', char({ ritmo: ritmo({ acoes: TETO_DE_ACOES_POR_HORA - 1 }) })]]);
-    const lidos = new Map([['u1', char()]]);
-    const primeira = observarJogadores('combate', lidos, gravados, [], [], T0);
+  it('cada sinal vai para a fila uma vez por hora; o ritmo vem sempre do que estava no banco', () => {
+    // as regras recebem o personagem sem o ritmo: o que vale é o lido do banco
+    const banco = char({ ritmo: ritmo({ acoes: TETO_DE_ACOES_POR_HORA - 1 }) });
+    const gravados = new Map([['u1', char()]]);
+    const primeira = observarJogadores('combate', new Map([['u1', banco]]), gravados, [], [], T0);
     expect(primeira.map((r) => [r.tipo, r.id])).toEqual([['acoesPorHora', 'u1__2026-10-24T13__acoesPorHora']]);
-    expect(gravados.get('u1')!.ritmo!.avisados).toEqual(['acoesPorHora']);
-    expect(observarJogadores('combate', lidos, gravados, [], [], T0)).toEqual([]);
-    // transação do Mestre não conta como ação do jogador
-    observarJogadores('ajusteDoMestre', lidos, gravados, [], [], T0);
-    expect(gravados.get('u1')!.ritmo!.acoes).toBe(TETO_DE_ACOES_POR_HORA + 1);
+    const depois = gravados.get('u1')!;
+    expect(depois.ritmo).toMatchObject({ acoes: TETO_DE_ACOES_POR_HORA, avisados: ['acoesPorHora'] });
+    // a próxima ação da mesma hora não repete o sinal
+    const outra = new Map([['u1', char()]]);
+    expect(observarJogadores('combate', new Map([['u1', depois]]), outra, [], [], T0)).toEqual([]);
+    expect(outra.get('u1')!.ritmo!.acoes).toBe(TETO_DE_ACOES_POR_HORA + 1);
+    // transação do Mestre não conta como ação, mas o ritmo do banco é mantido
+    const doMestre = new Map([['u1', char()]]);
+    observarJogadores('ajusteDoMestre', new Map([['u1', outra.get('u1')!]]), doMestre, [], [], T0);
+    expect(doMestre.get('u1')!.ritmo!.acoes).toBe(TETO_DE_ACOES_POR_HORA + 1);
   });
 
   it('leitura tolerante do ritmo', () => {
@@ -154,8 +160,13 @@ describe('Integridade: no servidor', () => {
     await createCharacter('u1', { nome: 'Aragorn', racaId: 'elfo', classeId: 'cavaleiro', pontos: PONTOS });
     await updateCharacter('u1', { nivel: 25, atributos: FORTE });
     await executarCombate('u1', 'rato-da-peste', { seed: 7 });
-    const c = (await getCharacterByUid('u1'))!;
+    const c = (await repositorio.lerPersonagem('u1'))!;
     expect(c.ritmo).toMatchObject({ acoes: 1, ouro: c.ouro });
+    // o jogador não vê o ritmo (nem os sinais): a ficha que vai para o navegador sai sem ele
+    expect(await getCharacterByUid('u1')).not.toHaveProperty('ritmo');
+    // e um ajuste do Mestre não apaga o ritmo
+    await updateCharacter('u1', { sobre: 'oi' });
+    expect((await repositorio.lerPersonagem('u1'))!.ritmo).toMatchObject({ acoes: 1 });
     process.env.EXTRATO_SO_AVISA = '1';
     await repositorio.executarTransacao('codigo-com-defeito', async (ctx) => {
       const eu = await carregarPersonagem(ctx, 'u1');

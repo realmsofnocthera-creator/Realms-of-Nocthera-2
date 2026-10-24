@@ -119,11 +119,16 @@ export function observarJogadores(
     if (semRegistro.length)
       revisoes.push(entrada(depois, 'extratoSemRegistro', `Em "${operacao}": ${semRegistro.map((d) => `${d.chave} devia ficar em ${d.esperado} e ficou em ${d.real}`).join('; ')}.`));
 
-    if (!lidos.has(uid) || !contaNoRitmo(operacao)) continue;
+    if (!lidos.has(uid)) continue;
     const antes = lidos.get(uid);
+    // As regras trabalham com o personagem sem o ritmo (normalizarPersonagem): ele vem sempre do que estava no banco
+    if (!contaNoRitmo(operacao)) {
+      if (antes?.ritmo) gravados.set(uid, { ...depois, ritmo: antes.ritmo });
+      continue;
+    }
     const ouro = transacoes.filter((t) => t.uid === uid && (t.moeda ?? 'ouro') === 'ouro' && t.tipo === 'ganho' && !t.semRegistro).reduce((s, t) => s + t.quantidade, 0);
     const niveis = Math.max(0, (depois.nivel ?? 1) - (antes?.nivel ?? depois.nivel ?? 1));
-    const ritmo = somarRitmo(depois.ritmo, { ouro, niveis }, agora);
+    const ritmo = somarRitmo(antes?.ritmo, { ouro, niveis }, agora);
     const novos = sinaisDoRitmo(ritmo, depois.nivel ?? 1).filter((s) => !ritmo.avisados.includes(s.tipo));
     for (const s of novos) revisoes.push(entrada(depois, s.tipo, s.descricao));
     gravados.set(uid, { ...depois, ritmo: { ...ritmo, avisados: [...ritmo.avisados, ...novos.map((s) => s.tipo)] } });
