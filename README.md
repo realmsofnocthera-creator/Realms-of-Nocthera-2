@@ -53,6 +53,8 @@ O servidor é a fonte da verdade para o estado e as mecânicas; o navegador apen
 | `revogacoes/{uid}` | instante do último logout no servidor (tokens de logins anteriores são recusados) | só o servidor |
 | `revisao/{id}` | fila de revisão do Painel do Mestre: sinais de anomalia por jogador (6.5-4) | só o servidor |
 | `cadastrosDaRede/{marca}` | contas criadas na mesma rede nas últimas 24 horas, pela marca curta do IP (6.5-6) | só o servidor |
+| `mercado/{id}` | anúncios ativos da Troca entre jogadores, com o item guardado até a venda (7.2) | só o servidor |
+| `mercadoPrecos/{chave}` | preços das últimas vendas de cada item, para avisar de preço fora do normal | só o servidor |
 
 ## Desenvolvimento
 
