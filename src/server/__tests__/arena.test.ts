@@ -74,7 +74,9 @@ describe('Arena (7.5): servidor', () => {
     const rep = await verReplay('u1', depois.historico[0].id, AGORA);
     expect(rep.combate).toEqual(r.combate);
     expect((await verReplay(alvo.uid, dele.historico[0].id, AGORA)).combate).toEqual(r.combate);
-    expect(await erro(verReplay('u3', depois.historico[0].id, AGORA))).toBeInstanceOf(ErroDaArena);
+    // quem não lutou não vê (a lista é sorteada: escolhe alguém que não é o adversário)
+    const deFora = ['u2', 'u3', 'u4'].find((u) => u !== alvo.uid)!;
+    expect(await erro(verReplay(deFora, depois.historico[0].id, AGORA))).toBeInstanceOf(ErroDaArena);
     // o pódio mostra os dois (depois dos 30 segundos de cache)
     limparCacheDaArena();
     expect((await estadoDaArena('u1', AGORA)).podio.map((p) => p.nome)).toEqual(expect.arrayContaining(['Aldric', alvo.nome]));
