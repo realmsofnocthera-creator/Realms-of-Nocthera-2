@@ -30,6 +30,12 @@ const NOMES_DAS_OPERACOES: Record<string, string> = {
   fundirEmblemas: 'Fundir emblemas',
   zerarProgressao: 'Progressão zerada pelo Mestre',
   ajusteDoMestre: 'Ajuste do Mestre',
+  'mercado:anunciar': 'Mercado: anúncio',
+  'mercado:comprar': 'Mercado: compra e venda',
+  'mercado:cancelar': 'Mercado: anúncio cancelado',
+  'mercado:devolver': 'Mercado: anúncio expirado',
+  'correio:resgatar': 'Correio',
+  'correio:resgatarTudo': 'Correio',
 };
 const nomeDaOperacao = (operacao: string) => NOMES_DAS_OPERACOES[operacao] ?? operacao;
 

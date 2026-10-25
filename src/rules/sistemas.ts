@@ -19,6 +19,7 @@ export const SISTEMAS = [
   { id: 'chefeMundial', nome: 'Provação de Chefe Mundial' },
   { id: 'conquistas', nome: 'Conquistas' },
   { id: 'diario', nome: 'Missões diárias e semanais e Check-in' },
+  { id: 'mercado', nome: 'Troca entre jogadores (Mercado)' },
 ] as const;
 export type SistemaId = (typeof SISTEMAS)[number]['id'];
 

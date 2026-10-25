@@ -28,6 +28,7 @@ import { conquistasDoDocumento, estatisticasDoDocumento } from '@/rules/conquist
 import { ehTitulo, titulosDoDocumento } from '@/rules/titulos';
 import { checkinDoDocumento, diarioDoDocumento } from '@/rules/diario';
 import { revisaoDoDocumento, ritmoDoDocumento, type EntradaDeRevisao } from '@/rules/integridade';
+import { anuncioDoDocumento, type AnuncioDoMercado } from '@/rules/mercado';
 import { ELEMENTOS, type Elemento } from '@/rules/elements';
 import { correioGeralDoDocumento, mensagemDoDocumento, mensagensDoDocumento, type MensagemGeral } from '@/rules/correio';
 import { entradaMundialDoDocumento, participacoesMundiaisDoDocumento, type EntradaDoChefeMundial } from '@/rules/chefeMundial';
@@ -416,6 +417,10 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(diarioDoDocumento(data.diario) ? { diario: diarioDoDocumento(data.diario) } : {}),
     ...(checkinDoDocumento(data.checkin) ? { checkin: checkinDoDocumento(data.checkin) } : {}),
     ...(ritmoDoDocumento(data.ritmo) ? { ritmo: ritmoDoDocumento(data.ritmo) } : {}),
+    ...(Array.isArray(data.anunciosNoMercado) ? { anunciosNoMercado: (data.anunciosNoMercado as unknown[]).filter((v): v is string => typeof v === 'string').slice(0, 50) } : {}),
+    ...(Array.isArray(data.comprasNoMercado)
+      ? { comprasNoMercado: (data.comprasNoMercado as unknown[]).filter((v): v is { de: string; em: string } => !!v && typeof (v as { de?: unknown }).de === 'string' && typeof (v as { em?: unknown }).em === 'string').slice(-30) }
+      : {}),
     ...(estatisticasDoDocumento(data.estatisticas) ? { estatisticas: estatisticasDoDocumento(data.estatisticas) } : {}),
     ...(conquistasDoDocumento(data.conquistas) ? { conquistas: conquistasDoDocumento(data.conquistas) } : {}),
     ...(titulosDoDocumento(data.titulos) ? { titulos: titulosDoDocumento(data.titulos) } : {}),
@@ -504,6 +509,8 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.diario ? { diario: semUndefined(char.diario) } : {}),
     ...(char.checkin ? { checkin: char.checkin } : {}),
     ...(char.ritmo ? { ritmo: semUndefined(char.ritmo) } : {}),
+    ...(char.anunciosNoMercado?.length ? { anunciosNoMercado: char.anunciosNoMercado } : {}),
+    ...(char.comprasNoMercado?.length ? { comprasNoMercado: char.comprasNoMercado } : {}),
     ...(char.estatisticas && Object.keys(char.estatisticas).length ? { estatisticas: semUndefined(char.estatisticas) } : {}),
     ...(char.conquistas && Object.keys(char.conquistas).length ? { conquistas: char.conquistas } : {}),
     ...(char.titulos?.length ? { titulos: char.titulos } : {}),
@@ -542,6 +549,9 @@ function transacaoParaFirestore(tx: TransactionDocument): DocumentData {
   };
 }
 
+/** Id do documento de preços do Mercado (a chave tem ":" e ids de item): seguro para o Firestore. */
+const chaveDoPreco = (chave: string) => `p_${Buffer.from(chave, 'utf8').toString('base64url')}`;
+
 /** Remove `undefined` (o Firestore rejeita) mantendo o resto do objeto. */
 function semUndefined<T>(valor: T): T {
   return JSON.parse(JSON.stringify(valor)) as T;
@@ -557,6 +567,9 @@ class ContextoFirestore implements ContextoTransacao {
   /** Como cada personagem estava no banco antes desta transação (para fechar o extrato, 6.5-3). */
   private lidos = new Map<string, CharacterDocument | null>();
   private cadastrosDaRede = new Map<string, CadastrosDaRede>();
+  /** null = apagar. */
+  private anuncios = new Map<string, AnuncioDoMercado | null>();
+  private precos = new Map<string, number[]>();
   private nomes = new Map<string, { uid: string; nome: string }>();
   private transacoes: TransactionDocument[] = [];
   private combates = new Map<string, RegistroCombate>();
@@ -648,6 +661,32 @@ class ContextoFirestore implements ContextoTransacao {
     this.cadastrosDaRede.set(c.marca, structuredClone(c));
   }
 
+  async lerAnuncioDoMercado(id: string): Promise<AnuncioDoMercado | null> {
+    if (this.anuncios.has(id)) return structuredClone(this.anuncios.get(id) ?? null);
+    const snap = await this.tx.get(this.db.collection('mercado').doc(id));
+    return snap.exists ? anuncioDoDocumento(id, snap.data()) : null;
+  }
+
+  gravarAnuncioDoMercado(a: AnuncioDoMercado): void {
+    this.anuncios.set(a.id, structuredClone(a));
+  }
+
+  apagarAnuncioDoMercado(id: string): void {
+    this.anuncios.set(id, null);
+  }
+
+  async lerPrecosDoMercado(chave: string): Promise<number[]> {
+    const pendente = this.precos.get(chave);
+    if (pendente) return [...pendente];
+    const snap = await this.tx.get(this.db.collection('mercadoPrecos').doc(chaveDoPreco(chave)));
+    const v = snap.exists ? snap.data()?.precos : null;
+    return Array.isArray(v) ? v.filter((n): n is number => typeof n === 'number' && Number.isFinite(n)) : [];
+  }
+
+  gravarPrecosDoMercado(chave: string, precos: number[]): void {
+    this.precos.set(chave, [...precos]);
+  }
+
   async lerParty(id: string): Promise<PartyDocumento | null> {
     if (this.partys.has(id)) {
       const pendente = this.partys.get(id);
@@ -708,6 +747,12 @@ class ContextoFirestore implements ContextoTransacao {
     const revisoes = observarJogadores(operacao, this.lidos, this.personagens, extrato.transacoes, extrato.divergencias);
     for (const r of revisoes) this.tx.set(this.db.collection('revisao').doc(r.id), semUndefined(r));
     for (const c of this.cadastrosDaRede.values()) this.tx.set(this.db.collection('cadastrosDaRede').doc(c.marca), { contas: c.contas });
+    for (const [id, a] of this.anuncios) {
+      const ref = this.db.collection('mercado').doc(id);
+      if (a) this.tx.set(ref, semUndefined({ ...a, id: undefined }));
+      else this.tx.delete(ref);
+    }
+    for (const [chave, precos] of this.precos) this.tx.set(this.db.collection('mercadoPrecos').doc(chaveDoPreco(chave)), { precos });
     for (const [uid, personagem] of this.personagens) {
       this.tx.set(this.db.collection('characters').doc(uid), personagemParaFirestore(personagem));
     }
@@ -899,6 +944,20 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
           .filter((r): r is EntradaDeRevisao => r !== null)
           .sort((a, b) => b.criadaEm.localeCompare(a.criadaEm))
           .slice(0, limite);
+      });
+    },
+
+    async listarAnunciosDoMercado() {
+      return lerComRetry('listarAnunciosDoMercado', async () => {
+        const snap = await db.collection('mercado').get();
+        return snap.docs.map((d) => anuncioDoDocumento(d.id, d.data())).filter((a): a is AnuncioDoMercado => a !== null);
+      });
+    },
+
+    async lerAnuncioDoMercado(id: string) {
+      return lerComRetry(`lerAnuncioDoMercado:${id}`, async () => {
+        const snap = await db.collection('mercado').doc(id).get();
+        return snap.exists ? anuncioDoDocumento(id, snap.data()) : null;
       });
     },
 
@@ -1207,6 +1266,8 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
         const personagem = await db.collection('characters').doc(uid).get();
         for (const p of participacoesMundiaisDoDocumento(personagem.data()?.chefeMundial) ?? [])
           refs.push(db.collection('chefeMundial').doc(p.dia).collection('jogadores').doc(uid), db.collection('chefeMundial').doc(p.dia).collection('ocultos').doc(uid));
+        // Os anúncios dele no Mercado (7.2)
+        for (const id of (personagem.data()?.anunciosNoMercado as unknown[] | undefined) ?? []) if (typeof id === 'string') refs.push(db.collection('mercado').doc(id));
         if (chaveNome) {
           const nome = await db.collection('nomes').doc(chaveNome).get();
           if (nome.exists && nome.data()?.uid === uid) refs.push(nome.ref);

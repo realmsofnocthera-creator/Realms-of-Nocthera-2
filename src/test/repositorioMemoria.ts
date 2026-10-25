@@ -9,6 +9,7 @@ import type { CharacterDocument, TransactionDocument } from '@/server/characterS
 import { fecharExtrato, tratarDivergencias } from '@/server/extrato';
 import { observarJogadores, type CadastrosDaRede } from '@/server/integridade';
 import type { EntradaDeRevisao } from '@/rules/integridade';
+import type { AnuncioDoMercado } from '@/rules/mercado';
 import type { SancaoDocumento } from '@/rules/sancoes';
 import { chaveDeBusca, type CampoDoRanking, type CriterioDeRanking, type RankingGuardado, type ResumoDePersonagem } from '@/rules/social';
 import type { ConfiguracaoDeSistemas } from '@/rules/sistemas';
@@ -52,6 +53,8 @@ interface Estado {
   correioGeral: Map<string, MensagemGeral>;
   revisoes: Map<string, EntradaDeRevisao>;
   cadastrosDaRede: Map<string, CadastrosDaRede>;
+  anuncios: Map<string, AnuncioDoMercado>;
+  precosDoMercado: Map<string, number[]>;
 }
 
 const estado: Estado = {
@@ -75,6 +78,8 @@ const estado: Estado = {
   correioGeral: new Map(),
   revisoes: new Map(),
   cadastrosDaRede: new Map(),
+  anuncios: new Map(),
+  precosDoMercado: new Map(),
 };
 
 /** Chefe Mundial: a entrada de quem está com limite silencioso fica à parte (como chefeMundial/{dia}/ocultos). */
@@ -223,6 +228,26 @@ class ContextoMemoria implements ContextoTransacao {
   gravarCadastrosDaRede(c: CadastrosDaRede) {
     this.cadastrosDaRede.set(c.marca, structuredClone(c));
   }
+  /** null = apagar. */
+  anuncios = new Map<string, AnuncioDoMercado | null>();
+  precos = new Map<string, number[]>();
+  async lerAnuncioDoMercado(id: string) {
+    if (this.anuncios.has(id)) return structuredClone(this.anuncios.get(id) ?? null);
+    const a = estado.anuncios.get(id);
+    return a ? structuredClone(a) : null;
+  }
+  gravarAnuncioDoMercado(a: AnuncioDoMercado) {
+    this.anuncios.set(a.id, structuredClone(a));
+  }
+  apagarAnuncioDoMercado(id: string) {
+    this.anuncios.set(id, null);
+  }
+  async lerPrecosDoMercado(chave: string) {
+    return [...(this.precos.get(chave) ?? estado.precosDoMercado.get(chave) ?? [])];
+  }
+  gravarPrecosDoMercado(chave: string, precos: number[]) {
+    this.precos.set(chave, [...precos]);
+  }
 }
 
 export const repositorio: Repositorio = {
@@ -254,6 +279,8 @@ export const repositorio: Repositorio = {
         estado.transacoes.push(...extrato.transacoes);
         for (const r of revisoes) estado.revisoes.set(r.id, structuredClone(r));
         for (const [marca, c] of ctx.cadastrosDaRede) estado.cadastrosDaRede.set(marca, c);
+        for (const [id, a] of ctx.anuncios) (a ? estado.anuncios.set(id, a) : estado.anuncios.delete(id));
+        for (const [chave, p] of ctx.precos) estado.precosDoMercado.set(chave, p);
         return valor;
       })
     );
@@ -425,6 +452,7 @@ export const repositorio: Repositorio = {
     estado.sancoes.delete(uid);
     estado.revogacoes.delete(uid);
     for (const [k, e] of estado.chefeMundial) if (e.uid === uid) estado.chefeMundial.delete(k);
+    for (const [id, a] of estado.anuncios) if (a.vendedorUid === uid) estado.anuncios.delete(id);
   },
 
   async lerGuilda(id: string) {
@@ -472,6 +500,15 @@ export const repositorio: Repositorio = {
       .map((r) => structuredClone(r))
       .sort((a, b) => b.criadaEm.localeCompare(a.criadaEm))
       .slice(0, limite);
+  },
+
+  async listarAnunciosDoMercado() {
+    return [...estado.anuncios.values()].map((a) => structuredClone(a));
+  },
+
+  async lerAnuncioDoMercado(id: string) {
+    const a = estado.anuncios.get(id);
+    return a ? structuredClone(a) : null;
   },
 
   async gravarRevisao(entrada: EntradaDeRevisao) {
@@ -539,6 +576,8 @@ export function resetCharacterStore(): void {
   estado.correioGeral.clear();
   estado.revisoes.clear();
   estado.cadastrosDaRede.clear();
+  estado.anuncios.clear();
+  estado.precosDoMercado.clear();
   falhaNaConfiguracao = null;
   falhaNoLogAdmin = null;
   falhaAoGravar = null;

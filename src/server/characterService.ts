@@ -275,6 +275,9 @@ export interface CharacterDocument {
   checkin?: CheckinDoJogador;
   /** Integridade (6.5-4): as contas da hora corrente e os instantes das últimas ações, para a fila de revisão. */
   ritmo?: RitmoDoJogador;
+  /** Troca entre jogadores (7.2): os anúncios ativos do jogador e as compras das últimas 24 horas (para a fila de revisão). */
+  anunciosNoMercado?: string[];
+  comprasNoMercado?: { de: string; em: string }[];
   /** Feiticeiro (1.5.2): o elemento escolhido, usado nas habilidades da classe que não têm elemento próprio. */
   elementoDaClasse?: Elemento;
   /** Conquistas: os totais contados (vitórias, forjas…), os degraus já resgatados, os títulos e o título escolhido. */

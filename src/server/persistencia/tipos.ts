@@ -10,6 +10,7 @@ import type { EntradaDoChefeSemanal } from '@/rules/chefeSemanal';
 import type { PartyDocumento } from '@/rules/testeEquipe';
 import type { EntradaDoChefeMundial } from '@/rules/chefeMundial';
 import type { MensagemGeral } from '@/rules/correio';
+import type { AnuncioDoMercado } from '@/rules/mercado';
 import type { EntradaDeRevisao } from '@/rules/integridade';
 import type { CadastrosDaRede } from '@/server/integridade';
 
@@ -138,6 +139,12 @@ export interface ContextoTransacao {
   /** Contas criadas numa rede nas últimas 24 horas (6.5-6). */
   lerCadastrosDaRede(marca: string): Promise<CadastrosDaRede | null>;
   gravarCadastrosDaRede(c: CadastrosDaRede): void;
+  /** Troca entre jogadores (7.2): o anúncio e os preços das últimas vendas de um item. */
+  lerAnuncioDoMercado(id: string): Promise<AnuncioDoMercado | null>;
+  gravarAnuncioDoMercado(a: AnuncioDoMercado): void;
+  apagarAnuncioDoMercado(id: string): void;
+  lerPrecosDoMercado(chave: string): Promise<number[]>;
+  gravarPrecosDoMercado(chave: string, precos: number[]): void;
 }
 
 /** Papel de Mestre concedido pelo painel (o Dono vem do ambiente e não é gravado aqui). */
@@ -303,6 +310,9 @@ export interface Repositorio {
   gravarRevisao(entrada: EntradaDeRevisao): Promise<void>;
   /** Marca as entradas como revisadas; devolve quantas existiam. */
   marcarRevisoes(ids: readonly string[], por: string, em: string): Promise<number>;
+  /** Troca entre jogadores (7.2): todos os anúncios (os vendidos e cancelados são apagados) e um anúncio fora de transação. */
+  listarAnunciosDoMercado(): Promise<AnuncioDoMercado[]>;
+  lerAnuncioDoMercado(id: string): Promise<AnuncioDoMercado | null>;
 }
 
 /**

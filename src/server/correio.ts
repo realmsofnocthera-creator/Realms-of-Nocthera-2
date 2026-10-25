@@ -18,6 +18,7 @@ import {
 import { MATERIAIS_MAP } from '@/rules/materiais';
 import { MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
 import { comTitulos, ehTitulo } from '@/rules/titulos';
+import { CARTAS_MAXIMAS } from '@/rules/almas';
 import { alterarSaldoEm, carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { comRegistro, ErroMestre, exigir, type SessaoMestre } from '@/server/mestre';
 import { repositorio, type ContextoTransacao } from '@/server/persistencia';
@@ -77,9 +78,24 @@ export function novaMensagem(dados: { titulo: string; texto: string; de: string;
   };
 }
 
-/** A caixa do jogador com a mensagem nova: tira as vencidas e guarda no máximo 100 (as mais antigas saem). */
+/**
+ * A caixa do jogador com a mensagem nova: tira as vencidas e guarda no máximo 100. Passando disso, saem primeiro as
+ * mais antigas sem presente por resgatar (avisos do Mercado, presentes já resgatados); só depois as outras.
+ */
 export function comMensagem(caixa: readonly MensagemDoCorreio[] | undefined, mensagem: MensagemDoCorreio, agora: Date): MensagemDoCorreio[] {
-  return [...(caixa ?? []).filter((m) => mensagemValida(m, agora)), mensagem].slice(-MENSAGENS_MAXIMAS);
+  const lista = [...(caixa ?? []).filter((m) => mensagemValida(m, agora)), mensagem];
+  let sobra = lista.length - MENSAGENS_MAXIMAS;
+  if (sobra <= 0) return lista;
+  const pendente = (m: MensagemDoCorreio) => !!m.presente && !m.resgatada;
+  const fora = new Set<string>();
+  for (const m of lista) {
+    if (sobra <= 0) break;
+    if (m !== mensagem && !pendente(m)) {
+      fora.add(m.id);
+      sobra--;
+    }
+  }
+  return lista.filter((m) => !fora.has(m.id)).slice(-MENSAGENS_MAXIMAS);
 }
 
 /**
@@ -168,6 +184,12 @@ export function entregarPresente(ctx: ContextoTransacao, char: CharacterDocument
     patch.inventario = inventario;
   }
   if (presente.titulos?.length) patch.titulos = comTitulos(doc.titulos, presente.titulos);
+  if (presente.cartas?.length) {
+    const itens = doc.cartasItens ?? [];
+    if (itens.length + presente.cartas.length > CARTAS_MAXIMAS) throw new ErroDeCorreio(`Suas cartas estão cheias (${CARTAS_MAXIMAS}). Destrua ou venda algumas para resgatar.`);
+    patch.cartasItens = [...itens, ...presente.cartas];
+    patch.cartasDescobertas = [...new Set([...(doc.cartasDescobertas ?? []), ...presente.cartas.map((c) => c.tipo)])];
+  }
   return { doc, patch };
 }
 
