@@ -21,6 +21,7 @@ export const SISTEMAS = [
   { id: 'diario', nome: 'Missões diárias e semanais e Check-in' },
   { id: 'mercado', nome: 'Troca entre jogadores (Mercado)' },
   { id: 'leilao', nome: 'Leilão' },
+  { id: 'loja', nome: 'Loja' },
 ] as const;
 export type SistemaId = (typeof SISTEMAS)[number]['id'];
 

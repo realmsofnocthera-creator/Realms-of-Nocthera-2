@@ -36,6 +36,7 @@ const NOMES_DAS_OPERACOES: Record<string, string> = {
   'mercado:devolver': 'Mercado: anúncio expirado',
   'correio:resgatar': 'Correio',
   'correio:resgatarTudo': 'Correio',
+  'loja:comprar': 'Loja',
 };
 const nomeDaOperacao = (operacao: string) => NOMES_DAS_OPERACOES[operacao] ?? operacao;
 

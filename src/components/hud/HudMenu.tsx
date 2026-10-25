@@ -102,7 +102,8 @@ export function HudMenu({
       id: 'loja',
       label: 'Loja',
       iconSrc: HUD_ICONS.menuLoja,
-      enabled: false,
+      enabled: true,
+      onClick: () => router.push('/loja'),
     },
     {
       id: 'guilda',
