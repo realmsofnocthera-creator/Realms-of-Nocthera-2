@@ -4092,19 +4092,9 @@ export function resolverCombate(
   return passo.value;
 }
 
-/**
- * O motor do combate: avança uma rodada a cada next() e devolve o resultado no fim. Com `compartilhado`, o monstro
- * (e os status nele) vem de fora e é dividido com os outros aliados.
- */
-export function* motorDeCombate(
-  personagem: Combatente,
-  monstro: MonsterDefinition,
-  seed: number = 42,
-  opcoes?: OpcoesResolverCombate,
-  compartilhado?: AlvoCompartilhado
-): Generator<void, ResultadoCombate, void> {
-  // Clona instâncias para manter função 100% pura
-  const p: Combatente = {
+/** A cópia do personagem com que a luta começa (o motor é puro: nunca mexe na ficha recebida). */
+function clonarPersonagemParaLuta(personagem: Combatente): Combatente {
+  return {
     nome: personagem.nome,
     hp: personagem.hp,
     hpMax: personagem.hpMax,
@@ -4163,6 +4153,465 @@ export function* motorDeCombate(
     cargasFocoAbsoluto: personagem.cargasFocoAbsoluto ?? 0,
     contadorCorteDoVazio: personagem.contadorCorteDoVazio ?? 0,
   };
+}
+
+/** Os efeitos de Mitigação e defesa contam os turnos do inimigo: perdem 1 rodada depois que ele age. */
+function passarRodadaEfeitosDefensivos(alvoDosAtaques: Combatente): void {
+  if (!alvoDosAtaques.efeitosDefensivos || alvoDosAtaques.efeitosDefensivos.length === 0) return;
+  const avanco = avancarRodadaEfeitosDefensivos(alvoDosAtaques.efeitosDefensivos);
+  alvoDosAtaques.efeitosDefensivos = avanco.efeitos;
+  if (avanco.sobreescudoRemovido > 0) {
+    alvoDosAtaques.sobreescudo = Math.max(0, alvoDosAtaques.sobreescudo - avanco.sobreescudoRemovido);
+  }
+}
+
+/** O que o lado que aplica um status soma a ele (emblemas): duração do veneno e dos controles e dano do sangramento. */
+interface BonusDoAplicador {
+  duracaoVeneno: number;
+  duracaoControle: number;
+  danoSangramento: number;
+  /** Os emblemas de quem aplicou reagem ao controle aplicado. */
+  aoControlar: (eventosEfeitosDoTurno: EventoEfeito[]) => void;
+}
+
+/** O que um lado precisa da luta: a rodada, os sorteios e onde os índices dos sorteios dele começam. */
+interface LutaDoLado {
+  rodada: () => number;
+  sorteioStatus: (rodada: number, indice: number) => number;
+  sorteioCritico: (rodada: number, indiceAtaque: number, indiceGolpe: number) => number;
+  /** Somado aos índices dos sorteios do lado: 0 no PvE; no PvP, o segundo jogador usa outro trecho. */
+  deslocamento: number;
+  /** No PvP os eventos de status trazem o nome de quem sofreu (os dois lados são jogadores). */
+  alvoNosEventos: boolean;
+}
+
+/**
+ * Um lado da luta que é um personagem: os status que ele sofre, os emblemas, as habilidades de armadura e a ação dele
+ * (o turno e o que vem depois: status no inimigo, limpezas e gatilhos). No PvE o inimigo é o monstro; no PvP, outro lado.
+ */
+function criarLadoDoPersonagem(
+  p: Combatente,
+  inimigo: () => Combatente,
+  statusDoInimigo: () => EfeitoStatus[],
+  aplicarStatusNoInimigo: (efeitoId: EfeitoStatus, sorteio: number, chanceExtraPontos: number, eventosEfeitosDoTurno: EventoEfeito[]) => void,
+  luta: LutaDoLado
+) {
+  const d = luta.deslocamento;
+  const sorteio = (rodada: number, indice: number) => luta.sorteioStatus(rodada, indice + d);
+  // Estado local de efeitos do personagem apenas durante a luta (nunca persistido)
+  let efeitosPersonagem: Map<EfeitoStatus, EfeitoAtivo> = new Map();
+  if ((p.equipamento?.emblemas?.gatilhos.length ?? 0) > 0) p.gatilhosEmblema = novoEstadoGatilhos();
+  const alvoDoEvento = () => (luta.alvoNosEventos ? { alvo: p.nome } : {});
+
+  // Gatilhos dos emblemas: o que acontece na luta chama as habilidades que reagem a isso
+  let mensagensDeEmblemas: string[] = [];
+  let sorteiosDeGatilho = 0;
+  let morteDoInimigoTratada = false;
+  const dispararEmblemas = (acontecimento: AcontecimentoDaLuta, eventosEfeitosDoTurno: EventoEfeito[]) => {
+    const estado = p.gatilhosEmblema;
+    if (!estado || p.hp <= 0) return;
+    const m = inimigo();
+    const turno = luta.rodada();
+    const disparos = dispararGatilhos(p.equipamento?.emblemas, estado, acontecimento, {
+      rodada: turno,
+      hpMaxProprio: p.hpMax,
+      sorteio: () => sorteio(turno, 3000 + sorteiosDeGatilho++),
+    });
+    for (const disparo of disparos) {
+      const partes: string[] = [];
+      if (disparo.cura > 0) {
+        const cura = Math.min(p.hpMax - p.hp, disparo.cura);
+        if (cura > 0) {
+          p.hp += cura;
+          partes.push(`recupera ${cura} de HP`);
+        }
+      }
+      if (disparo.escudoPercentual && disparo.escudoRodadas) {
+        const res = adicionarEfeitoDefensivo(
+          p.efeitosDefensivos ?? [],
+          { efeito: 'escudoTemporario', valorPercentual: disparo.escudoPercentual, duracaoRodadas: disparo.escudoRodadas },
+          p.hpMax
+        );
+        p.efeitosDefensivos = res.efeitos;
+        p.sobreescudo = Math.max(0, p.sobreescudo + res.sobreescudoGanho - res.sobreescudoRemovido);
+        partes.push(`ganha ${res.sobreescudoGanho} de escudo`);
+      }
+      if (disparo.removerNegativos && efeitosPersonagem.size > 0) {
+        efeitosPersonagem = removerEfeitos(efeitosPersonagem, 'todos').efeitos;
+        partes.push('remove os efeitos negativos');
+      }
+      if (disparo.debuffDefesaNoInimigo && m.hp > 0) {
+        m.debuffs = adicionarDebuffs(m.debuffs, [{ tipo: 'reducaoDefesa', ...disparo.debuffDefesaNoInimigo }]);
+        partes.push(`${m.nome} perde ${disparo.debuffDefesaNoInimigo.percentual}% de DEF`);
+      }
+      if (disparo.sangramentoNoInimigo && m.hp > 0) {
+        aplicarStatusNoInimigo('sangramento', 0, 0, eventosEfeitosDoTurno);
+        partes.push(`${m.nome} sangra`);
+      }
+      if (disparo.danoExtra > 0 && m.hp > 0) {
+        m.hp = Math.max(0, m.hp - disparo.danoExtra);
+        partes.push(`causa ${disparo.danoExtra} de dano extra`);
+      }
+      mensagensDeEmblemas.push(`Emblema — ${disparo.nome}: ${partes.length > 0 ? partes.join(', ') : 'ativou'}.`);
+    }
+  };
+  /** A morte do inimigo (por golpe, dano contínuo ou dano refletido) dispara as habilidades "ao derrotar um inimigo". */
+  const tratarMorteDoInimigo = (eventosEfeitosDoTurno: EventoEfeito[]) => {
+    if (inimigo().hp > 0 || morteDoInimigoTratada) return;
+    morteDoInimigoTratada = true;
+    dispararEmblemas({ evento: 'inimigoMorto' }, eventosEfeitosDoTurno);
+  };
+  /** HP baixo: as habilidades de "quando o HP fica abaixo de X%" conferem o HP depois de cada dano. */
+  const conferirHpDosEmblemas = (eventosEfeitosDoTurno: EventoEfeito[]) => {
+    if (p.hp > 0 && p.hpMax > 0) dispararEmblemas({ evento: 'hpAbaixo', hpPercentual: (p.hp * 100) / p.hpMax }, eventosEfeitosDoTurno);
+  };
+
+  // Resistências a status da armadura (nível somado das habilidades): chance, dano e duração do que o personagem sofre
+  const armaduraDoPersonagem = () => p.equipamento?.habilidadesArmadura;
+  const reducaoChancePersonagem = (efeitoId: EfeitoStatus): number =>
+    Math.min(
+      100,
+      reducaoChanceStatusRacial(p.racaId, efeitoId) +
+        reducaoChanceStatusDeArmadura(armaduraDoPersonagem(), efeitoId) +
+        (p.equipamento?.emblemas?.resistenciaStatusPercentual ?? 0)
+    );
+  /** Ressuscitar: o dano de status não age até o fim da rodada que ele marcou. */
+  const semDanoDeStatus = (): boolean => (p.imunidadeDanoStatusAteRodada ?? 0) >= luta.rodada();
+  const danoDeStatusNoPersonagem = (efeitoId: EfeitoStatus, dano: number): number =>
+    semDanoDeStatus() ? 0 : Math.floor((dano * (100 - reducaoDanoStatusDeArmadura(armaduraDoPersonagem(), efeitoId))) / 100);
+  /** Resistência a Flagelo: encurta a duração do dano contínuo que acabou de ser aplicado ou renovado no personagem. */
+  const encurtarDuracaoNoPersonagem = (efeitoId: EfeitoStatus): void => {
+    const reducao = reducaoDuracaoStatusDeArmadura(armaduraDoPersonagem(), efeitoId);
+    const ativo = efeitosPersonagem.get(efeitoId);
+    if (reducao <= 0 || !ativo) return;
+    const duracao = Math.max(1, Math.ceil(((EFEITOS_STATUS[efeitoId].duracaoRodadas ?? 1) * (100 - reducao)) / 100));
+    efeitosPersonagem = new Map(efeitosPersonagem).set(efeitoId, { ...ativo, rodadasRestantes: Math.min(ativo.rodadasRestantes, duracao) });
+  };
+  const rodadasDoStatusNoPersonagem = (efeitoId: EfeitoStatus): number | undefined =>
+    efeitosPersonagem.get(efeitoId)?.rodadasRestantes ?? EFEITOS_STATUS[efeitoId].duracaoRodadas;
+
+  // Efeitos que o personagem resistiu na ação do inimigo (PvP; no PvE quem conta são os efeitos do próprio monstro)
+  let efeitosResistidos = 0;
+  /**
+   * Aplica um status no personagem (habilidade do inimigo): forçado (sorteio 0) ou com chance; respeita imunidade e
+   * redução racial. `doAplicador` (PvP) soma os emblemas de quem aplicou.
+   */
+  const receberStatus = (
+    efeitoId: EfeitoStatus,
+    sorteioDoStatus: number,
+    chanceExtraPontos: number,
+    eventosEfeitosDoTurno: EventoEfeito[],
+    doAplicador?: BonusDoAplicador
+  ) => {
+    if (estaImuneAoStatus(p, efeitoId)) {
+      eventosEfeitosDoTurno.push({ tipo: 'imune', efeito: efeitoId, ...alvoDoEvento() });
+      return;
+    }
+    const reducao = reducaoChancePersonagem(efeitoId);
+    const tentativa = tentarAplicarEfeito(efeitosPersonagem, efeitoId, sorteioDoStatus, reducao, chanceExtraPontos);
+    efeitosPersonagem = tentativa.efeitos;
+    if (doAplicador && tentativa.resultado === 'nao_ativou' && reducao > 0 && sorteioDoStatus < (EFEITOS_STATUS[efeitoId]?.chanceAtivacao ?? 0) + chanceExtraPontos) {
+      efeitosResistidos++;
+    }
+    if (tentativa.resultado === 'aplicado' || tentativa.resultado === 'renovado') {
+      encurtarDuracaoNoPersonagem(efeitoId);
+      // Contaminação Persistente de quem aplicou: o veneno dura mais
+      const veneno = efeitoId === 'veneno' ? efeitosPersonagem.get('veneno') : undefined;
+      if (veneno && (doAplicador?.duracaoVeneno ?? 0) > 0) {
+        efeitosPersonagem = new Map(efeitosPersonagem).set('veneno', { ...veneno, rodadasRestantes: duracaoComBonus(veneno.rodadasRestantes, doAplicador!.duracaoVeneno) });
+      }
+    }
+    const definicao = EFEITOS_STATUS[efeitoId];
+    if (tentativa.resultado === 'controle') {
+      const danoImediato = definicao.percentualHpMax > 0 ? calcularDanoEfeito(p.hpMax, definicao.percentualHpMax) : 0;
+      p.hp = Math.max(0, p.hp - danoImediato);
+      aplicarEfeitoControle(p, efeitoId, doAplicador?.duracaoControle ?? 0);
+      doAplicador?.aoControlar(eventosEfeitosDoTurno);
+      eventosEfeitosDoTurno.push({ tipo: 'controle', efeito: efeitoId, ...(danoImediato > 0 ? { dano: danoImediato } : {}), ...alvoDoEvento() });
+    } else if (tentativa.resultado === 'aplicado' || tentativa.resultado === 'renovado') {
+      eventosEfeitosDoTurno.push({ tipo: tentativa.resultado, efeito: efeitoId, rodadasRestantes: rodadasDoStatusNoPersonagem(efeitoId), ...alvoDoEvento() });
+    } else if (tentativa.resultado === 'instantaneo') {
+      const base = calcularDanoEfeito(p.hpMax, definicao.percentualHpMax);
+      const bonus = efeitoId === 'sangramento' ? doAplicador?.danoSangramento ?? 0 : 0;
+      const danoInstantaneo = danoDeStatusNoPersonagem(efeitoId, bonus > 0 ? Math.floor((base * (100 + bonus)) / 100) : base);
+      p.hp = Math.max(0, p.hp - danoInstantaneo);
+      registrarEstadoDeLuta(p, efeitoId);
+      eventosEfeitosDoTurno.push({ tipo: 'instantaneo', efeito: efeitoId, dano: danoInstantaneo, ...alvoDoEvento() });
+    }
+  };
+
+  /** Estado de quem tem a armadura (o personagem) para as habilidades de status de ataque. */
+  const estadoArmaduraDoPersonagem = (): EstadoGolpeArmadura => ({
+    hpAtacante: p.hp,
+    hpMaxAtacante: p.hpMax,
+    sobreescudoAtacante: p.sobreescudo,
+    sobreescudoMaxAtacante: p.equipamento?.sobreescudoMaximo ?? 0,
+    hpAlvo: inimigo().hp,
+    hpMaxAlvo: inimigo().hpMax,
+    alvoEnfurecido: false,
+  });
+  /** Pontos a somar à chance base do status que o personagem aplica: o do Grimório e o bônus relativo das habilidades. */
+  const chanceExtraDoStatus = (status: EfeitoStatus): number =>
+    (p.equipamento?.bonusChanceEfeitosPontos ?? 0) +
+    chanceExtraRelativaEmPontos(
+      status,
+      bonusChanceStatusRelativa(p.equipamento?.habilidadesArmadura, status, estadoArmaduraDoPersonagem()) +
+        (status === 'congelamento' || status === 'sono' ? p.equipamento?.emblemas?.chanceStatus[status] ?? 0 : 0)
+    );
+
+  const removerDoPersonagem = (quantos: number | 'todos', eventosEfeitosDoTurno: EventoEfeito[]) => {
+    const rem = removerEfeitos(efeitosPersonagem, quantos);
+    efeitosPersonagem = rem.efeitos;
+    for (const efeitoRemovido of rem.removidos) {
+      eventosEfeitosDoTurno.push({ tipo: 'removido', efeito: efeitoRemovido, ...alvoDoEvento() });
+    }
+  };
+
+  const executarAcaoPersonagemBase = (
+    rodada: number,
+    ataquesDoTurno: AtaqueLog[],
+    eventosEfeitosDoTurno: EventoEfeito[],
+    opcoesDoDefensor?: Partial<OpcoesTurno>
+  ) => {
+    const m = inimigo();
+    m.statusAtivos = statusDoInimigo();
+    const tPersonagem = turnoDeCombate(p, m, rodada, {
+      sorteioCritico: (idxAtk, idxGolpe) => luta.sorteioCritico(rodada, idxAtk, idxGolpe),
+      sorteioAtaqueExtra: () => sorteio(rodada, 3900),
+      ...opcoesDoDefensor,
+    });
+    passarRodadaEfeitosDefensivos(m);
+    ataquesDoTurno.push(...tPersonagem.turnoLog.ataques);
+
+    for (const atk of tPersonagem.turnoLog.ataques) {
+      // Sangramento Forçado (catálogo 1.2): status aplicado no inimigo sem sorteio de chance
+      for (const efeitoId of atk.statusForcadosNoAlvo ?? []) {
+        aplicarStatusNoInimigo(efeitoId, 0, 0, eventosEfeitosDoTurno);
+      }
+      // Status com chance (ex.: Paralisia de uma habilidade de Relâmpago, com +5% de chance): sorteia a ativação
+      (atk.statusComChanceNoAlvo ?? []).forEach((s, i) => {
+        aplicarStatusNoInimigo(
+          s.status,
+          sorteio(rodada, 100 + i),
+          (s.chanceExtraPercentual ?? 0) + chanceExtraDoStatus(s.status),
+          eventosEfeitosDoTurno
+        );
+      });
+      // Status da arma: cada golpe que causa dano tenta aplicar cada status com a chance base dele
+      if (p.equipamento && atk.danoBruto > 0 && !atk.incapacitado) {
+        p.equipamento.statusArma.forEach((status, i) => {
+          aplicarStatusNoInimigo(
+            status,
+            sorteio(rodada, 300 + ataquesDoTurno.indexOf(atk) * 4 + i),
+            chanceExtraDoStatus(status),
+            eventosEfeitosDoTurno
+          );
+        });
+        // Adição de Veneno, Paralisia, Sono e Explosão: chance fixa por golpe, só se a arma não aplicar o status
+        adicoesDeStatus(p.equipamento.habilidadesArmadura, p.equipamento.statusArma).forEach((a, i) => {
+          if (sorteio(rodada, 600 + ataquesDoTurno.indexOf(atk) * 4 + i) < a.chancePercentual) {
+            aplicarStatusNoInimigo(a.status, 0, 0, eventosEfeitosDoTurno);
+          }
+        });
+      }
+      // Limpeza (catálogo 1.2): remove de 1 a 3 efeitos negativos do personagem
+      if (atk.efeitosNegativosRemovidos) removerDoPersonagem(atk.efeitosNegativosRemovidos, eventosEfeitosDoTurno);
+      if (atk.habilidadeAcionada === 'Bênção Divina') removerDoPersonagem(QUANTIDADE_REMOCAO_BENCAO_DIVINA, eventosEfeitosDoTurno);
+      else if (atk.habilidadeAcionada === 'Milagre Divino') removerDoPersonagem('todos', eventosEfeitosDoTurno);
+    }
+  };
+
+  /** Cura que o personagem recebeu na rodada atual (base da Reversão da Selvara). */
+  let curaDoPersonagemNaRodada = 0;
+  const executarAcao = (rodada: number, ataquesDoTurno: AtaqueLog[], eventosEfeitosDoTurno: EventoEfeito[], opcoesDoDefensor?: Partial<OpcoesTurno>) => {
+    const hpAntes = p.hp;
+    const inicioDosAtaques = ataquesDoTurno.length;
+    executarAcaoPersonagemBase(rodada, ataquesDoTurno, eventosEfeitosDoTurno, opcoesDoDefensor);
+    curaDoPersonagemNaRodada += Math.max(0, p.hp - hpAntes);
+
+    // Emblemas: os bônus de "próximo ataque" gastam um golpe; depois os golpes desta ação disparam as habilidades
+    const golpesDaAcao = ataquesDoTurno.slice(inicioDosAtaques).filter((a) => a.atacante === p.nome && a.danoBruto > 0 && !a.incapacitado);
+    if (golpesDaAcao.length > 0) consumirGolpeDosGatilhos(p.gatilhosEmblema, rodada);
+    for (const atk of golpesDaAcao) {
+      if ((atk.golpesCriticos ?? 0) > 0) {
+        dispararEmblemas({ evento: 'criticoDado', danoDoGolpe: atk.danoPorGolpe ?? atk.danoBruto }, eventosEfeitosDoTurno);
+      }
+      if (atk.elemento) {
+        dispararEmblemas(
+          { evento: 'golpeElemental', elemento: atk.elemento, danoCausado: atk.danoEfetivo, hpAtualDoAlvo: atk.hpRestante, hpMaxDoAlvo: inimigo().hpMax },
+          eventosEfeitosDoTurno
+        );
+      }
+    }
+    tratarMorteDoInimigo(eventosEfeitosDoTurno);
+  };
+
+  // Pouso Seguro: o primeiro golpe que o personagem sofre na luta
+  let personagemJaFoiAtingido = false;
+
+  return {
+    c: p,
+    /** O sorteio de status deste lado (com o deslocamento dele). */
+    sorteio,
+    get efeitos() {
+      return efeitosPersonagem;
+    },
+    set efeitos(e: Map<EfeitoStatus, EfeitoAtivo>) {
+      efeitosPersonagem = e;
+    },
+    get jaFoiAtingido() {
+      return personagemJaFoiAtingido;
+    },
+    set jaFoiAtingido(v: boolean) {
+      personagemJaFoiAtingido = v;
+    },
+    get curaNaRodada() {
+      return curaDoPersonagemNaRodada;
+    },
+    set curaNaRodada(v: number) {
+      curaDoPersonagemNaRodada = v;
+    },
+    /** Tira as mensagens dos emblemas acumuladas (vão para o log da rodada). */
+    tomarMensagensDeEmblemas(): string[] {
+      const m = mensagensDeEmblemas;
+      mensagensDeEmblemas = [];
+      return m;
+    },
+    tomarEfeitosResistidos(): number {
+      const n = efeitosResistidos;
+      efeitosResistidos = 0;
+      return n;
+    },
+    dispararEmblemas,
+    tratarMorteDoInimigo,
+    conferirHpDosEmblemas,
+    reducaoChancePersonagem,
+    danoDeStatusNoPersonagem,
+    encurtarDuracaoNoPersonagem,
+    rodadasDoStatusNoPersonagem,
+    semDanoDeStatus,
+    receberStatus,
+    executarAcao,
+    /** O que os emblemas deste personagem somam aos status que ele aplica. */
+    bonusDoAplicador(): BonusDoAplicador {
+      return {
+        duracaoVeneno: p.equipamento?.emblemas?.duracaoStatus.veneno ?? 0,
+        duracaoControle: p.equipamento?.emblemas?.duracaoStatus.controle ?? 0,
+        danoSangramento: p.equipamento?.emblemas?.danoStatus.sangramento ?? 0,
+        aoControlar: (eventos) => dispararEmblemas({ evento: 'controleAplicado' }, eventos),
+      };
+    },
+    /** Bônus de dano do dano contínuo que este personagem causa (armadura e emblemas). */
+    bonusDoDanoContinuo(): { queimadura: number; veneno: number } {
+      return {
+        queimadura: bonusDanoQueimaduraDeArmadura(p.equipamento?.habilidadesArmadura) + (p.equipamento?.emblemas?.danoStatus.queimadura ?? 0),
+        veneno: p.equipamento?.emblemas?.danoStatus.veneno ?? 0,
+      };
+    },
+    /** Espinhos de Dravakhar: o dano devolvido tem chance de causar Sangramento em quem atacou. */
+    espinhos(ataquesRecebidos: readonly AtaqueLog[], rodada: number, eventosEfeitosDoTurno: EventoEfeito[]) {
+      const chance = chanceSangramentoRefletidoDeArmadura(p.equipamento?.habilidadesArmadura);
+      if (chance <= 0) return;
+      ataquesRecebidos.forEach((atk, idx) => {
+        if ((atk.danoRefletido ?? 0) > 0 && sorteio(rodada, 700 + idx) < chance) aplicarStatusNoInimigo('sangramento', 0, 0, eventosEfeitosDoTurno);
+      });
+    },
+    /** Emblemas defensivos depois da ação do inimigo: atacado, dano recebido, efeito resistido e HP baixo. */
+    reagirAAcaoDoInimigo(golpesRecebidos: number, hpAntes: number, resistidos: number, eventosEfeitosDoTurno: EventoEfeito[]) {
+      if (p.hp > 0 && golpesRecebidos > 0) {
+        dispararEmblemas({ evento: 'atacadoPorInimigo' }, eventosEfeitosDoTurno);
+        const perdido = Math.max(0, hpAntes - p.hp);
+        if (perdido > 0) {
+          dispararEmblemas({ evento: 'danoRecebido', percentualHpPerdido: (perdido * 100) / Math.max(1, p.hpMax) }, eventosEfeitosDoTurno);
+        }
+      }
+      if (resistidos > 0) dispararEmblemas({ evento: 'efeitoResistido' }, eventosEfeitosDoTurno);
+      conferirHpDosEmblemas(eventosEfeitosDoTurno);
+    },
+    /** Dano contínuo no fim da rodada (o bônus é o de quem causou: zero no PvE, o do outro jogador no PvP). */
+    tickDeStatus(eventosEfeitosDoTurno: EventoEfeito[], bonusDeQuemCausou = { queimadura: 0, veneno: 0 }) {
+      if (p.hp <= 0) return;
+      const tick = processarTickEfeitos(efeitosPersonagem, p.hpMax, {
+        queimadura: -reducaoDanoStatusDeArmadura(armaduraDoPersonagem(), 'queimadura') + bonusDeQuemCausou.queimadura,
+        podridaoEscarlate: -reducaoDanoStatusDeArmadura(armaduraDoPersonagem(), 'podridaoEscarlate'),
+        veneno: -reducaoDanoStatusDeArmadura(armaduraDoPersonagem(), 'veneno') + bonusDeQuemCausou.veneno,
+      });
+      efeitosPersonagem = tick.efeitos;
+      for (const e of tick.eventos) eventosEfeitosDoTurno.push(luta.alvoNosEventos ? { ...e, alvo: p.nome } : e);
+      if (tick.danoTotal > 0 && !semDanoDeStatus()) {
+        p.hp = Math.max(0, p.hp - tick.danoTotal);
+        conferirHpDosEmblemas(eventosEfeitosDoTurno);
+      }
+    },
+    /** Regeneração e Surto de Vigor (habilidades de armadura) de quem está de pé. */
+    curaDeArmadura(eventosCuraDoTurno: EventoCuraRodada[]) {
+      if (p.hp <= 0) return;
+      const regeneracao = regeneracaoPorRodadaDeArmadura(armaduraDoPersonagem(), p.hp, p.hpMax);
+      if (regeneracao > 0 && p.hp < p.hpMax) {
+        const cura = Math.min(p.hpMax - p.hp, Math.floor((p.hpMax * regeneracao) / 100));
+        if (cura > 0) {
+          p.hp += cura;
+          eventosCuraDoTurno.push({ tipo: 'regeneracao', combatente: p.nome, valor: cura });
+        }
+      }
+      const surto = surtoDeVigorDeArmadura(armaduraDoPersonagem());
+      const tetoSobreescudo = p.equipamento?.sobreescudoMaximo ?? 0;
+      if (surto > 0 && p.sobreescudo < tetoSobreescudo) {
+        p.sobreescudo = Math.min(tetoSobreescudo, p.sobreescudo + Math.floor((tetoSobreescudo * surto) / 100));
+      }
+    },
+  };
+}
+
+type LadoDoPersonagem = ReturnType<typeof criarLadoDoPersonagem>;
+
+/** Cura no fim da rodada de qualquer combatente: Ressurreição Parcial (se o dano contínuo derrubou) e Cura Contínua. */
+function curasDoFimDaRodada(combatentes: readonly Combatente[], eventosCuraDoTurno: EventoCuraRodada[]): void {
+  for (const c of combatentes) {
+    if (c.hp <= 0 && c.ressurreicaoParcial) {
+      const rev = tentarRessurreicaoParcial(c.ressurreicaoParcial, c.hp, c.hpMax);
+      if (rev.ressuscitou) {
+        c.hp = rev.hp;
+        c.ressurreicaoParcial = rev.estado;
+        eventosCuraDoTurno.push({ tipo: 'ressurreicao', combatente: c.nome, valor: rev.hp });
+      }
+    }
+    if (c.hp > 0 && c.curaContinua) {
+      const bonusEficaciaCura =
+        obterModificadoresPassivaSubclasse({
+          subclasseAtualId: c.subclasseAtualId,
+          subclasseTiers: c.subclasseTiers,
+          hp: c.hp,
+          hpMax: c.hpMax,
+          nivel: c.nivel,
+          bonusNivelPercentual: bonusHabilidadePorAscensao(c.ascensaoHabilidade).passivaI,
+        }).bonusEficaciaCuraPercentual ?? 0;
+      const tickCura = processarCuraContinua(
+        c.curaContinua,
+        c.hp,
+        c.hpMax,
+        Math.max(0, fatorCuraPercentual(c.debuffs) + bonusEficaciaCura + bonusCuraDeArmadura(c.equipamento?.habilidadesArmadura))
+      );
+      c.hp = tickCura.hp;
+      c.curaContinua = tickCura.estado;
+      eventosCuraDoTurno.push({ tipo: 'curaContinua', combatente: c.nome, valor: tickCura.cura });
+    }
+  }
+}
+
+/**
+ * O motor do combate: avança uma rodada a cada next() e devolve o resultado no fim. Com `compartilhado`, o monstro
+ * (e os status nele) vem de fora e é dividido com os outros aliados.
+ */
+export function* motorDeCombate(
+  personagem: Combatente,
+  monstro: MonsterDefinition,
+  seed: number = 42,
+  opcoes?: OpcoesResolverCombate,
+  compartilhado?: AlvoCompartilhado
+): Generator<void, ResultadoCombate, void> {
+  // Clona instâncias para manter função 100% pura
+  const p = clonarPersonagemParaLuta(personagem);
 
   const m: Combatente = compartilhado?.m ?? montarCombatenteDoMonstro(monstro);
 
@@ -4193,11 +4642,8 @@ export function* motorDeCombate(
   let turno = 1;
   const MAX_TURNOS = 100;
 
-  // Estado local de efeitos do personagem apenas durante a luta (nunca persistido)
-  let efeitosPersonagem: Map<EfeitoStatus, EfeitoAtivo> = new Map();
   // Status no monstro (só entram por habilidades do jogador, como o Sangramento Forçado)
   let efeitosMonstroStatus: Map<EfeitoStatus, EfeitoAtivo> = compartilhado?.efeitosMonstroStatus ?? new Map();
-  if ((p.equipamento?.emblemas?.gatilhos.length ?? 0) > 0) p.gatilhosEmblema = novoEstadoGatilhos();
   const obterSorteioStatus = (rodada: number, indiceAtaque: number): number =>
     opcoes?.rngStatus
       ? opcoes.rngStatus(rodada, indiceAtaque)
@@ -4212,15 +4658,20 @@ export function* motorDeCombate(
       ? opcoes.rngCritico(rodada, indiceAtaque, indiceGolpe, lado)
       : sorteioCritico(seed, rodada, indiceAtaque, indiceGolpe, lado);
 
-  // Os efeitos de Mitigação e defesa contam os turnos do inimigo: perdem 1 rodada depois que ele age
-  const passarRodadaEfeitosDefensivos = (alvoDosAtaques: Combatente) => {
-    if (!alvoDosAtaques.efeitosDefensivos || alvoDosAtaques.efeitosDefensivos.length === 0) return;
-    const avanco = avancarRodadaEfeitosDefensivos(alvoDosAtaques.efeitosDefensivos);
-    alvoDosAtaques.efeitosDefensivos = avanco.efeitos;
-    if (avanco.sobreescudoRemovido > 0) {
-      alvoDosAtaques.sobreescudo = Math.max(0, alvoDosAtaques.sobreescudo - avanco.sobreescudoRemovido);
+  // O personagem: status que sofre, emblemas, armadura e a ação dele (a mesma do PvP)
+  const lado = criarLadoDoPersonagem(
+    p,
+    () => m,
+    () => [...efeitosMonstroStatus.keys()],
+    (efeitoId, sorteio, chanceExtraPontos, eventosEfeitosDoTurno) => aplicarStatusNoMonstro(efeitoId, sorteio, chanceExtraPontos, eventosEfeitosDoTurno),
+    {
+      rodada: () => turno,
+      sorteioStatus: obterSorteioStatus,
+      sorteioCritico: (rodada, idxAtk, idxGolpe) => obterSorteioCritico(rodada, idxAtk, idxGolpe, 'personagem'),
+      deslocamento: 0,
+      alvoNosEventos: false,
     }
-  };
+  );
 
   /** Aplica um status no monstro (jogador → monstro): forçado (sorteio 0) ou com chance; trata imunidade de chefes. */
   const aplicarStatusNoMonstro = (
@@ -4255,7 +4706,7 @@ export function* motorDeCombate(
       const danoImediato = def.percentualHpMax > 0 ? calcularDanoEfeito(m.hpMax, def.percentualHpMax) : 0;
       m.hp = Math.max(0, m.hp - danoImediato);
       aplicarEfeitoControle(m, efeitoId, p.equipamento?.emblemas?.duracaoStatus.controle ?? 0);
-      dispararEmblemas({ evento: 'controleAplicado' }, eventosEfeitosDoTurno);
+      lado.dispararEmblemas({ evento: 'controleAplicado' }, eventosEfeitosDoTurno);
       eventosEfeitosDoTurno.push({
         tipo: 'controle',
         efeito: efeitoId,
@@ -4286,263 +4737,20 @@ export function* motorDeCombate(
     }
   };
 
-  // Gatilhos dos emblemas: o que acontece na luta chama as habilidades que reagem a isso
-  let mensagensDeEmblemas: string[] = [];
-  let sorteiosDeGatilho = 0;
-  let morteDoMonstroTratada = false;
-  const dispararEmblemas = (acontecimento: AcontecimentoDaLuta, eventosEfeitosDoTurno: EventoEfeito[]) => {
-    const estado = p.gatilhosEmblema;
-    if (!estado || p.hp <= 0) return;
-    const disparos = dispararGatilhos(p.equipamento?.emblemas, estado, acontecimento, {
-      rodada: turno,
-      hpMaxProprio: p.hpMax,
-      sorteio: () => obterSorteioStatus(turno, 3000 + sorteiosDeGatilho++),
-    });
-    for (const d of disparos) {
-      const partes: string[] = [];
-      if (d.cura > 0) {
-        const cura = Math.min(p.hpMax - p.hp, d.cura);
-        if (cura > 0) {
-          p.hp += cura;
-          partes.push(`recupera ${cura} de HP`);
-        }
-      }
-      if (d.escudoPercentual && d.escudoRodadas) {
-        const res = adicionarEfeitoDefensivo(
-          p.efeitosDefensivos ?? [],
-          { efeito: 'escudoTemporario', valorPercentual: d.escudoPercentual, duracaoRodadas: d.escudoRodadas },
-          p.hpMax
-        );
-        p.efeitosDefensivos = res.efeitos;
-        p.sobreescudo = Math.max(0, p.sobreescudo + res.sobreescudoGanho - res.sobreescudoRemovido);
-        partes.push(`ganha ${res.sobreescudoGanho} de escudo`);
-      }
-      if (d.removerNegativos && efeitosPersonagem.size > 0) {
-        efeitosPersonagem = removerEfeitos(efeitosPersonagem, 'todos').efeitos;
-        partes.push('remove os efeitos negativos');
-      }
-      if (d.debuffDefesaNoInimigo && m.hp > 0) {
-        m.debuffs = adicionarDebuffs(m.debuffs, [{ tipo: 'reducaoDefesa', ...d.debuffDefesaNoInimigo }]);
-        partes.push(`${m.nome} perde ${d.debuffDefesaNoInimigo.percentual}% de DEF`);
-      }
-      if (d.sangramentoNoInimigo && m.hp > 0) {
-        aplicarStatusNoMonstro('sangramento', 0, 0, eventosEfeitosDoTurno);
-        partes.push(`${m.nome} sangra`);
-      }
-      if (d.danoExtra > 0 && m.hp > 0) {
-        m.hp = Math.max(0, m.hp - d.danoExtra);
-        partes.push(`causa ${d.danoExtra} de dano extra`);
-      }
-      mensagensDeEmblemas.push(`Emblema — ${d.nome}: ${partes.length > 0 ? partes.join(', ') : 'ativou'}.`);
-    }
-  };
-  /** A morte do monstro (por golpe, dano contínuo ou dano refletido) dispara as habilidades "ao derrotar um inimigo". */
-  const tratarMorteDoMonstro = (eventosEfeitosDoTurno: EventoEfeito[]) => {
-    if (m.hp > 0 || morteDoMonstroTratada) return;
-    morteDoMonstroTratada = true;
-    dispararEmblemas({ evento: 'inimigoMorto' }, eventosEfeitosDoTurno);
-  };
-  /** HP baixo: as habilidades de "quando o HP fica abaixo de X%" conferem o HP depois de cada dano. */
-  const conferirHpDosEmblemas = (eventosEfeitosDoTurno: EventoEfeito[]) => {
-    if (p.hp > 0 && p.hpMax > 0) dispararEmblemas({ evento: 'hpAbaixo', hpPercentual: (p.hp * 100) / p.hpMax }, eventosEfeitosDoTurno);
-  };
-
-  // Resistências a status da armadura (nível somado das habilidades): chance, dano e duração do que o personagem sofre
-  const armaduraDoPersonagem = () => p.equipamento?.habilidadesArmadura;
-  const reducaoChancePersonagem = (efeitoId: EfeitoStatus): number =>
-    Math.min(
-      100,
-      reducaoChanceStatusRacial(p.racaId, efeitoId) +
-        reducaoChanceStatusDeArmadura(armaduraDoPersonagem(), efeitoId) +
-        (p.equipamento?.emblemas?.resistenciaStatusPercentual ?? 0)
-    );
-  /** Ressuscitar: o dano de status não age até o fim da rodada que ele marcou. */
-  const semDanoDeStatus = (): boolean => (p.imunidadeDanoStatusAteRodada ?? 0) >= turno;
-  const danoDeStatusNoPersonagem = (efeitoId: EfeitoStatus, dano: number): number =>
-    semDanoDeStatus() ? 0 : Math.floor((dano * (100 - reducaoDanoStatusDeArmadura(armaduraDoPersonagem(), efeitoId))) / 100);
-  /** Resistência a Flagelo: encurta a duração do dano contínuo que acabou de ser aplicado ou renovado no personagem. */
-  const encurtarDuracaoNoPersonagem = (efeitoId: EfeitoStatus): void => {
-    const reducao = reducaoDuracaoStatusDeArmadura(armaduraDoPersonagem(), efeitoId);
-    const ativo = efeitosPersonagem.get(efeitoId);
-    if (reducao <= 0 || !ativo) return;
-    const duracao = Math.max(1, Math.ceil(((EFEITOS_STATUS[efeitoId].duracaoRodadas ?? 1) * (100 - reducao)) / 100));
-    efeitosPersonagem = new Map(efeitosPersonagem).set(efeitoId, { ...ativo, rodadasRestantes: Math.min(ativo.rodadasRestantes, duracao) });
-  };
-  const rodadasDoStatusNoPersonagem = (efeitoId: EfeitoStatus): number | undefined =>
-    efeitosPersonagem.get(efeitoId)?.rodadasRestantes ?? EFEITOS_STATUS[efeitoId].duracaoRodadas;
-
-  /** Aplica um status no personagem (habilidade de monstro): forçado (sorteio 0) ou com chance; respeita imunidade e redução racial. */
-  const aplicarStatusNoPersonagem = (
-    efeitoId: EfeitoStatus,
-    sorteio: number,
-    chanceExtraPontos: number,
-    eventosEfeitosDoTurno: EventoEfeito[]
-  ) => {
-    if (estaImuneAoStatus(p, efeitoId)) {
-      eventosEfeitosDoTurno.push({ tipo: 'imune', efeito: efeitoId });
-      return;
-    }
-    const tentativa = tentarAplicarEfeito(
-      efeitosPersonagem,
-      efeitoId,
-      sorteio,
-      reducaoChancePersonagem(efeitoId),
-      chanceExtraPontos
-    );
-    efeitosPersonagem = tentativa.efeitos;
-    if (tentativa.resultado === 'aplicado' || tentativa.resultado === 'renovado') encurtarDuracaoNoPersonagem(efeitoId);
-    const definicao = EFEITOS_STATUS[efeitoId];
-    if (tentativa.resultado === 'controle') {
-      const danoImediato = definicao.percentualHpMax > 0 ? calcularDanoEfeito(p.hpMax, definicao.percentualHpMax) : 0;
-      p.hp = Math.max(0, p.hp - danoImediato);
-      aplicarEfeitoControle(p, efeitoId);
-      eventosEfeitosDoTurno.push({ tipo: 'controle', efeito: efeitoId, ...(danoImediato > 0 ? { dano: danoImediato } : {}) });
-    } else if (tentativa.resultado === 'aplicado' || tentativa.resultado === 'renovado') {
-      eventosEfeitosDoTurno.push({ tipo: tentativa.resultado, efeito: efeitoId, rodadasRestantes: rodadasDoStatusNoPersonagem(efeitoId) });
-    } else if (tentativa.resultado === 'instantaneo') {
-      const danoInstantaneo = danoDeStatusNoPersonagem(efeitoId, calcularDanoEfeito(p.hpMax, definicao.percentualHpMax));
-      p.hp = Math.max(0, p.hp - danoInstantaneo);
-      registrarEstadoDeLuta(p, efeitoId);
-      eventosEfeitosDoTurno.push({ tipo: 'instantaneo', efeito: efeitoId, dano: danoInstantaneo });
-    }
-  };
-
-  /** Estado de quem tem a armadura (o personagem) para as habilidades de status de ataque. */
-  const estadoArmaduraDoPersonagem = (): EstadoGolpeArmadura => ({
-    hpAtacante: p.hp,
-    hpMaxAtacante: p.hpMax,
-    sobreescudoAtacante: p.sobreescudo,
-    sobreescudoMaxAtacante: p.equipamento?.sobreescudoMaximo ?? 0,
-    hpAlvo: m.hp,
-    hpMaxAlvo: m.hpMax,
-    alvoEnfurecido: false,
-  });
-  /** Pontos a somar à chance base do status que o personagem aplica: o do Grimório e o bônus relativo das habilidades. */
-  const chanceExtraDoStatus = (status: EfeitoStatus): number =>
-    (p.equipamento?.bonusChanceEfeitosPontos ?? 0) +
-    chanceExtraRelativaEmPontos(
-      status,
-      bonusChanceStatusRelativa(p.equipamento?.habilidadesArmadura, status, estadoArmaduraDoPersonagem()) +
-        (status === 'congelamento' || status === 'sono' ? p.equipamento?.emblemas?.chanceStatus[status] ?? 0 : 0)
-    );
-
-  const executarAcaoPersonagemBase = (
-    rodada: number,
-    ataquesDoTurno: AtaqueLog[],
-    eventosEfeitosDoTurno: EventoEfeito[]
-  ) => {
-    m.statusAtivos = [...efeitosMonstroStatus.keys()];
-    const tPersonagem = turnoDeCombate(p, m, rodada, {
-      sorteioCritico: (idxAtk, idxGolpe) =>
-        obterSorteioCritico(rodada, idxAtk, idxGolpe, 'personagem'),
-      sorteioAtaqueExtra: () => obterSorteioStatus(rodada, 3900),
-    });
-    passarRodadaEfeitosDefensivos(m);
-    ataquesDoTurno.push(...tPersonagem.turnoLog.ataques);
-
-    for (const atk of tPersonagem.turnoLog.ataques) {
-      // Sangramento Forçado (catálogo 1.2): status aplicado no monstro sem sorteio de chance
-      for (const efeitoId of atk.statusForcadosNoAlvo ?? []) {
-        aplicarStatusNoMonstro(efeitoId, 0, 0, eventosEfeitosDoTurno);
-      }
-      // Status com chance (ex.: Paralisia de uma habilidade de Relâmpago, com +5% de chance): sorteia a ativação
-      (atk.statusComChanceNoAlvo ?? []).forEach((s, i) => {
-        aplicarStatusNoMonstro(
-          s.status,
-          obterSorteioStatus(rodada, 100 + i),
-          (s.chanceExtraPercentual ?? 0) + chanceExtraDoStatus(s.status),
-          eventosEfeitosDoTurno
-        );
-      });
-      // Status da arma: cada golpe que causa dano tenta aplicar cada status com a chance base dele
-      if (p.equipamento && atk.danoBruto > 0 && !atk.incapacitado) {
-        p.equipamento.statusArma.forEach((status, i) => {
-          aplicarStatusNoMonstro(
-            status,
-            obterSorteioStatus(rodada, 300 + ataquesDoTurno.indexOf(atk) * 4 + i),
-            chanceExtraDoStatus(status),
-            eventosEfeitosDoTurno
-          );
-        });
-        // Adição de Veneno, Paralisia, Sono e Explosão: chance fixa por golpe, só se a arma não aplicar o status
-        adicoesDeStatus(p.equipamento.habilidadesArmadura, p.equipamento.statusArma).forEach((a, i) => {
-          if (obterSorteioStatus(rodada, 600 + ataquesDoTurno.indexOf(atk) * 4 + i) < a.chancePercentual) {
-            aplicarStatusNoMonstro(a.status, 0, 0, eventosEfeitosDoTurno);
-          }
-        });
-      }
-      // Limpeza (catálogo 1.2): remove de 1 a 3 efeitos negativos do personagem
-      if (atk.efeitosNegativosRemovidos) {
-        const rem = removerEfeitos(efeitosPersonagem, atk.efeitosNegativosRemovidos);
-        efeitosPersonagem = rem.efeitos;
-        for (const efeitoRemovido of rem.removidos) {
-          eventosEfeitosDoTurno.push({ tipo: 'removido', efeito: efeitoRemovido });
-        }
-      }
-      if (atk.habilidadeAcionada === 'Bênção Divina') {
-        const rem = removerEfeitos(efeitosPersonagem, QUANTIDADE_REMOCAO_BENCAO_DIVINA);
-        efeitosPersonagem = rem.efeitos;
-        for (const efeitoRemovido of rem.removidos) {
-          eventosEfeitosDoTurno.push({
-            tipo: 'removido',
-            efeito: efeitoRemovido,
-          });
-        }
-      } else if (atk.habilidadeAcionada === 'Milagre Divino') {
-        const rem = removerEfeitos(efeitosPersonagem, 'todos');
-        efeitosPersonagem = rem.efeitos;
-        for (const efeitoRemovido of rem.removidos) {
-          eventosEfeitosDoTurno.push({
-            tipo: 'removido',
-            efeito: efeitoRemovido,
-          });
-        }
-      }
-    }
-  };
-
-  // Pouso Seguro: o primeiro golpe que o personagem sofre na luta
-  let personagemJaFoiAtingido = false;
-
-  /** Cura que o personagem recebeu na rodada atual (base da Reversão da Selvara). */
-  let curaDoPersonagemNaRodada = 0;
-  const executarAcaoPersonagem = (rodada: number, ataquesDoTurno: AtaqueLog[], eventosEfeitosDoTurno: EventoEfeito[]) => {
-    const hpAntes = p.hp;
-    const inicioDosAtaques = ataquesDoTurno.length;
-    executarAcaoPersonagemBase(rodada, ataquesDoTurno, eventosEfeitosDoTurno);
-    curaDoPersonagemNaRodada += Math.max(0, p.hp - hpAntes);
-
-    // Emblemas: os bônus de "próximo ataque" gastam um golpe; depois os golpes desta ação disparam as habilidades
-    const golpesDaAcao = ataquesDoTurno.slice(inicioDosAtaques).filter((a) => a.atacante === p.nome && a.danoBruto > 0 && !a.incapacitado);
-    if (golpesDaAcao.length > 0) consumirGolpeDosGatilhos(p.gatilhosEmblema, rodada);
-    for (const atk of golpesDaAcao) {
-      if ((atk.golpesCriticos ?? 0) > 0) {
-        dispararEmblemas({ evento: 'criticoDado', danoDoGolpe: atk.danoPorGolpe ?? atk.danoBruto }, eventosEfeitosDoTurno);
-      }
-      if (atk.elemento) {
-        dispararEmblemas(
-          { evento: 'golpeElemental', elemento: atk.elemento, danoCausado: atk.danoEfetivo, hpAtualDoAlvo: atk.hpRestante, hpMaxDoAlvo: m.hpMax },
-          eventosEfeitosDoTurno
-        );
-      }
-    }
-    tratarMorteDoMonstro(eventosEfeitosDoTurno);
-  };
-
   let efeitosResistidosNaAcao = 0;
   const executarAcaoMonstroBase = (
     rodada: number,
     ataquesDoTurno: AtaqueLog[],
     eventosEfeitosDoTurno: EventoEfeito[]
   ) => {
-    p.statusAtivos = [...efeitosPersonagem.keys()];
+    p.statusAtivos = [...lado.efeitos.keys()];
     m.statusAtivos = [...efeitosMonstroStatus.keys()];
     const efeitosMonstro = monstro.efeitosAplicados ?? [];
     const tMonstro = turnoDeCombate(m, p, rodada, {
       sorteioCritico: (idxAtk, idxGolpe) => obterSorteioCritico(rodada, idxAtk, idxGolpe, 'monstro'),
       sorteioDefesa: (idxAtk, idxGolpe) => obterSorteioStatus(rodada, 900 + idxAtk * 16 + idxGolpe),
       sorteioMecanica: (indice) => obterSorteioStatus(rodada, 1200 + indice),
-      primeiroGolpeRecebido: !personagemJaFoiAtingido,
+      primeiroGolpeRecebido: !lado.jaFoiAtingido,
       aoFinalizarAtaque: (idxAtk, estadoDefensor) => {
         let hpDefensorAtual = estadoDefensor.hp;
 
@@ -4550,21 +4758,21 @@ export function* motorDeCombate(
         for (const efeitoId of efeitosMonstro) {
           const valorSorteio = obterSorteioStatus(rodada, idxAtk);
           const tentativa = tentarAplicarEfeito(
-            efeitosPersonagem,
+            lado.efeitos,
             efeitoId,
             valorSorteio,
-            reducaoChancePersonagem(efeitoId)
+            lado.reducaoChancePersonagem(efeitoId)
           );
-          efeitosPersonagem = tentativa.efeitos;
+          lado.efeitos = tentativa.efeitos;
           // Resistiu: sem a resistência o sorteio teria ativado o efeito
           if (
             tentativa.resultado === 'nao_ativou' &&
-            reducaoChancePersonagem(efeitoId) > 0 &&
+            lado.reducaoChancePersonagem(efeitoId) > 0 &&
             valorSorteio < (EFEITOS_STATUS[efeitoId]?.chanceAtivacao ?? 0)
           ) {
             efeitosResistidosNaAcao++;
           }
-          if (tentativa.resultado === 'aplicado' || tentativa.resultado === 'renovado') encurtarDuracaoNoPersonagem(efeitoId);
+          if (tentativa.resultado === 'aplicado' || tentativa.resultado === 'renovado') lado.encurtarDuracaoNoPersonagem(efeitoId);
           const definicao = EFEITOS_STATUS[efeitoId];
 
           if (tentativa.resultado === 'controle') {
@@ -4588,16 +4796,16 @@ export function* motorDeCombate(
             eventosEfeitosDoTurno.push({
               tipo: 'aplicado',
               efeito: efeitoId,
-              rodadasRestantes: rodadasDoStatusNoPersonagem(efeitoId),
+              rodadasRestantes: lado.rodadasDoStatusNoPersonagem(efeitoId),
             });
           } else if (tentativa.resultado === 'renovado') {
             eventosEfeitosDoTurno.push({
               tipo: 'renovado',
               efeito: efeitoId,
-              rodadasRestantes: rodadasDoStatusNoPersonagem(efeitoId),
+              rodadasRestantes: lado.rodadasDoStatusNoPersonagem(efeitoId),
             });
           } else if (tentativa.resultado === 'instantaneo') {
-            const danoInstantaneo = danoDeStatusNoPersonagem(
+            const danoInstantaneo = lado.danoDeStatusNoPersonagem(
               efeitoId,
               calcularDanoEfeito(estadoDefensor.hpMax, definicao.percentualHpMax)
             );
@@ -4616,25 +4824,17 @@ export function* motorDeCombate(
     });
 
     ataquesDoTurno.push(...tMonstro.turnoLog.ataques);
-    if (tMonstro.turnoLog.ataques.some((a) => a.danoBruto > 0)) personagemJaFoiAtingido = true;
-    // Espinhos de Dravakhar: o dano devolvido tem chance de causar Sangramento no monstro
-    const chanceSangramentoRefletido = chanceSangramentoRefletidoDeArmadura(p.equipamento?.habilidadesArmadura);
-    if (chanceSangramentoRefletido > 0) {
-      tMonstro.turnoLog.ataques.forEach((atk, idx) => {
-        if ((atk.danoRefletido ?? 0) > 0 && obterSorteioStatus(rodada, 700 + idx) < chanceSangramentoRefletido) {
-          aplicarStatusNoMonstro('sangramento', 0, 0, eventosEfeitosDoTurno);
-        }
-      });
-    }
+    if (tMonstro.turnoLog.ataques.some((a) => a.danoBruto > 0)) lado.jaFoiAtingido = true;
+    lado.espinhos(tMonstro.turnoLog.ataques, rodada, eventosEfeitosDoTurno);
     passarRodadaEfeitosDefensivos(p);
 
     // Habilidades de monstro: status garantidos e com chance no caçador
     for (const atk of tMonstro.turnoLog.ataques) {
       for (const efeitoId of atk.statusForcadosNoAlvo ?? []) {
-        aplicarStatusNoPersonagem(efeitoId, 0, 0, eventosEfeitosDoTurno);
+        lado.receberStatus(efeitoId, 0, 0, eventosEfeitosDoTurno);
       }
       (atk.statusComChanceNoAlvo ?? []).forEach((st, i) => {
-        aplicarStatusNoPersonagem(st.status, obterSorteioStatus(rodada, 200 + i), st.chanceExtraPercentual ?? 0, eventosEfeitosDoTurno);
+        lado.receberStatus(st.status, obterSorteioStatus(rodada, 200 + i), st.chanceExtraPercentual ?? 0, eventosEfeitosDoTurno);
       });
     }
   };
@@ -4647,16 +4847,8 @@ export function* motorDeCombate(
 
     // Emblemas: o que o inimigo fez nesta ação dispara as habilidades defensivas
     const golpesDoInimigo = ataquesDoTurno.slice(inicioDosAtaques).filter((a) => a.atacante === m.nome && a.danoBruto > 0 && !a.incapacitado);
-    if (p.hp > 0 && golpesDoInimigo.length > 0) {
-      dispararEmblemas({ evento: 'atacadoPorInimigo' }, eventosEfeitosDoTurno);
-      const perdido = Math.max(0, hpAntes - p.hp);
-      if (perdido > 0) {
-        dispararEmblemas({ evento: 'danoRecebido', percentualHpPerdido: (perdido * 100) / Math.max(1, p.hpMax) }, eventosEfeitosDoTurno);
-      }
-    }
-    if (efeitosResistidosNaAcao > 0) dispararEmblemas({ evento: 'efeitoResistido' }, eventosEfeitosDoTurno);
-    conferirHpDosEmblemas(eventosEfeitosDoTurno);
-    tratarMorteDoMonstro(eventosEfeitosDoTurno);
+    lado.reagirAAcaoDoInimigo(golpesDoInimigo.length, hpAntes, efeitosResistidosNaAcao, eventosEfeitosDoTurno);
+    lado.tratarMorteDoInimigo(eventosEfeitosDoTurno);
   };
 
   // Mecânica única do chefe (Provação do Guerreiro): o que ela faz antes da primeira rodada (ex.: o pacto de Belzareth)
@@ -4671,13 +4863,13 @@ export function* motorDeCombate(
     if (compartilhado) efeitosMonstroStatus = compartilhado.efeitosMonstroStatus;
     const vidaDoChefeAntes = m.hp + m.sobreescudo;
     const vidaDoPersonagemAntes = p.hp;
-    curaDoPersonagemNaRodada = 0;
+    lado.curaNaRodada = 0;
     const ataquesDoTurno: AtaqueLog[] = [];
     const eventosEfeitosDoTurno: EventoEfeito[] = [];
 
     if (primeiroAtacante === 'A') {
       // Personagem ataca Monstro
-      executarAcaoPersonagem(turno, ataquesDoTurno, eventosEfeitosDoTurno);
+      lado.executarAcao(turno, ataquesDoTurno, eventosEfeitosDoTurno);
 
       if (m.hp > 0) {
         // Monstro contra-ataca se ainda estiver vivo
@@ -4689,102 +4881,39 @@ export function* motorDeCombate(
 
       if (p.hp > 0) {
         // Personagem contra-ataca se ainda estiver vivo
-        executarAcaoPersonagem(turno, ataquesDoTurno, eventosEfeitosDoTurno);
+        lado.executarAcao(turno, ataquesDoTurno, eventosEfeitosDoTurno);
       }
     }
 
     // No fim de cada rodada (depois que ambos os lados agiram), processa os ticks de DOT
     // Se o personagem já morreu no meio da rodada, não processa ticks
-    if (p.hp > 0) {
-      const tick = processarTickEfeitos(efeitosPersonagem, p.hpMax, {
-        queimadura: -reducaoDanoStatusDeArmadura(armaduraDoPersonagem(), 'queimadura'),
-        podridaoEscarlate: -reducaoDanoStatusDeArmadura(armaduraDoPersonagem(), 'podridaoEscarlate'),
-        veneno: -reducaoDanoStatusDeArmadura(armaduraDoPersonagem(), 'veneno'),
-      });
-      efeitosPersonagem = tick.efeitos;
-      if (tick.eventos.length > 0) {
-        eventosEfeitosDoTurno.push(...tick.eventos);
-      }
-      if (tick.danoTotal > 0 && !semDanoDeStatus()) {
-        p.hp = Math.max(0, p.hp - tick.danoTotal);
-        conferirHpDosEmblemas(eventosEfeitosDoTurno);
-      }
-    }
+    lado.tickDeStatus(eventosEfeitosDoTurno);
 
     // Dano contínuo no monstro (Sangramento Forçado do jogador)
     if (m.hp > 0 && efeitosMonstroStatus.size > 0) {
-      const tickMonstro = processarTickEfeitos(efeitosMonstroStatus, m.hpMax, {
-        queimadura:
-          bonusDanoQueimaduraDeArmadura(p.equipamento?.habilidadesArmadura) + (p.equipamento?.emblemas?.danoStatus.queimadura ?? 0),
-        veneno: p.equipamento?.emblemas?.danoStatus.veneno ?? 0,
-      });
+      const tickMonstro = processarTickEfeitos(efeitosMonstroStatus, m.hpMax, lado.bonusDoDanoContinuo());
       efeitosMonstroStatus = tickMonstro.efeitos;
       for (const e of tickMonstro.eventos) {
         eventosEfeitosDoTurno.push({ ...e, alvo: m.nome });
       }
       if (tickMonstro.danoTotal > 0) {
         m.hp = Math.max(0, m.hp - tickMonstro.danoTotal);
-        tratarMorteDoMonstro(eventosEfeitosDoTurno);
+        lado.tratarMorteDoInimigo(eventosEfeitosDoTurno);
       }
     }
 
     // Cura e restauração no fim da rodada: Ressurreição Parcial (se o dano contínuo derrubou) e Cura Contínua
     const eventosCuraDoTurno: EventoCuraRodada[] = [];
-    // Regeneração e Surto de Vigor (habilidades de armadura) de quem está de pé
-    if (p.hp > 0) {
-      const regeneracao = regeneracaoPorRodadaDeArmadura(armaduraDoPersonagem(), p.hp, p.hpMax);
-      if (regeneracao > 0 && p.hp < p.hpMax) {
-        const cura = Math.min(p.hpMax - p.hp, Math.floor((p.hpMax * regeneracao) / 100));
-        if (cura > 0) {
-          p.hp += cura;
-          eventosCuraDoTurno.push({ tipo: 'regeneracao', combatente: p.nome, valor: cura });
-        }
-      }
-      const surto = surtoDeVigorDeArmadura(armaduraDoPersonagem());
-      const tetoSobreescudo = p.equipamento?.sobreescudoMaximo ?? 0;
-      if (surto > 0 && p.sobreescudo < tetoSobreescudo) {
-        p.sobreescudo = Math.min(tetoSobreescudo, p.sobreescudo + Math.floor((tetoSobreescudo * surto) / 100));
-      }
-    }
-    for (const c of [p, m]) {
-      if (c.hp <= 0 && c.ressurreicaoParcial) {
-        const rev = tentarRessurreicaoParcial(c.ressurreicaoParcial, c.hp, c.hpMax);
-        if (rev.ressuscitou) {
-          c.hp = rev.hp;
-          c.ressurreicaoParcial = rev.estado;
-          eventosCuraDoTurno.push({ tipo: 'ressurreicao', combatente: c.nome, valor: rev.hp });
-        }
-      }
-      if (c.hp > 0 && c.curaContinua) {
-        const bonusEficaciaCura =
-          obterModificadoresPassivaSubclasse({
-            subclasseAtualId: c.subclasseAtualId,
-            subclasseTiers: c.subclasseTiers,
-            hp: c.hp,
-            hpMax: c.hpMax,
-            nivel: c.nivel,
-            bonusNivelPercentual: bonusHabilidadePorAscensao(c.ascensaoHabilidade).passivaI,
-          }).bonusEficaciaCuraPercentual ?? 0;
-        const tickCura = processarCuraContinua(
-          c.curaContinua,
-          c.hp,
-          c.hpMax,
-          Math.max(0, fatorCuraPercentual(c.debuffs) + bonusEficaciaCura + bonusCuraDeArmadura(c.equipamento?.habilidadesArmadura))
-        );
-        c.hp = tickCura.hp;
-        c.curaContinua = tickCura.estado;
-        eventosCuraDoTurno.push({ tipo: 'curaContinua', combatente: c.nome, valor: tickCura.cura });
-      }
-    }
+    lado.curaDeArmadura(eventosCuraDoTurno);
+    curasDoFimDaRodada([p, m], eventosCuraDoTurno);
 
-    let eventosMecanica: string[] = [...mensagensDaMecanicaPendentes, ...mensagensDeEmblemas];
+    let eventosMecanica: string[] = [...mensagensDaMecanicaPendentes, ...lado.tomarMensagensDeEmblemas()];
     mensagensDaMecanicaPendentes = [];
-    mensagensDeEmblemas = [];
     if (m.mecanicaChefe && m.hp > 0 && p.hp > 0) {
       const curaDoPersonagemEmEventos = eventosCuraDoTurno
         .filter((e) => e.combatente === p.nome && e.tipo !== 'ressurreicao')
         .reduce((soma, e) => soma + (e.valor ?? 0), 0);
-      const curaRecebida = curaDoPersonagemNaRodada + curaDoPersonagemEmEventos;
+      const curaRecebida = lado.curaNaRodada + curaDoPersonagemEmEventos;
       const criticos = ataquesDoTurno.filter((a) => a.atacante === p.nome && (a.golpesCriticos ?? 0) > 0);
       const efeitosMecanica = atualizarMecanicaNoFimDaRodada(m.mecanicaChefe, {
         rodada: turno,
@@ -4950,5 +5079,128 @@ export function resolverCombateEmGrupo(aliados: readonly Combatente[], monstro: 
     aliados: estado.map(({ nome, dano, caiuNaRodada }) => ({ nome, dano, caiuNaRodada })),
     chefeFinal: { hp: Math.max(0, m.hp), hpMax: m.hpMax },
     mensagens,
+  };
+}
+
+export interface ResultadoCombatePvp {
+  /** 'a' = quem atacou, 'b' = quem defendeu; 'ninguem' no empate (no PvP os dois perdem). */
+  vencedor: 'a' | 'b' | 'ninguem';
+  motivoFim: 'derrota' | 'limite_rodadas';
+  logTurnos: TurnoLog[];
+  mensagens: string[];
+  finalA: { nome: string; hp: number; hpMax: number };
+  finalB: { nome: string; hp: number; hpMax: number };
+}
+
+/** A vida em % (com casas, para o desempate do limite de rodadas). */
+const vidaEmPorMilhao = (c: Combatente) => (c.hp > 0 && c.hpMax > 0 ? Math.max(1, Math.round((c.hp * 1_000_000) / c.hpMax)) : 0);
+
+/**
+ * Luta entre dois jogadores (Arena, 7.5): os dois lados usam tudo — classe, subclasse, status da arma, habilidades de
+ * armadura, emblemas e o que as cartas dão à ficha. Pura e determinística pela semente. Termina quando um cai ou no
+ * limite de 100 rodadas; no limite vence quem tem mais vida em %, e no empate os dois perdem (1.11.1).
+ */
+export function resolverCombatePvp(atacante: Combatente, defensor: Combatente, seed: number): ResultadoCombatePvp {
+  const A = clonarPersonagemParaLuta(atacante);
+  const B = clonarPersonagemParaLuta(defensor);
+  // os golpes são separados pelo nome de quem bateu: dois nomes iguais viram nomes diferentes
+  if (B.nome === A.nome) B.nome = `${B.nome} (defensor)`;
+  const MAX_TURNOS = 100;
+  let turno = 1;
+  let s = Math.abs(Math.floor(seed)) || 1337;
+  const nextRng = () => {
+    s = (s * 1664525 + 1013904223) % 4294967296;
+    return s / 4294967296;
+  };
+  const sorteioDeStatus = (rodada: number, indice: number) => sorteioStatus(seed, rodada, indice);
+  const ladoA: LadoDoPersonagem = criarLadoDoPersonagem(
+    A,
+    () => B,
+    () => [...ladoB.efeitos.keys()],
+    (efeitoId, sorteio, chanceExtra, eventos) => ladoB.receberStatus(efeitoId, sorteio, chanceExtra, eventos, ladoA.bonusDoAplicador()),
+    { rodada: () => turno, sorteioStatus: sorteioDeStatus, sorteioCritico: (r, i, g) => sorteioCritico(seed, r, i, g, 'personagem'), deslocamento: 0, alvoNosEventos: true }
+  );
+  const ladoB: LadoDoPersonagem = criarLadoDoPersonagem(
+    B,
+    () => A,
+    () => [...ladoA.efeitos.keys()],
+    (efeitoId, sorteio, chanceExtra, eventos) => ladoA.receberStatus(efeitoId, sorteio, chanceExtra, eventos, ladoB.bonusDoAplicador()),
+    { rodada: () => turno, sorteioStatus: sorteioDeStatus, sorteioCritico: (r, i, g) => sorteioCritico(seed, r, i, g, 'monstro'), deslocamento: 10_000, alvoNosEventos: true }
+  );
+
+  const logTurnos: TurnoLog[] = [];
+  const mensagens: string[] = [];
+  const primeiro = iniciativa(
+    calcularAgilidadeEfetiva(A.atributos.agilidade, { classeId: A.classeId, nivel: A.nivel ?? 1 }),
+    calcularAgilidadeEfetiva(B.atributos.agilidade, { classeId: B.classeId, nivel: B.nivel ?? 1 }),
+    Math.floor(nextRng() * 1000)
+  );
+  const [ladoPrimeiro, ladoSegundo] = primeiro === 'A' ? [ladoA, ladoB] : [ladoB, ladoA];
+  mensagens.push(`Iniciativa: ${ladoPrimeiro.c.nome} tem a vantagem e ataca primeiro!`);
+
+  /** A ação de um lado contra o outro: o turno dele e a reação de quem apanhou (Pouso Seguro, espinhos e emblemas). */
+  const acao = (x: LadoDoPersonagem, y: LadoDoPersonagem, rodada: number, ataquesDoTurno: AtaqueLog[], eventosEfeitosDoTurno: EventoEfeito[]) => {
+    const hpAntes = y.c.hp;
+    const inicio = ataquesDoTurno.length;
+    x.c.statusAtivos = [...x.efeitos.keys()];
+    x.executarAcao(rodada, ataquesDoTurno, eventosEfeitosDoTurno, {
+      sorteioDefesa: (idxAtk, idxGolpe) => y.sorteio(rodada, 900 + idxAtk * 16 + idxGolpe),
+      primeiroGolpeRecebido: !y.jaFoiAtingido,
+    });
+    const daAcao = ataquesDoTurno.slice(inicio).filter((a) => a.atacante === x.c.nome);
+    if (daAcao.some((a) => a.danoBruto > 0)) y.jaFoiAtingido = true;
+    y.espinhos(daAcao, rodada, eventosEfeitosDoTurno);
+    y.reagirAAcaoDoInimigo(daAcao.filter((a) => a.danoBruto > 0 && !a.incapacitado).length, hpAntes, y.tomarEfeitosResistidos(), eventosEfeitosDoTurno);
+    y.tratarMorteDoInimigo(eventosEfeitosDoTurno);
+  };
+
+  while (A.hp > 0 && B.hp > 0 && turno <= MAX_TURNOS) {
+    ladoA.curaNaRodada = 0;
+    ladoB.curaNaRodada = 0;
+    const ataquesDoTurno: AtaqueLog[] = [];
+    const eventosEfeitosDoTurno: EventoEfeito[] = [];
+    acao(ladoPrimeiro, ladoSegundo, turno, ataquesDoTurno, eventosEfeitosDoTurno);
+    if (ladoPrimeiro.c.hp > 0 && ladoSegundo.c.hp > 0) acao(ladoSegundo, ladoPrimeiro, turno, ataquesDoTurno, eventosEfeitosDoTurno);
+
+    // Dano contínuo no fim da rodada: o bônus é o de quem causou
+    ladoA.tickDeStatus(eventosEfeitosDoTurno, ladoB.bonusDoDanoContinuo());
+    ladoB.tickDeStatus(eventosEfeitosDoTurno, ladoA.bonusDoDanoContinuo());
+    ladoA.tratarMorteDoInimigo(eventosEfeitosDoTurno);
+    ladoB.tratarMorteDoInimigo(eventosEfeitosDoTurno);
+
+    const eventosCuraDoTurno: EventoCuraRodada[] = [];
+    ladoA.curaDeArmadura(eventosCuraDoTurno);
+    ladoB.curaDeArmadura(eventosCuraDoTurno);
+    curasDoFimDaRodada([A, B], eventosCuraDoTurno);
+    const eventosMecanica = [...ladoA.tomarMensagensDeEmblemas(), ...ladoB.tomarMensagensDeEmblemas()];
+
+    logTurnos.push({
+      numeroTurno: turno,
+      ataques: ataquesDoTurno,
+      eventosEfeitos: eventosEfeitosDoTurno,
+      ...(eventosCuraDoTurno.length > 0 ? { eventosCura: eventosCuraDoTurno } : {}),
+      ...(eventosMecanica.length > 0 ? { eventosMecanica } : {}),
+    });
+    turno++;
+  }
+
+  const desfecho = decidirDesfecho({
+    hpJogador: vidaEmPorMilhao(A),
+    hpOponente: vidaEmPorMilhao(B),
+    limiteAtingido: A.hp > 0 && B.hp > 0,
+    modo: 'pvp',
+  });
+  if (desfecho.motivo === 'limite_rodadas') {
+    mensagens.push(`Limite de ${MAX_TURNOS} rodadas atingido: vence quem tem mais vida em % (${A.nome} ${Math.round(vidaEmPorMilhao(A) / 10_000)}% × ${B.nome} ${Math.round(vidaEmPorMilhao(B) / 10_000)}%).`);
+  }
+  const vencedor = desfecho.vencedor === 'jogador' ? 'a' : desfecho.vencedor === 'oponente' ? 'b' : 'ninguem';
+  mensagens.push(vencedor === 'ninguem' ? 'Empate! No PvP, os dois perdem.' : `${vencedor === 'a' ? A.nome : B.nome} venceu!`);
+  return {
+    vencedor,
+    motivoFim: desfecho.motivo,
+    logTurnos,
+    mensagens,
+    finalA: { nome: A.nome, hp: Math.max(0, A.hp), hpMax: A.hpMax },
+    finalB: { nome: B.nome, hp: Math.max(0, B.hp), hpMax: B.hpMax },
   };
 }
