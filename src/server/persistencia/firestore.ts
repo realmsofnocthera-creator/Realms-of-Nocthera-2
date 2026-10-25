@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { DocumentData, Firestore, Transaction } from 'firebase-admin/firestore';
 import { AVATARES_DISPONIVEIS, getAvatarById } from '@/rules/avatars';
+import { comprasNaLojaDoDocumento } from '@/rules/loja';
 import { normalizarHabilidadesEquipadas, ZEROS_ATRIBUTOS } from '@/game';
 import { lerArmasPersonagem } from '@/game/forja';
 import { lerArmadurasPersonagem } from '@/game/armaduraForja';
@@ -422,6 +423,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(Array.isArray(data.comprasNoMercado)
       ? { comprasNoMercado: (data.comprasNoMercado as unknown[]).filter((v): v is { de: string; em: string } => !!v && typeof (v as { de?: unknown }).de === 'string' && typeof (v as { em?: unknown }).em === 'string').slice(-30) }
       : {}),
+    ...(comprasNaLojaDoDocumento(data.comprasNaLoja) ? { comprasNaLoja: comprasNaLojaDoDocumento(data.comprasNaLoja) } : {}),
     ...(estatisticasDoDocumento(data.estatisticas) ? { estatisticas: estatisticasDoDocumento(data.estatisticas) } : {}),
     ...(conquistasDoDocumento(data.conquistas) ? { conquistas: conquistasDoDocumento(data.conquistas) } : {}),
     ...(titulosDoDocumento(data.titulos) ? { titulos: titulosDoDocumento(data.titulos) } : {}),
@@ -512,6 +514,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.ritmo ? { ritmo: semUndefined(char.ritmo) } : {}),
     ...(char.anunciosNoMercado?.length ? { anunciosNoMercado: char.anunciosNoMercado } : {}),
     ...(char.comprasNoMercado?.length ? { comprasNoMercado: char.comprasNoMercado } : {}),
+    ...(char.comprasNaLoja ? { comprasNaLoja: char.comprasNaLoja } : {}),
     ...(char.estatisticas && Object.keys(char.estatisticas).length ? { estatisticas: semUndefined(char.estatisticas) } : {}),
     ...(char.conquistas && Object.keys(char.conquistas).length ? { conquistas: char.conquistas } : {}),
     ...(char.titulos?.length ? { titulos: char.titulos } : {}),

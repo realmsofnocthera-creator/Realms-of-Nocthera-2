@@ -1,6 +1,7 @@
 import { bonusDasCartas, bonusVazio, type BonusDeAlma } from '@/game/almas';
 import { atributosDosColecionaveis } from '@/game/colecionaveis';
 import type { ColecionaveisDoJogador, SelosDoJogador } from '@/rules/colecionaveis';
+import type { ComprasNaLoja } from '@/rules/loja';
 import type { ExpedicaoEmAndamento } from '@/rules/expedicao';
 import type { CorreioGeralDoJogador, MensagemDoCorreio } from '@/rules/correio';
 import type { ParticipacaoNoChefeMundial } from '@/rules/chefeMundial';
@@ -278,6 +279,8 @@ export interface CharacterDocument {
   /** Troca entre jogadores (7.2): os anúncios ativos do jogador e as compras das últimas 24 horas (para a fila de revisão). */
   anunciosNoMercado?: string[];
   comprasNoMercado?: { de: string; em: string }[];
+  /** Loja normal: quantas unidades de cada produto foram compradas no mês (o limite zera no dia 1). */
+  comprasNaLoja?: ComprasNaLoja;
   /** Feiticeiro (1.5.2): o elemento escolhido, usado nas habilidades da classe que não têm elemento próprio. */
   elementoDaClasse?: Elemento;
   /** Conquistas: os totais contados (vitórias, forjas…), os degraus já resgatados, os títulos e o título escolhido. */
