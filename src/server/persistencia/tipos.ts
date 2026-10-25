@@ -11,6 +11,7 @@ import type { PartyDocumento } from '@/rules/testeEquipe';
 import type { EntradaDoChefeMundial } from '@/rules/chefeMundial';
 import type { MensagemGeral } from '@/rules/correio';
 import type { AnuncioDoMercado } from '@/rules/mercado';
+import type { LeilaoDoDia } from '@/rules/leilao';
 import type { EntradaDeRevisao } from '@/rules/integridade';
 import type { CadastrosDaRede } from '@/server/integridade';
 
@@ -145,6 +146,9 @@ export interface ContextoTransacao {
   apagarAnuncioDoMercado(id: string): void;
   lerPrecosDoMercado(chave: string): Promise<number[]>;
   gravarPrecosDoMercado(chave: string, precos: number[]): void;
+  /** Leilão (7.2): o leilão de um dia. */
+  lerLeilao(dia: string): Promise<LeilaoDoDia | null>;
+  gravarLeilao(l: LeilaoDoDia): void;
 }
 
 /** Papel de Mestre concedido pelo painel (o Dono vem do ambiente e não é gravado aqui). */
@@ -313,6 +317,7 @@ export interface Repositorio {
   /** Troca entre jogadores (7.2): todos os anúncios (os vendidos e cancelados são apagados) e um anúncio fora de transação. */
   listarAnunciosDoMercado(): Promise<AnuncioDoMercado[]>;
   lerAnuncioDoMercado(id: string): Promise<AnuncioDoMercado | null>;
+  lerLeilao(dia: string): Promise<LeilaoDoDia | null>;
 }
 
 /**

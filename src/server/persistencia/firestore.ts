@@ -29,6 +29,7 @@ import { ehTitulo, titulosDoDocumento } from '@/rules/titulos';
 import { checkinDoDocumento, diarioDoDocumento } from '@/rules/diario';
 import { revisaoDoDocumento, ritmoDoDocumento, type EntradaDeRevisao } from '@/rules/integridade';
 import { anuncioDoDocumento, type AnuncioDoMercado } from '@/rules/mercado';
+import { leilaoDoDocumento, type LeilaoDoDia } from '@/rules/leilao';
 import { ELEMENTOS, type Elemento } from '@/rules/elements';
 import { correioGeralDoDocumento, mensagemDoDocumento, mensagensDoDocumento, type MensagemGeral } from '@/rules/correio';
 import { entradaMundialDoDocumento, participacoesMundiaisDoDocumento, type EntradaDoChefeMundial } from '@/rules/chefeMundial';
@@ -570,6 +571,7 @@ class ContextoFirestore implements ContextoTransacao {
   /** null = apagar. */
   private anuncios = new Map<string, AnuncioDoMercado | null>();
   private precos = new Map<string, number[]>();
+  private leiloes = new Map<string, LeilaoDoDia>();
   private nomes = new Map<string, { uid: string; nome: string }>();
   private transacoes: TransactionDocument[] = [];
   private combates = new Map<string, RegistroCombate>();
@@ -687,6 +689,17 @@ class ContextoFirestore implements ContextoTransacao {
     this.precos.set(chave, [...precos]);
   }
 
+  async lerLeilao(dia: string): Promise<LeilaoDoDia | null> {
+    const pendente = this.leiloes.get(dia);
+    if (pendente) return structuredClone(pendente);
+    const snap = await this.tx.get(this.db.collection('leilao').doc(dia));
+    return snap.exists ? leilaoDoDocumento(dia, snap.data()) : null;
+  }
+
+  gravarLeilao(l: LeilaoDoDia): void {
+    this.leiloes.set(l.dia, structuredClone(l));
+  }
+
   async lerParty(id: string): Promise<PartyDocumento | null> {
     if (this.partys.has(id)) {
       const pendente = this.partys.get(id);
@@ -753,6 +766,7 @@ class ContextoFirestore implements ContextoTransacao {
       else this.tx.delete(ref);
     }
     for (const [chave, precos] of this.precos) this.tx.set(this.db.collection('mercadoPrecos').doc(chaveDoPreco(chave)), { precos });
+    for (const l of this.leiloes.values()) this.tx.set(this.db.collection('leilao').doc(l.dia), semUndefined({ itens: l.itens }));
     for (const [uid, personagem] of this.personagens) {
       this.tx.set(this.db.collection('characters').doc(uid), personagemParaFirestore(personagem));
     }
@@ -951,6 +965,13 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
       return lerComRetry('listarAnunciosDoMercado', async () => {
         const snap = await db.collection('mercado').get();
         return snap.docs.map((d) => anuncioDoDocumento(d.id, d.data())).filter((a): a is AnuncioDoMercado => a !== null);
+      });
+    },
+
+    async lerLeilao(dia: string) {
+      return lerComRetry(`lerLeilao:${dia}`, async () => {
+        const snap = await db.collection('leilao').doc(dia).get();
+        return snap.exists ? leilaoDoDocumento(dia, snap.data()) : null;
       });
     },
 

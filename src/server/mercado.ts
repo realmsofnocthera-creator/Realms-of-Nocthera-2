@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { CARTAS_MAXIMAS, TIPO_DE_CARTA_MAP, type CartaItem } from '@/rules/almas';
+import { MAX_ARMAS_POR_PERSONAGEM, type ArmaPersonagem } from '@/game/forja';
+import { MAX_ARMADURAS_POR_PERSONAGEM, type ArmaduraPersonagem } from '@/game/armaduraForja';
+import type { PresenteDoCorreio } from '@/rules/correio';
 import { ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
 import { PECAS_ARMADURA_MAP } from '@/rules/armadurasCatalogo';
 import { ATTRIBUTE_DISPLAY_NAMES } from '@/rules/attributeInfo';
@@ -233,8 +236,11 @@ function retirar(ctx: ContextoTransacao, c: CharacterDocument, ref: RefDoItem, q
   }
 }
 
-/** Põe o item no jogador. A carta que não cabe (cartas cheias) volta em `carta` para ir pelo Correio. */
-function entregar(ctx: ContextoTransacao, c: CharacterDocument, item: ItemDoAnuncio, motivo: string): { doc: CharacterDocument; patch: Partial<CharacterDocument>; pelaCaixa?: CartaItem } {
+/**
+ * Põe o item no jogador. O que não cabe (cartas, armas ou armaduras no limite) volta em `pelaCaixa`, o presente que vai
+ * pelo Correio.
+ */
+export function entregarItem(ctx: ContextoTransacao, c: CharacterDocument, item: ItemDoAnuncio, motivo: string): { doc: CharacterDocument; patch: Partial<CharacterDocument>; pelaCaixa?: PresenteDoCorreio } {
   switch (item.tipo) {
     case 'material': {
       const inventario = { ...(c.inventario ?? {}), [item.id]: (c.inventario?.[item.id] ?? 0) + item.quantidade };
@@ -244,7 +250,7 @@ function entregar(ctx: ContextoTransacao, c: CharacterDocument, item: ItemDoAnun
       return mudarRecurso(ctx, c, item.id, item.quantidade, motivo);
     case 'carta': {
       const carta = item.carta as CartaItem;
-      if ((c.cartasItens ?? []).length >= CARTAS_MAXIMAS) return { doc: c, patch: {}, pelaCaixa: carta };
+      if ((c.cartasItens ?? []).length >= CARTAS_MAXIMAS) return { doc: c, patch: {}, pelaCaixa: { cartas: [carta] } };
       const cartasItens = [...(c.cartasItens ?? []), carta];
       const cartasDescobertas = [...new Set([...(c.cartasDescobertas ?? []), carta.tipo])];
       return { doc: { ...c, cartasItens, cartasDescobertas }, patch: { cartasItens, cartasDescobertas } };
@@ -254,11 +260,15 @@ function entregar(ctx: ContextoTransacao, c: CharacterDocument, item: ItemDoAnun
       return { doc: { ...c, emblemasItens }, patch: { emblemasItens } };
     }
     case 'arma': {
-      const armas = [...(c.armas ?? []), item.arma as unknown as NonNullable<CharacterDocument['armas']>[number]];
+      const arma = item.arma as unknown as ArmaPersonagem;
+      if ((c.armas ?? []).length >= MAX_ARMAS_POR_PERSONAGEM) return { doc: c, patch: {}, pelaCaixa: { armas: [arma] } };
+      const armas = [...(c.armas ?? []), arma];
       return { doc: { ...c, armas }, patch: { armas } };
     }
     case 'armadura': {
-      const armaduras = [...(c.armaduras ?? []), item.armadura as unknown as NonNullable<CharacterDocument['armaduras']>[number]];
+      const armadura = item.armadura as unknown as ArmaduraPersonagem;
+      if ((c.armaduras ?? []).length >= MAX_ARMADURAS_POR_PERSONAGEM) return { doc: c, patch: {}, pelaCaixa: { armaduras: [armadura] } };
+      const armaduras = [...(c.armaduras ?? []), armadura];
       return { doc: { ...c, armaduras }, patch: { armaduras } };
     }
   }
@@ -392,10 +402,10 @@ async function devolverExpirados(uid: string, agora: Date): Promise<void> {
         ficam.push(id);
         continue;
       }
-      const r = entregar(ctx, eu, a.item, `Mercado: anúncio expirado (${a.nome})`);
+      const r = entregarItem(ctx, eu, a.item, `Mercado: anúncio expirado (${a.nome})`);
       eu = r.doc;
       patch = { ...patch, ...r.patch };
-      if (r.pelaCaixa) patch.correio = eu.correio = comMensagem(eu.correio, novaMensagem({ titulo: 'Anúncio expirado', texto: `Seu anúncio de ${a.nome} passou de 7 dias e a carta voltou pelo Correio (suas cartas estavam cheias).`, de: 'Mercado', presente: { cartas: [r.pelaCaixa] } }, agora), agora);
+      if (r.pelaCaixa) patch.correio = eu.correio = comMensagem(eu.correio, novaMensagem({ titulo: 'Anúncio expirado', texto: `Seu anúncio de ${a.nome} passou de 7 dias e o item voltou pelo Correio (não cabia na mochila).`, de: 'Mercado', presente: r.pelaCaixa }, agora), agora);
       ctx.apagarAnuncioDoMercado(id);
     }
     salvarPersonagem(ctx, eu, { ...patch, anunciosNoMercado: ficam.length ? ficam : undefined });
@@ -494,11 +504,11 @@ async function comprar(uid: string, emailVerificado: boolean, pedido: PedidoDoMe
     // o dinheiro: sai de quem compra e entra para quem vende, com extrato dos dois
     eu = alterarSaldoEm(ctx, eu, a.moeda, -a.preco, `Mercado: compra de ${rotulo}`).character;
     vendedor = alterarSaldoEm(ctx, vendedor, a.moeda, a.preco, `Mercado: venda de ${rotulo}`).character;
-    const r = entregar(ctx, eu, a.item, `Mercado: compra de ${rotulo}`);
+    const r = entregarItem(ctx, eu, a.item, `Mercado: compra de ${rotulo}`);
     eu = r.doc;
     let correioDoComprador = eu.correio;
     if (r.pelaCaixa)
-      correioDoComprador = comMensagem(correioDoComprador, novaMensagem({ titulo: 'Compra no Mercado', texto: `Suas cartas estavam cheias: ${a.nome} chegou pelo Correio.`, de: 'Mercado', presente: { cartas: [r.pelaCaixa] } }, agora), agora);
+      correioDoComprador = comMensagem(correioDoComprador, novaMensagem({ titulo: 'Compra no Mercado', texto: `${a.nome} não cabia na sua mochila e chegou pelo Correio.`, de: 'Mercado', presente: r.pelaCaixa }, agora), agora);
     // sinais para a fila de revisão: compras repetidas do mesmo vendedor e preço muito fora do normal
     const compras = [...(eu.comprasNoMercado ?? []).filter((c) => agora.getTime() - Date.parse(c.em) < 86_400_000), { de: a.vendedorUid, em: agora.toISOString() }].slice(-30);
     const doMesmo = compras.filter((c) => c.de === a.vendedorUid).length;
@@ -521,7 +531,7 @@ async function comprar(uid: string, emailVerificado: boolean, pedido: PedidoDoMe
       revisoes.push({ id: idDaRevisao(uid, hora, 'trocaEntreAsMesmasContas'), uid, nome: eu.nome, tipo: 'trocaEntreAsMesmasContas', descricao: `${doMesmo} compras de ${vendedor.nome} em 24 horas no Mercado.`, criadaEm: agora.toISOString(), revisada: false, contasDaRede: [a.vendedorUid] });
     if (atipico)
       revisoes.push({ id: idDaRevisao(a.vendedorUid, hora, 'precoAtipico'), uid: a.vendedorUid, nome: vendedor.nome, tipo: 'precoAtipico', descricao: `Vendeu ${rotulo} para ${eu.nome} por ${nomeDaMoeda(a.moeda, a.preco)}, muito fora do preço normal desse item.`, criadaEm: agora.toISOString(), revisada: false, contasDaRede: [uid] });
-    return { mensagem: `Você comprou ${rotulo} por ${nomeDaMoeda(a.moeda, a.preco)}.${r.pelaCaixa ? ' Suas cartas estavam cheias: a carta foi para o Correio.' : ''}`, revisoes };
+    return { mensagem: `Você comprou ${rotulo} por ${nomeDaMoeda(a.moeda, a.preco)}.${r.pelaCaixa ? ' Não cabia na sua mochila: o item foi para o Correio.' : ''}`, revisoes };
   });
 }
 
@@ -549,9 +559,9 @@ async function cancelar(uid: string, pedido: PedidoDoMercado, agora: Date) {
     const a = await ctx.lerAnuncioDoMercado(id);
     if (!a || a.vendedorUid !== uid) throw new ErroDoMercado('Esse anúncio não está mais no Mercado.');
     let eu = await carregarPersonagem(ctx, uid);
-    const r = entregar(ctx, eu, a.item, `Mercado: anúncio cancelado (${a.nome})`);
+    const r = entregarItem(ctx, eu, a.item, `Mercado: anúncio cancelado (${a.nome})`);
     eu = r.doc;
-    const correio = r.pelaCaixa ? comMensagem(eu.correio, novaMensagem({ titulo: 'Anúncio cancelado', texto: `Suas cartas estavam cheias: ${a.nome} voltou pelo Correio.`, de: 'Mercado', presente: { cartas: [r.pelaCaixa] } }, agora), agora) : eu.correio;
+    const correio = r.pelaCaixa ? comMensagem(eu.correio, novaMensagem({ titulo: 'Anúncio cancelado', texto: `${a.nome} não cabia na sua mochila e voltou pelo Correio.`, de: 'Mercado', presente: r.pelaCaixa }, agora), agora) : eu.correio;
     const ficam = (eu.anunciosNoMercado ?? []).filter((x) => x !== id);
     salvarPersonagem(ctx, eu, { ...r.patch, correio, anunciosNoMercado: ficam.length ? ficam : undefined });
     ctx.apagarAnuncioDoMercado(id);

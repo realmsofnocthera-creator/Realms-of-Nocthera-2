@@ -10,6 +10,7 @@ import { fecharExtrato, tratarDivergencias } from '@/server/extrato';
 import { observarJogadores, type CadastrosDaRede } from '@/server/integridade';
 import type { EntradaDeRevisao } from '@/rules/integridade';
 import type { AnuncioDoMercado } from '@/rules/mercado';
+import type { LeilaoDoDia } from '@/rules/leilao';
 import type { SancaoDocumento } from '@/rules/sancoes';
 import { chaveDeBusca, type CampoDoRanking, type CriterioDeRanking, type RankingGuardado, type ResumoDePersonagem } from '@/rules/social';
 import type { ConfiguracaoDeSistemas } from '@/rules/sistemas';
@@ -55,6 +56,7 @@ interface Estado {
   cadastrosDaRede: Map<string, CadastrosDaRede>;
   anuncios: Map<string, AnuncioDoMercado>;
   precosDoMercado: Map<string, number[]>;
+  leiloes: Map<string, LeilaoDoDia>;
 }
 
 const estado: Estado = {
@@ -80,6 +82,7 @@ const estado: Estado = {
   cadastrosDaRede: new Map(),
   anuncios: new Map(),
   precosDoMercado: new Map(),
+  leiloes: new Map(),
 };
 
 /** Chefe Mundial: a entrada de quem está com limite silencioso fica à parte (como chefeMundial/{dia}/ocultos). */
@@ -248,6 +251,14 @@ class ContextoMemoria implements ContextoTransacao {
   gravarPrecosDoMercado(chave: string, precos: number[]) {
     this.precos.set(chave, [...precos]);
   }
+  leiloes = new Map<string, LeilaoDoDia>();
+  async lerLeilao(dia: string) {
+    const l = this.leiloes.get(dia) ?? estado.leiloes.get(dia);
+    return l ? structuredClone(l) : null;
+  }
+  gravarLeilao(l: LeilaoDoDia) {
+    this.leiloes.set(l.dia, structuredClone(l));
+  }
 }
 
 export const repositorio: Repositorio = {
@@ -281,6 +292,7 @@ export const repositorio: Repositorio = {
         for (const [marca, c] of ctx.cadastrosDaRede) estado.cadastrosDaRede.set(marca, c);
         for (const [id, a] of ctx.anuncios) (a ? estado.anuncios.set(id, a) : estado.anuncios.delete(id));
         for (const [chave, p] of ctx.precos) estado.precosDoMercado.set(chave, p);
+        for (const [dia, l] of ctx.leiloes) estado.leiloes.set(dia, l);
         return valor;
       })
     );
@@ -511,6 +523,11 @@ export const repositorio: Repositorio = {
     return a ? structuredClone(a) : null;
   },
 
+  async lerLeilao(dia: string) {
+    const l = estado.leiloes.get(dia);
+    return l ? structuredClone(l) : null;
+  },
+
   async gravarRevisao(entrada: EntradaDeRevisao) {
     estado.revisoes.set(entrada.id, structuredClone(entrada));
   },
@@ -578,6 +595,7 @@ export function resetCharacterStore(): void {
   estado.cadastrosDaRede.clear();
   estado.anuncios.clear();
   estado.precosDoMercado.clear();
+  estado.leiloes.clear();
   falhaNaConfiguracao = null;
   falhaNoLogAdmin = null;
   falhaAoGravar = null;
