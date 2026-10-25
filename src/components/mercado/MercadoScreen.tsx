@@ -7,16 +7,18 @@ import { CATEGORIAS_DO_MERCADO, NOME_DA_CATEGORIA, RARIDADES_DO_MERCADO, type Ca
 import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
 import type { AnuncioNaTela, EstadoDoMercado, ItemVendavel } from '@/server/mercado';
 import { NOCTHERA_THEME } from '@/theme/theme';
+import { LeilaoPainel } from '@/components/mercado/LeilaoPainel';
 
 type Token = () => Promise<string | null>;
 const OURO = '#C8A656';
 const VERMELHO = '#E5484D';
 const VERDE = '#7BC47F';
-type Aba = 'comprar' | 'vender' | 'meus';
+type Aba = 'comprar' | 'vender' | 'meus' | 'leilao';
 const ABAS: readonly { id: Aba; nome: string }[] = [
   { id: 'comprar', nome: 'Comprar' },
   { id: 'vender', nome: 'Vender' },
   { id: 'meus', nome: 'Meus anúncios' },
+  { id: 'leilao', nome: 'Leilão' },
 ];
 
 interface Filtro {
@@ -84,8 +86,8 @@ function CartaoDoAnuncio({ a, acao }: { a: AnuncioNaTela; acao: React.ReactNode 
 }
 
 /**
- * Mercado (7.2): por enquanto a Troca entre jogadores. Comprar (com filtros), vender o que está na mochila (por ouro
- * ou Diamantes, o anúncio dura 7 dias) e ver ou cancelar os próprios anúncios. A loja normal e o leilão entram depois.
+ * Mercado (7.2): a Troca entre jogadores (comprar com filtros, vender o que está na mochila por ouro ou Diamantes, ver
+ * ou cancelar os próprios anúncios) e o Leilão. A loja normal entra depois.
  */
 export function MercadoScreen({ tokenFresco }: { tokenFresco: Token }) {
   const { colors } = NOCTHERA_THEME;
@@ -139,8 +141,8 @@ export function MercadoScreen({ tokenFresco }: { tokenFresco: Token }) {
             <p className="text-[11px]" style={{ color: colors.text.secondary }}>
               Seu saldo: {preco('ouro', estado.ouro)} · {preco('diamantes', estado.diamantes)}
             </p>
-            {!estado.podeNegociar && <p role="status" className="text-xs font-semibold" style={{ color: '#E6C775' }}>{estado.motivo}</p>}
-            <div role="tablist" aria-label="Mercado" className="flex gap-1.5">
+            {!estado.podeNegociar && aba !== 'leilao' && <p role="status" className="text-xs font-semibold" style={{ color: '#E6C775' }}>{estado.motivo}</p>}
+            <div role="tablist" aria-label="Mercado" className="flex flex-wrap gap-1.5">
               {ABAS.map((a) => (
                 <button
                   key={a.id}
@@ -206,6 +208,8 @@ export function MercadoScreen({ tokenFresco }: { tokenFresco: Token }) {
                 )}
               </section>
             )}
+
+            {aba === 'leilao' && <LeilaoPainel tokenFresco={tokenFresco} />}
 
             {aba === 'vender' && <Vender estado={estado} ocupado={ocupado} anunciar={(corpo) => agir({ acao: 'anunciar', ...corpo })} />}
 

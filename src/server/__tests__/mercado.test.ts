@@ -217,3 +217,23 @@ describe('Correio cheio (7.2)', () => {
     expect(caixa.at(-1)!.titulo).toBe('Venda nova');
   });
 });
+
+describe('Mochila cheia de armas (7.2)', () => {
+  it('a arma comprada acima do limite é cobrada e chega pelo Correio', async () => {
+    const { MAX_ARMAS_POR_PERSONAGEM } = await import('@/game/forja');
+    resetCharacterStore();
+    limparCacheDoMercado();
+    limparCacheDoCorreio();
+    for (const [uid, nome] of [['v1', 'Vendedor'], ['c1', 'Comprador']]) await createCharacter(uid, { nome, racaId: 'elfo', classeId: 'cavaleiro', pontos: PONTOS });
+    await updateCharacter('v1', { nivel: 20, armas: [arma('w1')] as never });
+    await updateCharacter('c1', { nivel: 20, ouro: 1000, armas: Array.from({ length: MAX_ARMAS_POR_PERSONAGEM }, (_, i) => arma(`m${i}`)) as never });
+    await agirNoMercado('v1', true, 'anunciar', { item: { tipo: 'arma', id: 'w1' }, moeda: 'ouro', preco: 100 }, T0);
+    const a = (await estadoDoMercado('c1', true, {}, T0)).anuncios[0];
+    expect((await agirNoMercado('c1', true, 'comprar', { id: a.id }, T0)).mensagem).toMatch(/foi para o Correio/);
+    const c = (await getCharacterByUid('c1'))!;
+    expect([c.ouro, c.armas!.length]).toEqual([900, MAX_ARMAS_POR_PERSONAGEM]);
+    const msg = (await estadoDoCorreio('c1', T0)).mensagens.find((m) => m.titulo === 'Compra no Mercado')!;
+    expect(msg.presente?.armas?.map((x) => x.id)).toEqual(['w1']);
+    expect((await erro(agirNoCorreio('c1', 'resgatar', { id: msg.id }, T0)))?.message).toMatch(/armas estão cheias/);
+  });
+});
