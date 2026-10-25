@@ -1,3 +1,4 @@
+import type { EntradaDaArena, ReplayDaArena } from '@/rules/arena';
 import type { ProgressoDaCampanha } from '@/game/campanha';
 import type { CampoDoRanking, CriterioDeRanking, RankingGuardado, ResumoDePersonagem } from '@/rules/social';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
@@ -149,6 +150,10 @@ export interface ContextoTransacao {
   /** Leilão (7.2): o leilão de um dia. */
   lerLeilao(dia: string): Promise<LeilaoDoDia | null>;
   gravarLeilao(l: LeilaoDoDia): void;
+  /** Arena (7.5): o jogador na semana (`oculto`: a entrada à parte de quem está com limite silencioso) e o replay das lutas. */
+  lerEntradaDaArena(semana: string, uid: string, oculto?: boolean): Promise<EntradaDaArena | null>;
+  gravarEntradaDaArena(entrada: EntradaDaArena): void;
+  gravarReplayDaArena(replay: ReplayDaArena): void;
 }
 
 /** Papel de Mestre concedido pelo painel (o Dono vem do ambiente e não é gravado aqui). */
@@ -318,6 +323,12 @@ export interface Repositorio {
   listarAnunciosDoMercado(): Promise<AnuncioDoMercado[]>;
   lerAnuncioDoMercado(id: string): Promise<AnuncioDoMercado | null>;
   lerLeilao(dia: string): Promise<LeilaoDoDia | null>;
+  /** Arena (7.5): a entrada de um jogador, os mais próximos em pontos (acima ou abaixo), o topo, a posição e um replay. */
+  lerEntradaDaArena(semana: string, uid: string, oculto?: boolean): Promise<EntradaDaArena | null>;
+  listarArenaPerto(semana: string, pontos: number, acima: boolean, limite: number): Promise<EntradaDaArena[]>;
+  listarArenaTopo(semana: string, limite: number): Promise<EntradaDaArena[]>;
+  contarAcimaNaArena(semana: string, pontos: number): Promise<number>;
+  lerReplayDaArena(id: string): Promise<ReplayDaArena | null>;
 }
 
 /**

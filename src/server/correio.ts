@@ -1,3 +1,5 @@
+import { FAIXAS_DA_ARENA, faixaDaArena, presenteDaFaixaDaArena } from '@/rules/arena';
+import { semanaDe } from '@/rules/chefeSemanal';
 import { randomUUID } from 'node:crypto';
 import { diaDeBrasilia } from '@/game/batalhaSangrenta';
 import { CAMPOS_DOS_COLECIONAVEIS, ehCampoDosColecionaveis, LIMITE_DE_MATERIAL_POR_PEDIDO, MAXIMO_DE_MATERIAIS_POR_PEDIDO } from '@/rules/ajustes';
@@ -148,6 +150,56 @@ export async function mandarRecompensasDoChefeMundial(uid: string, agora = new D
   });
 }
 
+/**
+ * Manda ao Correio os prêmios da Arena das semanas que já fecharam (7.5). A posição é contada fora da transação: a
+ * semana acabou, ninguém muda mais os pontos. Do 101º em diante, só ganha quem fez pelo menos 1 luta.
+ */
+export async function mandarPremiosDaArena(uid: string, agora = new Date()): Promise<void> {
+  const char = await repositorio.lerPersonagem(uid);
+  const atual = semanaDe(agora);
+  const pendentes = (char?.arena ?? []).filter((s) => !s.premiada && s.semana < atual);
+  if (!char || !pendentes.length) return;
+  const oculto = await comLimiteSilencioso(uid);
+  const ultimaFaixa = FAIXAS_DA_ARENA[FAIXAS_DA_ARENA.length - 1];
+  const resultados = await Promise.all(
+    pendentes.map(async (s) => {
+      const entrada = (oculto ? await repositorio.lerEntradaDaArena(s.semana, uid, true) : null) ?? (await repositorio.lerEntradaDaArena(s.semana, uid));
+      if (!entrada) return { semana: s.semana, mensagem: null };
+      const contada = (await repositorio.contarAcimaNaArena(s.semana, entrada.pontos)) + 1;
+      // Limite silencioso (6.5-7): a recompensa é a da última faixa, sem aviso
+      const posicao = oculto || entrada.oculto ? Math.max(contada, ultimaFaixa.de) : contada;
+      const faixa = faixaDaArena(posicao);
+      if (faixa === ultimaFaixa && entrada.lutas < 1) return { semana: s.semana, mensagem: null };
+      const [ano, mes, d] = s.semana.split('-');
+      return {
+        semana: s.semana,
+        mensagem: novaMensagem(
+          {
+            titulo: `Arena: ${faixa.nome}`,
+            texto: `Você terminou a semana de ${d}/${mes}/${ano} da Arena em ${posicao}º, com ${entrada.pontos.toLocaleString('pt-BR')} pontos.`,
+            de: 'Arena',
+            presente: presenteDaFaixaDaArena(faixa),
+          },
+          agora
+        ),
+      };
+    })
+  );
+  await repositorio.executarTransacao('correio:arena', async (ctx) => {
+    const eu = await carregarPersonagem(ctx, uid);
+    let caixa = eu.correio ?? [];
+    const enviadas = new Set<string>();
+    for (const r of resultados) {
+      const s = (eu.arena ?? []).find((x) => x.semana === r.semana);
+      if (!s || s.premiada) continue;
+      enviadas.add(r.semana);
+      if (r.mensagem) caixa = comMensagem(caixa, r.mensagem, agora);
+    }
+    if (!enviadas.size) return;
+    salvarPersonagem(ctx, eu, { correio: caixa, arena: (eu.arena ?? []).map((x) => (enviadas.has(x.semana) ? { ...x, premiada: true } : x)) });
+  });
+}
+
 function montarEstado(char: CharacterDocument, gerais: readonly MensagemGeral[], agora: Date): EstadoDoCorreio {
   const doJogador: MensagemNaTela[] = (char.correio ?? []).filter((m) => mensagemValida(m, agora));
   const marcas = char.correioGeral ?? {};
@@ -160,6 +212,7 @@ function montarEstado(char: CharacterDocument, gerais: readonly MensagemGeral[],
 
 export async function estadoDoCorreio(uid: string, agora = new Date()): Promise<EstadoDoCorreio> {
   await mandarRecompensasDoChefeMundial(uid, agora);
+  await mandarPremiosDaArena(uid, agora);
   const char = await repositorio.lerPersonagem(uid);
   if (!char) throw new Error('Personagem não encontrado.');
   return montarEstado(char, await mensagensGerais(agora), agora);
