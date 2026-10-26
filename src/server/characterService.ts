@@ -5,6 +5,7 @@ import type { ComprasNaLoja } from '@/rules/loja';
 import type { ExpedicaoEmAndamento } from '@/rules/expedicao';
 import type { CorreioGeralDoJogador, MensagemDoCorreio } from '@/rules/correio';
 import type { ParticipacaoNoChefeMundial } from '@/rules/chefeMundial';
+import type { SemanaNaArena } from '@/rules/arena';
 import type { CartaItem } from '@/rules/almas';
 import type { BonusDeGuilda } from '@/rules/pesquisa';
 import type { ParticipacaoNoChefeSemanal } from '@/rules/chefeSemanal';
@@ -266,6 +267,8 @@ export interface CharacterDocument {
   correioGeral?: CorreioGeralDoJogador;
   /** Chefe Mundial: os dias em que lutou (os 30 últimos) e se a recompensa já foi para o Correio. */
   chefeMundial?: ParticipacaoNoChefeMundial[];
+  /** Arena (7.5): as semanas em que o jogador lutou ou foi atacado, e se o prêmio já foi para o Correio. */
+  arena?: SemanaNaArena[];
   /** Expedição: as expedições nas vagas (até 3) e os Avanços de expedição guardados. */
   expedicoes?: ExpedicaoEmAndamento[];
   avancosDeExpedicao?: number;

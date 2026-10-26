@@ -4,6 +4,7 @@
  * transações atômicas (gravações pendentes até o fim), isoladas (executadas uma por vez)
  * e sem transação aninhada.
  */
+import type { EntradaDaArena, ReplayDaArena } from '@/rules/arena';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import { fecharExtrato, tratarDivergencias } from '@/server/extrato';
@@ -57,6 +58,8 @@ interface Estado {
   anuncios: Map<string, AnuncioDoMercado>;
   precosDoMercado: Map<string, number[]>;
   leiloes: Map<string, LeilaoDoDia>;
+  arena: Map<string, EntradaDaArena>;
+  replaysDaArena: Map<string, ReplayDaArena>;
 }
 
 const estado: Estado = {
@@ -83,7 +86,12 @@ const estado: Estado = {
   anuncios: new Map(),
   precosDoMercado: new Map(),
   leiloes: new Map(),
+  arena: new Map(),
+  replaysDaArena: new Map(),
 };
+
+/** Arena: como arena/{semana}/jogadores (ou ocultos)/{uid}. */
+const chaveDaArena = (semana: string, uid: string, oculto: boolean) => `${semana}/${uid}${oculto ? '/oculto' : ''}`;
 
 /** Chefe Mundial: a entrada de quem está com limite silencioso fica à parte (como chefeMundial/{dia}/ocultos). */
 const chaveMundial = (dia: string, uid: string, oculto: boolean) => `${dia}/${uid}${oculto ? '/oculto' : ''}`;
@@ -259,6 +267,19 @@ class ContextoMemoria implements ContextoTransacao {
   gravarLeilao(l: LeilaoDoDia) {
     this.leiloes.set(l.dia, structuredClone(l));
   }
+  arena = new Map<string, EntradaDaArena>();
+  replaysDaArena = new Map<string, ReplayDaArena>();
+  async lerEntradaDaArena(semana: string, uid: string, oculto = false) {
+    const k = chaveDaArena(semana, uid, oculto);
+    const e = this.arena.get(k) ?? estado.arena.get(k);
+    return e ? structuredClone(e) : null;
+  }
+  gravarEntradaDaArena(entrada: EntradaDaArena) {
+    this.arena.set(chaveDaArena(entrada.semana, entrada.uid, entrada.oculto === true), structuredClone(entrada));
+  }
+  gravarReplayDaArena(replay: ReplayDaArena) {
+    this.replaysDaArena.set(replay.id, structuredClone(replay));
+  }
 }
 
 export const repositorio: Repositorio = {
@@ -293,6 +314,8 @@ export const repositorio: Repositorio = {
         for (const [id, a] of ctx.anuncios) (a ? estado.anuncios.set(id, a) : estado.anuncios.delete(id));
         for (const [chave, p] of ctx.precos) estado.precosDoMercado.set(chave, p);
         for (const [dia, l] of ctx.leiloes) estado.leiloes.set(dia, l);
+        for (const [k, e] of ctx.arena) estado.arena.set(k, e);
+        for (const [id, r] of ctx.replaysDaArena) estado.replaysDaArena.set(id, r);
         return valor;
       })
     );
@@ -465,6 +488,8 @@ export const repositorio: Repositorio = {
     estado.revogacoes.delete(uid);
     for (const [k, e] of estado.chefeMundial) if (e.uid === uid) estado.chefeMundial.delete(k);
     for (const [id, a] of estado.anuncios) if (a.vendedorUid === uid) estado.anuncios.delete(id);
+    for (const [k, e] of estado.arena) if (e.uid === uid) estado.arena.delete(k);
+    for (const id of estado.replaysDaArena.keys()) if (id.startsWith(`${uid}_`)) estado.replaysDaArena.delete(id);
   },
 
   async lerGuilda(id: string) {
@@ -523,6 +548,25 @@ export const repositorio: Repositorio = {
     return a ? structuredClone(a) : null;
   },
 
+  async lerEntradaDaArena(semana: string, uid: string, oculto = false) {
+    const e = estado.arena.get(chaveDaArena(semana, uid, oculto));
+    return e ? structuredClone(e) : null;
+  },
+  async listarArenaPerto(semana: string, pontos: number, acima: boolean, limite: number) {
+    const daSemana = [...estado.arena.values()].filter((e) => e.semana === semana && !e.oculto);
+    const lista = acima ? daSemana.filter((e) => e.pontos >= pontos).sort((a, b) => a.pontos - b.pontos) : daSemana.filter((e) => e.pontos < pontos).sort((a, b) => b.pontos - a.pontos);
+    return lista.slice(0, limite).map((e) => structuredClone(e));
+  },
+  async listarArenaTopo(semana: string, limite: number) {
+    return [...estado.arena.values()].filter((e) => e.semana === semana && !e.oculto).sort((a, b) => b.pontos - a.pontos).slice(0, limite).map((e) => structuredClone(e));
+  },
+  async contarAcimaNaArena(semana: string, pontos: number) {
+    return [...estado.arena.values()].filter((e) => e.semana === semana && !e.oculto && e.pontos > pontos).length;
+  },
+  async lerReplayDaArena(id: string) {
+    const r = estado.replaysDaArena.get(id);
+    return r ? structuredClone(r) : null;
+  },
   async lerLeilao(dia: string) {
     const l = estado.leiloes.get(dia);
     return l ? structuredClone(l) : null;
@@ -596,6 +640,8 @@ export function resetCharacterStore(): void {
   estado.anuncios.clear();
   estado.precosDoMercado.clear();
   estado.leiloes.clear();
+  estado.arena.clear();
+  estado.replaysDaArena.clear();
   falhaNaConfiguracao = null;
   falhaNoLogAdmin = null;
   falhaAoGravar = null;
