@@ -1,3 +1,4 @@
+import type { CanalDocumento } from '@/rules/chat';
 import type { CampeonatoDoDia } from '@/rules/campeonato';
 import type { EntradaDaArena, ModoDaArena, ReplayDaArena } from '@/rules/arena';
 import type { ProgressoDaCampanha } from '@/game/campanha';
@@ -158,6 +159,9 @@ export interface ContextoTransacao {
   /** Campeonato (7.5): a edição do dia (campeonatos/{dia}). */
   lerCampeonato(dia: string): Promise<CampeonatoDoDia | null>;
   gravarCampeonato(c: CampeonatoDoDia): void;
+  /** Chat (7.7): o canal (chat/{canal}) com as últimas mensagens. */
+  lerCanalDoChat(id: string): Promise<CanalDocumento | null>;
+  gravarCanalDoChat(c: CanalDocumento): void;
 }
 
 /** Papel de Mestre concedido pelo painel (o Dono vem do ambiente e não é gravado aqui). */
@@ -336,6 +340,7 @@ export interface Repositorio {
   contarAcimaNaArena(semana: string, pontos: number, modo?: ModoDaArena): Promise<number>;
   lerReplayDaArena(id: string): Promise<ReplayDaArena | null>;
   lerCampeonato(dia: string): Promise<CampeonatoDoDia | null>;
+  lerCanalDoChat(id: string): Promise<CanalDocumento | null>;
 }
 
 /**

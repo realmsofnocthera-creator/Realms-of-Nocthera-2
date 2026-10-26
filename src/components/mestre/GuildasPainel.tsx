@@ -115,7 +115,7 @@ export function GuildasPainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel;
         <Cartao titulo={`Guilda ${aberta.nome}`}>
           <p className="text-[12px]">{aberta.descricao || <i style={{ color: colors.text.secondary }}>Sem descrição.</i>}</p>
           <p className="text-[11px]" style={{ color: colors.text.secondary }}>
-            Nível {aberta.nivel} · {aberta.xp.toLocaleString('pt-BR')} de XP · criada em {new Date(aberta.criadaEm).toLocaleDateString('pt-BR')} · {aberta.convites} convites e {aberta.pedidos} pedidos esperando
+            Identificador: <code>{aberta.id}</code> · Nível {aberta.nivel} · {aberta.xp.toLocaleString('pt-BR')} de XP · criada em {new Date(aberta.criadaEm).toLocaleDateString('pt-BR')} · {aberta.convites} convites e {aberta.pedidos} pedidos esperando
           </p>
           <ul className="text-[12px] flex flex-col gap-0.5">
             {aberta.membrosDaGuilda.map((m) => (

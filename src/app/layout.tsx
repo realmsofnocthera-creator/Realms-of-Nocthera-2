@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 import { FirebaseInit } from '@/components/FirebaseInit';
+import { ChatFlutuante } from '@/components/chat/ChatFlutuante';
 
 const cinzel = localFont({
   src: [
@@ -50,6 +51,7 @@ export default function RootLayout({
       <body className="bg-[#0D0D0D] text-[#F5F3E0] min-h-screen antialiased selection:bg-[#ED8A0C]/30 selection:text-[#F5F3E0]">
         <FirebaseInit />
         {children}
+        <ChatFlutuante />
       </body>
     </html>
   );

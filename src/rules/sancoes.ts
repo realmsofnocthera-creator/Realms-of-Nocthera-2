@@ -37,6 +37,14 @@ export interface LimiteSilencioso {
   aplicadoEm: string;
 }
 
+/** Silêncio no chat (7.7): o jogador joga normalmente, mas não consegue enviar mensagens até `ate`. */
+export interface SilencioNoChat {
+  ate: string;
+  motivo: string;
+  aplicadoPor: string;
+  aplicadoEm: string;
+}
+
 export type SituacaoDaApelacao = 'pendente' | 'aceita' | 'recusada';
 
 /** Pedido de apelação feito pelo jogo (6.5-7): um por sanção. */
@@ -67,6 +75,7 @@ export interface SancaoDocumento {
   aplicadaEm: string;
   advertencias: Advertencia[];
   limiteSilencioso?: LimiteSilencioso | null;
+  silencioNoChat?: SilencioNoChat | null;
   apelacao?: Apelacao | null;
 }
 
@@ -132,4 +141,17 @@ export function limiteDoDocumento(bruto: unknown): LimiteSilencioso | null {
   const o = bruto as Record<string, unknown>;
   if (typeof o.aplicadoEm !== 'string') return null;
   return { motivo: typeof o.motivo === 'string' ? o.motivo : '', aplicadoPor: typeof o.aplicadoPor === 'string' ? o.aplicadoPor : '', aplicadoEm: o.aplicadoEm };
+}
+
+export function silencioDoDocumento(bruto: unknown): SilencioNoChat | null {
+  if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto)) return null;
+  const o = bruto as Record<string, unknown>;
+  if (typeof o.ate !== 'string' || !Number.isFinite(Date.parse(o.ate))) return null;
+  return { ate: o.ate, motivo: typeof o.motivo === 'string' ? o.motivo : '', aplicadoPor: typeof o.aplicadoPor === 'string' ? o.aplicadoPor : '', aplicadoEm: typeof o.aplicadoEm === 'string' ? o.aplicadoEm : '' };
+}
+
+/** O silêncio que ainda vale em `agora` (o vencido deixa de valer sozinho). */
+export function silencioEmVigor(doc: SancaoDocumento | null, agora: Date): SilencioNoChat | null {
+  const s = doc?.silencioNoChat;
+  return s && Date.parse(s.ate) > agora.getTime() ? s : null;
 }

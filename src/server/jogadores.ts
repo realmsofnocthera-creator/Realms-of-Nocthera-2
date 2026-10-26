@@ -1,3 +1,4 @@
+import { apagarMensagensDoJogador } from '@/server/chat';
 import { tirarDaGuildaAntesDeExcluir } from '@/server/guildas';
 import {
   ehAcaoDeSancao,
@@ -7,7 +8,9 @@ import {
   RESPOSTA_MAXIMA,
   sancaoDocumentoVazio,
   sancaoEmVigor,
+  silencioEmVigor,
   type AcaoDeSancao,
+  type SilencioNoChat,
   type Advertencia,
   type Apelacao,
   type LimiteSilencioso,
@@ -78,6 +81,8 @@ export interface FichaDoJogador {
   papelNoPainel: PapelMestre | null;
   /** Limite silencioso em vigor (6.5-7), ou null. */
   limiteSilencioso: LimiteSilencioso | null;
+  /** Silêncio no chat em vigor (7.7), ou null. */
+  silencioNoChat: SilencioNoChat | null;
   /** O pedido de apelação mais recente (6.5-7), ou null. */
   apelacao: Apelacao | null;
   transacoes: TransactionDocument[];
@@ -160,6 +165,7 @@ async function montarFicha(uid: string): Promise<FichaDoJogador> {
     advertencias: sancaoDoc?.advertencias ?? [],
     papelNoPainel: papel?.papel ?? null,
     limiteSilencioso: sancaoDoc?.limiteSilencioso ?? null,
+    silencioNoChat: silencioEmVigor(sancaoDoc, new Date()),
     apelacao: sancaoDoc?.apelacao ?? null,
     transacoes,
     conferenciaDoExtrato: conferirExtrato(personagem, transacoes),
@@ -449,6 +455,8 @@ export interface ResultadoDaExclusao {
  */
 export async function excluirJogador(sessao: SessaoMestre, uidAlvo: unknown, pedido: PedidoDestrutivo, ip?: string): Promise<ResultadoDaExclusao> {
   const { uid, personagem, motivo } = await alvoDestrutivo(sessao, uidAlvo, pedido);
+  // as mensagens dele no chat (7.7) saem junto com a conta
+  await apagarMensagensDoJogador(uid, personagem.guildaId);
   await comRegistro(
     sessao,
     { acao: 'jogador.excluir', alvo: uid, antes: { nome: personagem.nome, nivel: personagem.nivel }, depois: { excluido: true }, motivo, ip },

@@ -6,6 +6,7 @@ import type { ExpedicaoEmAndamento } from '@/rules/expedicao';
 import type { CorreioGeralDoJogador, MensagemDoCorreio } from '@/rules/correio';
 import type { ParticipacaoNoChefeMundial } from '@/rules/chefeMundial';
 import type { SemanaNaArena } from '@/rules/arena';
+import type { BloqueadoNoChat } from '@/rules/chat';
 import type { BauDeEscolha } from '@/rules/arenaRanqueada';
 import type { CartaItem } from '@/rules/almas';
 import type { BonusDeGuilda } from '@/rules/pesquisa';
@@ -277,6 +278,8 @@ export interface CharacterDocument {
   /** Campeonato (7.5): as edições cujo prêmio já foi para o Correio e quantos campeonatos o jogador ganhou. */
   campeonatos?: string[];
   campeonatosVencidos?: number;
+  /** Chat (7.7): quem o jogador bloqueou (até 100). */
+  bloqueadosNoChat?: BloqueadoNoChat[];
   /** Expedição: as expedições nas vagas (até 3) e os Avanços de expedição guardados. */
   expedicoes?: ExpedicaoEmAndamento[];
   avancosDeExpedicao?: number;

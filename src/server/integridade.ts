@@ -87,6 +87,10 @@ const SEM_RITMO = new Set([
   'campanhaPosicao',
   'guilda:contratosDoDia',
   'guilda:consertar',
+  'correio:arena',
+  'correio:campeonato',
+  'chat:bloquear',
+  'chat:desbloquear',
 ]);
 const contaNoRitmo = (operacao: string) => !SEM_RITMO.has(operacao) && !operacao.startsWith('alterar:');
 

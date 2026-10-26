@@ -52,3 +52,17 @@ export function temOfensa(texto: string): boolean {
 
 export const MENSAGEM_DE_NOME_PROIBIDO = 'Esse nome tem uma palavra que não é permitida no jogo. Escolha outro.';
 export const MENSAGEM_DE_TEXTO_PROIBIDO = 'Esse texto tem uma palavra que não é permitida no jogo. Reescreva sem ela.';
+
+/**
+ * Chat (7.7): troca cada palavra com ofensa pesada por "***" e tira os links (também "***"). Se mesmo assim sobrar
+ * uma ofensa (letras separadas por espaço, por exemplo), a mensagem inteira vira "***". `mudou` diz se algo foi trocado.
+ */
+const LINK = /(?:https?:\/\/|www\.)\S+|\b[\w-]+(?:\.[\w-]+)*\.(?:com|net|org|br|io|gg|me|tv|app|dev|xyz|info|co|link|ly|gl|be|to)(?:\/\S*)?\b/gi;
+
+export function censurarOfensas(texto: string): { texto: string; mudou: boolean } {
+  const semLinks = texto.replace(LINK, '***');
+  // só as letras da palavra viram "***": a pontuação em volta fica ("puta," → "***,")
+  let saida = semLinks.replace(/[\p{L}\p{N}@$]+/gu, (palavra) => (temOfensa(palavra) ? '***' : palavra));
+  if (temOfensa(saida)) saida = '***';
+  return { texto: saida, mudou: saida !== texto };
+}
