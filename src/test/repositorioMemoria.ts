@@ -4,7 +4,7 @@
  * transações atômicas (gravações pendentes até o fim), isoladas (executadas uma por vez)
  * e sem transação aninhada.
  */
-import type { EntradaDaArena, ReplayDaArena } from '@/rules/arena';
+import type { EntradaDaArena, ModoDaArena, ReplayDaArena } from '@/rules/arena';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
 import { fecharExtrato, tratarDivergencias } from '@/server/extrato';
@@ -91,7 +91,8 @@ const estado: Estado = {
 };
 
 /** Arena: como arena/{semana}/jogadores (ou ocultos)/{uid}. */
-const chaveDaArena = (semana: string, uid: string, oculto: boolean) => `${semana}/${uid}${oculto ? '/oculto' : ''}`;
+const chaveDaArena = (semana: string, uid: string, oculto: boolean, modo: ModoDaArena = 'arena') => `${modo}/${semana}/${uid}${oculto ? '/oculto' : ''}`;
+const doModo = (e: EntradaDaArena, modo: ModoDaArena) => (e.modo ?? 'arena') === modo;
 
 /** Chefe Mundial: a entrada de quem está com limite silencioso fica à parte (como chefeMundial/{dia}/ocultos). */
 const chaveMundial = (dia: string, uid: string, oculto: boolean) => `${dia}/${uid}${oculto ? '/oculto' : ''}`;
@@ -269,13 +270,13 @@ class ContextoMemoria implements ContextoTransacao {
   }
   arena = new Map<string, EntradaDaArena>();
   replaysDaArena = new Map<string, ReplayDaArena>();
-  async lerEntradaDaArena(semana: string, uid: string, oculto = false) {
-    const k = chaveDaArena(semana, uid, oculto);
+  async lerEntradaDaArena(semana: string, uid: string, oculto = false, modo: ModoDaArena = 'arena') {
+    const k = chaveDaArena(semana, uid, oculto, modo);
     const e = this.arena.get(k) ?? estado.arena.get(k);
     return e ? structuredClone(e) : null;
   }
   gravarEntradaDaArena(entrada: EntradaDaArena) {
-    this.arena.set(chaveDaArena(entrada.semana, entrada.uid, entrada.oculto === true), structuredClone(entrada));
+    this.arena.set(chaveDaArena(entrada.semana, entrada.uid, entrada.oculto === true, entrada.modo ?? 'arena'), structuredClone(entrada));
   }
   gravarReplayDaArena(replay: ReplayDaArena) {
     this.replaysDaArena.set(replay.id, structuredClone(replay));
@@ -548,20 +549,20 @@ export const repositorio: Repositorio = {
     return a ? structuredClone(a) : null;
   },
 
-  async lerEntradaDaArena(semana: string, uid: string, oculto = false) {
-    const e = estado.arena.get(chaveDaArena(semana, uid, oculto));
+  async lerEntradaDaArena(semana: string, uid: string, oculto = false, modo: ModoDaArena = 'arena') {
+    const e = estado.arena.get(chaveDaArena(semana, uid, oculto, modo));
     return e ? structuredClone(e) : null;
   },
-  async listarArenaPerto(semana: string, pontos: number, acima: boolean, limite: number) {
-    const daSemana = [...estado.arena.values()].filter((e) => e.semana === semana && !e.oculto);
+  async listarArenaPerto(semana: string, pontos: number, acima: boolean, limite: number, modo: ModoDaArena = 'arena') {
+    const daSemana = [...estado.arena.values()].filter((e) => e.semana === semana && !e.oculto && doModo(e, modo));
     const lista = acima ? daSemana.filter((e) => e.pontos >= pontos).sort((a, b) => a.pontos - b.pontos) : daSemana.filter((e) => e.pontos < pontos).sort((a, b) => b.pontos - a.pontos);
     return lista.slice(0, limite).map((e) => structuredClone(e));
   },
-  async listarArenaTopo(semana: string, limite: number) {
-    return [...estado.arena.values()].filter((e) => e.semana === semana && !e.oculto).sort((a, b) => b.pontos - a.pontos).slice(0, limite).map((e) => structuredClone(e));
+  async listarArenaTopo(semana: string, limite: number, modo: ModoDaArena = 'arena') {
+    return [...estado.arena.values()].filter((e) => e.semana === semana && !e.oculto && doModo(e, modo)).sort((a, b) => b.pontos - a.pontos).slice(0, limite).map((e) => structuredClone(e));
   },
-  async contarAcimaNaArena(semana: string, pontos: number) {
-    return [...estado.arena.values()].filter((e) => e.semana === semana && !e.oculto && e.pontos > pontos).length;
+  async contarAcimaNaArena(semana: string, pontos: number, modo: ModoDaArena = 'arena') {
+    return [...estado.arena.values()].filter((e) => e.semana === semana && !e.oculto && doModo(e, modo) && e.pontos > pontos).length;
   },
   async lerReplayDaArena(id: string) {
     const r = estado.replaysDaArena.get(id);

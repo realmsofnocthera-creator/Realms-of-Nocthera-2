@@ -24,6 +24,16 @@ export const TITULOS: readonly TituloDefinition[] = [
   { id: 'maestre', nome: 'Maestre', origem: 'Conquista Maestria, 5º degrau' },
   { id: 'guardiao-de-almas', nome: 'Guardião de Almas', origem: 'Conquista Alma, 5º degrau' },
   { id: 'campeao-do-chefe-mundial', nome: 'Campeão do Chefe Mundial', origem: '1º lugar do dia no Chefe Mundial (pelo Correio)' },
+  { id: 'recruta-da-arena', nome: 'Recruta da Arena', origem: 'Terminar a semana no ranque Recruta da Arena ranqueada (pelo Correio)' },
+  { id: 'combatente-da-arena', nome: 'Combatente da Arena', origem: 'Terminar a semana no ranque Combatente da Arena ranqueada (pelo Correio)' },
+  { id: 'veterano-da-arena', nome: 'Veterano da Arena', origem: 'Terminar a semana no ranque Veterano da Arena ranqueada (pelo Correio)' },
+  { id: 'gladiador-da-arena', nome: 'Gladiador da Arena', origem: 'Terminar a semana no ranque Gladiador da Arena ranqueada (pelo Correio)' },
+  { id: 'elite-da-arena', nome: 'Elite da Arena', origem: 'Terminar a semana no ranque Elite da Arena ranqueada (pelo Correio)' },
+  { id: 'campeao-da-arena', nome: 'Campeão da Arena', origem: 'Terminar a semana no ranque Campeão da Arena ranqueada (pelo Correio)' },
+  { id: 'ascendente-da-arena', nome: 'Ascendente da Arena', origem: 'Terminar a semana no ranque Ascendente da Arena ranqueada (pelo Correio)' },
+  { id: 'soberano-da-arena', nome: 'Soberano da Arena', origem: 'Terminar a semana no ranque Soberano da Arena ranqueada (pelo Correio)' },
+  { id: 'transcendente-da-arena', nome: 'Transcendente da Arena', origem: 'Terminar a semana no ranque Transcendente da Arena ranqueada (pelo Correio)' },
+  { id: 'eterno-da-arena', nome: 'Eterno da Arena', origem: 'Terminar a semana no ranque Eterno da Arena ranqueada (pelo Correio)' },
 ];
 
 export const TITULO_MAP: Readonly<Record<string, TituloDefinition>> = Object.fromEntries(TITULOS.map((t) => [t.id, t]));

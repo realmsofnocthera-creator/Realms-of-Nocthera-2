@@ -1,7 +1,8 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { DocumentData, Firestore, Transaction } from 'firebase-admin/firestore';
 import { AVATARES_DISPONIVEIS, getAvatarById } from '@/rules/avatars';
-import { entradaDaArenaDoDocumento, LUTAS_GUARDADAS, semanasNaArenaDoDocumento, type EntradaDaArena, type ReplayDaArena } from '@/rules/arena';
+import { entradaDaArenaDoDocumento, LUTAS_GUARDADAS, semanasNaArenaDoDocumento, type EntradaDaArena, type ModoDaArena, type ReplayDaArena } from '@/rules/arena';
+import { bausDeEscolhaDoDocumento } from '@/rules/arenaRanqueada';
 import { comprasNaLojaDoDocumento } from '@/rules/loja';
 import { normalizarHabilidadesEquipadas, ZEROS_ATRIBUTOS } from '@/game';
 import { lerArmasPersonagem } from '@/game/forja';
@@ -51,6 +52,9 @@ import {
   ResumoVersao,
   VersaoConteudo,
 } from './tipos';
+
+/** A coleção de cada modo da Arena (7.5). */
+const colecaoDaArena = (modo: ModoDaArena = 'arena') => (modo === 'ranqueada' ? 'arenaRanqueada' : 'arena');
 
 const texto = (v: unknown) => (typeof v === 'string' ? v : '');
 /** Áreas de monstros descansando: só chaves de texto com tempo numérico; vazio vira "sem descansos". */
@@ -434,6 +438,8 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(correioGeralDoDocumento(data.correioGeral) ? { correioGeral: correioGeralDoDocumento(data.correioGeral) } : {}),
     ...(participacoesMundiaisDoDocumento(data.chefeMundial) ? { chefeMundial: participacoesMundiaisDoDocumento(data.chefeMundial) } : {}),
     ...(semanasNaArenaDoDocumento(data.arena)?.length ? { arena: semanasNaArenaDoDocumento(data.arena) } : {}),
+    ...(semanasNaArenaDoDocumento(data.ranqueada)?.length ? { ranqueada: semanasNaArenaDoDocumento(data.ranqueada) } : {}),
+    ...(bausDeEscolhaDoDocumento(data.bausDeEscolha) ? { bausDeEscolha: bausDeEscolhaDoDocumento(data.bausDeEscolha) } : {}),
     ...(typeof data.partyId === 'string' && data.partyId ? { partyId: data.partyId } : {}),
     ...(idsDeParty(data.convitesDeParty).length ? { convitesDeParty: idsDeParty(data.convitesDeParty) } : {}),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
@@ -526,6 +532,8 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.correioGeral && Object.keys(char.correioGeral).length ? { correioGeral: char.correioGeral } : {}),
     ...(char.chefeMundial?.length ? { chefeMundial: semUndefined(char.chefeMundial) } : {}),
     ...(char.arena?.length ? { arena: semUndefined(char.arena) } : {}),
+    ...(char.ranqueada?.length ? { ranqueada: semUndefined(char.ranqueada) } : {}),
+    ...(char.bausDeEscolha?.length ? { bausDeEscolha: char.bausDeEscolha } : {}),
     ...(char.partyId ? { partyId: char.partyId } : {}),
     ...(char.convitesDeParty?.length ? { convitesDeParty: char.convitesDeParty } : {}),
     // campos derivados, só para o banco poder ordenar e buscar (7.1): o nome em minúsculas e os contadores das provações
@@ -708,15 +716,15 @@ class ContextoFirestore implements ContextoTransacao {
     this.leiloes.set(l.dia, structuredClone(l));
   }
 
-  async lerEntradaDaArena(semana: string, uid: string, oculto = false): Promise<EntradaDaArena | null> {
-    const pendente = this.arena.get(`${semana}/${uid}/${oculto ? 'o' : 'p'}`);
+  async lerEntradaDaArena(semana: string, uid: string, oculto = false, modo: ModoDaArena = 'arena'): Promise<EntradaDaArena | null> {
+    const pendente = this.arena.get(`${modo}/${semana}/${uid}/${oculto ? 'o' : 'p'}`);
     if (pendente) return structuredClone(pendente);
-    const snap = await this.tx.get(this.db.collection('arena').doc(semana).collection(oculto ? 'ocultos' : 'jogadores').doc(uid));
+    const snap = await this.tx.get(this.db.collection(colecaoDaArena(modo)).doc(semana).collection(oculto ? 'ocultos' : 'jogadores').doc(uid));
     return snap.exists ? entradaDaArenaDoDocumento(snap.data()) : null;
   }
 
   gravarEntradaDaArena(entrada: EntradaDaArena): void {
-    this.arena.set(`${entrada.semana}/${entrada.uid}/${entrada.oculto ? 'o' : 'p'}`, structuredClone(entrada));
+    this.arena.set(`${entrada.modo ?? 'arena'}/${entrada.semana}/${entrada.uid}/${entrada.oculto ? 'o' : 'p'}`, structuredClone(entrada));
   }
 
   gravarReplayDaArena(replay: ReplayDaArena): void {
@@ -790,7 +798,7 @@ class ContextoFirestore implements ContextoTransacao {
     }
     for (const [chave, precos] of this.precos) this.tx.set(this.db.collection('mercadoPrecos').doc(chaveDoPreco(chave)), { precos });
     for (const l of this.leiloes.values()) this.tx.set(this.db.collection('leilao').doc(l.dia), semUndefined({ itens: l.itens }));
-    for (const e of this.arena.values()) this.tx.set(this.db.collection('arena').doc(e.semana).collection(e.oculto ? 'ocultos' : 'jogadores').doc(e.uid), semUndefined(e));
+    for (const e of this.arena.values()) this.tx.set(this.db.collection(colecaoDaArena(e.modo)).doc(e.semana).collection(e.oculto ? 'ocultos' : 'jogadores').doc(e.uid), semUndefined(e));
     for (const r of this.replaysDaArena.values()) this.tx.set(this.db.collection('arenaReplays').doc(r.id), semUndefined(r));
     for (const [uid, personagem] of this.personagens) {
       this.tx.set(this.db.collection('characters').doc(uid), personagemParaFirestore(personagem));
@@ -1000,31 +1008,31 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
       });
     },
 
-    async lerEntradaDaArena(semana: string, uid: string, oculto = false) {
-      return lerComRetry(`lerArena:${semana}`, async () => {
-        const snap = await db.collection('arena').doc(semana).collection(oculto ? 'ocultos' : 'jogadores').doc(uid).get();
+    async lerEntradaDaArena(semana: string, uid: string, oculto = false, modo: ModoDaArena = 'arena') {
+      return lerComRetry(`lerArena:${modo}:${semana}`, async () => {
+        const snap = await db.collection(colecaoDaArena(modo)).doc(semana).collection(oculto ? 'ocultos' : 'jogadores').doc(uid).get();
         return snap.exists ? entradaDaArenaDoDocumento(snap.data()) : null;
       });
     },
 
-    async listarArenaPerto(semana: string, pontos: number, acima: boolean, limite: number) {
-      return lerComRetry(`listarArenaPerto:${semana}`, async () => {
-        const col = db.collection('arena').doc(semana).collection('jogadores');
+    async listarArenaPerto(semana: string, pontos: number, acima: boolean, limite: number, modo: ModoDaArena = 'arena') {
+      return lerComRetry(`listarArenaPerto:${modo}:${semana}`, async () => {
+        const col = db.collection(colecaoDaArena(modo)).doc(semana).collection('jogadores');
         const snap = await (acima ? col.where('pontos', '>=', pontos).orderBy('pontos', 'asc') : col.where('pontos', '<', pontos).orderBy('pontos', 'desc')).limit(limite).get();
         return snap.docs.flatMap((d) => entradaDaArenaDoDocumento(d.data()) ?? []);
       });
     },
 
-    async listarArenaTopo(semana: string, limite: number) {
-      return lerComRetry(`listarArenaTopo:${semana}`, async () => {
-        const snap = await db.collection('arena').doc(semana).collection('jogadores').orderBy('pontos', 'desc').limit(limite).get();
+    async listarArenaTopo(semana: string, limite: number, modo: ModoDaArena = 'arena') {
+      return lerComRetry(`listarArenaTopo:${modo}:${semana}`, async () => {
+        const snap = await db.collection(colecaoDaArena(modo)).doc(semana).collection('jogadores').orderBy('pontos', 'desc').limit(limite).get();
         return snap.docs.flatMap((d) => entradaDaArenaDoDocumento(d.data()) ?? []);
       });
     },
 
-    async contarAcimaNaArena(semana: string, pontos: number) {
-      return lerComRetry(`contarArena:${semana}`, async () => {
-        const snap = await db.collection('arena').doc(semana).collection('jogadores').where('pontos', '>', pontos).count().get();
+    async contarAcimaNaArena(semana: string, pontos: number, modo: ModoDaArena = 'arena') {
+      return lerComRetry(`contarArena:${modo}:${semana}`, async () => {
+        const snap = await db.collection(colecaoDaArena(modo)).doc(semana).collection('jogadores').where('pontos', '>', pontos).count().get();
         return snap.data().count;
       });
     },
@@ -1351,7 +1359,9 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
         // A Arena (7.5): as entradas das semanas em que ele lutou e as vagas dos replays dele
         for (const s of semanasNaArenaDoDocumento(personagem.data()?.arena) ?? [])
           refs.push(db.collection('arena').doc(s.semana).collection('jogadores').doc(uid), db.collection('arena').doc(s.semana).collection('ocultos').doc(uid));
-        for (let vaga = 0; vaga < LUTAS_GUARDADAS; vaga++) refs.push(db.collection('arenaReplays').doc(`${uid}_${vaga}`));
+        for (const s of semanasNaArenaDoDocumento(personagem.data()?.ranqueada) ?? [])
+          refs.push(db.collection('arenaRanqueada').doc(s.semana).collection('jogadores').doc(uid), db.collection('arenaRanqueada').doc(s.semana).collection('ocultos').doc(uid));
+        for (let vaga = 0; vaga < LUTAS_GUARDADAS; vaga++) refs.push(db.collection('arenaReplays').doc(`${uid}_${vaga}`), db.collection('arenaReplays').doc(`${uid}_r${vaga}`));
         // Os anúncios dele no Mercado (7.2)
         for (const id of (personagem.data()?.anunciosNoMercado as unknown[] | undefined) ?? []) if (typeof id === 'string') refs.push(db.collection('mercado').doc(id));
         if (chaveNome) {

@@ -79,9 +79,14 @@ export interface AdversarioNaLista {
   pontos: number;
 }
 
-/** arena/{semana}/jogadores/{uid}: o jogador na semana da Arena. */
+/** Os dois modos usam as mesmas regras de lista, luta e replay: a Arena e a Arena ranqueada. */
+export type ModoDaArena = 'arena' | 'ranqueada';
+
+/** arena/{semana}/jogadores/{uid} (ou arenaRanqueada/...): o jogador na semana da Arena. */
 export interface EntradaDaArena {
   uid: string;
+  /** Sem o campo: a Arena; 'ranqueada': a Arena ranqueada. */
+  modo?: 'ranqueada';
   semana: string;
   nome: string;
   nivel: number;
@@ -133,6 +138,7 @@ export function entradaDaArenaDoDocumento(bruto: unknown): EntradaDaArena | null
   if (typeof e.uid !== 'string' || typeof e.semana !== 'string' || typeof e.pontos !== 'number') return null;
   return {
     uid: e.uid,
+    ...(e.modo === 'ranqueada' ? { modo: 'ranqueada' as const } : {}),
     semana: e.semana,
     nome: String(e.nome ?? ''),
     nivel: Number(e.nivel) || 1,
