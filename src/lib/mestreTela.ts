@@ -63,6 +63,15 @@ export function descreverAcao(e: Pick<EntradaLogAdmin, 'acao' | 'alvo' | 'antes'
     case 'jogador.exportar':
       texto = `Exportou os dados de ${alvo}`;
       break;
+    case 'guilda.renomear':
+      texto = `Renomeou a guilda ${(e.antes as { nome?: string } | null | undefined)?.nome ?? alvo} para ${(e.depois as { nome?: string } | null | undefined)?.nome ?? '?'}`;
+      break;
+    case 'guilda.apagarDescricao':
+      texto = `Apagou a descrição da guilda ${(e.antes as { nome?: string } | null | undefined)?.nome ?? alvo}`;
+      break;
+    case 'guilda.dissolver':
+      texto = `Dissolveu a guilda ${(e.antes as { nome?: string } | null | undefined)?.nome ?? alvo}`;
+      break;
     case 'jogador.zerar':
       texto = `Zerou a progressão de ${alvo}`;
       break;

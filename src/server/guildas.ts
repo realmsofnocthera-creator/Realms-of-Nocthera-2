@@ -53,6 +53,7 @@ import {
   type RamoDaPesquisa,
 } from '@/rules/pesquisa';
 import { gerarSementeCombate } from '@/server/combateSemente';
+import { comMensagem, novaMensagem } from '@/server/correio';
 import { entregarCartas, sorteadorDaSemente, sortearTipoDaRaridade } from '@/server/almas';
 import { CHANCE_DE_CARTA_DA_INCURSAO, RARIDADE_DA_CARTA_DA_INCURSAO } from '@/rules/almas';
 import {
@@ -111,7 +112,7 @@ const vazioParaUndefined = (lista: string[]) => (lista.length ? lista : undefine
 /** O que sai do personagem quando ele deixa a guilda (inclui o bônus da Pesquisa). */
 const SEM_GUILDA = { guildaId: undefined, guildaNome: undefined, bonusDeGuilda: undefined } as const;
 
-async function regras(): Promise<RegrasDeGuilda> {
+export async function regras(): Promise<RegrasDeGuilda> {
   return (await lerConfiguracaoDeSistemas()).guildas;
 }
 
@@ -173,7 +174,7 @@ function exigirVaga(guilda: GuildaDocumento, r: RegrasDeGuilda) {
  * Desfaz a guilda: tira todos os membros, limpa os convites e pedidos dos jogadores e libera o nome.
  * Até 50 membros + 40 pendências: cabe com folga no limite de uma transação do Firestore.
  */
-async function desfazerNoContexto(ctx: ContextoTransacao, guilda: GuildaDocumento, ignorar?: string): Promise<void> {
+export async function desfazerNoContexto(ctx: ContextoTransacao, guilda: GuildaDocumento, ignorar?: string, aviso?: { titulo: string; texto: string; de: string }): Promise<void> {
   const uids = [...new Set([...guilda.membros.map((m) => m.uid), ...guilda.convites.map((c) => c.uid), ...guilda.pedidos.map((p) => p.uid)])].filter((u) => u !== ignorar);
   const jogadores = await Promise.all(uids.map((u) => ctx.lerPersonagem(u)));
   for (const j of jogadores) {
@@ -185,6 +186,8 @@ async function desfazerNoContexto(ctx: ContextoTransacao, guilda: GuildaDocument
     ctx.gravarPersonagem({
       ...j,
       ...(naGuilda ? SEM_GUILDA : {}),
+      // o aviso (dissolução pelo Mestre) vai só para quem estava na guilda
+      ...(naGuilda && aviso ? { correio: comMensagem(j.correio, novaMensagem(aviso, new Date()), new Date()) } : {}),
       convitesDeGuilda: vazioParaUndefined(convites),
       pedidosDeGuilda: vazioParaUndefined(pedidos),
     });

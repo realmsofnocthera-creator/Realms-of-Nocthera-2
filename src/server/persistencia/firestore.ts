@@ -1093,6 +1093,13 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
       return n;
     },
 
+    async listarPartys(limite: number) {
+      return lerComRetry('listarPartys', async () => {
+        const snap = await db.collection('partys').orderBy('atualizadaEm', 'desc').limit(limite).get();
+        return snap.docs.flatMap((d) => partyDoDocumento(d.id, d.data()) ?? []);
+      });
+    },
+
     async listarGuildas(limite: number) {
       return lerComRetry('listarGuildas', async () => {
         const snap = await db.collection('guildas').orderBy('quantidadeMembros', 'desc').limit(limite).get();

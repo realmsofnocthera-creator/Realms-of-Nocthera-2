@@ -308,6 +308,8 @@ export interface Repositorio {
   lerEntradaChefeSemanal(semana: string, guildaId: string): Promise<EntradaDoChefeSemanal | null>;
   /** Party do Teste de Equipe (7.4), fora de transação. */
   lerParty(id: string): Promise<PartyDocumento | null>;
+  /** Painel do Mestre (7.10): as parties mexidas mais recentemente. */
+  listarPartys(limite: number): Promise<PartyDocumento[]>;
   /** Chefe Mundial: os jogadores do dia com mais dano. */
   listarChefeMundial(dia: string, limite: number): Promise<EntradaDoChefeMundial[]>;
   /** Quantos jogadores do dia têm mais dano (a posição é isso + 1). */

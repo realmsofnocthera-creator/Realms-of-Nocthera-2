@@ -604,6 +604,9 @@ export const repositorio: Repositorio = {
     return n;
   },
 
+  async listarPartys(limite: number) {
+    return [...estado.partys.values()].sort((a, b) => b.atualizadaEm.localeCompare(a.atualizadaEm)).slice(0, limite).map((p) => structuredClone(p));
+  },
   async lerParty(id: string) {
     const v = estado.partys.get(id);
     return v ? structuredClone(v) : null;
