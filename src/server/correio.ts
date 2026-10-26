@@ -1,4 +1,5 @@
-import { FAIXAS_DA_ARENA, faixaDaArena, presenteDaFaixaDaArena } from '@/rules/arena';
+import { FAIXAS_DA_ARENA, faixaDaArena, presenteDaFaixaDaArena, type ModoDaArena, type SemanaNaArena } from '@/rules/arena';
+import { presenteDoRanque, ranqueDe } from '@/rules/arenaRanqueada';
 import { semanaDe } from '@/rules/chefeSemanal';
 import { randomUUID } from 'node:crypto';
 import { diaDeBrasilia } from '@/game/batalhaSangrenta';
@@ -151,34 +152,59 @@ export async function mandarRecompensasDoChefeMundial(uid: string, agora = new D
 }
 
 /**
- * Manda ao Correio os prêmios da Arena das semanas que já fecharam (7.5). A posição é contada fora da transação: a
- * semana acabou, ninguém muda mais os pontos. Do 101º em diante, só ganha quem fez pelo menos 1 luta.
+ * Manda ao Correio os prêmios das semanas da Arena e da Arena ranqueada que já fecharam (7.5). A posição (Arena) é
+ * contada fora da transação: a semana acabou, ninguém muda mais os pontos. Na Arena, do 101º em diante só ganha quem
+ * fez pelo menos 1 luta; na ranqueada, o prêmio é o do ranque final, com pelo menos 1 luta, e o Eterno ganha também um
+ * baú de escolha de carta lendária (fica no personagem até ele escolher).
  */
 export async function mandarPremiosDaArena(uid: string, agora = new Date()): Promise<void> {
   const char = await repositorio.lerPersonagem(uid);
   const atual = semanaDe(agora);
-  const pendentes = (char?.arena ?? []).filter((s) => !s.premiada && s.semana < atual);
-  if (!char || !pendentes.length) return;
+  const pendentesArena = (char?.arena ?? []).filter((s) => !s.premiada && s.semana < atual);
+  const pendentesRanqueada = (char?.ranqueada ?? []).filter((s) => !s.premiada && s.semana < atual);
+  if (!char || (!pendentesArena.length && !pendentesRanqueada.length)) return;
   const oculto = await comLimiteSilencioso(uid);
   const ultimaFaixa = FAIXAS_DA_ARENA[FAIXAS_DA_ARENA.length - 1];
-  const resultados = await Promise.all(
-    pendentes.map(async (s) => {
-      const entrada = (oculto ? await repositorio.lerEntradaDaArena(s.semana, uid, true) : null) ?? (await repositorio.lerEntradaDaArena(s.semana, uid));
+  const dataDa = (semana: string) => semana.split('-').reverse().join('/');
+  const lerEntrada = async (semana: string, modo: ModoDaArena) =>
+    (oculto ? await repositorio.lerEntradaDaArena(semana, uid, true, modo) : null) ?? (await repositorio.lerEntradaDaArena(semana, uid, false, modo));
+  const daArena = await Promise.all(
+    pendentesArena.map(async (s) => {
+      const entrada = await lerEntrada(s.semana, 'arena');
       if (!entrada) return { semana: s.semana, mensagem: null };
       const contada = (await repositorio.contarAcimaNaArena(s.semana, entrada.pontos)) + 1;
       // Limite silencioso (6.5-7): a recompensa é a da última faixa, sem aviso
       const posicao = oculto || entrada.oculto ? Math.max(contada, ultimaFaixa.de) : contada;
       const faixa = faixaDaArena(posicao);
       if (faixa === ultimaFaixa && entrada.lutas < 1) return { semana: s.semana, mensagem: null };
-      const [ano, mes, d] = s.semana.split('-');
       return {
         semana: s.semana,
         mensagem: novaMensagem(
           {
             titulo: `Arena: ${faixa.nome}`,
-            texto: `Você terminou a semana de ${d}/${mes}/${ano} da Arena em ${posicao}º, com ${entrada.pontos.toLocaleString('pt-BR')} pontos.`,
+            texto: `Você terminou a semana de ${dataDa(s.semana)} da Arena em ${posicao}º, com ${entrada.pontos.toLocaleString('pt-BR')} pontos.`,
             de: 'Arena',
             presente: presenteDaFaixaDaArena(faixa),
+          },
+          agora
+        ),
+      };
+    })
+  );
+  const daRanqueada = await Promise.all(
+    pendentesRanqueada.map(async (s) => {
+      const entrada = await lerEntrada(s.semana, 'ranqueada');
+      if (!entrada || entrada.lutas < 1) return { semana: s.semana, mensagem: null, bau: false };
+      const ranque = ranqueDe(entrada.pontos);
+      return {
+        semana: s.semana,
+        bau: !!ranque.bauDeCartaLendaria,
+        mensagem: novaMensagem(
+          {
+            titulo: `Arena ranqueada: ${ranque.nome}`,
+            texto: `Você terminou a semana de ${dataDa(s.semana)} da Arena ranqueada no ranque ${ranque.nome}, com ${entrada.pontos.toLocaleString('pt-BR')} pontos.${ranque.bauDeCartaLendaria ? ' Você também ganhou um baú de escolha de carta lendária: abra na Arena ranqueada.' : ''}`,
+            de: 'Arena ranqueada',
+            presente: presenteDoRanque(ranque),
           },
           agora
         ),
@@ -188,15 +214,30 @@ export async function mandarPremiosDaArena(uid: string, agora = new Date()): Pro
   await repositorio.executarTransacao('correio:arena', async (ctx) => {
     const eu = await carregarPersonagem(ctx, uid);
     let caixa = eu.correio ?? [];
-    const enviadas = new Set<string>();
-    for (const r of resultados) {
+    let baus = eu.bausDeEscolha ?? [];
+    const enviadasArena = new Set<string>();
+    const enviadasRanqueada = new Set<string>();
+    for (const r of daArena) {
       const s = (eu.arena ?? []).find((x) => x.semana === r.semana);
       if (!s || s.premiada) continue;
-      enviadas.add(r.semana);
+      enviadasArena.add(r.semana);
       if (r.mensagem) caixa = comMensagem(caixa, r.mensagem, agora);
     }
-    if (!enviadas.size) return;
-    salvarPersonagem(ctx, eu, { correio: caixa, arena: (eu.arena ?? []).map((x) => (enviadas.has(x.semana) ? { ...x, premiada: true } : x)) });
+    for (const r of daRanqueada) {
+      const s = (eu.ranqueada ?? []).find((x) => x.semana === r.semana);
+      if (!s || s.premiada) continue;
+      enviadasRanqueada.add(r.semana);
+      if (r.mensagem) caixa = comMensagem(caixa, r.mensagem, agora);
+      if (r.bau) baus = [...baus, { id: `bau-${r.semana}`, tipo: 'cartaLendaria' as const, origem: `Eterno da Arena ranqueada (semana de ${dataDa(r.semana)})`, em: agora.toISOString() }];
+    }
+    if (!enviadasArena.size && !enviadasRanqueada.size) return;
+    const marcar = (lista: SemanaNaArena[] | undefined, feitas: Set<string>) => (lista ?? []).map((x) => (feitas.has(x.semana) ? { ...x, premiada: true } : x));
+    salvarPersonagem(ctx, eu, {
+      correio: caixa,
+      ...(enviadasArena.size ? { arena: marcar(eu.arena, enviadasArena) } : {}),
+      ...(enviadasRanqueada.size ? { ranqueada: marcar(eu.ranqueada, enviadasRanqueada) } : {}),
+      ...(baus.length ? { bausDeEscolha: baus } : {}),
+    });
   });
 }
 

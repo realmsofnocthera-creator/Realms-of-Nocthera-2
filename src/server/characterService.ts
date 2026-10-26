@@ -6,6 +6,7 @@ import type { ExpedicaoEmAndamento } from '@/rules/expedicao';
 import type { CorreioGeralDoJogador, MensagemDoCorreio } from '@/rules/correio';
 import type { ParticipacaoNoChefeMundial } from '@/rules/chefeMundial';
 import type { SemanaNaArena } from '@/rules/arena';
+import type { BauDeEscolha } from '@/rules/arenaRanqueada';
 import type { CartaItem } from '@/rules/almas';
 import type { BonusDeGuilda } from '@/rules/pesquisa';
 import type { ParticipacaoNoChefeSemanal } from '@/rules/chefeSemanal';
@@ -269,6 +270,10 @@ export interface CharacterDocument {
   chefeMundial?: ParticipacaoNoChefeMundial[];
   /** Arena (7.5): as semanas em que o jogador lutou ou foi atacado, e se o prêmio já foi para o Correio. */
   arena?: SemanaNaArena[];
+  /** Arena ranqueada (7.5): as semanas em que lutou ou foi atacado (os pontos passam de uma semana para a outra). */
+  ranqueada?: SemanaNaArena[];
+  /** Baús de escolha ainda não abertos (o de carta lendária do Eterno da Arena ranqueada). */
+  bausDeEscolha?: BauDeEscolha[];
   /** Expedição: as expedições nas vagas (até 3) e os Avanços de expedição guardados. */
   expedicoes?: ExpedicaoEmAndamento[];
   avancosDeExpedicao?: number;

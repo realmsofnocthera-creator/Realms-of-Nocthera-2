@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET as avisosGet } from '@/app/api/avisos/route';
 import { GET as diarioGet, POST as diarioPost } from '@/app/api/diario/route';
@@ -76,21 +76,27 @@ describe('Missões diárias, semanais e Check-in: servidor', () => {
   });
 
   it('as missões contam jogando: vitória, forja, expedição, buscas e Chefe Mundial', async () => {
-    const luta = await executarCombate('u1', 'rato-da-peste', { seed: 7 });
-    expect(luta.resultado.vencedor).toBe('personagem');
-    await fabricarArma('u1', { baseId: 'ferro-de-cacada', categoria: 'lanca' }, { aleatorio: () => 0.5 });
-    // vitória e forja usam o relógio de agora; o resto, o relógio passado (T0): confere o de agora antes
-    const agora = (await getCharacterByUid('u1'))!.diario!;
-    expect([agora.hoje.vitorias, agora.hoje.forja]).toEqual([1, 1]);
-    await agirNaExpedicao('u1', 'enviar', { horas: 2 }, T0);
-    await agirNaExpedicao('u1', 'coletar', { vaga: 0 }, new Date(T0.getTime() + 2 * HORA_MS), 5);
-    await agirNosColecionaveis('u1', 'buscar', { selo: 'desgastado', vezes: 10 }, 3);
-    await lutarChefeMundial('u1', 11, T0);
-    await lutarChefeMundial('u1', 12, T0);
-    const d = (await getCharacterByUid('u1'))!.diario!;
-    expect(d.estaSemana).toMatchObject({ vitorias: 1, forja: 1, expedicoes: 1, buscas: 10 });
-    // o Chefe Mundial conta uma vez por dia, mesmo com duas lutas
-    expect(d.estaSemana.chefeMundial).toBe(1);
+    // vitória, forja e buscas usam o relógio de agora: ele fica parado em T0, para tudo cair na mesma semana em qualquer data
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(T0);
+    try {
+      const luta = await executarCombate('u1', 'rato-da-peste', { seed: 7 });
+      expect(luta.resultado.vencedor).toBe('personagem');
+      await fabricarArma('u1', { baseId: 'ferro-de-cacada', categoria: 'lanca' }, { aleatorio: () => 0.5 });
+      const agora = (await getCharacterByUid('u1'))!.diario!;
+      expect([agora.hoje.vitorias, agora.hoje.forja]).toEqual([1, 1]);
+      await agirNaExpedicao('u1', 'enviar', { horas: 2 }, T0);
+      await agirNaExpedicao('u1', 'coletar', { vaga: 0 }, new Date(T0.getTime() + 2 * HORA_MS), 5);
+      await agirNosColecionaveis('u1', 'buscar', { selo: 'desgastado', vezes: 10 }, 3);
+      await lutarChefeMundial('u1', 11, T0);
+      await lutarChefeMundial('u1', 12, T0);
+      const d = (await getCharacterByUid('u1'))!.diario!;
+      expect(d.estaSemana).toMatchObject({ vitorias: 1, forja: 1, expedicoes: 1, buscas: 10 });
+      // o Chefe Mundial conta uma vez por dia, mesmo com duas lutas
+      expect(d.estaSemana.chefeMundial).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('o baú do dia abre por degraus, entrega Diamantes com extrato e não repete', async () => {

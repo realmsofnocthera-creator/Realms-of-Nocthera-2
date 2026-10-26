@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET as guildaGet, POST as guildaPost } from '@/app/api/guilda/route';
 import { GET as guildasGet } from '@/app/api/guildas/route';
@@ -525,7 +525,14 @@ describe('Chefe de guildas (7.3)', () => {
     });
     for (const uid of ['u1', 'u2']) await updateCharacter(uid, { chefeSemanal: [{ semana: '2026-10-19', guildaId: a }] });
     await updateCharacter('u3', { chefeSemanal: [{ semana: '2026-10-19', guildaId: b }] });
-    expect((await erro(agir('u1', 'resgatarChefeSemanal', { semana: '2026-10-19' })))?.message).toBeTruthy();
+    // a rota usa o relógio de agora: ele fica parado na quarta da semana, para a semana não ter acabado em qualquer data
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(QUARTA);
+    try {
+      expect((await erro(agir('u1', 'resgatarChefeSemanal', { semana: '2026-10-19' })))?.message).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
     expect((await erro(resgatarChefeSemanal('u1', '2026-10-19', QUARTA)))?.message).toMatch(/ainda não acabou/);
     const ouro1 = (await getCharacterByUid('u1'))!.ouro;
     const { mensagem } = await resgatarChefeSemanal('u1', '2026-10-19', SEGUNDA_SEGUINTE);

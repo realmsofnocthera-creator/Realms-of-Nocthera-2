@@ -23,6 +23,7 @@ export const SISTEMAS = [
   { id: 'leilao', nome: 'Leilão' },
   { id: 'loja', nome: 'Loja' },
   { id: 'arena', nome: 'Arena (PvP)' },
+  { id: 'arenaRanqueada', nome: 'Arena ranqueada' },
 ] as const;
 export type SistemaId = (typeof SISTEMAS)[number]['id'];
 
