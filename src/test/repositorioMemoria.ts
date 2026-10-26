@@ -4,6 +4,7 @@
  * transações atômicas (gravações pendentes até o fim), isoladas (executadas uma por vez)
  * e sem transação aninhada.
  */
+import type { CampeonatoDoDia } from '@/rules/campeonato';
 import type { EntradaDaArena, ModoDaArena, ReplayDaArena } from '@/rules/arena';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { CharacterDocument, TransactionDocument } from '@/server/characterService';
@@ -60,6 +61,7 @@ interface Estado {
   leiloes: Map<string, LeilaoDoDia>;
   arena: Map<string, EntradaDaArena>;
   replaysDaArena: Map<string, ReplayDaArena>;
+  campeonatos: Map<string, CampeonatoDoDia>;
 }
 
 const estado: Estado = {
@@ -88,6 +90,7 @@ const estado: Estado = {
   leiloes: new Map(),
   arena: new Map(),
   replaysDaArena: new Map(),
+  campeonatos: new Map(),
 };
 
 /** Arena: como arena/{semana}/jogadores (ou ocultos)/{uid}. */
@@ -281,6 +284,14 @@ class ContextoMemoria implements ContextoTransacao {
   gravarReplayDaArena(replay: ReplayDaArena) {
     this.replaysDaArena.set(replay.id, structuredClone(replay));
   }
+  campeonatos = new Map<string, CampeonatoDoDia>();
+  async lerCampeonato(dia: string) {
+    const c = this.campeonatos.get(dia) ?? estado.campeonatos.get(dia);
+    return c ? structuredClone(c) : null;
+  }
+  gravarCampeonato(c: CampeonatoDoDia) {
+    this.campeonatos.set(c.dia, structuredClone(c));
+  }
 }
 
 export const repositorio: Repositorio = {
@@ -317,6 +328,7 @@ export const repositorio: Repositorio = {
         for (const [dia, l] of ctx.leiloes) estado.leiloes.set(dia, l);
         for (const [k, e] of ctx.arena) estado.arena.set(k, e);
         for (const [id, r] of ctx.replaysDaArena) estado.replaysDaArena.set(id, r);
+        for (const [dia, c] of ctx.campeonatos) estado.campeonatos.set(dia, c);
         return valor;
       })
     );
@@ -564,6 +576,10 @@ export const repositorio: Repositorio = {
   async contarAcimaNaArena(semana: string, pontos: number, modo: ModoDaArena = 'arena') {
     return [...estado.arena.values()].filter((e) => e.semana === semana && !e.oculto && doModo(e, modo) && e.pontos > pontos).length;
   },
+  async lerCampeonato(dia: string) {
+    const c = estado.campeonatos.get(dia);
+    return c ? structuredClone(c) : null;
+  },
   async lerReplayDaArena(id: string) {
     const r = estado.replaysDaArena.get(id);
     return r ? structuredClone(r) : null;
@@ -643,6 +659,7 @@ export function resetCharacterStore(): void {
   estado.leiloes.clear();
   estado.arena.clear();
   estado.replaysDaArena.clear();
+  estado.campeonatos.clear();
   falhaNaConfiguracao = null;
   falhaNoLogAdmin = null;
   falhaAoGravar = null;

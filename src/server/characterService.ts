@@ -274,6 +274,9 @@ export interface CharacterDocument {
   ranqueada?: SemanaNaArena[];
   /** Baús de escolha ainda não abertos (o de carta lendária do Eterno da Arena ranqueada). */
   bausDeEscolha?: BauDeEscolha[];
+  /** Campeonato (7.5): as edições cujo prêmio já foi para o Correio e quantos campeonatos o jogador ganhou. */
+  campeonatos?: string[];
+  campeonatosVencidos?: number;
   /** Expedição: as expedições nas vagas (até 3) e os Avanços de expedição guardados. */
   expedicoes?: ExpedicaoEmAndamento[];
   avancosDeExpedicao?: number;

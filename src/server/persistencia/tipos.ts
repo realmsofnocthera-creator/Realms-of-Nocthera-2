@@ -1,3 +1,4 @@
+import type { CampeonatoDoDia } from '@/rules/campeonato';
 import type { EntradaDaArena, ModoDaArena, ReplayDaArena } from '@/rules/arena';
 import type { ProgressoDaCampanha } from '@/game/campanha';
 import type { CampoDoRanking, CriterioDeRanking, RankingGuardado, ResumoDePersonagem } from '@/rules/social';
@@ -154,6 +155,9 @@ export interface ContextoTransacao {
   lerEntradaDaArena(semana: string, uid: string, oculto?: boolean, modo?: ModoDaArena): Promise<EntradaDaArena | null>;
   gravarEntradaDaArena(entrada: EntradaDaArena): void;
   gravarReplayDaArena(replay: ReplayDaArena): void;
+  /** Campeonato (7.5): a edição do dia (campeonatos/{dia}). */
+  lerCampeonato(dia: string): Promise<CampeonatoDoDia | null>;
+  gravarCampeonato(c: CampeonatoDoDia): void;
 }
 
 /** Papel de Mestre concedido pelo painel (o Dono vem do ambiente e não é gravado aqui). */
@@ -329,6 +333,7 @@ export interface Repositorio {
   listarArenaTopo(semana: string, limite: number, modo?: ModoDaArena): Promise<EntradaDaArena[]>;
   contarAcimaNaArena(semana: string, pontos: number, modo?: ModoDaArena): Promise<number>;
   lerReplayDaArena(id: string): Promise<ReplayDaArena | null>;
+  lerCampeonato(dia: string): Promise<CampeonatoDoDia | null>;
 }
 
 /**

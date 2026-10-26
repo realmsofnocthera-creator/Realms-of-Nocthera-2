@@ -66,10 +66,10 @@ export const presenteDoRanque = (r: RanqueDaArena): PresenteDoCorreio => ({
   titulos: [r.titulo],
 });
 
-/** Um baú de escolha guardado no personagem até o jogador escolher (hoje: o de carta lendária do Eterno). */
+/** Um baú de escolha guardado no personagem até o jogador escolher: o de carta lendária do Eterno da ranqueada e o mítico (carta ou emblema) do campeão. */
 export interface BauDeEscolha {
   id: string;
-  tipo: 'cartaLendaria';
+  tipo: 'cartaLendaria' | 'mitico';
   origem: string;
   em: string;
 }
@@ -77,7 +77,7 @@ export interface BauDeEscolha {
 export function bausDeEscolhaDoDocumento(bruto: unknown): BauDeEscolha[] | undefined {
   if (!Array.isArray(bruto)) return undefined;
   const lista = bruto
-    .filter((b): b is BauDeEscolha => !!b && typeof (b as BauDeEscolha).id === 'string' && (b as BauDeEscolha).tipo === 'cartaLendaria')
+    .filter((b): b is BauDeEscolha => !!b && typeof (b as BauDeEscolha).id === 'string' && ['cartaLendaria', 'mitico'].includes((b as BauDeEscolha).tipo))
     .map((b) => ({ id: b.id, tipo: b.tipo, origem: String(b.origem ?? ''), em: String(b.em ?? '') }))
     .slice(0, 20);
   return lista.length ? lista : undefined;

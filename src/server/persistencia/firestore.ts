@@ -3,6 +3,7 @@ import type { DocumentData, Firestore, Transaction } from 'firebase-admin/firest
 import { AVATARES_DISPONIVEIS, getAvatarById } from '@/rules/avatars';
 import { entradaDaArenaDoDocumento, LUTAS_GUARDADAS, semanasNaArenaDoDocumento, type EntradaDaArena, type ModoDaArena, type ReplayDaArena } from '@/rules/arena';
 import { bausDeEscolhaDoDocumento } from '@/rules/arenaRanqueada';
+import { campeonatoDoDocumento, type CampeonatoDoDia } from '@/rules/campeonato';
 import { comprasNaLojaDoDocumento } from '@/rules/loja';
 import { normalizarHabilidadesEquipadas, ZEROS_ATRIBUTOS } from '@/game';
 import { lerArmasPersonagem } from '@/game/forja';
@@ -440,6 +441,8 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(semanasNaArenaDoDocumento(data.arena)?.length ? { arena: semanasNaArenaDoDocumento(data.arena) } : {}),
     ...(semanasNaArenaDoDocumento(data.ranqueada)?.length ? { ranqueada: semanasNaArenaDoDocumento(data.ranqueada) } : {}),
     ...(bausDeEscolhaDoDocumento(data.bausDeEscolha) ? { bausDeEscolha: bausDeEscolhaDoDocumento(data.bausDeEscolha) } : {}),
+    ...(Array.isArray(data.campeonatos) ? { campeonatos: (data.campeonatos as unknown[]).filter((v): v is string => typeof v === 'string').slice(-30) } : {}),
+    ...(typeof data.campeonatosVencidos === 'number' && data.campeonatosVencidos > 0 ? { campeonatosVencidos: Math.floor(data.campeonatosVencidos) } : {}),
     ...(typeof data.partyId === 'string' && data.partyId ? { partyId: data.partyId } : {}),
     ...(idsDeParty(data.convitesDeParty).length ? { convitesDeParty: idsDeParty(data.convitesDeParty) } : {}),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
@@ -534,6 +537,8 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.arena?.length ? { arena: semUndefined(char.arena) } : {}),
     ...(char.ranqueada?.length ? { ranqueada: semUndefined(char.ranqueada) } : {}),
     ...(char.bausDeEscolha?.length ? { bausDeEscolha: char.bausDeEscolha } : {}),
+    ...(char.campeonatos?.length ? { campeonatos: char.campeonatos } : {}),
+    ...(char.campeonatosVencidos ? { campeonatosVencidos: char.campeonatosVencidos } : {}),
     ...(char.partyId ? { partyId: char.partyId } : {}),
     ...(char.convitesDeParty?.length ? { convitesDeParty: char.convitesDeParty } : {}),
     // campos derivados, só para o banco poder ordenar e buscar (7.1): o nome em minúsculas e os contadores das provações
@@ -588,6 +593,7 @@ class ContextoFirestore implements ContextoTransacao {
   private leiloes = new Map<string, LeilaoDoDia>();
   private arena = new Map<string, EntradaDaArena>();
   private replaysDaArena = new Map<string, ReplayDaArena>();
+  private campeonatos = new Map<string, CampeonatoDoDia>();
   private nomes = new Map<string, { uid: string; nome: string }>();
   private transacoes: TransactionDocument[] = [];
   private combates = new Map<string, RegistroCombate>();
@@ -731,6 +737,17 @@ class ContextoFirestore implements ContextoTransacao {
     this.replaysDaArena.set(replay.id, structuredClone(replay));
   }
 
+  async lerCampeonato(dia: string): Promise<CampeonatoDoDia | null> {
+    const pendente = this.campeonatos.get(dia);
+    if (pendente) return structuredClone(pendente);
+    const snap = await this.tx.get(this.db.collection('campeonatos').doc(dia));
+    return snap.exists ? campeonatoDoDocumento(dia, snap.data()) : null;
+  }
+
+  gravarCampeonato(c: CampeonatoDoDia): void {
+    this.campeonatos.set(c.dia, structuredClone(c));
+  }
+
   async lerParty(id: string): Promise<PartyDocumento | null> {
     if (this.partys.has(id)) {
       const pendente = this.partys.get(id);
@@ -800,6 +817,8 @@ class ContextoFirestore implements ContextoTransacao {
     for (const l of this.leiloes.values()) this.tx.set(this.db.collection('leilao').doc(l.dia), semUndefined({ itens: l.itens }));
     for (const e of this.arena.values()) this.tx.set(this.db.collection(colecaoDaArena(e.modo)).doc(e.semana).collection(e.oculto ? 'ocultos' : 'jogadores').doc(e.uid), semUndefined(e));
     for (const r of this.replaysDaArena.values()) this.tx.set(this.db.collection('arenaReplays').doc(r.id), semUndefined(r));
+    // o Firestore não guarda lista dentro de lista: cada rodada vai como { lutas }
+    for (const c of this.campeonatos.values()) this.tx.set(this.db.collection('campeonatos').doc(c.dia), semUndefined({ ...c, rodadas: c.rodadas.map((lutas) => ({ lutas })) }));
     for (const [uid, personagem] of this.personagens) {
       this.tx.set(this.db.collection('characters').doc(uid), personagemParaFirestore(personagem));
     }
@@ -1034,6 +1053,13 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
       return lerComRetry(`contarArena:${modo}:${semana}`, async () => {
         const snap = await db.collection(colecaoDaArena(modo)).doc(semana).collection('jogadores').where('pontos', '>', pontos).count().get();
         return snap.data().count;
+      });
+    },
+
+    async lerCampeonato(dia: string) {
+      return lerComRetry(`lerCampeonato:${dia}`, async () => {
+        const snap = await db.collection('campeonatos').doc(dia).get();
+        return snap.exists ? campeonatoDoDocumento(dia, snap.data()) : null;
       });
     },
 

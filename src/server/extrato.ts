@@ -39,7 +39,7 @@ const NOMES_DAS_OPERACOES: Record<string, string> = {
   'loja:comprar': 'Loja',
   'arena:comprarLuta': 'Arena: luta extra',
   'correio:arena': 'Correio: prêmio da Arena',
-  'ranqueada:abrirBau': 'Baú de escolha da Arena ranqueada',
+  'arena:abrirBau': 'Baú de escolha',
 };
 const nomeDaOperacao = (operacao: string) => NOMES_DAS_OPERACOES[operacao] ?? operacao;
 
