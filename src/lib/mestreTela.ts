@@ -63,6 +63,24 @@ export function descreverAcao(e: Pick<EntradaLogAdmin, 'acao' | 'alvo' | 'antes'
     case 'jogador.exportar':
       texto = `Exportou os dados de ${alvo}`;
       break;
+    case 'chat.apagar':
+      texto = `Apagou uma mensagem de ${alvo} no chat (${(e.antes as { canal?: string } | null | undefined)?.canal ?? '?'})`;
+      break;
+    case 'chat.silenciar':
+      texto = `Silenciou ${alvo} no chat${(e.depois as { duracao?: string } | null | undefined)?.duracao ? ` por ${(e.depois as { duracao?: string }).duracao}` : ''}`;
+      break;
+    case 'chat.tirarSilencio':
+      texto = `Levantou o silêncio de ${alvo} no chat`;
+      break;
+    case 'guilda.renomear':
+      texto = `Renomeou a guilda ${(e.antes as { nome?: string } | null | undefined)?.nome ?? alvo} para ${(e.depois as { nome?: string } | null | undefined)?.nome ?? '?'}`;
+      break;
+    case 'guilda.apagarDescricao':
+      texto = `Apagou a descrição da guilda ${(e.antes as { nome?: string } | null | undefined)?.nome ?? alvo}`;
+      break;
+    case 'guilda.dissolver':
+      texto = `Dissolveu a guilda ${(e.antes as { nome?: string } | null | undefined)?.nome ?? alvo}`;
+      break;
     case 'jogador.zerar':
       texto = `Zerou a progressão de ${alvo}`;
       break;

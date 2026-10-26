@@ -4,6 +4,7 @@
  * transações atômicas (gravações pendentes até o fim), isoladas (executadas uma por vez)
  * e sem transação aninhada.
  */
+import type { CanalDocumento } from '@/rules/chat';
 import type { CampeonatoDoDia } from '@/rules/campeonato';
 import type { EntradaDaArena, ModoDaArena, ReplayDaArena } from '@/rules/arena';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -62,6 +63,7 @@ interface Estado {
   arena: Map<string, EntradaDaArena>;
   replaysDaArena: Map<string, ReplayDaArena>;
   campeonatos: Map<string, CampeonatoDoDia>;
+  canaisDoChat: Map<string, CanalDocumento>;
 }
 
 const estado: Estado = {
@@ -91,6 +93,7 @@ const estado: Estado = {
   arena: new Map(),
   replaysDaArena: new Map(),
   campeonatos: new Map(),
+  canaisDoChat: new Map(),
 };
 
 /** Arena: como arena/{semana}/jogadores (ou ocultos)/{uid}. */
@@ -292,6 +295,14 @@ class ContextoMemoria implements ContextoTransacao {
   gravarCampeonato(c: CampeonatoDoDia) {
     this.campeonatos.set(c.dia, structuredClone(c));
   }
+  canaisDoChat = new Map<string, CanalDocumento>();
+  async lerCanalDoChat(id: string) {
+    const c = this.canaisDoChat.get(id) ?? estado.canaisDoChat.get(id);
+    return c ? structuredClone(c) : null;
+  }
+  gravarCanalDoChat(c: CanalDocumento) {
+    this.canaisDoChat.set(c.id, structuredClone(c));
+  }
 }
 
 export const repositorio: Repositorio = {
@@ -329,6 +340,7 @@ export const repositorio: Repositorio = {
         for (const [k, e] of ctx.arena) estado.arena.set(k, e);
         for (const [id, r] of ctx.replaysDaArena) estado.replaysDaArena.set(id, r);
         for (const [dia, c] of ctx.campeonatos) estado.campeonatos.set(dia, c);
+        for (const [id, c] of ctx.canaisDoChat) estado.canaisDoChat.set(id, c);
         return valor;
       })
     );
@@ -576,6 +588,10 @@ export const repositorio: Repositorio = {
   async contarAcimaNaArena(semana: string, pontos: number, modo: ModoDaArena = 'arena') {
     return [...estado.arena.values()].filter((e) => e.semana === semana && !e.oculto && doModo(e, modo) && e.pontos > pontos).length;
   },
+  async lerCanalDoChat(id: string) {
+    const c = estado.canaisDoChat.get(id);
+    return c ? structuredClone(c) : null;
+  },
   async lerCampeonato(dia: string) {
     const c = estado.campeonatos.get(dia);
     return c ? structuredClone(c) : null;
@@ -604,6 +620,9 @@ export const repositorio: Repositorio = {
     return n;
   },
 
+  async listarPartys(limite: number) {
+    return [...estado.partys.values()].sort((a, b) => b.atualizadaEm.localeCompare(a.atualizadaEm)).slice(0, limite).map((p) => structuredClone(p));
+  },
   async lerParty(id: string) {
     const v = estado.partys.get(id);
     return v ? structuredClone(v) : null;
@@ -660,6 +679,7 @@ export function resetCharacterStore(): void {
   estado.arena.clear();
   estado.replaysDaArena.clear();
   estado.campeonatos.clear();
+  estado.canaisDoChat.clear();
   falhaNaConfiguracao = null;
   falhaNoLogAdmin = null;
   falhaAoGravar = null;

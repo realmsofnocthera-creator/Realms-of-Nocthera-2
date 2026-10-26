@@ -239,6 +239,11 @@ function Sancoes({
           Limite silencioso desde {dataDoLog(ficha.limiteSilencioso.aplicadoEm)}: fora dos rankings e só a recompensa mínima dos chefes. Motivo: {ficha.limiteSilencioso.motivo}
         </p>
       )}
+      {ficha.silencioNoChat && (
+        <p className="text-[12px]" style={{ color: COR_DO_TOM.aviso }}>
+          Silenciado no chat até {dataDoLog(ficha.silencioNoChat.ate)}. Motivo: {ficha.silencioNoChat.motivo}. (Para mudar, use a aba Chat.)
+        </p>
+      )}
       {ficha.apelacao && <ApelacaoNaFicha apelacao={ficha.apelacao} podeResponder={podeSancionar && !!ficha.sancao} responder={responder} />}
       {!podeSancionar ? (
         <p className="text-[11px]" style={{ color: colors.text.secondary }}>Seu papel só consulta. Quem sanciona é o Moderador ou o Dono.</p>

@@ -4,6 +4,7 @@ import { AVATARES_DISPONIVEIS, getAvatarById } from '@/rules/avatars';
 import { entradaDaArenaDoDocumento, LUTAS_GUARDADAS, semanasNaArenaDoDocumento, type EntradaDaArena, type ModoDaArena, type ReplayDaArena } from '@/rules/arena';
 import { bausDeEscolhaDoDocumento } from '@/rules/arenaRanqueada';
 import { campeonatoDoDocumento, type CampeonatoDoDia } from '@/rules/campeonato';
+import { bloqueadosDoDocumento, canalDoDocumento, type CanalDocumento } from '@/rules/chat';
 import { comprasNaLojaDoDocumento } from '@/rules/loja';
 import { normalizarHabilidadesEquipadas, ZEROS_ATRIBUTOS } from '@/game';
 import { lerArmasPersonagem } from '@/game/forja';
@@ -40,7 +41,7 @@ import { entradaMundialDoDocumento, participacoesMundiaisDoDocumento, type Entra
 import { bonusDeGuildaDoDocumento } from '@/rules/pesquisa';
 import { chaveDoNomeDaGuilda, guildaDoDocumento, type GuildaDocumento } from '@/rules/guilda';
 import { configuracaoDoDocumento, type ConfiguracaoDeSistemas } from '@/rules/sistemas';
-import { apelacaoDoDocumento, limiteDoDocumento, MAXIMO_DE_ADVERTENCIAS, sancaoDocumentoVazio, type Advertencia, type SancaoDocumento } from '@/rules/sancoes';
+import { apelacaoDoDocumento, limiteDoDocumento, MAXIMO_DE_ADVERTENCIAS, sancaoDocumentoVazio, silencioDoDocumento, type Advertencia, type SancaoDocumento } from '@/rules/sancoes';
 import {
   ConteudoDocumento,
   ContextoTransacao,
@@ -151,6 +152,7 @@ function sancaoDoDocumento(uid: string, data: DocumentData | undefined): SancaoD
     aplicadaEm: texto(data.aplicadaEm),
     advertencias,
     ...(limiteDoDocumento(data.limiteSilencioso) ? { limiteSilencioso: limiteDoDocumento(data.limiteSilencioso) } : {}),
+    ...(silencioDoDocumento(data.silencioNoChat) ? { silencioNoChat: silencioDoDocumento(data.silencioNoChat) } : {}),
     ...(apelacaoDoDocumento(data.apelacao) ? { apelacao: apelacaoDoDocumento(data.apelacao) } : {}),
   };
 }
@@ -441,6 +443,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(semanasNaArenaDoDocumento(data.arena)?.length ? { arena: semanasNaArenaDoDocumento(data.arena) } : {}),
     ...(semanasNaArenaDoDocumento(data.ranqueada)?.length ? { ranqueada: semanasNaArenaDoDocumento(data.ranqueada) } : {}),
     ...(bausDeEscolhaDoDocumento(data.bausDeEscolha) ? { bausDeEscolha: bausDeEscolhaDoDocumento(data.bausDeEscolha) } : {}),
+    ...(bloqueadosDoDocumento(data.bloqueadosNoChat) ? { bloqueadosNoChat: bloqueadosDoDocumento(data.bloqueadosNoChat) } : {}),
     ...(Array.isArray(data.campeonatos) ? { campeonatos: (data.campeonatos as unknown[]).filter((v): v is string => typeof v === 'string').slice(-30) } : {}),
     ...(typeof data.campeonatosVencidos === 'number' && data.campeonatosVencidos > 0 ? { campeonatosVencidos: Math.floor(data.campeonatosVencidos) } : {}),
     ...(typeof data.partyId === 'string' && data.partyId ? { partyId: data.partyId } : {}),
@@ -538,6 +541,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.ranqueada?.length ? { ranqueada: semUndefined(char.ranqueada) } : {}),
     ...(char.bausDeEscolha?.length ? { bausDeEscolha: char.bausDeEscolha } : {}),
     ...(char.campeonatos?.length ? { campeonatos: char.campeonatos } : {}),
+    ...(char.bloqueadosNoChat?.length ? { bloqueadosNoChat: char.bloqueadosNoChat } : {}),
     ...(char.campeonatosVencidos ? { campeonatosVencidos: char.campeonatosVencidos } : {}),
     ...(char.partyId ? { partyId: char.partyId } : {}),
     ...(char.convitesDeParty?.length ? { convitesDeParty: char.convitesDeParty } : {}),
@@ -594,6 +598,7 @@ class ContextoFirestore implements ContextoTransacao {
   private arena = new Map<string, EntradaDaArena>();
   private replaysDaArena = new Map<string, ReplayDaArena>();
   private campeonatos = new Map<string, CampeonatoDoDia>();
+  private canaisDoChat = new Map<string, CanalDocumento>();
   private nomes = new Map<string, { uid: string; nome: string }>();
   private transacoes: TransactionDocument[] = [];
   private combates = new Map<string, RegistroCombate>();
@@ -748,6 +753,17 @@ class ContextoFirestore implements ContextoTransacao {
     this.campeonatos.set(c.dia, structuredClone(c));
   }
 
+  async lerCanalDoChat(id: string): Promise<CanalDocumento | null> {
+    const pendente = this.canaisDoChat.get(id);
+    if (pendente) return structuredClone(pendente);
+    const snap = await this.tx.get(this.db.collection('chat').doc(id));
+    return snap.exists ? canalDoDocumento(id, snap.data()) : null;
+  }
+
+  gravarCanalDoChat(c: CanalDocumento): void {
+    this.canaisDoChat.set(c.id, structuredClone(c));
+  }
+
   async lerParty(id: string): Promise<PartyDocumento | null> {
     if (this.partys.has(id)) {
       const pendente = this.partys.get(id);
@@ -818,6 +834,7 @@ class ContextoFirestore implements ContextoTransacao {
     for (const e of this.arena.values()) this.tx.set(this.db.collection(colecaoDaArena(e.modo)).doc(e.semana).collection(e.oculto ? 'ocultos' : 'jogadores').doc(e.uid), semUndefined(e));
     for (const r of this.replaysDaArena.values()) this.tx.set(this.db.collection('arenaReplays').doc(r.id), semUndefined(r));
     // o Firestore não guarda lista dentro de lista: cada rodada vai como { lutas }
+    for (const c of this.canaisDoChat.values()) this.tx.set(this.db.collection('chat').doc(c.id), semUndefined({ mensagens: c.mensagens }));
     for (const c of this.campeonatos.values()) this.tx.set(this.db.collection('campeonatos').doc(c.dia), semUndefined({ ...c, rodadas: c.rodadas.map((lutas) => ({ lutas })) }));
     for (const [uid, personagem] of this.personagens) {
       this.tx.set(this.db.collection('characters').doc(uid), personagemParaFirestore(personagem));
@@ -1056,6 +1073,13 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
       });
     },
 
+    async lerCanalDoChat(id: string) {
+      return lerComRetry(`lerCanalDoChat:${id}`, async () => {
+        const snap = await db.collection('chat').doc(id).get();
+        return snap.exists ? canalDoDocumento(id, snap.data()) : null;
+      });
+    },
+
     async lerCampeonato(dia: string) {
       return lerComRetry(`lerCampeonato:${dia}`, async () => {
         const snap = await db.collection('campeonatos').doc(dia).get();
@@ -1091,6 +1115,13 @@ export function criarRepositorioFirestore(db: Firestore): Repositorio {
         n++;
       }
       return n;
+    },
+
+    async listarPartys(limite: number) {
+      return lerComRetry('listarPartys', async () => {
+        const snap = await db.collection('partys').orderBy('atualizadaEm', 'desc').limit(limite).get();
+        return snap.docs.flatMap((d) => partyDoDocumento(d.id, d.data()) ?? []);
+      });
     },
 
     async listarGuildas(limite: number) {
