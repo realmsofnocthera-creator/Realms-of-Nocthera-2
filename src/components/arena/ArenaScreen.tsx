@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Gift, RefreshCw } from 'lucide-react';
 import type { ResultadoCombatePvp } from '@/game/combat';
+import { CampeonatoPainel } from '@/components/arena/CampeonatoPainel';
 import { ReplayArena } from '@/components/arena/ReplayArena';
 import type { ModoDaArena } from '@/rules/arena';
 import { indiceDoRanque, RANQUES } from '@/rules/arenaRanqueada';
@@ -247,7 +248,7 @@ function PainelDaArena({ modo, tokenFresco, abrirReplay, aviso, setAviso }: { mo
 /**
  * Arena (7.5): a Arena (5 lutas por dia e mais 5 por Diamantes, pódio semanal) e a Arena ranqueada (10 ranques, 5
  * lutas por dia, recompensa pelo ranque). Escolher um adversário da lista e lutar contra a ficha atual dele; o replay
- * das últimas 20 lutas de cada modo. O Campeonato vem depois.
+ * das últimas 20 lutas de cada modo. E o Campeonato quinzenal (chave automática, prêmios por colocação).
  */
 export function ArenaScreen({ tokenFresco }: { tokenFresco: Token }) {
   const { colors } = NOCTHERA_THEME;
@@ -302,7 +303,7 @@ export function ArenaScreen({ tokenFresco }: { tokenFresco: Token }) {
           ))}
         </div>
         {aba === 'campeonato' ? (
-          <p className="text-sm" style={{ color: colors.text.secondary }}>Em breve.</p>
+          <CampeonatoPainel key={`campeonato-${versao}`} tokenFresco={tokenFresco} abrirReplay={setReplay} aviso={aviso} setAviso={setAviso} />
         ) : (
           <PainelDaArena key={`${aba}-${versao}`} modo={aba} tokenFresco={tokenFresco} abrirReplay={setReplay} aviso={aviso} setAviso={setAviso} />
         )}

@@ -2,6 +2,8 @@ import { randomInt, randomUUID } from 'node:crypto';
 import { resolverCombatePvp, type Combatente, type ResultadoCombatePvp } from '@/game/combat';
 import { diaDeBrasilia } from '@/game/batalhaSangrenta';
 import { criarCarta, TIPOS_DE_CARTA } from '@/rules/almas';
+import { TIPOS_EMBLEMA } from '@/rules/emblemasCatalogo';
+import type { ItemDoAnuncio } from '@/rules/mercado';
 import { semanaDe, fimDaSemana } from '@/rules/chefeSemanal';
 import {
   ADVERSARIOS_NA_LISTA,
@@ -254,7 +256,7 @@ export async function estadoDaArena(uid: string, agora = new Date(), modo: ModoD
     }),
     historico: [...(minha?.historico ?? [])].reverse(),
     faixas: FAIXAS_DA_ARENA,
-    baus: cfg.modo === 'ranqueada' ? char.bausDeEscolha ?? [] : [],
+    baus: cfg.modo === 'ranqueada' ? (char.bausDeEscolha ?? []).filter((b) => b.tipo === 'cartaLendaria') : [],
     cartasLendarias: cfg.modo === 'ranqueada' ? CARTAS_LENDARIAS.map((t) => ({ id: t.id, nome: t.nome, categoria: t.categoria })) : [],
   };
 }
@@ -313,7 +315,7 @@ export interface LadoNaTela {
   hpMax: number;
   sobreescudo: number;
 }
-const ladoNaTela = (ficha: Combatente, avatarId: string, nome = ficha.nome): LadoNaTela => ({
+export const ladoNaTela = (ficha: Combatente, avatarId: string, nome = ficha.nome): LadoNaTela => ({
   nome,
   nivel: ficha.nivel ?? 1,
   classeId: ficha.classeId ?? '',
@@ -323,7 +325,7 @@ const ladoNaTela = (ficha: Combatente, avatarId: string, nome = ficha.nome): Lad
 });
 
 /** O replay guardado: a semente, as fichas e o resultado (para conferir que a luta refeita é a mesma). */
-interface ReplayGuardado {
+export interface ReplayGuardado {
   semente: number;
   fichaA: Combatente;
   fichaB: Combatente;
@@ -454,23 +456,35 @@ export async function verReplay(
   return { combate, lados: { a: ladoNaTela(g.fichaA, g.avatarA, combate.finalA.nome), b: ladoNaTela(g.fichaB, g.avatarB, combate.finalB.nome) }, em: doc.em };
 }
 
-/** Abre um baú de escolha (o de carta lendária do Eterno): a carta escolhida vai para a mochila (cheia: pelo Correio). */
-export async function abrirBauDeEscolha(uid: string, bauBruto: unknown, cartaBruta: unknown, agora = new Date()): Promise<{ mensagem: string }> {
+/** As opções de cada baú de escolha: cartas lendárias (Eterno da ranqueada); cartas e emblemas míticos (campeão). */
+export function opcoesDoBau(tipo: BauDeEscolha['tipo']): { id: string; nome: string; tipo: 'carta' | 'emblema' }[] {
+  if (tipo === 'cartaLendaria') return CARTAS_LENDARIAS.map((t) => ({ id: t.id, nome: t.nome, tipo: 'carta' as const }));
+  return [
+    ...TIPOS_DE_CARTA.filter((t) => t.raridade === 'mitico').map((t) => ({ id: t.id, nome: `Carta: ${t.nome}`, tipo: 'carta' as const })),
+    ...TIPOS_EMBLEMA.filter((t) => t.raridade === 'mitico').map((t) => ({ id: t.id, nome: `Emblema: ${t.nome}`, tipo: 'emblema' as const })),
+  ];
+}
+
+/** Abre um baú de escolha: a carta (ou o emblema) escolhido vai para a mochila (carta com a mochila cheia: pelo Correio). */
+export async function abrirBauDeEscolha(uid: string, bauBruto: unknown, escolhaBruta: unknown, agora = new Date()): Promise<{ mensagem: string }> {
   const bauId = typeof bauBruto === 'string' ? bauBruto : '';
-  const tipo = CARTAS_LENDARIAS.find((t) => t.id === cartaBruta);
-  if (!tipo) throw new ErroDaArena('Escolha a carta lendária.');
-  return repositorio.executarTransacao('ranqueada:abrirBau', async (ctx) => {
+  return repositorio.executarTransacao('arena:abrirBau', async (ctx) => {
     let eu = await carregarPersonagem(ctx, uid);
     const bau = (eu.bausDeEscolha ?? []).find((b) => b.id === bauId);
     if (!bau) throw new ErroDaArena('Esse baú já foi aberto.');
-    const carta = criarCarta(randomUUID(), tipo.id, sorteadorDaSemente(randomInt(1, 2 ** 31)));
-    const r = entregarItem(ctx, eu, { tipo: 'carta', carta }, `Baú de escolha: ${tipo.nome}`);
+    const opcao = opcoesDoBau(bau.tipo).find((o) => o.id === escolhaBruta);
+    if (!opcao) throw new ErroDaArena(bau.tipo === 'cartaLendaria' ? 'Escolha a carta lendária.' : 'Escolha a carta ou o emblema mítico.');
+    const item: ItemDoAnuncio =
+      opcao.tipo === 'carta'
+        ? { tipo: 'carta', carta: criarCarta(randomUUID(), opcao.id, sorteadorDaSemente(randomInt(1, 2 ** 31))) }
+        : { tipo: 'emblema', emblema: { id: randomUUID(), tipo: opcao.id, estrelas: 1 } };
+    const r = entregarItem(ctx, eu, item, `Baú de escolha: ${opcao.nome}`);
     eu = r.doc;
     const correio = r.pelaCaixa
-      ? comMensagem(eu.correio, novaMensagem({ titulo: 'Baú de escolha', texto: `${tipo.nome} não cabia na sua mochila e chegou pelo Correio.`, de: 'Arena ranqueada', presente: r.pelaCaixa }, agora), agora)
+      ? comMensagem(eu.correio, novaMensagem({ titulo: 'Baú de escolha', texto: `${opcao.nome} não cabia na sua mochila e chegou pelo Correio.`, de: 'Arena', presente: r.pelaCaixa }, agora), agora)
       : eu.correio;
     const bausDeEscolha = (eu.bausDeEscolha ?? []).filter((b) => b.id !== bauId);
     salvarPersonagem(ctx, eu, { ...r.patch, correio, bausDeEscolha: bausDeEscolha.length ? bausDeEscolha : undefined });
-    return { mensagem: `Você escolheu ${tipo.nome}.${r.pelaCaixa ? ' Ela não cabia na mochila e foi para o Correio.' : ''}` };
+    return { mensagem: `Você escolheu ${opcao.nome.replace(/^(Carta|Emblema): /, '')}.${r.pelaCaixa ? ' Não cabia na mochila e foi para o Correio.' : ''}` };
   });
 }

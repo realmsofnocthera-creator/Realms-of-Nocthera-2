@@ -24,6 +24,7 @@ export const SISTEMAS = [
   { id: 'loja', nome: 'Loja' },
   { id: 'arena', nome: 'Arena (PvP)' },
   { id: 'arenaRanqueada', nome: 'Arena ranqueada' },
+  { id: 'campeonato', nome: 'Campeonato' },
 ] as const;
 export type SistemaId = (typeof SISTEMAS)[number]['id'];
 

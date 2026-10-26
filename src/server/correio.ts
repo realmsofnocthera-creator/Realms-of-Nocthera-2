@@ -254,6 +254,8 @@ function montarEstado(char: CharacterDocument, gerais: readonly MensagemGeral[],
 export async function estadoDoCorreio(uid: string, agora = new Date()): Promise<EstadoDoCorreio> {
   await mandarRecompensasDoChefeMundial(uid, agora);
   await mandarPremiosDaArena(uid, agora);
+  // import na hora: o Campeonato usa o Correio para mandar os prêmios
+  await (await import('@/server/campeonato')).mandarPremiosDoCampeonato(uid, agora);
   const char = await repositorio.lerPersonagem(uid);
   if (!char) throw new Error('Personagem não encontrado.');
   return montarEstado(char, await mensagensGerais(agora), agora);

@@ -33,6 +33,10 @@ export const TITULOS: readonly TituloDefinition[] = [
   { id: 'ascendente-da-arena', nome: 'Ascendente da Arena', origem: 'Terminar a semana no ranque Ascendente da Arena ranqueada (pelo Correio)' },
   { id: 'soberano-da-arena', nome: 'Soberano da Arena', origem: 'Terminar a semana no ranque Soberano da Arena ranqueada (pelo Correio)' },
   { id: 'transcendente-da-arena', nome: 'Transcendente da Arena', origem: 'Terminar a semana no ranque Transcendente da Arena ranqueada (pelo Correio)' },
+  { id: 'campeao-de-nocthera', nome: 'Campeão de Nocthera', origem: 'Ganhar 1 Campeonato (pelo Correio)' },
+  { id: 'bicampeao-de-nocthera', nome: 'Bicampeão de Nocthera', origem: 'Ganhar 2 Campeonatos (pelo Correio)' },
+  { id: 'tricampeao-de-nocthera', nome: 'Tricampeão de Nocthera', origem: 'Ganhar 3 Campeonatos (pelo Correio)' },
+  { id: 'lenda-de-nocthera', nome: 'Lenda de Nocthera', origem: 'Ganhar 5 Campeonatos (pelo Correio)' },
   { id: 'eterno-da-arena', nome: 'Eterno da Arena', origem: 'Terminar a semana no ranque Eterno da Arena ranqueada (pelo Correio)' },
 ];
 
