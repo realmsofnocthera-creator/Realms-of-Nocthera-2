@@ -2,7 +2,7 @@ import { bonusDasCartas, bonusVazio, type BonusDeAlma } from '@/game/almas';
 import { atributosDosColecionaveis } from '@/game/colecionaveis';
 import type { ColecionaveisDoJogador, SelosDoJogador } from '@/rules/colecionaveis';
 import type { ComprasNaLoja } from '@/rules/loja';
-import type { PedidoDeCompra } from '@/rules/compras';
+import type { ComprasMensais, PedidoDeCompra } from '@/rules/compras';
 import { bonusDoVip, espacosExtrasDoVip, tentativaExtraDoVip } from '@/rules/vip';
 import type { ExpedicaoEmAndamento } from '@/rules/expedicao';
 import type { CorreioGeralDoJogador, MensagemDoCorreio } from '@/rules/correio';
@@ -303,6 +303,8 @@ export interface CharacterDocument {
   /** VIP (8.5): o gasto real acumulado em centavos (compras estornadas já descontadas), os pedidos recentes, se a primeira compra de Diamantes já foi feita, os Diamantes de estorno ainda não cobertos e o último dia do ouro diário. */
   gastoReal?: number;
   pedidosDeCompra?: PedidoDeCompra[];
+  /** Pacotes mensais (Coleção, Ouro e Expedição): quantos de cada cadeia já foram comprados no mês. */
+  comprasMensais?: ComprasMensais;
   primeiraCompraFeita?: boolean;
   dividaDeDiamantes?: number;
   vipOuroDiario?: string;

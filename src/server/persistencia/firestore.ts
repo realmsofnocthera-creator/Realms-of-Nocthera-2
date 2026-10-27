@@ -6,7 +6,7 @@ import { bausDeEscolhaDoDocumento } from '@/rules/arenaRanqueada';
 import { campeonatoDoDocumento, type CampeonatoDoDia } from '@/rules/campeonato';
 import { bloqueadosDoDocumento, canalDoDocumento, type CanalDocumento } from '@/rules/chat';
 import { comprasNaLojaDoDocumento } from '@/rules/loja';
-import { pedidosDoDocumento } from '@/rules/compras';
+import { comprasMensaisDoDocumento, pedidosDoDocumento } from '@/rules/compras';
 import { normalizarHabilidadesEquipadas, ZEROS_ATRIBUTOS } from '@/game';
 import { lerArmasPersonagem } from '@/game/forja';
 import { lerArmadurasPersonagem } from '@/game/armaduraForja';
@@ -440,6 +440,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(comprasNaLojaDoDocumento(data.comprasNaLoja) ? { comprasNaLoja: comprasNaLojaDoDocumento(data.comprasNaLoja) } : {}),
     ...(quantidadePositiva(data.gastoReal) ? { gastoReal: quantidadePositiva(data.gastoReal) } : {}),
     ...(pedidosDoDocumento(data.pedidosDeCompra) ? { pedidosDeCompra: pedidosDoDocumento(data.pedidosDeCompra) } : {}),
+    ...(comprasMensaisDoDocumento(data.comprasMensais) ? { comprasMensais: comprasMensaisDoDocumento(data.comprasMensais) } : {}),
     ...(data.primeiraCompraFeita === true ? { primeiraCompraFeita: true } : {}),
     ...(quantidadePositiva(data.dividaDeDiamantes) ? { dividaDeDiamantes: quantidadePositiva(data.dividaDeDiamantes) } : {}),
     ...(typeof data.vipOuroDiario === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.vipOuroDiario) ? { vipOuroDiario: data.vipOuroDiario } : {}),
@@ -543,6 +544,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.comprasNaLoja ? { comprasNaLoja: char.comprasNaLoja } : {}),
     ...(char.gastoReal ? { gastoReal: char.gastoReal } : {}),
     ...(char.pedidosDeCompra?.length ? { pedidosDeCompra: semUndefined(char.pedidosDeCompra) } : {}),
+    ...(char.comprasMensais ? { comprasMensais: char.comprasMensais } : {}),
     ...(char.primeiraCompraFeita ? { primeiraCompraFeita: true } : {}),
     ...(char.dividaDeDiamantes ? { dividaDeDiamantes: char.dividaDeDiamantes } : {}),
     ...(char.vipOuroDiario ? { vipOuroDiario: char.vipOuroDiario } : {}),
