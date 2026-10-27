@@ -7,6 +7,8 @@ export interface CamadaDoTopo {
   id: string;
   /** Caminho em /public; null = ainda não existe. */
   src: string | null;
+  /** Mesma arte em AVIF (bem mais leve; navegadores antigos usam o `src`). */
+  srcAvif?: string;
   /** 0 = parada; 1 = anda junto com a rolagem. Camadas da frente andam mais. */
   velocidade: number;
   /** Posição da arte quando a tela corta (formato do object-position do CSS). */
@@ -16,7 +18,7 @@ export interface CamadaDoTopo {
 }
 
 export const CAMADAS_DO_TOPO: readonly CamadaDoTopo[] = [
-  { id: 'ceu', src: '/images/landing-topo.webp', velocidade: 0.08, posicao: '22% 70%', pixel: false },
+  { id: 'ceu', src: '/images/landing-topo.webp', srcAvif: '/images/landing-topo.avif', velocidade: 0.08, posicao: '22% 70%', pixel: false },
   { id: 'fundo', src: null, velocidade: 0.12 },
   { id: 'meio', src: null, velocidade: 0.2 },
   { id: 'frente', src: null, velocidade: 0.32 },
@@ -26,3 +28,43 @@ export const CAMADAS_DO_TOPO: readonly CamadaDoTopo[] = [
 export const LOGO_DA_PAGINA_INICIAL: string | null = '/images/landing-logo.webp';
 /** Herói de costas (128×192) no topo. */
 export const HEROI_DO_TOPO: string | null = null;
+
+const PASTA = '/images/landing/';
+
+/** Retratos de corpo inteiro (240×360, fundo transparente). Povo sem retrato (Anão) usa a arte antiga do assistente. */
+export const RETRATOS_DE_POVOS: Readonly<Record<string, string>> = {
+  humano: `${PASTA}povo-humano.webp`,
+  elfo: `${PASTA}povo-elfo.webp`,
+  orc: `${PASTA}povo-orc.webp`,
+  vampiro: `${PASTA}povo-vampiro.webp`,
+  draconiano: `${PASTA}povo-draconiano.webp`,
+};
+
+export const RETRATOS_DE_VOCACOES: Readonly<Record<string, string>> = {
+  barbaro: `${PASTA}vocacao-barbaro.webp`,
+  cavaleiro: `${PASTA}vocacao-cavaleiro.webp`,
+  feiticeiro: `${PASTA}vocacao-feiticeiro.webp`,
+  bandido: `${PASTA}vocacao-bandido.webp`,
+  profeta: `${PASTA}vocacao-profeta.webp`,
+  samurai: `${PASTA}vocacao-samurai.webp`,
+};
+
+/** Ícones quadrados (128×128): rosto do povo e símbolo da vocação. */
+export const ICONES_DE_POVOS: Readonly<Record<string, string>> = {
+  humano: `${PASTA}icone-povo-humano.webp`,
+  elfo: `${PASTA}icone-povo-elfo.webp`,
+  orc: `${PASTA}icone-povo-orc.webp`,
+  vampiro: `${PASTA}icone-povo-vampiro.webp`,
+  draconiano: `${PASTA}icone-povo-draconiano.webp`,
+};
+
+export const ICONES_DE_VOCACOES: Readonly<Record<string, string>> = {
+  barbaro: `${PASTA}icone-vocacao-barbaro.webp`,
+  cavaleiro: `${PASTA}icone-vocacao-cavaleiro.webp`,
+  feiticeiro: `${PASTA}icone-vocacao-feiticeiro.webp`,
+  bandido: `${PASTA}icone-vocacao-bandido.webp`,
+  profeta: `${PASTA}icone-vocacao-profeta.webp`,
+  samurai: `${PASTA}icone-vocacao-samurai.webp`,
+};
+
+/** O botão em 3 estados (384×194, moldura de 9 partes) fica em `.botao-pixel`, no globals.css: botao-normal, botao-hover e botao-apertado em /images/landing/. */

@@ -7,8 +7,10 @@ export interface EntityCarouselItem {
   id: string;
   nome: string;
   iconeUrl: string;
-  /** Retrato grande (128×192). Sem ele, o cartão mostra só o ícone. */
+  /** Retrato grande. Sem ele, o cartão mostra só o ícone. */
   imagemUrl?: string;
+  /** true = retrato de corpo inteiro com fundo transparente (sem moldura); false = arte retangular, com moldura. */
+  recorte?: boolean;
   descricaoCurta: string;
 }
 
@@ -80,10 +82,15 @@ export function EntityCarousel({
             className="w-[240px] sm:w-[265px] md:w-[280px] shrink-0 px-3 py-2 flex flex-col items-center text-center"
             style={{ scrollSnapAlign: 'center' }}
           >
-            {item.imagemUrl ? (
+            {item.imagemUrl && item.recorte ? (
+              <div className="w-40 h-60 mb-3 shrink-0 flex items-end justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={item.imagemUrl} alt={item.nome} loading="lazy" draggable={false} className="max-w-full max-h-full object-contain object-bottom pointer-events-none drop-shadow-[0_10px_14px_rgba(0,0,0,0.8)]" />
+              </div>
+            ) : item.imagemUrl ? (
               <div className="w-36 h-48 mb-4 shrink-0 overflow-hidden border-4 border-[#1A120B] shadow-[0_0_0_2px_#B2A66C,0_8px_20px_rgba(0,0,0,0.7)] bg-[#120F0C]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.imagemUrl} alt={item.nome} draggable={false} className="w-full h-full object-cover object-top pointer-events-none" />
+                <img src={item.imagemUrl} alt={item.nome} loading="lazy" draggable={false} className="w-full h-full object-cover object-top pointer-events-none" />
               </div>
             ) : (
             <div className="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center mb-3.5 shrink-0">
@@ -103,9 +110,15 @@ export function EntityCarousel({
             </div>
             )}
 
-            <h3 className="font-[family-name:var(--font-pixel)] uppercase text-[11px] sm:text-xs leading-relaxed text-[#F5F3E0] mb-3 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
-              {item.nome}
-            </h3>
+            <div className="flex items-center justify-center gap-2 mb-3">
+              {item.imagemUrl && item.iconeUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={item.iconeUrl} alt="" loading="lazy" draggable={false} className="w-8 h-8 object-contain pointer-events-none" />
+              )}
+              <h3 className="font-[family-name:var(--font-pixel)] uppercase text-[11px] sm:text-xs leading-relaxed text-[#F5F3E0] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                {item.nome}
+              </h3>
+            </div>
 
             <p className="text-xs sm:text-sm text-[#E2D6B6] leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
               {item.descricaoCurta}
