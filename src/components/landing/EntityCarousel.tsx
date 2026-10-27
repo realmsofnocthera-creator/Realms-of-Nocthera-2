@@ -7,6 +7,8 @@ export interface EntityCarouselItem {
   id: string;
   nome: string;
   iconeUrl: string;
+  /** Retrato grande (128×192). Sem ele, o cartão mostra só o ícone. */
+  imagemUrl?: string;
   descricaoCurta: string;
 }
 
@@ -78,6 +80,12 @@ export function EntityCarousel({
             className="w-[240px] sm:w-[265px] md:w-[280px] shrink-0 px-3 py-2 flex flex-col items-center text-center"
             style={{ scrollSnapAlign: 'center' }}
           >
+            {item.imagemUrl ? (
+              <div className="w-36 h-48 mb-4 shrink-0 overflow-hidden border-4 border-[#1A120B] shadow-[0_0_0_2px_#B2A66C,0_8px_20px_rgba(0,0,0,0.7)] bg-[#120F0C]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={item.imagemUrl} alt={item.nome} draggable={false} className="w-full h-full object-cover object-top pointer-events-none" />
+              </div>
+            ) : (
             <div className="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center mb-3.5 shrink-0">
               {item.iconeUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -93,8 +101,9 @@ export function EntityCarousel({
                 </span>
               )}
             </div>
+            )}
 
-            <h3 className="font-cinzel font-bold text-base sm:text-lg text-[#F5F3E0] tracking-wide mb-2 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+            <h3 className="font-[family-name:var(--font-pixel)] uppercase text-[11px] sm:text-xs leading-relaxed text-[#F5F3E0] mb-3 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
               {item.nome}
             </h3>
 

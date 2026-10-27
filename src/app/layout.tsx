@@ -26,6 +26,21 @@ const cinzel = localFont({
   display: 'swap',
 });
 
+const pixel = localFont({
+  src: [{ path: '../assets/fonts/press-start-2p-latin-400-normal.woff2', weight: '400', style: 'normal' }],
+  variable: '--font-pixel',
+  display: 'swap',
+});
+
+const silkscreen = localFont({
+  src: [
+    { path: '../assets/fonts/silkscreen-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: '../assets/fonts/silkscreen-latin-700-normal.woff2', weight: '700', style: 'normal' },
+  ],
+  variable: '--font-silk',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: 'Realms of Nocthera',
   description: 'RPG online de dark fantasy - Base do projeto e regras do jogo.',
@@ -47,7 +62,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR" className={cinzel.variable}>
+    <html lang="pt-BR" className={`${cinzel.variable} ${pixel.variable} ${silkscreen.variable}`}>
       <body className="bg-[#0D0D0D] text-[#F5F3E0] min-h-screen antialiased selection:bg-[#ED8A0C]/30 selection:text-[#F5F3E0]">
         <FirebaseInit />
         {children}
