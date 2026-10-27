@@ -43,6 +43,8 @@ export interface EstadoForja {
   inventario: Readonly<Record<string, number>>;
   ouro: number;
   armas: readonly ArmaPersonagem[];
+  /** Espaços a mais na mochila (VIP). */
+  espacosExtras?: number;
 }
 
 /** Limite de armas guardadas por personagem (o documento do Firestore tem tamanho máximo). */
@@ -171,7 +173,7 @@ export function planejarFabricacao(
     if (!anterior || anterior.baseId !== base.consome || anterior.categoria !== categoria) {
       return { ok: false, motivo: 'armaAnteriorAusente' };
     }
-  } else if (estado.armas.length >= MAX_ARMAS_POR_PERSONAGEM) {
+  } else if (estado.armas.length >= MAX_ARMAS_POR_PERSONAGEM + (estado.espacosExtras ?? 0)) {
     return { ok: false, motivo: 'limiteDeArmas' };
   }
 

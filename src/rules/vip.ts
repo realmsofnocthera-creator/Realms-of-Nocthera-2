@@ -50,7 +50,7 @@ export const NIVEIS_DO_VIP: readonly NivelDoVip[] = [
     xp: 3,
     ouro: 3,
     ouroDiario: OURO_DIARIO_DO_VIP,
-    beneficios: [emBreve('Título de perfil exclusivo.'), emBreve('+1 chance diária na Provação do Guerreiro.')],
+    beneficios: [emBreve('Título de perfil exclusivo.'), ativo('+1 chance diária na Provação do Guerreiro (uma extra em cada dificuldade).')],
   },
   {
     nivel: 3,
@@ -59,7 +59,7 @@ export const NIVEIS_DO_VIP: readonly NivelDoVip[] = [
     xp: 4,
     ouro: 5,
     ouroDiario: OURO_DIARIO_DO_VIP,
-    beneficios: [emBreve('+20 espaços na mochila (cartas, armas e armaduras).'), emBreve('Moldura exclusiva.')],
+    beneficios: [ativo('+20 espaços na mochila (cartas, armas e armaduras).'), emBreve('Moldura exclusiva.')],
   },
   { nivel: 4, nome: 'Veterano', gastoCentavos: 15_000, xp: 5, ouro: 7, ouroDiario: OURO_DIARIO_DO_VIP, beneficios: [emBreve('Uma skin de personagem.')] },
   {
@@ -69,7 +69,7 @@ export const NIVEIS_DO_VIP: readonly NivelDoVip[] = [
     xp: 7,
     ouro: 10,
     ouroDiario: OURO_DIARIO_DO_VIP,
-    beneficios: [emBreve('+1 tentativa diária de Batalha Sangrenta.'), emBreve('Moldura animada de perfil.')],
+    beneficios: [ativo('+1 tentativa diária de Batalha Sangrenta.'), emBreve('Moldura animada de perfil.')],
   },
   {
     nivel: 6,
@@ -78,7 +78,7 @@ export const NIVEIS_DO_VIP: readonly NivelDoVip[] = [
     xp: 8,
     ouro: 12,
     ouroDiario: OURO_DIARIO_DO_VIP,
-    beneficios: [emBreve('+1 tentativa no Teste de Equipe.'), emBreve('Efeito visual exclusivo ao entrar em combate.')],
+    beneficios: [ativo('+1 chave grátis por dia no Teste de Equipe.'), emBreve('Efeito visual exclusivo ao entrar em combate.')],
   },
   {
     nivel: 7,
@@ -165,3 +165,18 @@ export function progressoDoVip(gastoCentavos: unknown): ProgressoDoVip {
 export const comBonusPercentual = (base: number, percentual: number) => (base > 0 && percentual > 0 ? base + Math.floor((base * percentual) / 100) : base);
 
 export const formatarReais = (centavos: number) => (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+// ---------------------------------------------------------------------------------------------------------------
+// Benefícios do VIP que mudam limites (mochila e tentativas diárias)
+// ---------------------------------------------------------------------------------------------------------------
+
+/** VIP 3: +20 espaços em cada uma das três mochilas (cartas, armas e armaduras). */
+export const NIVEL_DA_MOCHILA_DO_VIP = 3;
+export const ESPACOS_EXTRAS_DA_MOCHILA = 20;
+export const espacosExtrasDoVip = (gastoCentavos: unknown) => (nivelDoVip(gastoCentavos) >= NIVEL_DA_MOCHILA_DO_VIP ? ESPACOS_EXTRAS_DA_MOCHILA : 0);
+
+/** A partir de que nível o VIP dá +1 tentativa por dia em cada provação. */
+export const NIVEL_DA_TENTATIVA_EXTRA = { guerreiro: 2, batalhaSangrenta: 5, testeEquipe: 6 } as const;
+export type ProvacaoComTentativaExtra = keyof typeof NIVEL_DA_TENTATIVA_EXTRA;
+/** 0 ou 1: as tentativas extras de hoje que o nível dá a essa provação (não acumulam com os níveis de baixo: é sempre +1). */
+export const tentativaExtraDoVip = (gastoCentavos: unknown, provacao: ProvacaoComTentativaExtra) => (nivelDoVip(gastoCentavos) >= NIVEL_DA_TENTATIVA_EXTRA[provacao] ? 1 : 0);

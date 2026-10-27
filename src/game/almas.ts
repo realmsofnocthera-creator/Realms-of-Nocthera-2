@@ -137,8 +137,8 @@ export function destruirCartas(itens: readonly CartaItem[], equipadas: readonly 
 }
 
 /** Quantas cartas ainda cabem no inventário; o que passar vira cacos de alma na hora (ver `guardarCartas`). */
-export function guardarCartas(itens: readonly CartaItem[], novas: readonly CartaItem[]): { itens: CartaItem[]; cacosDoExcesso: number } {
-  const cabem = Math.max(0, CARTAS_MAXIMAS - itens.length);
+export function guardarCartas(itens: readonly CartaItem[], novas: readonly CartaItem[], espacosExtras = 0): { itens: CartaItem[]; cacosDoExcesso: number } {
+  const cabem = Math.max(0, CARTAS_MAXIMAS + espacosExtras - itens.length);
   const guardadas = novas.slice(0, cabem);
   const cacosDoExcesso = novas.slice(cabem).reduce((s, c) => s + CACOS_AO_DESTRUIR[TIPO_DE_CARTA_MAP[c.tipo].raridade], 0);
   return { itens: [...itens, ...guardadas], cacosDoExcesso };

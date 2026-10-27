@@ -3,7 +3,7 @@ import { atributosDosColecionaveis } from '@/game/colecionaveis';
 import type { ColecionaveisDoJogador, SelosDoJogador } from '@/rules/colecionaveis';
 import type { ComprasNaLoja } from '@/rules/loja';
 import type { PedidoDeCompra } from '@/rules/compras';
-import { bonusDoVip } from '@/rules/vip';
+import { bonusDoVip, espacosExtrasDoVip, tentativaExtraDoVip } from '@/rules/vip';
 import type { ExpedicaoEmAndamento } from '@/rules/expedicao';
 import type { CorreioGeralDoJogador, MensagemDoCorreio } from '@/rules/correio';
 import type { ParticipacaoNoChefeMundial } from '@/rules/chefeMundial';
@@ -111,6 +111,7 @@ import {
 } from '@/game/batalhaSangrenta';
 import {
   conferirEntradaGuerreiro,
+  gastarTentativaDoGuerreiro,
   MENSAGEM_BLOQUEIO_GUERREIRO,
   montarChefeGuerreiro,
   sortearEmblemas,
@@ -221,6 +222,8 @@ export interface CharacterDocument {
   campanha?: ProgressoDaCampanha;
   /** Provação do Guerreiro: o dia (em Brasília) da última tentativa em cada dificuldade (1 tentativa por dia por chefe). */
   guerreiroTentativas?: Record<string, string>;
+  /** Provação do Guerreiro: o dia (em Brasília) em que a tentativa extra do VIP foi usada em cada dificuldade. */
+  guerreiroExtras?: Record<string, string>;
   /** Provação do Guerreiro: dificuldades cujo chefe já foi vencido (cada uma abre ao vencer a anterior). */
   guerreiroVencidas?: number[];
   /** Emblemas do personagem (itens com tipo e estrelas), vindos da Provação do Guerreiro. */
@@ -534,6 +537,7 @@ function mesclarPersonagem(
     ...((updates.torreAndar ?? current.torreAndar) !== undefined ? { torreAndar: updates.torreAndar ?? current.torreAndar } : {}),
     ...((updates.campanha ?? current.campanha) ? { campanha: updates.campanha ?? current.campanha } : {}),
     ...((updates.guerreiroTentativas ?? current.guerreiroTentativas) ? { guerreiroTentativas: updates.guerreiroTentativas ?? current.guerreiroTentativas } : {}),
+    ...((updates.guerreiroExtras ?? current.guerreiroExtras) ? { guerreiroExtras: updates.guerreiroExtras ?? current.guerreiroExtras } : {}),
     ...((updates.guerreiroVencidas ?? current.guerreiroVencidas) ? { guerreiroVencidas: updates.guerreiroVencidas ?? current.guerreiroVencidas } : {}),
     ...((updates.emblemasItens ?? current.emblemasItens) ? { emblemasItens: updates.emblemasItens ?? current.emblemasItens } : {}),
     ...((updates.emblemasEquipados ?? current.emblemasEquipados) ? { emblemasEquipados: updates.emblemasEquipados ?? current.emblemasEquipados } : {}),
@@ -2199,7 +2203,7 @@ export async function executarBatalhaSangrenta(
       return { ...resumo, character: current, combateId, repetido: true, mensagens: anterior.resposta.mensagens };
     }
 
-    const entrada = conferirEntradaBatalha(dificuldadeId, current.nivel, current.batalhaSangrenta, current.batalhaSangrentaVencidas, agora);
+    const entrada = conferirEntradaBatalha(dificuldadeId, current.nivel, current.batalhaSangrenta, current.batalhaSangrentaVencidas, agora, tentativaExtraDoVip(current.gastoReal, 'batalhaSangrenta'));
     if (!entrada.ok) throw new Error(MENSAGEM_BLOQUEIO_BATALHA[entrada.motivo]);
     const dificuldade = entrada.dificuldade;
 
@@ -2236,7 +2240,7 @@ export async function executarBatalhaSangrenta(
     const primeiraVitoria = venceuTudo && !(current.batalhaSangrentaVencidas ?? []).includes(dificuldade.id);
     const recompensa = recompensaDaBatalha(dificuldade, venceuTudo, opcoes.seed, primeiraVitoria);
     const estadoTentativas: EstadoBatalhaSangrenta = gastarTentativa(current.batalhaSangrenta, agora);
-    const restantes = tentativasRestantes(estadoTentativas, agora);
+    const restantes = tentativasRestantes(estadoTentativas, agora, tentativaExtraDoVip(current.gastoReal, 'batalhaSangrenta'));
     const motivo = `Batalha Sangrenta (${dificuldade.nome})`;
 
     let character = current;
@@ -2505,7 +2509,7 @@ export async function executarGuerreiro(uid: string, dificuldadeId: unknown, opc
       };
     }
 
-    const entrada = conferirEntradaGuerreiro(dificuldadeId, current.nivel, current.guerreiroTentativas, current.guerreiroVencidas, agora);
+    const entrada = conferirEntradaGuerreiro(dificuldadeId, current.nivel, current.guerreiroTentativas, current.guerreiroVencidas, agora, { permitida: tentativaExtraDoVip(current.gastoReal, 'guerreiro') > 0, usadas: current.guerreiroExtras });
     if (!entrada.ok) throw new Error(MENSAGEM_BLOQUEIO_GUERREIRO[entrada.motivo]);
     const { dificuldade, chefe } = entrada;
     const monstro = montarChefeGuerreiro(dificuldade);
@@ -2524,7 +2528,7 @@ export async function executarGuerreiro(uid: string, dificuldadeId: unknown, opc
     const contratosDoGuerreiro = venceu ? contarVitorias(current.contratos, [monstro.id], diaDeBrasilia(agora)) : null;
     const novosEmblemas: EmblemaItem[] = emblemasGanhos.map((e) => ({ id: randomUUID(), tipo: e.tipoId, estrelas: 1 }));
     const character = salvarPersonagem(ctx, current, {
-      guerreiroTentativas: { ...(current.guerreiroTentativas ?? {}), [String(dificuldade)]: diaDeBrasilia(agora) },
+      ...gastarTentativaDoGuerreiro(current.guerreiroTentativas, current.guerreiroExtras, dificuldade, agora),
       guerreiroVencidas: primeiraVitoria ? [...(current.guerreiroVencidas ?? []), dificuldade].sort((a, b) => a - b) : current.guerreiroVencidas ?? [],
       emblemasItens: [...(current.emblemasItens ?? []), ...novosEmblemas],
       ...(contratosDoGuerreiro ? { contratos: contratosDoGuerreiro } : {}),
@@ -2621,7 +2625,7 @@ export interface RespostaForja {
 }
 
 function estadoForja(char: CharacterDocument): EstadoForja {
-  return { inventario: char.inventario ?? {}, ouro: char.ouro, armas: char.armas ?? [] };
+  return { inventario: char.inventario ?? {}, ouro: char.ouro, armas: char.armas ?? [], espacosExtras: espacosExtrasDoVip(char.gastoReal) };
 }
 
 /** XP na maestria de Forja (com o teto do dia) e, ao fabricar, o total da conquista de Forja, para salvar junto. */
@@ -2718,7 +2722,7 @@ export interface RespostaArmadura {
 }
 
 function estadoArmaduras(char: CharacterDocument): EstadoArmaduras {
-  return { inventario: char.inventario ?? {}, ouro: char.ouro, armaduras: char.armaduras ?? [] };
+  return { inventario: char.inventario ?? {}, ouro: char.ouro, armaduras: char.armaduras ?? [], espacosExtras: espacosExtrasDoVip(char.gastoReal) };
 }
 
 /** Fabrica uma peça de armadura: paga a receita e sorteia o atributo. Tudo numa transação. */

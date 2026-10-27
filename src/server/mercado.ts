@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { CARTAS_MAXIMAS, TIPO_DE_CARTA_MAP, type CartaItem } from '@/rules/almas';
+import { espacosExtrasDoVip } from '@/rules/vip';
 import { MAX_ARMAS_POR_PERSONAGEM, type ArmaPersonagem } from '@/game/forja';
 import { MAX_ARMADURAS_POR_PERSONAGEM, type ArmaduraPersonagem } from '@/game/armaduraForja';
 import type { PresenteDoCorreio } from '@/rules/correio';
@@ -250,7 +251,7 @@ export function entregarItem(ctx: ContextoTransacao, c: CharacterDocument, item:
       return mudarRecurso(ctx, c, item.id, item.quantidade, motivo);
     case 'carta': {
       const carta = item.carta as CartaItem;
-      if ((c.cartasItens ?? []).length >= CARTAS_MAXIMAS) return { doc: c, patch: {}, pelaCaixa: { cartas: [carta] } };
+      if ((c.cartasItens ?? []).length >= CARTAS_MAXIMAS + espacosExtrasDoVip(c.gastoReal)) return { doc: c, patch: {}, pelaCaixa: { cartas: [carta] } };
       const cartasItens = [...(c.cartasItens ?? []), carta];
       const cartasDescobertas = [...new Set([...(c.cartasDescobertas ?? []), carta.tipo])];
       return { doc: { ...c, cartasItens, cartasDescobertas }, patch: { cartasItens, cartasDescobertas } };
@@ -261,13 +262,13 @@ export function entregarItem(ctx: ContextoTransacao, c: CharacterDocument, item:
     }
     case 'arma': {
       const arma = item.arma as unknown as ArmaPersonagem;
-      if ((c.armas ?? []).length >= MAX_ARMAS_POR_PERSONAGEM) return { doc: c, patch: {}, pelaCaixa: { armas: [arma] } };
+      if ((c.armas ?? []).length >= MAX_ARMAS_POR_PERSONAGEM + espacosExtrasDoVip(c.gastoReal)) return { doc: c, patch: {}, pelaCaixa: { armas: [arma] } };
       const armas = [...(c.armas ?? []), arma];
       return { doc: { ...c, armas }, patch: { armas } };
     }
     case 'armadura': {
       const armadura = item.armadura as unknown as ArmaduraPersonagem;
-      if ((c.armaduras ?? []).length >= MAX_ARMADURAS_POR_PERSONAGEM) return { doc: c, patch: {}, pelaCaixa: { armaduras: [armadura] } };
+      if ((c.armaduras ?? []).length >= MAX_ARMADURAS_POR_PERSONAGEM + espacosExtrasDoVip(c.gastoReal)) return { doc: c, patch: {}, pelaCaixa: { armaduras: [armadura] } };
       const armaduras = [...(c.armaduras ?? []), armadura];
       return { doc: { ...c, armaduras }, patch: { armaduras } };
     }

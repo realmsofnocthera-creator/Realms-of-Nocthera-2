@@ -95,13 +95,14 @@ export function chavesDoDia(c: ChavesDaProvacao | undefined, hoje: string): Chav
   return c.dia === hoje ? c : { dia: hoje, gratisUsadas: 0, compradasHoje: 0, guardadas: c.guardadas };
 }
 
-export const chavesGratisRestantes = (c: ChavesDaProvacao) => Math.max(0, CHAVES_GRATIS_POR_DIA - c.gratisUsadas);
-export const chavesDisponiveis = (c: ChavesDaProvacao) => chavesGratisRestantes(c) + c.guardadas;
+/** `extras`: chaves grátis a mais no dia (VIP). */
+export const chavesGratisRestantes = (c: ChavesDaProvacao, extras = 0) => Math.max(0, CHAVES_GRATIS_POR_DIA + extras - c.gratisUsadas);
+export const chavesDisponiveis = (c: ChavesDaProvacao, extras = 0) => chavesGratisRestantes(c, extras) + c.guardadas;
 export const comprasRestantesHoje = (c: ChavesDaProvacao) => Math.max(0, CHAVES_COMPRAVEIS_POR_DIA - c.compradasHoje);
 
 /** Gasta 1 chave: as grátis do dia primeiro, depois as compradas. null se não há chave. */
-export function gastarChave(c: ChavesDaProvacao): ChavesDaProvacao | null {
-  if (chavesGratisRestantes(c) > 0) return { ...c, gratisUsadas: c.gratisUsadas + 1 };
+export function gastarChave(c: ChavesDaProvacao, extras = 0): ChavesDaProvacao | null {
+  if (chavesGratisRestantes(c, extras) > 0) return { ...c, gratisUsadas: c.gratisUsadas + 1 };
   if (c.guardadas > 0) return { ...c, guardadas: c.guardadas - 1 };
   return null;
 }

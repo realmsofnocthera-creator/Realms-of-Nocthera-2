@@ -10,11 +10,12 @@ import {
   tentativasRestantes,
 } from '@/game/batalhaSangrenta';
 import { CHEFES_ESPECIAIS_MAP } from '@/rules/chefesEspeciais';
+import { tentativaExtraDoVip } from '@/rules/vip';
 import { SUBCLASSES } from '@/rules/subclasses';
 
 /** Lógica da tela da Batalha Sangrenta (dificuldades, tentativas e textos), sem React. */
 
-type Personagem = Pick<CharacterDocument, 'nivel' | 'batalhaSangrenta' | 'batalhaSangrentaVencidas'>;
+type Personagem = Pick<CharacterDocument, 'nivel' | 'batalhaSangrenta' | 'batalhaSangrentaVencidas' | 'gastoReal'>;
 
 export interface DificuldadeTela {
   id: DificuldadeBatalha;
@@ -31,16 +32,19 @@ export interface DificuldadeTela {
   diamantesPendentes: boolean;
 }
 
-export function tentativasDeHoje(c: Pick<CharacterDocument, 'batalhaSangrenta'>, agora: Date = new Date()): number {
-  return tentativasRestantes(c.batalhaSangrenta, agora);
+export function tentativasDeHoje(c: Pick<CharacterDocument, 'batalhaSangrenta' | 'gastoReal'>, agora: Date = new Date()): number {
+  return tentativasRestantes(c.batalhaSangrenta, agora, tentativaExtraDoVip(c.gastoReal, 'batalhaSangrenta'));
 }
+
+/** As tentativas do dia (a base mais a extra do VIP), para mostrar "restantes/total". */
+export const tentativasPorDia = (c: Pick<CharacterDocument, 'gastoReal'>) => BATALHA_SANGRENTA.tentativasPorDia + tentativaExtraDoVip(c.gastoReal, 'batalhaSangrenta');
 
 export function dificuldadesDaBatalha(c: Personagem, agora: Date = new Date()): DificuldadeTela[] {
   return DIFICULDADES_BATALHA.map((d, i) => {
     const vencidas = c.batalhaSangrentaVencidas ?? [];
     const liberada = c.nivel >= NIVEL_BATALHA_SANGRENTA && dificuldadeLiberada(d.id, vencidas);
     const anterior = i > 0 ? DIFICULDADES_BATALHA[i - 1].nome : null;
-    const entrada = conferirEntradaBatalha(d.id, c.nivel, c.batalhaSangrenta, vencidas, agora);
+    const entrada = conferirEntradaBatalha(d.id, c.nivel, c.batalhaSangrenta, vencidas, agora, tentativaExtraDoVip(c.gastoReal, 'batalhaSangrenta'));
     let bloqueio: string | null = null;
     if (!entrada.ok) {
       bloqueio =

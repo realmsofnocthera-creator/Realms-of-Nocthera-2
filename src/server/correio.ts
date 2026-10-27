@@ -22,6 +22,7 @@ import { MATERIAIS_MAP } from '@/rules/materiais';
 import { MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
 import { comTitulos, ehTitulo } from '@/rules/titulos';
 import { CARTAS_MAXIMAS } from '@/rules/almas';
+import { espacosExtrasDoVip } from '@/rules/vip';
 import { MAX_ARMAS_POR_PERSONAGEM } from '@/game/forja';
 import { MAX_ARMADURAS_POR_PERSONAGEM } from '@/game/armaduraForja';
 import { alterarSaldoEm, carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
@@ -265,6 +266,7 @@ export async function estadoDoCorreio(uid: string, agora = new Date()): Promise<
 /** Entrega o presente no personagem (dentro da transação): moedas com extrato, selos, saldos e materiais. */
 export function entregarPresente(ctx: ContextoTransacao, char: CharacterDocument, presente: PresenteDoCorreio, motivo: string): { doc: CharacterDocument; patch: Partial<CharacterDocument> } {
   let doc = char;
+  const extras = espacosExtrasDoVip(char.gastoReal);
   for (const moeda of ['ouro', 'diamantes', 'essenciaDeSoberano'] as const) {
     if (presente[moeda]) doc = alterarSaldoEm(ctx, doc, moeda, presente[moeda]!, motivo).character;
   }
@@ -285,19 +287,19 @@ export function entregarPresente(ctx: ContextoTransacao, char: CharacterDocument
   if (presente.titulos?.length) patch.titulos = comTitulos(doc.titulos, presente.titulos);
   if (presente.cartas?.length) {
     const itens = doc.cartasItens ?? [];
-    if (itens.length + presente.cartas.length > CARTAS_MAXIMAS) throw new ErroDeCorreio(`Suas cartas estão cheias (${CARTAS_MAXIMAS}). Destrua ou venda algumas para resgatar.`);
+    if (itens.length + presente.cartas.length > CARTAS_MAXIMAS + extras) throw new ErroDeCorreio(`Suas cartas estão cheias (${CARTAS_MAXIMAS + extras}). Destrua ou venda algumas para resgatar.`);
     patch.cartasItens = [...itens, ...presente.cartas];
     patch.cartasDescobertas = [...new Set([...(doc.cartasDescobertas ?? []), ...presente.cartas.map((c) => c.tipo)])];
   }
   if (presente.emblemas?.length) patch.emblemasItens = [...(doc.emblemasItens ?? []), ...presente.emblemas];
   if (presente.armas?.length) {
     const armas = doc.armas ?? [];
-    if (armas.length + presente.armas.length > MAX_ARMAS_POR_PERSONAGEM) throw new ErroDeCorreio(`Suas armas estão cheias (${MAX_ARMAS_POR_PERSONAGEM}). Venda ou use algumas para resgatar.`);
+    if (armas.length + presente.armas.length > MAX_ARMAS_POR_PERSONAGEM + extras) throw new ErroDeCorreio(`Suas armas estão cheias (${MAX_ARMAS_POR_PERSONAGEM + extras}). Venda ou use algumas para resgatar.`);
     patch.armas = [...armas, ...presente.armas];
   }
   if (presente.armaduras?.length) {
     const armaduras = doc.armaduras ?? [];
-    if (armaduras.length + presente.armaduras.length > MAX_ARMADURAS_POR_PERSONAGEM) throw new ErroDeCorreio(`Suas armaduras estão cheias (${MAX_ARMADURAS_POR_PERSONAGEM}). Venda ou use algumas para resgatar.`);
+    if (armaduras.length + presente.armaduras.length > MAX_ARMADURAS_POR_PERSONAGEM + extras) throw new ErroDeCorreio(`Suas armaduras estão cheias (${MAX_ARMADURAS_POR_PERSONAGEM + extras}). Venda ou use algumas para resgatar.`);
     patch.armaduras = [...armaduras, ...presente.armaduras];
   }
   return { doc, patch };

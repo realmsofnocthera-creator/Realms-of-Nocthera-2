@@ -87,8 +87,9 @@ export function tentativasUsadasHoje(estado: EstadoBatalhaSangrenta | undefined,
   return estado && estado.dia === diaDeBrasilia(agora) ? estado.tentativas : 0;
 }
 
-export function tentativasRestantes(estado: EstadoBatalhaSangrenta | undefined, agora: Date): number {
-  return Math.max(0, BATALHA_SANGRENTA.tentativasPorDia - tentativasUsadasHoje(estado, agora));
+/** `extras`: tentativas a mais no dia (VIP). */
+export function tentativasRestantes(estado: EstadoBatalhaSangrenta | undefined, agora: Date, extras = 0): number {
+  return Math.max(0, BATALHA_SANGRENTA.tentativasPorDia + extras - tentativasUsadasHoje(estado, agora));
 }
 
 /** O estado depois de gastar uma tentativa agora. */
@@ -112,12 +113,13 @@ export function conferirEntradaBatalha(
   nivel: number,
   estado: EstadoBatalhaSangrenta | undefined,
   vencidas: readonly string[] | undefined,
-  agora: Date
+  agora: Date,
+  extras = 0
 ): { ok: true; dificuldade: DefinicaoDificuldade } | { ok: false; motivo: MotivoBloqueioBatalha } {
   if (!ehDificuldadeBatalha(dificuldade)) return { ok: false, motivo: 'dificuldadeInvalida' };
   if (nivel < NIVEL_BATALHA_SANGRENTA) return { ok: false, motivo: 'nivelInsuficiente' };
   if (!dificuldadeLiberada(dificuldade, vencidas)) return { ok: false, motivo: 'dificuldadeBloqueada' };
-  if (tentativasRestantes(estado, agora) <= 0) return { ok: false, motivo: 'semTentativas' };
+  if (tentativasRestantes(estado, agora, extras) <= 0) return { ok: false, motivo: 'semTentativas' };
   return { ok: true, dificuldade: DIFICULDADES_BATALHA_MAP[dificuldade] };
 }
 

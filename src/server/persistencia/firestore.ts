@@ -386,6 +386,11 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
           ) as Record<string, string>,
         }
       : {}),
+    ...(data.guerreiroExtras && typeof data.guerreiroExtras === 'object'
+      ? {
+          guerreiroExtras: Object.fromEntries(Object.entries(data.guerreiroExtras as Record<string, unknown>).filter(([, v]) => typeof v === 'string')) as Record<string, string>,
+        }
+      : {}),
     ...(Array.isArray(data.guerreiroVencidas)
       ? { guerreiroVencidas: (data.guerreiroVencidas as unknown[]).filter((n): n is number => typeof n === 'number') }
       : {}),
@@ -496,6 +501,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.torreAndar ? { torreAndar: char.torreAndar } : {}),
     ...(char.campanha ? { campanha: char.campanha } : {}),
     ...(char.guerreiroTentativas ? { guerreiroTentativas: char.guerreiroTentativas } : {}),
+    ...(char.guerreiroExtras ? { guerreiroExtras: char.guerreiroExtras } : {}),
     ...(char.guerreiroVencidas ? { guerreiroVencidas: char.guerreiroVencidas } : {}),
     ...(char.emblemasItens && char.emblemasItens.length > 0 ? { emblemasItens: char.emblemasItens } : {}),
     ...(char.emblemasEquipados && char.emblemasEquipados.length > 0 ? { emblemasEquipados: char.emblemasEquipados } : {}),
