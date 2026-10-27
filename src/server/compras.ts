@@ -1,9 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { diaDeBrasilia } from '@/game/batalhaSangrenta';
 import { NOME_DO_SELO, SELOS_DE_BUSCA, type SelosDoJogador } from '@/rules/colecionaveis';
+import { ITENS_DA_LOJA_VIP, compradasNaLojaVip } from '@/rules/lojaMoedasVip';
+import { TIPOS_DE_BAU_DE_COMPRA, type BauDeEscolha } from '@/rules/arenaRanqueada';
+import { opcoesDoBau } from '@/server/arena';
 import {
   CADEIAS_MENSAIS,
   comCompraMensal,
+  ehPacoteDoIniciante,
+  PACOTE_DO_INICIANTE,
   diamantesDoPacote,
   feitasNoMes,
   NOME_DA_CADEIA,
@@ -97,6 +102,18 @@ export interface PasseNaTela {
   fim: string | null;
 }
 
+export interface ItemDaLojaVipNaTela {
+  chave: string;
+  nome: string;
+  raridade: string;
+  preco: number;
+  limiteMensal: number;
+  comprados: number;
+  restantes: number;
+}
+
+const NOME_DO_BAU: Readonly<Record<string, string>> = { emblemaEpico: 'Baú de escolha de emblema épico', emblemaLendario: 'Baú de escolha de emblema lendário', cartaLendariaVip: 'Baú de escolha de carta lendária' };
+
 export interface NivelNaTela extends NivelDoVip {
   atual: boolean;
   desbloqueado: boolean;
@@ -118,6 +135,12 @@ export interface EstadoDaLojaVip {
   /** Os pacotes mensais (Coleção, Ouro e Expedição): 1 de cada por mês, em ordem; as cadeias voltam ao primeiro no dia 1 (Brasília). */
   mensais: CadeiaNaTela[];
   passes: PasseNaTela[];
+  /** Pacote do Iniciante: 1 por conta. */
+  iniciante: { comprado: boolean; precoCentavos: number; conteudo: string[] };
+  /** Loja de Moedas VIP (preços fixos, limite por mês em cada item). */
+  lojaMoedas: ItemDaLojaVipNaTela[];
+  /** Baús de escolha vindos de compras, ainda fechados, com as opções de cada um. */
+  baus: { id: string; tipo: string; nome: string; origem: string; opcoes: { id: string; nome: string }[] }[];
   /** O bônus que os Passes dão agora (o maior entre eles; soma com o do VIP). */
   bonusDosPasses: { xp: number; ouro: number; desconto: number };
   moedasVip: number;
@@ -134,6 +157,7 @@ export function linhasDaEntrega(e: EntregaDoPacote | undefined, diamantes = 0): 
   if (e?.ouro) linhas.push(`${numero(e.ouro)} de ouro`);
   if (e?.avancosDeExpedicao) linhas.push(`${numero(e.avancosDeExpedicao)} Avanços de expedição`);
   if (e?.moedasVip) linhas.push(`${numero(e.moedasVip)} Moedas VIP`);
+  if (e?.bauId) linhas.push('1 baú de escolha de emblema épico (abra na aba VIP)');
   for (const s of SELOS_DE_BUSCA) if (e?.selos?.[s]) linhas.push(`${numero(e.selos[s]!)}× ${NOME_DO_SELO[s]}`);
   return linhas;
 }
@@ -180,6 +204,14 @@ export async function estadoDaLojaVip(uid: string, agora = new Date()): Promise<
       diasRestantes: diasRestantesDoPasse(c.passes?.[d.id], hoje),
       fim: passeAtivo(c.passes?.[d.id], hoje) ? c.passes![d.id]!.fim : null,
     })),
+    iniciante: { comprado: !!c.iniciantePago, precoCentavos: PACOTE_DO_INICIANTE.precoCentavos, conteudo: linhasDaEntrega({ ouro: PACOTE_DO_INICIANTE.ouro, diamantes: PACOTE_DO_INICIANTE.diamantes, bauId: 'x' }) },
+    lojaMoedas: ITENS_DA_LOJA_VIP.map((i) => {
+      const comprados = compradasNaLojaVip(c.comprasMoedasVip, i.chave, agora);
+      return { chave: i.chave, nome: i.nome, raridade: i.raridade, preco: i.preco, limiteMensal: i.limiteMensal, comprados, restantes: Math.max(0, i.limiteMensal - comprados) };
+    }),
+    baus: (c.bausDeEscolha ?? [])
+      .filter((b) => TIPOS_DE_BAU_DE_COMPRA.includes(b.tipo))
+      .map((b) => ({ id: b.id, tipo: b.tipo, nome: NOME_DO_BAU[b.tipo] ?? 'Baú de escolha', origem: b.origem, opcoes: opcoesDoBau(b.tipo).map((o) => ({ id: o.id, nome: o.nome.replace(/^(Carta|Emblema): /, '') })) })),
     bonusDosPasses: bonusDosPasses(c.passes, hoje),
     moedasVip: c.moedasVip ?? 0,
     pedidos: [...(c.pedidosDeCompra ?? [])].reverse().slice(0, 20),
@@ -271,8 +303,11 @@ export async function criarPedido(uid: string, produtoBruto: unknown, agora = ne
   const diamantes = pacoteDeDiamantes(produtoBruto);
   const mensal = pacoteMensal(produtoBruto);
   const passe = passeDoProduto(produtoBruto);
-  if (!diamantes && !mensal && !passe) throw new ErroDeCompra('Esse produto não existe.');
-  const produto = diamantes
+  const iniciante = ehPacoteDoIniciante(produtoBruto);
+  if (!diamantes && !mensal && !passe && !iniciante) throw new ErroDeCompra('Esse produto não existe.');
+  const produto = iniciante
+    ? { id: PACOTE_DO_INICIANTE.id, nome: PACOTE_DO_INICIANTE.nome, precoCentavos: PACOTE_DO_INICIANTE.precoCentavos }
+    : diamantes
     ? { id: diamantes.id, nome: `Pacote ${diamantes.nome} (Diamantes)`, precoCentavos: diamantes.precoCentavos }
     : mensal
       ? { id: mensal.id, nome: `Pacote ${mensal.nome}`, precoCentavos: mensal.precoCentavos }
@@ -286,6 +321,7 @@ export async function criarPedido(uid: string, produtoBruto: unknown, agora = ne
       return eu.dividaDeDiamantes;
     }
     if (mensal) conferirDisponibilidade(eu, mensal, agora);
+    if (iniciante && eu.iniciantePago) throw new ErroDeCompra('O Pacote do Iniciante só pode ser comprado uma vez por conta.');
     const pedido: PedidoDeCompra = { id: `ped_${randomUUID()}`, produto: produto.id, nome: produto.nome, valorCentavos: produto.precoCentavos, estado: 'criado', provedor: 'teste', criadoEm: agora.toISOString() };
     // no máximo 5 pedidos abertos: os mais antigos viram "cancelado"
     const abertos = (eu.pedidosDeCompra ?? []).filter((p) => p.estado === 'criado');
@@ -315,14 +351,24 @@ export async function confirmarPagamento(uid: string, pedidoId: unknown, referen
     const dePacoteDiamantes = pacoteDeDiamantes(pedido.produto);
     const mensal = pacoteMensal(pedido.produto);
     const dePasse = passeDoProduto(pedido.produto);
-    if (!dePacoteDiamantes && !mensal && !dePasse) throw new ErroDeCompra('O produto desse pedido não existe mais.');
+    const doIniciante = ehPacoteDoIniciante(pedido.produto);
+    if (!dePacoteDiamantes && !mensal && !dePasse && !doIniciante) throw new ErroDeCompra('O produto desse pedido não existe mais.');
     let diamantes = 0;
     let entrega: EntregaDoPacote | undefined;
     let extra: Partial<CharacterDocument> = {};
     let infoDoPasse: PedidoDeCompra['passe'];
     let linhasDoPasse: string[] = [];
     let correioDoPasse = eu.correio;
-    if (dePasse) {
+    if (doIniciante) {
+      if (eu.iniciantePago) throw new ErroDeCompra('O Pacote do Iniciante só pode ser comprado uma vez por conta.');
+      diamantes = PACOTE_DO_INICIANTE.diamantes;
+      eu = alterarSaldoEm(ctx, eu, 'ouro', PACOTE_DO_INICIANTE.ouro, `Compra: ${pedido.nome}`).character;
+      eu = alterarSaldoEm(ctx, eu, 'diamantes', diamantes, `Compra: ${pedido.nome}`).character;
+      eu = quitarDivida(ctx, eu);
+      const bau: BauDeEscolha = { id: `bau-${pedido.id}`, tipo: 'emblemaEpico', origem: PACOTE_DO_INICIANTE.nome, em: agora.toISOString() };
+      entrega = { ouro: PACOTE_DO_INICIANTE.ouro, bauId: bau.id };
+      extra = { iniciantePago: true, bausDeEscolha: [...(eu.bausDeEscolha ?? []), bau] };
+    } else if (dePasse) {
       const hoje = diaDeBrasilia(agora);
       const janela = janelaDaCompra(eu.passes?.[dePasse.id], hoje);
       infoDoPasse = { id: dePasse.id, desde: janela.desde, ate: janela.ate };
@@ -382,6 +428,12 @@ export async function estornarPedido(uid: string, pedidoId: unknown, agora = new
       const r = retirarPacote(ctx, eu, pedido.entrega, `Estorno: ${pedido.nome}`);
       eu = r.doc;
       naoRecuperado = linhasDaEntrega(r.faltou);
+      const bauId = pedido.entrega.bauId;
+      if (bauId) {
+        // o baú do Pacote do Iniciante: se ainda está fechado, sai; se já foi aberto, o emblema escolhido fica com o jogador
+        if ((eu.bausDeEscolha ?? []).some((b) => b.id === bauId)) eu = { ...eu, bausDeEscolha: (eu.bausDeEscolha ?? []).filter((b) => b.id !== bauId) };
+        else naoRecuperado.push('o emblema épico do baú (já aberto)');
+      }
     }
     let passesDepois = eu.passes;
     let dividaDoPasse = 0;
@@ -402,7 +454,7 @@ export async function estornarPedido(uid: string, pedidoId: unknown, agora = new
       ctx,
       eu,
       pedidos.map((p) => (p.id === pedido.id ? estornado : p)),
-      { gastoReal: Math.max(0, (eu.gastoReal ?? 0) - pedido.valorCentavos) || undefined, dividaDeDiamantes: (eu.dividaDeDiamantes ?? 0) + dividaGerada + dividaDoPasse || undefined, correio, selosDeBusca: eu.selosDeBusca, avancosDeExpedicao: eu.avancosDeExpedicao, moedasVip: eu.moedasVip || undefined, passes: passesDepois }
+      { gastoReal: Math.max(0, (eu.gastoReal ?? 0) - pedido.valorCentavos) || undefined, dividaDeDiamantes: (eu.dividaDeDiamantes ?? 0) + dividaGerada + dividaDoPasse || undefined, correio, selosDeBusca: eu.selosDeBusca, avancosDeExpedicao: eu.avancosDeExpedicao, moedasVip: eu.moedasVip || undefined, passes: passesDepois, bausDeEscolha: eu.bausDeEscolha?.length ? eu.bausDeEscolha : undefined }
     );
     return { pedido: estornado, jaEstavaEstornado: false, dividaGerada: dividaGerada + dividaDoPasse, naoRecuperado };
   });
