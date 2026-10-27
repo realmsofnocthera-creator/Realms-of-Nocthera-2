@@ -42,6 +42,7 @@ import { sortearRaridadePorPesos } from '@/rules/almas';
 import type { EmblemaRaridade } from '@/rules/emblemas';
 import { chaveDoNome, repositorio, type ContextoTransacao } from '@/server/persistencia';
 import { exigirSistemaLigado } from '@/server/sistemasLeitura';
+import { tentativaExtraDoVip } from '@/rules/vip';
 
 /**
  * Party e Teste de Equipe (7.4). A party é aberta a qualquer jogador de nível 25 ou mais (não precisa de guilda): o
@@ -138,6 +139,7 @@ export async function estadoDoTeste(uid: string): Promise<EstadoDoTeste> {
   const char = await repositorio.lerPersonagem(uid);
   if (!char) throw new Error('Personagem não encontrado.');
   const chaves = chavesDoDia(char.chavesDaProvacao, diaDeBrasilia(agora()));
+  const extra = tentativaExtraDoVip(char.gastoReal, 'testeEquipe');
   const propria = char.partyId ? await repositorio.lerParty(char.partyId) : null;
   const minha = propria && partyVale(propria, agora()) && propria.membros.some((m) => m.uid === uid) ? propria : null;
   const ids = char.convitesDeParty ?? [];
@@ -152,8 +154,8 @@ export async function estadoDoTeste(uid: string): Promise<EstadoDoTeste> {
     minhaParty: minha ? { ...minha, souLider: minha.liderUid === uid } : null,
     convites,
     chaves: {
-      gratisRestantes: chavesGratisRestantes(chaves),
-      gratisPorDia: CHAVES_GRATIS_POR_DIA,
+      gratisRestantes: chavesGratisRestantes(chaves, extra),
+      gratisPorDia: CHAVES_GRATIS_POR_DIA + extra,
       guardadas: chaves.guardadas,
       comprasRestantes: comprasRestantesHoje(chaves),
       preco: PRECO_DA_CHAVE_EM_DIAMANTES,
@@ -299,7 +301,7 @@ export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificu
       if (!dificuldadeLiberada(categoria, dificuldade, d.testeEquipeConcluidas)) {
         throw new ErroDeParty(`${d.nome} ainda não concluiu o ${dificuldadeDoTeste(dificuldade - 1).nome} do ${NOME_DO_TESTE[categoria]}.`);
       }
-      if (pedeSelo ? (d.selosDoAbismo ?? 0) < 1 : chavesDisponiveis(chavesDoDia(d.chavesDaProvacao, hoje)) < 1) {
+      if (pedeSelo ? (d.selosDoAbismo ?? 0) < 1 : chavesDisponiveis(chavesDoDia(d.chavesDaProvacao, hoje), tentativaExtraDoVip(d.gastoReal, 'testeEquipe')) < 1) {
         throw new ErroDeParty(`${d.nome} não tem ${pedeSelo ? 'selo do abismo' : 'chave da provação'}.`, 409);
       }
     }
@@ -311,7 +313,7 @@ export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificu
       let doc = d;
       // A entrada: 1 chave (as grátis do dia primeiro) ou 1 selo, ganhe ou perca
       const selosDepoisDaEntrada = (doc.selosDoAbismo ?? 0) - (pedeSelo ? 1 : 0);
-      const custo = pedeSelo ? { selosDoAbismo: selosDepoisDaEntrada || undefined } : { chavesDaProvacao: gastarChave(chavesDoDia(doc.chavesDaProvacao, hoje))! };
+      const custo = pedeSelo ? { selosDoAbismo: selosDepoisDaEntrada || undefined } : { chavesDaProvacao: gastarChave(chavesDoDia(doc.chavesDaProvacao, hoje), tentativaExtraDoVip(doc.gastoReal, 'testeEquipe'))! };
       if (!venceu) {
         salvarPersonagem(ctx, doc, custo);
         continue;

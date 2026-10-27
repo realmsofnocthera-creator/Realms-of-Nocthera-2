@@ -5,6 +5,7 @@ import {
   GUERREIRO,
   NIVEL_GUERREIRO,
 } from '@/game/guerreiro';
+import { tentativaExtraDoVip } from '@/rules/vip';
 import { CHEFES_GUERREIRO } from '@/rules/guerreiroChefes';
 import { EMBLEMA_RARIDADES, EMBLEMA_RARIDADE_MAP, EmblemaRaridade } from '@/rules/emblemas';
 import { TIPO_EMBLEMA_MAP } from '@/rules/emblemasCatalogo';
@@ -12,7 +13,7 @@ import type { EmblemaItem } from '@/game/emblemas';
 
 /** Lógica da tela da Provação do Guerreiro (dificuldades, estado de cada chefe e emblemas), sem React. */
 
-type Personagem = Pick<CharacterDocument, 'nivel' | 'guerreiroTentativas' | 'guerreiroVencidas'>;
+type Personagem = Pick<CharacterDocument, 'nivel' | 'guerreiroTentativas' | 'guerreiroExtras' | 'guerreiroVencidas' | 'gastoReal'>;
 
 export type EstadoChefeGuerreiro = 'disponivel' | 'bloqueado' | 'tentativaUsada';
 
@@ -39,7 +40,7 @@ export interface DificuldadeGuerreiroTela {
 export function dificuldadesDoGuerreiro(c: Personagem, agora: Date = new Date()): DificuldadeGuerreiroTela[] {
   return CHEFES_GUERREIRO.map((chefe) => {
     const d = chefe.dificuldade;
-    const entrada = conferirEntradaGuerreiro(d, c.nivel, c.guerreiroTentativas, c.guerreiroVencidas, agora);
+    const entrada = conferirEntradaGuerreiro(d, c.nivel, c.guerreiroTentativas, c.guerreiroVencidas, agora, { permitida: tentativaExtraDoVip(c.gastoReal, 'guerreiro') > 0, usadas: c.guerreiroExtras });
     let estado: EstadoChefeGuerreiro = 'disponivel';
     let aviso: string | null = null;
     if (!entrada.ok) {

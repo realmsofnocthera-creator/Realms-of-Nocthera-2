@@ -38,6 +38,8 @@ export interface EstadoArmaduras {
   inventario: Readonly<Record<string, number>>;
   ouro: number;
   armaduras: readonly ArmaduraPersonagem[];
+  /** Espaços a mais na mochila (VIP). */
+  espacosExtras?: number;
 }
 
 /** Limite de peças guardadas por personagem (o documento do Firestore tem tamanho máximo). */
@@ -89,7 +91,7 @@ export function planejarFabricacaoArmadura(
   const peca = typeof pecaId === 'string' ? PECAS_ARMADURA_MAP[pecaId] : undefined;
   if (!peca) return { ok: false, motivo: 'pecaInvalida' };
   if (pecaDesativada(peca.id)) return { ok: false, motivo: 'pecaDesativada' };
-  if (estado.armaduras.length >= MAX_ARMADURAS_POR_PERSONAGEM) return { ok: false, motivo: 'limiteDeArmaduras' };
+  if (estado.armaduras.length >= MAX_ARMADURAS_POR_PERSONAGEM + (estado.espacosExtras ?? 0)) return { ok: false, motivo: 'limiteDeArmaduras' };
 
   const custo = custoDaReceita(peca.receita);
   const inventario = pagarCusto(estado.inventario, custo);

@@ -63,9 +63,31 @@ export function dificuldadeLiberadaGuerreiro(dificuldade: number, vencidas: read
   return dificuldade === 1 || (vencidas ?? []).includes(dificuldade - 1);
 }
 
-/** Tentativas do dia: cada chefe tem 1 por dia (o dia vale em Brasília). */
-export function tentativaDisponivel(tentativas: Readonly<Record<string, string>> | undefined, dificuldade: number, agora: Date): boolean {
-  return tentativas?.[String(dificuldade)] !== diaDeBrasilia(agora);
+/** A tentativa extra do dia (VIP): se o jogador tem direito a ela e em que dificuldades já a usou hoje. */
+export interface TentativaExtraDoGuerreiro {
+  permitida: boolean;
+  usadas?: Readonly<Record<string, string>>;
+}
+
+/** Tentativas do dia: cada chefe tem 1 por dia, mais 1 extra com o VIP (o dia vale em Brasília). */
+export function tentativaDisponivel(tentativas: Readonly<Record<string, string>> | undefined, dificuldade: number, agora: Date, extra?: TentativaExtraDoGuerreiro): boolean {
+  const hoje = diaDeBrasilia(agora);
+  const chave = String(dificuldade);
+  if (tentativas?.[chave] !== hoje) return true;
+  return !!extra?.permitida && extra.usadas?.[chave] !== hoje;
+}
+
+/** Marca a tentativa de hoje: a normal primeiro; se ela já foi usada, a extra. */
+export function gastarTentativaDoGuerreiro(
+  tentativas: Readonly<Record<string, string>> | undefined,
+  extrasUsadas: Readonly<Record<string, string>> | undefined,
+  dificuldade: number,
+  agora: Date
+): { guerreiroTentativas: Record<string, string>; guerreiroExtras?: Record<string, string> } {
+  const hoje = diaDeBrasilia(agora);
+  const chave = String(dificuldade);
+  if (tentativas?.[chave] !== hoje) return { guerreiroTentativas: { ...(tentativas ?? {}), [chave]: hoje }, ...(extrasUsadas ? { guerreiroExtras: { ...extrasUsadas } } : {}) };
+  return { guerreiroTentativas: { ...(tentativas ?? {}) }, guerreiroExtras: { ...(extrasUsadas ?? {}), [chave]: hoje } };
 }
 
 export function conferirEntradaGuerreiro(
@@ -73,12 +95,13 @@ export function conferirEntradaGuerreiro(
   nivel: number,
   tentativas: Readonly<Record<string, string>> | undefined,
   vencidas: readonly number[] | undefined,
-  agora: Date
+  agora: Date,
+  extra?: TentativaExtraDoGuerreiro
 ): { ok: true; dificuldade: number; chefe: ChefeGuerreiro } | { ok: false; motivo: MotivoBloqueioGuerreiro } {
   if (!ehDificuldadeGuerreiro(dificuldade)) return { ok: false, motivo: 'dificuldadeInvalida' };
   if (nivel < NIVEL_GUERREIRO) return { ok: false, motivo: 'nivelInsuficiente' };
   if (!dificuldadeLiberadaGuerreiro(dificuldade, vencidas)) return { ok: false, motivo: 'dificuldadeBloqueada' };
-  if (!tentativaDisponivel(tentativas, dificuldade, agora)) return { ok: false, motivo: 'semTentativa' };
+  if (!tentativaDisponivel(tentativas, dificuldade, agora, extra)) return { ok: false, motivo: 'semTentativa' };
   return { ok: true, dificuldade, chefe: CHEFE_GUERREIRO_POR_DIFICULDADE[dificuldade] };
 }
 

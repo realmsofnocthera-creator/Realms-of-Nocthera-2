@@ -6,7 +6,7 @@ import { ArrowLeft, Check, Crown, Lock, Skull } from 'lucide-react';
 import type { CharacterDocument, RespostaBatalhaSangrenta } from '@/server/characterService';
 import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
 import { CHEFES_ESPECIAIS_MAP } from '@/rules/chefesEspeciais';
-import { dificuldadesDaBatalha, nomeDaSubclasse, REGRAS_RESUMO, tentativasDeHoje } from '@/lib/batalhaSangrentaTela';
+import { dificuldadesDaBatalha, nomeDaSubclasse, REGRAS_RESUMO, tentativasDeHoje, tentativasPorDia } from '@/lib/batalhaSangrentaTela';
 import { BATALHA_SANGRENTA } from '@/game/batalhaSangrenta';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { CombateCacada } from '@/components/cacada/CombateCacada';
@@ -96,6 +96,7 @@ export function BatalhaSangrentaScreen({ character, onCharacterChange, tokenFres
   }
 
   const restantes = tentativasDeHoje(character);
+  const porDia = tentativasPorDia(character);
 
   return (
     <main className="min-h-dvh w-full flex flex-col items-center px-2.5 py-3 select-none" style={{ backgroundColor: colors.background.primary, backgroundImage: 'radial-gradient(ellipse at top, rgba(40,16,16,0.92) 0%, rgba(13,13,13,1) 75%)', color: colors.text.primary }}>
@@ -122,8 +123,8 @@ export function BatalhaSangrentaScreen({ character, onCharacterChange, tokenFres
         {etapa.tipo === 'dificuldades' && (
           <section aria-label="Escolha a dificuldade" className="flex flex-col gap-2.5">
             <div className="rounded-sm border px-3 py-2 text-center" style={{ backgroundColor: colors.background.secondary, borderColor: `${OURO}88` }}>
-              <div className="font-cinzel font-black text-lg" style={{ color: restantes > 0 ? '#F3C769' : '#FF8A80' }} aria-label={`Tentativas restantes hoje: ${restantes} de ${BATALHA_SANGRENTA.tentativasPorDia}`}>
-                Tentativas hoje: {restantes}/{BATALHA_SANGRENTA.tentativasPorDia}
+              <div className="font-cinzel font-black text-lg" style={{ color: restantes > 0 ? '#F3C769' : '#FF8A80' }} aria-label={`Tentativas restantes hoje: ${restantes} de ${porDia}`}>
+                Tentativas hoje: {restantes}/{porDia}
               </div>
               <p className="text-[11px] leading-snug mt-1" style={{ color: colors.text.secondary }}>{REGRAS_RESUMO}</p>
             </div>
@@ -179,7 +180,7 @@ export function BatalhaSangrentaScreen({ character, onCharacterChange, tokenFres
                   <span style={{ color: '#F3C769' }}>Ouro +{resposta.ouro}</span>
                   {resposta.diamantes > 0 && <span style={{ color: '#5AA7F0' }}>Diamantes +{resposta.diamantes}</span>}
                 </div>
-                <div className="text-[11px] mt-1" style={{ color: colors.text.secondary }}>Tentativas restantes hoje: {resposta.tentativasRestantes}/{BATALHA_SANGRENTA.tentativasPorDia}</div>
+                <div className="text-[11px] mt-1" style={{ color: colors.text.secondary }}>Tentativas restantes hoje: {resposta.tentativasRestantes}/{porDia}</div>
               </div>
               <div className="rounded-sm border-2 p-2.5 flex flex-col gap-1.5" style={{ backgroundColor: colors.background.secondary, borderColor: OURO }}>
                 <div className="font-cinzel font-bold text-sm" style={{ color: '#E6C775' }}>Lutas</div>

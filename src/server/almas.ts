@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { desequiparCarta, despertarCarta, destruirCartas, equiparCarta, guardarCartas, MENSAGEM_BLOQUEIO_ALMA, refinarCarta, type MotivoBloqueioAlma } from '@/game/almas';
 import { criarCarta, NIVEL_DA_ALMA, TIPO_DE_CARTA_MAP, tiposDaRaridadeDeCarta, type CartaItem, type CategoriaDeCarta } from '@/rules/almas';
+import { espacosExtrasDoVip } from '@/rules/vip';
 import type { EmblemaRaridade } from '@/rules/emblemas';
 import { carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { gerarSementeCombate } from '@/server/combateSemente';
@@ -49,7 +50,7 @@ export interface EntregaDeCartas {
 export function entregarCartas(char: CharacterDocument, tipoIds: readonly string[], semente: number): EntregaDeCartas {
   const sorteio = sorteadorDaSemente(semente);
   const novas = tipoIds.map((t) => criarCarta(randomUUID(), t, sorteio));
-  const guardado = guardarCartas(char.cartasItens ?? [], novas);
+  const guardado = guardarCartas(char.cartasItens ?? [], novas, espacosExtrasDoVip(char.gastoReal));
   const descobertas = [...(char.cartasDescobertas ?? [])];
   const criadas = novas.map((c) => {
     const nova = !descobertas.includes(c.tipo);

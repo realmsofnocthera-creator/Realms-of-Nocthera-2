@@ -1,3 +1,4 @@
+import { ESPACOS_EXTRAS_DA_MOCHILA } from './vip';
 import type { AttributeName } from './attributes';
 import type { EmblemaRaridade } from './emblemas';
 
@@ -207,7 +208,7 @@ export function lerCartasPersonagem(itensBrutos: unknown, equipadasBrutas: unkno
   const itens: CartaItem[] = [];
   const vistos = new Set<string>();
   if (Array.isArray(itensBrutos)) {
-    for (const bruto of itensBrutos.slice(0, CARTAS_MAXIMAS)) {
+    for (const bruto of itensBrutos.slice(0, CARTAS_MAXIMAS + ESPACOS_EXTRAS_DA_MOCHILA)) {
       if (!bruto || typeof bruto !== 'object') continue;
       const { id, tipo, efeitos, despertar } = bruto as Record<string, unknown>;
       if (typeof id !== 'string' || !id || vistos.has(id) || typeof tipo !== 'string') continue;
