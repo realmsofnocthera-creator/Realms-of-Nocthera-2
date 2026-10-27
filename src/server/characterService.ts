@@ -310,6 +310,10 @@ export interface CharacterDocument {
   /** Passes (8.5): o período de cada Passe comprado e a Moeda VIP dos Passes. */
   passes?: PassesDoJogador;
   moedasVip?: number;
+  /** Pacote do Iniciante já comprado (1 por conta; o estorno não devolve o direito). */
+  iniciantePago?: boolean;
+  /** Loja de Moedas VIP: quantas unidades de cada item foram compradas no mês. */
+  comprasMoedasVip?: ComprasNaLoja;
   primeiraCompraFeita?: boolean;
   dividaDeDiamantes?: number;
   vipOuroDiario?: string;

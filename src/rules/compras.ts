@@ -33,6 +33,10 @@ export const PACOTES_DE_DIAMANTES: readonly PacoteDeDiamantes[] = [
   { id: 'diamantes-6', nome: 'Supremo', precoCentavos: 9_999, base: 2_500, bonus: 500 },
 ];
 
+/** Pacote do Iniciante (Yuri, 27/10/2026): 1 por conta, R$ 9,99; o emblema épico é um baú de escolha. */
+export const PACOTE_DO_INICIANTE = { id: 'iniciante', nome: 'Pacote do Iniciante', precoCentavos: 999, ouro: 4_000, diamantes: 200 } as const;
+export const ehPacoteDoIniciante = (id: unknown) => id === PACOTE_DO_INICIANTE.id;
+
 export const pacoteDeDiamantes = (id: unknown) => PACOTES_DE_DIAMANTES.find((p) => p.id === id);
 
 /** A primeira compra de Diamantes da conta vale o dobro (base e bônus). */
@@ -114,6 +118,8 @@ export function pedidosDoDocumento(bruto: unknown): PedidoDeCompra[] | undefined
 
 /** O que um pacote mensal entrega (os "Pergaminhos" do Yuri são os Selos de busca). */
 export interface EntregaDoPacote {
+  /** Id do baú de escolha entregue (Pacote do Iniciante). */
+  bauId?: string;
   ouro?: number;
   diamantes?: number;
   moedasVip?: number;
@@ -189,6 +195,7 @@ export function comprasMensaisDoDocumento(bruto: unknown): ComprasMensais | unde
 export function entregaDoDocumento(bruto: unknown): EntregaDoPacote | undefined {
   const o = bruto as Record<string, unknown> | null;
   if (!o || typeof o !== 'object') return undefined;
+  const bauId = texto(o.bauId, 64);
   const ouro = inteiroPositivo(o.ouro);
   const diamantes = inteiroPositivo(o.diamantes);
   const moedasVip = inteiroPositivo(o.moedasVip);
@@ -196,7 +203,7 @@ export function entregaDoDocumento(bruto: unknown): EntregaDoPacote | undefined 
   const selos: SelosDoJogador = {};
   const brutoSelos = o.selos as Record<string, unknown> | undefined;
   if (brutoSelos && typeof brutoSelos === 'object') for (const s of SELOS_DE_BUSCA) if (inteiroPositivo(brutoSelos[s])) selos[s] = inteiroPositivo(brutoSelos[s]);
-  const saida: EntregaDoPacote = { ...(ouro ? { ouro } : {}), ...(diamantes ? { diamantes } : {}), ...(moedasVip ? { moedasVip } : {}), ...(avancosDeExpedicao ? { avancosDeExpedicao } : {}), ...(Object.keys(selos).length ? { selos } : {}) };
+  const saida: EntregaDoPacote = { ...(bauId ? { bauId } : {}), ...(ouro ? { ouro } : {}), ...(diamantes ? { diamantes } : {}), ...(moedasVip ? { moedasVip } : {}), ...(avancosDeExpedicao ? { avancosDeExpedicao } : {}), ...(Object.keys(selos).length ? { selos } : {}) };
   return Object.keys(saida).length ? saida : undefined;
 }
 

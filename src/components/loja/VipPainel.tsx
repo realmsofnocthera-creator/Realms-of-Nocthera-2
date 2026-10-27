@@ -37,6 +37,8 @@ export function VipPainel({ tokenFresco }: { tokenFresco: Token }) {
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
   const [ocupado, setOcupado] = useState(false);
   /** O pop-up de depois da compra: o que acabou de entrar na conta. */
+  const [quantidades, setQuantidades] = useState<Record<string, number>>({});
+  const [escolhas, setEscolhas] = useState<Record<string, string>>({});
   const [recebido, setRecebido] = useState<{ nome: string; linhas: string[] } | null>(null);
 
   const carregar = useCallback(async () => {
@@ -49,6 +51,16 @@ export function VipPainel({ tokenFresco }: { tokenFresco: Token }) {
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  /** Compra na Loja de Moedas VIP ou abre um baú: o resultado vira um aviso na tela. */
+  async function agir(corpo: Record<string, unknown>) {
+    setOcupado(true);
+    setAviso(null);
+    const r = await chamar(tokenFresco, corpo);
+    setOcupado(false);
+    setAviso({ texto: String(r.dados.mensagem ?? r.dados.error ?? (r.ok ? 'Feito.' : 'Não foi possível agora.')), erro: !r.ok });
+    await carregar();
+  }
 
   async function comprar(produto: string) {
     setOcupado(true);
@@ -164,6 +176,77 @@ export function VipPainel({ tokenFresco }: { tokenFresco: Token }) {
                 </button>
               </li>
             ))}
+          </ul>
+        </section>
+      )}
+
+      {estado.aberta && !estado.iniciante.comprado && (
+        <section className="rounded-sm border-2 px-3 py-2.5 flex flex-col gap-1.5" style={{ borderColor: OURO, backgroundColor: colors.background.secondary }}>
+          <h2 className="text-sm font-cinzel font-bold" style={{ color: '#F5E3B3' }}>Pacote do Iniciante</h2>
+          <p className="text-[11px]" style={{ color: colors.text.secondary }}>Uma vez por conta.</p>
+          {estado.iniciante.conteudo.map((l) => (
+            <span key={l} className="text-[12px]" style={{ color: colors.text.primary }}>✓ {l}</span>
+          ))}
+          <button type="button" onClick={() => void comprar('iniciante')} disabled={ocupado || !estado.podeComprar || estado.dividaDeDiamantes > 0} className="rounded-sm border px-2 py-1.5 text-xs font-bold disabled:opacity-50" style={{ borderColor: OURO, backgroundColor: '#3A2F18', color: '#F5E3B3' }}>
+            Comprar · {formatarReais(estado.iniciante.precoCentavos)}
+          </button>
+        </section>
+      )}
+
+      {estado.baus.length > 0 && (
+        <section className="flex flex-col gap-1.5">
+          <h2 className="text-sm font-cinzel font-bold" style={{ color: '#F5E3B3' }}>Seus baús de escolha</h2>
+          <ul className="flex flex-col gap-1.5">
+            {estado.baus.map((b) => (
+              <li key={b.id} className="rounded-sm border px-2.5 py-2 flex flex-col gap-1.5" style={{ borderColor: OURO, backgroundColor: colors.background.secondary }}>
+                <span className="text-xs font-semibold" style={{ color: '#F5E3B3' }}>{b.nome} <span className="font-normal" style={{ color: colors.text.secondary }}>· {b.origem}</span></span>
+                <select value={escolhas[b.id] ?? ''} onChange={(e) => setEscolhas({ ...escolhas, [b.id]: e.target.value })} aria-label={`Escolha do ${b.nome}`} className="rounded-sm border px-2 py-1 text-xs" style={{ backgroundColor: '#221C16', borderColor: '#4A3F2A', color: colors.text.primary }}>
+                  <option value="">Escolha…</option>
+                  {b.opcoes.map((o) => (
+                    <option key={o.id} value={o.id}>{o.nome}</option>
+                  ))}
+                </select>
+                <button type="button" onClick={() => void agir({ acao: 'abrirBau', bau: b.id, escolha: escolhas[b.id] })} disabled={ocupado || !escolhas[b.id]} className="rounded-sm border px-2 py-1.5 text-xs font-bold disabled:opacity-50" style={{ borderColor: OURO, backgroundColor: '#3A2F18', color: '#F5E3B3' }}>
+                  Abrir
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {estado.aberta && (
+        <section className="flex flex-col gap-1.5">
+          <h2 className="text-sm font-cinzel font-bold" style={{ color: '#F5E3B3' }}>Loja de Moedas VIP</h2>
+          <p className="text-[11px]" style={{ color: colors.text.secondary }}>
+            Você tem {estado.moedasVip.toLocaleString('pt-BR')} Moedas VIP (vêm dos Passes Premium e Deluxe, todo dia). O limite de cada item zera no dia 1.
+          </p>
+          <ul className="flex flex-col gap-1.5">
+            {estado.lojaMoedas.map((i) => {
+              const max = Math.max(1, Math.min(i.restantes, Math.floor(estado.moedasVip / i.preco)));
+              const q = Math.min(Math.max(1, quantidades[i.chave] ?? 1), max);
+              const esgotado = i.restantes === 0;
+              const semMoedas = estado.moedasVip < i.preco * q;
+              return (
+                <li key={i.chave} className="rounded-sm border px-2.5 py-2 flex flex-col gap-1" style={{ borderColor: '#4A3F2A', backgroundColor: colors.background.secondary, opacity: esgotado ? 0.6 : 1 }}>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-xs font-semibold" style={{ color: '#F5E3B3' }}>{i.nome}</span>
+                    <span className="text-[11px] font-bold shrink-0" style={{ color: OURO }}>{i.preco} Moedas</span>
+                  </div>
+                  <span className="text-[11px]" style={{ color: colors.text.secondary }}>{esgotado ? 'limite do mês atingido' : `pode comprar mais ${i.restantes} neste mês`}</span>
+                  {!esgotado && (
+                    <div className="flex items-center justify-end gap-1.5">
+                      {i.chave.startsWith('material:') && i.restantes > 1 && (
+                        <input type="number" inputMode="numeric" min={1} max={max} value={q} onChange={(e) => setQuantidades({ ...quantidades, [i.chave]: Number(e.target.value) || 1 })} aria-label={`Quantidade de ${i.nome}`} className="w-14 rounded-sm border px-1 py-1 text-xs text-center" style={{ backgroundColor: '#221C16', borderColor: '#4A3F2A', color: colors.text.primary }} />
+                      )}
+                      <button type="button" onClick={() => void agir({ acao: 'comprarMoedas', chave: i.chave, quantidade: q })} disabled={ocupado || semMoedas} className="rounded-sm border px-3 py-1.5 text-xs font-bold disabled:opacity-50 shrink-0" style={{ borderColor: OURO, backgroundColor: '#3A2F18', color: '#F5E3B3' }}>
+                        {semMoedas ? 'Moedas insuficientes' : `Comprar${q > 1 ? ` ${q}` : ''} · ${(i.preco * q).toLocaleString('pt-BR')} Moedas`}
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

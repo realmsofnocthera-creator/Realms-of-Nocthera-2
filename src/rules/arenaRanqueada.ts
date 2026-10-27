@@ -67,9 +67,15 @@ export const presenteDoRanque = (r: RanqueDaArena): PresenteDoCorreio => ({
 });
 
 /** Um baú de escolha guardado no personagem até o jogador escolher: o de carta lendária do Eterno da ranqueada e o mítico (carta ou emblema) do campeão. */
+/** `cartaLendaria` (Eterno da ranqueada), `mitico` (campeão) e os das compras: `emblemaEpico` (Pacote do Iniciante), `emblemaLendario` e `cartaLendariaVip` (Loja de Moedas VIP). */
+export const TIPOS_DE_BAU = ['cartaLendaria', 'mitico', 'emblemaEpico', 'emblemaLendario', 'cartaLendariaVip'] as const;
+export type BauDeEscolhaTipo = (typeof TIPOS_DE_BAU)[number];
+/** Os baús que vêm de compras (abrem na aba VIP da Loja, não na Arena). */
+export const TIPOS_DE_BAU_DE_COMPRA: readonly BauDeEscolhaTipo[] = ['emblemaEpico', 'emblemaLendario', 'cartaLendariaVip'];
+
 export interface BauDeEscolha {
   id: string;
-  tipo: 'cartaLendaria' | 'mitico';
+  tipo: BauDeEscolhaTipo;
   origem: string;
   em: string;
 }
@@ -77,7 +83,7 @@ export interface BauDeEscolha {
 export function bausDeEscolhaDoDocumento(bruto: unknown): BauDeEscolha[] | undefined {
   if (!Array.isArray(bruto)) return undefined;
   const lista = bruto
-    .filter((b): b is BauDeEscolha => !!b && typeof (b as BauDeEscolha).id === 'string' && ['cartaLendaria', 'mitico'].includes((b as BauDeEscolha).tipo))
+    .filter((b): b is BauDeEscolha => !!b && typeof (b as BauDeEscolha).id === 'string' && (TIPOS_DE_BAU as readonly string[]).includes((b as BauDeEscolha).tipo))
     .map((b) => ({ id: b.id, tipo: b.tipo, origem: String(b.origem ?? ''), em: String(b.em ?? '') }))
     .slice(0, 20);
   return lista.length ? lista : undefined;
