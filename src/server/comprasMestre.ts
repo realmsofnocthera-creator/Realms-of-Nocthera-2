@@ -44,7 +44,7 @@ export async function estornarComoMestre(sessao: SessaoMestre, pedido: { uid?: u
   try {
     const r = await comRegistro(sessao, { acao: 'compra.estornar', alvo: uid, antes: { pedido: id, estado: antes.estado, valorCentavos: antes.valorCentavos, diamantes: antes.diamantes ?? 0 }, depois: { estado: 'estornado' }, motivo, ip }, () => estornarPedido(uid, id));
     if (r.jaEstavaEstornado) return { mensagem: 'Esse pedido já estava estornado.' };
-    return { mensagem: `Pedido estornado.${r.dividaGerada ? ` O jogador já tinha gasto ${r.dividaGerada.toLocaleString('pt-BR')} Diamantes: ficam como dívida e bloqueiam novas compras até serem cobertos.` : ''}` };
+    return { mensagem: `Pedido estornado.${r.dividaGerada ? ` O jogador já tinha gasto ${r.dividaGerada.toLocaleString('pt-BR')} Diamantes: ficam como dívida e bloqueiam novas compras até serem cobertos.` : ''}${r.naoRecuperado.length ? ` Não deu para retirar o que já foi gasto: ${r.naoRecuperado.join(', ')}.` : ''}` };
   } catch (error) {
     if (error instanceof ErroDeCompra) throw new ErroMestre(400, error.message);
     throw error;

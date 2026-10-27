@@ -36,6 +36,8 @@ export function VipPainel({ tokenFresco }: { tokenFresco: Token }) {
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  /** O pop-up de depois da compra: o que acabou de entrar na conta. */
+  const [recebido, setRecebido] = useState<{ nome: string; linhas: string[] } | null>(null);
 
   const carregar = useCallback(async () => {
     const r = await chamar(tokenFresco);
@@ -53,7 +55,8 @@ export function VipPainel({ tokenFresco }: { tokenFresco: Token }) {
     setAviso(null);
     const r = await chamar(tokenFresco, { produto });
     setOcupado(false);
-    setAviso({ texto: String(r.dados.mensagem ?? r.dados.error ?? (r.ok ? 'Compra feita.' : 'Não foi possível agora.')), erro: !r.ok });
+    setAviso(r.ok ? null : { texto: String(r.dados.error ?? 'Não foi possível agora.'), erro: true });
+    if (r.ok) setRecebido({ nome: String(r.dados.nome ?? 'Compra'), linhas: Array.isArray(r.dados.recebido) ? (r.dados.recebido as string[]) : [] });
     await carregar();
   }
 
@@ -62,6 +65,23 @@ export function VipPainel({ tokenFresco }: { tokenFresco: Token }) {
   const { vip } = estado;
   return (
     <div className="flex flex-col gap-3">
+      {recebido && (
+        <div role="dialog" aria-modal="true" aria-label="Compra confirmada" className="fixed inset-0 z-[60] flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <div className="w-full max-w-[340px] rounded-sm border-2 px-4 py-4 flex flex-col gap-2 text-center" style={{ borderColor: OURO, backgroundColor: colors.background.secondary }}>
+            <h2 className="text-lg font-cinzel font-extrabold" style={{ color: '#F5E3B3' }}>Compra confirmada!</h2>
+            <p className="text-xs" style={{ color: colors.text.secondary }}>{recebido.nome}</p>
+            <ul className="flex flex-col gap-0.5">
+              {recebido.linhas.map((l) => (
+                <li key={l} className="text-sm font-semibold" style={{ color: '#7BC47F' }}>+ {l}</li>
+              ))}
+            </ul>
+            <p className="text-[11px]" style={{ color: colors.text.secondary }}>Já está na sua conta. Um recibo foi para o Correio.</p>
+            <button type="button" autoFocus onClick={() => setRecebido(null)} className="rounded-sm border px-3 py-1.5 text-xs font-bold" style={{ borderColor: OURO, backgroundColor: '#3A2F18', color: '#F5E3B3' }}>
+              Ótimo!
+            </button>
+          </div>
+        </div>
+      )}
       {aviso && <p role={aviso.erro ? 'alert' : 'status'} className="text-sm font-semibold" style={{ color: aviso.erro ? VERMELHO : VERDE }}>{aviso.texto}</p>}
       <section className="rounded-sm border px-3 py-2.5 flex flex-col gap-1.5" style={{ borderColor: OURO, backgroundColor: colors.background.secondary }}>
         <h2 className="text-sm font-cinzel font-bold" style={{ color: '#F5E3B3' }}>VIP {vip.nivel} · {vip.nome}</h2>
@@ -113,6 +133,35 @@ export function VipPainel({ tokenFresco }: { tokenFresco: Token }) {
           </>
         )}
       </section>
+
+      {estado.aberta && (
+        <section className="flex flex-col gap-1.5">
+          <h2 className="text-sm font-cinzel font-bold" style={{ color: '#F5E3B3' }}>Pacotes do mês</h2>
+          <p className="text-[11px]" style={{ color: colors.text.secondary }}>Um de cada vez, em ordem: o próximo só aparece depois de comprar o anterior. Tudo volta ao primeiro no dia 1 de cada mês.</p>
+          {estado.mensais.map((cadeia) => (
+            <div key={cadeia.id} className="flex flex-col gap-1">
+              <h3 className="text-xs font-cinzel font-bold" style={{ color: OURO }}>{cadeia.nome}</h3>
+              <ul className="grid grid-cols-2 gap-1.5">
+                {cadeia.pacotes.map((p) => (
+                  <li key={p.id} className="rounded-sm border px-2.5 py-2 flex flex-col gap-1" style={{ borderColor: p.estado === 'disponivel' ? OURO : '#4A3F2A', backgroundColor: colors.background.secondary, opacity: p.estado === 'disponivel' ? 1 : 0.6 }}>
+                    <span className="text-xs font-semibold" style={{ color: '#F5E3B3' }}>{p.nome}</span>
+                    {p.conteudo.map((l) => (
+                      <span key={l} className="text-[11px]" style={{ color: colors.text.primary }}>{l}</span>
+                    ))}
+                    {p.estado === 'disponivel' ? (
+                      <button type="button" onClick={() => void comprar(p.id)} disabled={ocupado || !estado.podeComprar} className="rounded-sm border px-2 py-1.5 text-xs font-bold disabled:opacity-50" style={{ borderColor: OURO, backgroundColor: '#3A2F18', color: '#F5E3B3' }}>
+                        {formatarReais(p.precoCentavos)}
+                      </button>
+                    ) : (
+                      <span className="text-[11px] font-semibold" style={{ color: colors.text.secondary }}>{p.estado === 'comprado' ? `✓ Comprado (${formatarReais(p.precoCentavos)})` : `Depois do anterior · ${formatarReais(p.precoCentavos)}`}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
 
       <section className="flex flex-col gap-1.5">
         <h2 className="text-sm font-cinzel font-bold" style={{ color: '#F5E3B3' }}>Níveis VIP</h2>
