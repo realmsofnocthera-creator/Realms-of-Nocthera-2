@@ -11,8 +11,11 @@ function Camada({ camada, rolagem, parar }: { camada: CamadaDoTopo; rolagem: Mot
   if (!camada.src) return null;
   return (
     <motion.div aria-hidden="true" className="absolute inset-x-0 -top-10 -bottom-10" style={{ y }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={camada.src} alt="" draggable={false} className={`w-full h-full object-cover select-none ${camada.pixel === false ? '' : '[image-rendering:pixelated]'}`} style={{ objectPosition: camada.posicao ?? 'center' }} />
+      <picture className="block w-full h-full">
+        {camada.srcAvif && <source srcSet={camada.srcAvif} type="image/avif" />}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={camada.src} alt="" draggable={false} className={`w-full h-full object-cover select-none ${camada.pixel === false ? '' : '[image-rendering:pixelated]'}`} style={{ objectPosition: camada.posicao ?? 'center' }} />
+      </picture>
     </motion.div>
   );
 }

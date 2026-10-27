@@ -7,6 +7,8 @@ export interface CamadaDoTopo {
   id: string;
   /** Caminho em /public; null = ainda não existe. */
   src: string | null;
+  /** Mesma arte em AVIF (bem mais leve; navegadores antigos usam o `src`). */
+  srcAvif?: string;
   /** 0 = parada; 1 = anda junto com a rolagem. Camadas da frente andam mais. */
   velocidade: number;
   /** Posição da arte quando a tela corta (formato do object-position do CSS). */
@@ -16,7 +18,7 @@ export interface CamadaDoTopo {
 }
 
 export const CAMADAS_DO_TOPO: readonly CamadaDoTopo[] = [
-  { id: 'ceu', src: '/images/landing-topo.webp', velocidade: 0.08, posicao: '22% 70%', pixel: false },
+  { id: 'ceu', src: '/images/landing-topo.webp', srcAvif: '/images/landing-topo.avif', velocidade: 0.08, posicao: '22% 70%', pixel: false },
   { id: 'fundo', src: null, velocidade: 0.12 },
   { id: 'meio', src: null, velocidade: 0.2 },
   { id: 'frente', src: null, velocidade: 0.32 },
