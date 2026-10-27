@@ -3,6 +3,8 @@ import { atributosDosColecionaveis } from '@/game/colecionaveis';
 import type { ColecionaveisDoJogador, SelosDoJogador } from '@/rules/colecionaveis';
 import type { ComprasNaLoja } from '@/rules/loja';
 import type { ComprasMensais, PedidoDeCompra } from '@/rules/compras';
+import type { PassesDoJogador } from '@/rules/passes';
+import { bonusDosPasses, comDescontoDoPasse } from '@/rules/passes';
 import { bonusDoVip, espacosExtrasDoVip, tentativaExtraDoVip } from '@/rules/vip';
 import type { ExpedicaoEmAndamento } from '@/rules/expedicao';
 import type { CorreioGeralDoJogador, MensagemDoCorreio } from '@/rules/correio';
@@ -305,6 +307,9 @@ export interface CharacterDocument {
   pedidosDeCompra?: PedidoDeCompra[];
   /** Pacotes mensais (Coleção, Ouro e Expedição): quantos de cada cadeia já foram comprados no mês. */
   comprasMensais?: ComprasMensais;
+  /** Passes (8.5): o período de cada Passe comprado e a Moeda VIP dos Passes. */
+  passes?: PassesDoJogador;
+  moedasVip?: number;
   primeiraCompraFeita?: boolean;
   dividaDeDiamantes?: number;
   vipOuroDiario?: string;
@@ -1571,6 +1576,16 @@ export interface ResultadoPosCombate {
  * - Se venceu: adiciona XP, processa level up até 30 com pontos por nível, adiciona ouro e grava transação.
  * - Se perdeu: aplica regra de morte (perde até 50 de ouro sem negativar) e grava transação.
  */
+/** Os bônus em vigor de XP e ouro: o do nível VIP somado ao do Passe ativo (Premium e Deluxe não somam entre si). */
+export function bonusDeXpEOuro(c: Pick<CharacterDocument, 'gastoReal' | 'passes'>, agora = new Date()): { xp: number; ouro: number } {
+  const vip = bonusDoVip(c.gastoReal);
+  const passe = bonusDosPasses(c.passes, diaDeBrasilia(agora));
+  return { xp: vip.xp + passe.xp, ouro: vip.ouro + passe.ouro };
+}
+
+/** O desconto (%) dos Passes na Loja e na Forja. */
+export const descontoDosPasses = (c: Pick<CharacterDocument, 'passes'>, agora = new Date()) => bonusDosPasses(c.passes, diaDeBrasilia(agora)).desconto;
+
 function aplicarResultadoCombateEm(
   ctx: ContextoTransacao,
   current: CharacterDocument,
@@ -1597,12 +1612,12 @@ function aplicarResultadoCombateEm(
       if (xpExtra || ouroExtra) mensagens.push(`Pesquisa da guilda: +${xpExtra} XP e +${ouroExtra} de ouro.`);
     }
     // VIP (8.5): o bônus do nível atual, só nos ganhos de combate contra monstros (nunca no PvP)
-    const vip = bonusDoVip(current.gastoReal);
+    const vip = bonusDeXpEOuro(current);
     const xpVip = Math.floor((baseXp * vip.xp) / 100);
     const ouroVip = Math.floor((baseOuro * vip.ouro) / 100);
     resultado.xpGanho += xpVip;
     resultado.ouroGanho += ouroVip;
-    if (xpVip || ouroVip) mensagens.push(`VIP: +${xpVip} XP e +${ouroVip} de ouro.`);
+    if (xpVip || ouroVip) mensagens.push(`VIP e Passe: +${xpVip} XP e +${ouroVip} de ouro.`);
   }
 
   if (resultado.vencedor === 'personagem') {
@@ -2253,7 +2268,7 @@ export async function executarBatalhaSangrenta(
     // VIP (8.5): o bônus de ouro do nível, calculado sobre o mesmo valor base
     const ouroBase = recompensa.ouro;
     if (ouroBase > 0 && current.bonusDeGuilda?.ouro) recompensa.ouro += Math.floor((ouroBase * current.bonusDeGuilda.ouro) / 100);
-    if (ouroBase > 0) recompensa.ouro += Math.floor((ouroBase * bonusDoVip(current.gastoReal).ouro) / 100);
+    if (ouroBase > 0) recompensa.ouro += Math.floor((ouroBase * bonusDeXpEOuro(current).ouro) / 100);
     if (recompensa.ouro > 0) {
       character = alterarSaldoEm(ctx, character, 'ouro', recompensa.ouro, `${motivo}: ${venceuTudo ? 'vitória' : 'derrota'}`).character;
     }
@@ -2660,7 +2675,8 @@ function gravarForja(
   descontaMateriais = true,
   fabricou = false
 ): RespostaForja {
-  const { inventario, ouroGasto } = descontoDaForja(current.maestrias, current.inventario ?? {}, plano, descontaMateriais);
+  const { inventario, ouroGasto: ouroDaMaestria } = descontoDaForja(current.maestrias, current.inventario ?? {}, plano, descontaMateriais);
+  const ouroGasto = comDescontoDoPasse(ouroDaMaestria, descontoDosPasses(current));
   const pago = alterarSaldoEm(ctx, current, 'ouro', -ouroGasto, motivo);
   const character = salvarPersonagem(ctx, current, {
     ouro: pago.character.ouro,
@@ -2738,7 +2754,8 @@ export async function fabricarArmadura(uid: string, pecaId: unknown, opcoes: Opc
       agora: new Date().toISOString(),
     });
     if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_ARMADURA[plano.motivo]);
-    const { inventario, ouroGasto } = descontoDaForja(current.maestrias, current.inventario ?? {}, plano);
+    const { inventario, ouroGasto: ouroDaMaestria } = descontoDaForja(current.maestrias, current.inventario ?? {}, plano);
+    const ouroGasto = comDescontoDoPasse(ouroDaMaestria, descontoDosPasses(current));
     const pago = alterarSaldoEm(ctx, current, 'ouro', -ouroGasto, `Ferreiro: fabricar ${plano.peca.nome}`);
     const character = salvarPersonagem(ctx, current, {
       ouro: pago.character.ouro,
@@ -2757,7 +2774,8 @@ export async function reforjarArmadura(uid: string, armaduraId: unknown, opcoes:
     const current = await carregarPersonagem(ctx, uid);
     const plano = planejarReforjaArmadura(estadoArmaduras(current), armaduraId, { aleatorio: opcoes.aleatorio ?? aleatorioDoServidor });
     if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_ARMADURA[plano.motivo]);
-    const { inventario, ouroGasto } = descontoDaForja(current.maestrias, current.inventario ?? {}, plano);
+    const { inventario, ouroGasto: ouroDaMaestria } = descontoDaForja(current.maestrias, current.inventario ?? {}, plano);
+    const ouroGasto = comDescontoDoPasse(ouroDaMaestria, descontoDosPasses(current));
     const pago = alterarSaldoEm(ctx, current, 'ouro', -ouroGasto, `Ferreiro: reforjar ${plano.peca.nome} (${plano.percentual}% da receita)`);
     const character = salvarPersonagem(ctx, current, {
       ouro: pago.character.ouro,

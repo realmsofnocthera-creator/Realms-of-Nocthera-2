@@ -148,6 +148,7 @@ export function LojaScreen({ tokenFresco }: { tokenFresco: Token }) {
             <p className="text-[11px]" style={{ color: colors.text.secondary }}>
               Seu saldo: {valor('ouro', estado.saldos.ouro)} · {valor('diamantes', estado.saldos.diamantes)} · {valor('essenciaDeSoberano', estado.saldos.essenciaDeSoberano)}
             </p>
+            {estado.descontoDoPasse > 0 && <p className="text-[11px] font-semibold" style={{ color: VERDE }}>Desconto do seu Passe: -{estado.descontoDoPasse}% (os preços abaixo já vêm com ele).</p>}
             {!estado.podeComprar && <p role="status" className="text-xs font-semibold" style={{ color: '#E6C775' }}>A loja abre no nível {estado.nivelNecessario}.</p>}
             <div role="tablist" aria-label="Loja" className="flex flex-wrap gap-1.5">
               {ABAS_DA_LOJA.map((a) => (

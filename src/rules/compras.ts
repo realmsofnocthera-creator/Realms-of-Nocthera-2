@@ -9,6 +9,7 @@
 
 import { SELOS_DE_BUSCA, type SelosDoJogador } from './colecionaveis';
 import { mesDeBrasilia } from './loja';
+import { PASSES, type PasseId } from './passes';
 
 export type EstadoDoPedido = 'criado' | 'pago' | 'estornado' | 'cancelado';
 
@@ -60,6 +61,8 @@ export interface PedidoDeCompra {
   /** O que o pedido entregou, para o estorno desfazer. */
   diamantes?: number;
   entrega?: EntregaDoPacote;
+  /** Passe comprado: qual e os 30 dias que esta compra acrescentou (para o estorno desfazer). */
+  passe?: { id: PasseId; desde: string; ate: string };
 }
 
 const ESTADOS: readonly EstadoDoPedido[] = ['criado', 'pago', 'estornado', 'cancelado'];
@@ -84,6 +87,7 @@ export function pedidosDoDocumento(bruto: unknown): PedidoDeCompra[] | undefined
     vistos.add(id);
     const diamantes = inteiroPositivo(o.diamantes);
     const entrega = entregaDoDocumento(o.entrega);
+    const passe = passeDoPedido(o.passe);
     lista.push({
       id,
       produto,
@@ -97,6 +101,7 @@ export function pedidosDoDocumento(bruto: unknown): PedidoDeCompra[] | undefined
       ...(texto(o.estornadoEm, 40) ? { estornadoEm: texto(o.estornadoEm, 40) } : {}),
       ...(diamantes ? { diamantes } : {}),
       ...(entrega ? { entrega } : {}),
+      ...(passe ? { passe } : {}),
     });
   }
   return lista.length ? lista.slice(-PEDIDOS_GUARDADOS) : undefined;
@@ -110,6 +115,8 @@ export function pedidosDoDocumento(bruto: unknown): PedidoDeCompra[] | undefined
 /** O que um pacote mensal entrega (os "Pergaminhos" do Yuri são os Selos de busca). */
 export interface EntregaDoPacote {
   ouro?: number;
+  diamantes?: number;
+  moedasVip?: number;
   avancosDeExpedicao?: number;
   selos?: SelosDoJogador;
 }
@@ -183,10 +190,19 @@ export function entregaDoDocumento(bruto: unknown): EntregaDoPacote | undefined 
   const o = bruto as Record<string, unknown> | null;
   if (!o || typeof o !== 'object') return undefined;
   const ouro = inteiroPositivo(o.ouro);
+  const diamantes = inteiroPositivo(o.diamantes);
+  const moedasVip = inteiroPositivo(o.moedasVip);
   const avancosDeExpedicao = inteiroPositivo(o.avancosDeExpedicao);
   const selos: SelosDoJogador = {};
   const brutoSelos = o.selos as Record<string, unknown> | undefined;
   if (brutoSelos && typeof brutoSelos === 'object') for (const s of SELOS_DE_BUSCA) if (inteiroPositivo(brutoSelos[s])) selos[s] = inteiroPositivo(brutoSelos[s]);
-  const saida: EntregaDoPacote = { ...(ouro ? { ouro } : {}), ...(avancosDeExpedicao ? { avancosDeExpedicao } : {}), ...(Object.keys(selos).length ? { selos } : {}) };
+  const saida: EntregaDoPacote = { ...(ouro ? { ouro } : {}), ...(diamantes ? { diamantes } : {}), ...(moedasVip ? { moedasVip } : {}), ...(avancosDeExpedicao ? { avancosDeExpedicao } : {}), ...(Object.keys(selos).length ? { selos } : {}) };
   return Object.keys(saida).length ? saida : undefined;
+}
+
+function passeDoPedido(bruto: unknown): PedidoDeCompra['passe'] {
+  const o = bruto as Record<string, unknown> | null;
+  if (!o || typeof o !== 'object' || !(PASSES as readonly unknown[]).includes(o.id)) return undefined;
+  const dia = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+  return dia(o.desde) && dia(o.ate) ? { id: o.id as PasseId, desde: o.desde, ate: o.ate } : undefined;
 }

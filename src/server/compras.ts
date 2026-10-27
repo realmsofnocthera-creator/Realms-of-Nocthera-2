@@ -21,6 +21,23 @@ import {
   type PedidoDeCompra,
   MULTIPLICADOR_DA_PRIMEIRA_COMPRA,
 } from '@/rules/compras';
+import {
+  bonusDosPasses,
+  comPasseComprado,
+  DEFINICOES_DOS_PASSES,
+  DIAS_DO_PASSE,
+  diasEntre,
+  diasRestantesDoPasse,
+  entregasDeHoje,
+  janelaDaCompra,
+  passeAtivo,
+  passeDoProduto,
+  presenteDosDias,
+  somarDias,
+  type DefinicaoDoPasse,
+  type EntregaDoDia,
+  type PassesDoJogador,
+} from '@/rules/passes';
 import { bonusDoVip, definicaoDoVip, NIVEIS_DO_VIP, OURO_DIARIO_DO_VIP, progressoDoVip, type NivelDoVip } from '@/rules/vip';
 import { alterarSaldoEm, carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { comMensagem, novaMensagem } from '@/server/correio';
@@ -69,6 +86,17 @@ export interface CadeiaNaTela {
   pacotes: PacoteMensalNaTela[];
 }
 
+export interface PasseNaTela {
+  id: DefinicaoDoPasse['id'];
+  produto: string;
+  nome: string;
+  precoCentavos: number;
+  beneficios: DefinicaoDoPasse['beneficios'];
+  /** Dias que ainda restam (0 = não está valendo) e o último dia (AAAA-MM-DD). */
+  diasRestantes: number;
+  fim: string | null;
+}
+
 export interface NivelNaTela extends NivelDoVip {
   atual: boolean;
   desbloqueado: boolean;
@@ -89,6 +117,10 @@ export interface EstadoDaLojaVip {
   pacotes: PacoteNaTela[];
   /** Os pacotes mensais (Coleção, Ouro e Expedição): 1 de cada por mês, em ordem; as cadeias voltam ao primeiro no dia 1 (Brasília). */
   mensais: CadeiaNaTela[];
+  passes: PasseNaTela[];
+  /** O bônus que os Passes dão agora (o maior entre eles; soma com o do VIP). */
+  bonusDosPasses: { xp: number; ouro: number; desconto: number };
+  moedasVip: number;
   pedidos: PedidoDeCompra[];
 }
 
@@ -97,9 +129,11 @@ const numero = (n: number) => n.toLocaleString('pt-BR');
 /** As linhas do que uma entrega traz (também usadas no pop-up de depois da compra). */
 export function linhasDaEntrega(e: EntregaDoPacote | undefined, diamantes = 0): string[] {
   const linhas: string[] = [];
-  if (diamantes) linhas.push(`${numero(diamantes)} Diamantes`);
+  const dTotal = diamantes + (e?.diamantes ?? 0);
+  if (dTotal) linhas.push(`${numero(dTotal)} Diamantes`);
   if (e?.ouro) linhas.push(`${numero(e.ouro)} de ouro`);
   if (e?.avancosDeExpedicao) linhas.push(`${numero(e.avancosDeExpedicao)} Avanços de expedição`);
+  if (e?.moedasVip) linhas.push(`${numero(e.moedasVip)} Moedas VIP`);
   for (const s of SELOS_DE_BUSCA) if (e?.selos?.[s]) linhas.push(`${numero(e.selos[s]!)}× ${NOME_DO_SELO[s]}`);
   return linhas;
 }
@@ -109,6 +143,7 @@ export async function estadoDaLojaVip(uid: string, agora = new Date()): Promise<
   if (!c) throw new Error('Personagem não encontrado.');
   const { lerConfiguracaoDeSistemas } = await import('@/server/sistemasLeitura');
   const config = await lerConfiguracaoDeSistemas();
+  const hoje = diaDeBrasilia(agora);
   const progresso = progressoDoVip(c.gastoReal);
   const primeiraCompra = !c.primeiraCompraFeita;
   return {
@@ -136,6 +171,17 @@ export async function estadoDaLojaVip(uid: string, agora = new Date()): Promise<
         })),
       };
     }),
+    passes: DEFINICOES_DOS_PASSES.map((d) => ({
+      id: d.id,
+      produto: d.produto,
+      nome: d.nome,
+      precoCentavos: d.precoCentavos,
+      beneficios: d.beneficios,
+      diasRestantes: diasRestantesDoPasse(c.passes?.[d.id], hoje),
+      fim: passeAtivo(c.passes?.[d.id], hoje) ? c.passes![d.id]!.fim : null,
+    })),
+    bonusDosPasses: bonusDosPasses(c.passes, hoje),
+    moedasVip: c.moedasVip ?? 0,
     pedidos: [...(c.pedidosDeCompra ?? [])].reverse().slice(0, 20),
   };
 }
@@ -151,6 +197,12 @@ function quitarDivida(ctx: ContextoTransacao, c: CharacterDocument): CharacterDo
 
 const grava = (ctx: ContextoTransacao, c: CharacterDocument, pedidos: PedidoDeCompra[], extra: Partial<CharacterDocument> = {}) =>
   salvarPersonagem(ctx, c, { ...extra, ouro: c.ouro, diamantes: c.diamantes, dividaDeDiamantes: extra.dividaDeDiamantes ?? c.dividaDeDiamantes, pedidosDeCompra: pedidos.slice(-PEDIDOS_GUARDADOS) });
+
+/** A mensagem do Correio com o que um Passe entrega hoje (vários dias atrasados chegam numa só). */
+function mensagemDaEntregaDoPasse(e: EntregaDoDia, agora: Date) {
+  const texto = e.dias > 1 ? `Chegaram ${e.dias} dias de entrega do ${e.passe.nome} de uma vez.` : `Sua entrega diária do ${e.passe.nome} chegou.`;
+  return novaMensagem({ titulo: `${e.passe.nome}: entrega diária`, texto, de: 'Loja VIP', presente: e.presente }, agora);
+}
 
 /** O pacote mensal só pode ser comprado se for o próximo da cadeia neste mês. */
 function conferirDisponibilidade(c: CharacterDocument, p: PacoteMensal, agora: Date) {
@@ -176,6 +228,16 @@ function entregarPacote(ctx: ContextoTransacao, c: CharacterDocument, e: Entrega
 function retirarPacote(ctx: ContextoTransacao, c: CharacterDocument, e: EntregaDoPacote, motivo: string): { doc: CharacterDocument; faltou: EntregaDoPacote } {
   let doc = c;
   const faltou: EntregaDoPacote = {};
+  if (e.diamantes) {
+    const tira = Math.min(e.diamantes, doc.diamantes ?? 0);
+    if (tira) doc = alterarSaldoEm(ctx, doc, 'diamantes', -tira, motivo).character;
+    if (e.diamantes > tira) faltou.diamantes = e.diamantes - tira;
+  }
+  if (e.moedasVip) {
+    const tira = Math.min(e.moedasVip, doc.moedasVip ?? 0);
+    doc = { ...doc, moedasVip: (doc.moedasVip ?? 0) - tira };
+    if (e.moedasVip > tira) faltou.moedasVip = e.moedasVip - tira;
+  }
   if (e.ouro) {
     const tira = Math.min(e.ouro, doc.ouro ?? 0);
     if (tira) doc = alterarSaldoEm(ctx, doc, 'ouro', -tira, motivo).character;
@@ -208,8 +270,13 @@ export async function criarPedido(uid: string, produtoBruto: unknown, agora = ne
   if (!pagamentosDeTesteLigados()) throw new ErroDeCompra('As compras ainda não estão disponíveis.');
   const diamantes = pacoteDeDiamantes(produtoBruto);
   const mensal = pacoteMensal(produtoBruto);
-  if (!diamantes && !mensal) throw new ErroDeCompra('Esse produto não existe.');
-  const produto = diamantes ? { id: diamantes.id, nome: `Pacote ${diamantes.nome} (Diamantes)`, precoCentavos: diamantes.precoCentavos } : { id: mensal!.id, nome: `Pacote ${mensal!.nome}`, precoCentavos: mensal!.precoCentavos };
+  const passe = passeDoProduto(produtoBruto);
+  if (!diamantes && !mensal && !passe) throw new ErroDeCompra('Esse produto não existe.');
+  const produto = diamantes
+    ? { id: diamantes.id, nome: `Pacote ${diamantes.nome} (Diamantes)`, precoCentavos: diamantes.precoCentavos }
+    : mensal
+      ? { id: mensal.id, nome: `Pacote ${mensal.nome}`, precoCentavos: mensal.precoCentavos }
+      : { id: passe!.produto, nome: passe!.nome, precoCentavos: passe!.precoCentavos };
   const resultado = await repositorio.executarTransacao('compra:criar', async (ctx): Promise<PedidoDeCompra | number> => {
     let eu = await carregarPersonagem(ctx, uid);
     eu = quitarDivida(ctx, eu);
@@ -247,11 +314,23 @@ export async function confirmarPagamento(uid: string, pedidoId: unknown, referen
     if (pedido.estado === 'cancelado') throw new ErroDeCompra('Esse pedido foi cancelado.');
     const dePacoteDiamantes = pacoteDeDiamantes(pedido.produto);
     const mensal = pacoteMensal(pedido.produto);
-    if (!dePacoteDiamantes && !mensal) throw new ErroDeCompra('O produto desse pedido não existe mais.');
+    const dePasse = passeDoProduto(pedido.produto);
+    if (!dePacoteDiamantes && !mensal && !dePasse) throw new ErroDeCompra('O produto desse pedido não existe mais.');
     let diamantes = 0;
     let entrega: EntregaDoPacote | undefined;
     let extra: Partial<CharacterDocument> = {};
-    if (dePacoteDiamantes) {
+    let infoDoPasse: PedidoDeCompra['passe'];
+    let linhasDoPasse: string[] = [];
+    let correioDoPasse = eu.correio;
+    if (dePasse) {
+      const hoje = diaDeBrasilia(agora);
+      const janela = janelaDaCompra(eu.passes?.[dePasse.id], hoje);
+      infoDoPasse = { id: dePasse.id, desde: janela.desde, ate: janela.ate };
+      const entregas = entregasDeHoje(comPasseComprado(eu.passes, dePasse.id, hoje), hoje);
+      for (const e of entregas.entregas) correioDoPasse = comMensagem(correioDoPasse, mensagemDaEntregaDoPasse(e, agora), agora);
+      extra = { passes: entregas.passes };
+      linhasDoPasse = [`${dePasse.nome} ativo por ${DIAS_DO_PASSE} dias a mais (até ${janela.ate.split('-').reverse().join('/')})`, 'A entrega de hoje já está no Correio'];
+    } else if (dePacoteDiamantes) {
       diamantes = diamantesDoPacote(dePacoteDiamantes, !eu.primeiraCompraFeita);
       eu = alterarSaldoEm(ctx, eu, 'diamantes', diamantes, `Compra: ${pedido.nome}${eu.primeiraCompraFeita ? '' : ' (primeira compra em dobro)'}`).character;
       eu = quitarDivida(ctx, eu);
@@ -263,11 +342,11 @@ export async function confirmarPagamento(uid: string, pedidoId: unknown, referen
       eu = entregarPacote(ctx, eu, entrega, `Compra: ${pedido.nome}`);
       extra = { comprasMensais: comCompraMensal(eu.comprasMensais, mensal!, agora), selosDeBusca: eu.selosDeBusca, avancosDeExpedicao: eu.avancosDeExpedicao };
     }
-    const recebido = linhasDaEntrega(entrega, diamantes);
-    const pago: PedidoDeCompra = { ...pedido, estado: 'pago', referencia: referencia.slice(0, 128), pagoEm: agora.toISOString(), ...(diamantes ? { diamantes } : {}), ...(entrega ? { entrega } : {}) };
+    const recebido = dePasse ? linhasDoPasse : linhasDaEntrega(entrega, diamantes);
+    const pago: PedidoDeCompra = { ...pedido, estado: 'pago', referencia: referencia.slice(0, 128), pagoEm: agora.toISOString(), ...(diamantes ? { diamantes } : {}), ...(entrega ? { entrega } : {}), ...(infoDoPasse ? { passe: infoDoPasse } : {}) };
     const correio = comMensagem(
-      eu.correio,
-      novaMensagem({ titulo: 'Compra confirmada', texto: `${pedido.nome} (${reais(pedido.valorCentavos)}): ${recebido.join(', ')}. Já está na sua conta. Obrigado por apoiar o jogo!`, de: 'Loja VIP' }, agora),
+      correioDoPasse,
+      novaMensagem({ titulo: 'Compra confirmada', texto: `${pedido.nome} (${reais(pedido.valorCentavos)}): ${recebido.join(', ')}. ${dePasse ? 'Os itens diários chegam pelo Correio.' : 'Já está na sua conta.'} Obrigado por apoiar o jogo!`, de: 'Loja VIP' }, agora),
       agora
     );
     grava(
@@ -304,6 +383,15 @@ export async function estornarPedido(uid: string, pedidoId: unknown, agora = new
       eu = r.doc;
       naoRecuperado = linhasDaEntrega(r.faltou);
     }
+    let passesDepois = eu.passes;
+    let dividaDoPasse = 0;
+    if (pedido.passe) {
+      const r = desfazerPasse(ctx, eu, pedido.passe, agora);
+      eu = r.doc;
+      passesDepois = r.passes;
+      naoRecuperado = [...naoRecuperado, ...linhasDaEntrega({ ...r.faltou, diamantes: 0 })];
+      dividaDoPasse = r.faltou.diamantes ?? 0;
+    }
     const estornado: PedidoDeCompra = { ...pedido, estado: 'estornado', estornadoEm: agora.toISOString() };
     const correio = comMensagem(
       eu.correio,
@@ -314,9 +402,73 @@ export async function estornarPedido(uid: string, pedidoId: unknown, agora = new
       ctx,
       eu,
       pedidos.map((p) => (p.id === pedido.id ? estornado : p)),
-      { gastoReal: Math.max(0, (eu.gastoReal ?? 0) - pedido.valorCentavos) || undefined, dividaDeDiamantes: (eu.dividaDeDiamantes ?? 0) + dividaGerada || undefined, correio, selosDeBusca: eu.selosDeBusca, avancosDeExpedicao: eu.avancosDeExpedicao }
+      { gastoReal: Math.max(0, (eu.gastoReal ?? 0) - pedido.valorCentavos) || undefined, dividaDeDiamantes: (eu.dividaDeDiamantes ?? 0) + dividaGerada + dividaDoPasse || undefined, correio, selosDeBusca: eu.selosDeBusca, avancosDeExpedicao: eu.avancosDeExpedicao, moedasVip: eu.moedasVip || undefined, passes: passesDepois }
     );
-    return { pedido: estornado, jaEstavaEstornado: false, dividaGerada, naoRecuperado };
+    return { pedido: estornado, jaEstavaEstornado: false, dividaGerada: dividaGerada + dividaDoPasse, naoRecuperado };
+  });
+}
+
+/**
+ * Desfaz um Passe estornado: tira 30 dias do fim (o Passe some se não sobra nenhum), apaga as entregas do Correio que
+ * ainda não foram resgatadas e retira do que o jogador ainda tem o que já tinha sido entregue nesses dias.
+ */
+function desfazerPasse(ctx: ContextoTransacao, c: CharacterDocument, info: NonNullable<PedidoDeCompra['passe']>, agora: Date): { doc: CharacterDocument; passes: PassesDoJogador | undefined; faltou: EntregaDoPacote } {
+  const def = DEFINICOES_DOS_PASSES.find((d) => d.id === info.id)!;
+  const estado = c.passes?.[info.id];
+  if (!estado) return { doc: c, passes: c.passes, faltou: {} };
+  // dias desta compra que já foram entregues (a interseção da janela da compra com o que foi entregue)
+  const de = info.desde > estado.inicio ? info.desde : estado.inicio;
+  const ate = estado.entregueAte && estado.entregueAte < info.ate ? estado.entregueAte : info.ate;
+  const diasEntregues = estado.entregueAte ? Math.max(0, diasEntre(de, ate) + 1) : 0;
+  // o que está parado no Correio sem resgatar sai dali; o resto é retirado do saldo, até onde der
+  const doPasse = (m: { titulo: string; de: string; presente?: unknown; resgatada?: boolean }) => m.de === 'Loja VIP' && m.titulo.startsWith(`${def.nome}:`) && !!m.presente && !m.resgatada;
+  const paradas = (c.correio ?? []).filter(doPasse);
+  const total = presenteDosDias(def, diasEntregues);
+  const sobra: EntregaDoPacote = { ...total, selos: { ...(total.selos ?? {}) } };
+  for (const m of paradas) {
+    const p = m.presente!;
+    for (const campo of ['ouro', 'diamantes', 'moedasVip', 'avancosDeExpedicao'] as const) if (sobra[campo]) sobra[campo] = Math.max(0, sobra[campo]! - (p[campo] ?? 0));
+    for (const s of SELOS_DE_BUSCA) if (sobra.selos?.[s]) sobra.selos[s] = Math.max(0, sobra.selos[s]! - (p.selos?.[s] ?? 0));
+  }
+  const retirar = entregaDoPacoteLimpa(sobra);
+  const r = retirarPacote(ctx, c, retirar, `Estorno: ${def.nome}`);
+  const novoFim = somarDias(estado.fim, -DIAS_DO_PASSE);
+  const passes = { ...(c.passes ?? {}) };
+  if (novoFim < estado.inicio) delete passes[info.id];
+  else passes[info.id] = { ...estado, fim: novoFim, ...(estado.entregueAte && estado.entregueAte > novoFim ? { entregueAte: novoFim } : {}) };
+  const ids = new Set(paradas.map((m) => (m as { id: string }).id));
+  const doc = { ...r.doc, correio: (c.correio ?? []).filter((m) => !ids.has(m.id)) };
+  return { doc, passes: Object.keys(passes).length ? passes : undefined, faltou: r.faltou };
+}
+
+/** Tira os zeros de uma entrega (campos e selos a 0). */
+function entregaDoPacoteLimpa(e: EntregaDoPacote): EntregaDoPacote {
+  const selos: SelosDoJogador = {};
+  for (const s of SELOS_DE_BUSCA) if (e.selos?.[s]) selos[s] = e.selos[s];
+  return {
+    ...(e.ouro ? { ouro: e.ouro } : {}),
+    ...(e.diamantes ? { diamantes: e.diamantes } : {}),
+    ...(e.moedasVip ? { moedasVip: e.moedasVip } : {}),
+    ...(e.avancosDeExpedicao ? { avancosDeExpedicao: e.avancosDeExpedicao } : {}),
+    ...(Object.keys(selos).length ? { selos } : {}),
+  };
+}
+
+/**
+ * Entrega dos Passes: o que cada Passe ativo ainda não entregou até hoje vai para o Correio, uma mensagem por Passe (os
+ * dias em que o jogador não abriu o jogo chegam juntos). Roda quando o jogador abre o Correio.
+ */
+export async function mandarEntregasDosPasses(uid: string, agora = new Date()): Promise<void> {
+  const char = await repositorio.lerPersonagem(uid);
+  const hoje = diaDeBrasilia(agora);
+  if (!char?.passes || !entregasDeHoje(char.passes, hoje).entregas.length) return;
+  await repositorio.executarTransacao('correio:passes', async (ctx) => {
+    const eu = await carregarPersonagem(ctx, uid);
+    const r = entregasDeHoje(eu.passes, hoje);
+    if (!r.entregas.length) return;
+    let correio = eu.correio;
+    for (const e of r.entregas) correio = comMensagem(correio, mensagemDaEntregaDoPasse(e, agora), agora);
+    salvarPersonagem(ctx, eu, { correio, passes: r.passes });
   });
 }
 

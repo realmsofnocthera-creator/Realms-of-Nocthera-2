@@ -75,7 +75,7 @@ export function VipPainel({ tokenFresco }: { tokenFresco: Token }) {
                 <li key={l} className="text-sm font-semibold" style={{ color: '#7BC47F' }}>+ {l}</li>
               ))}
             </ul>
-            <p className="text-[11px]" style={{ color: colors.text.secondary }}>Já está na sua conta. Um recibo foi para o Correio.</p>
+            <p className="text-[11px]" style={{ color: colors.text.secondary }}>Um recibo foi para o Correio.</p>
             <button type="button" autoFocus onClick={() => setRecebido(null)} className="rounded-sm border px-3 py-1.5 text-xs font-bold" style={{ borderColor: OURO, backgroundColor: '#3A2F18', color: '#F5E3B3' }}>
               Ótimo!
             </button>
@@ -133,6 +133,40 @@ export function VipPainel({ tokenFresco }: { tokenFresco: Token }) {
           </>
         )}
       </section>
+
+      {estado.aberta && (
+        <section className="flex flex-col gap-1.5">
+          <h2 className="text-sm font-cinzel font-bold" style={{ color: '#F5E3B3' }}>Passes (30 dias)</h2>
+          <p className="text-[11px]" style={{ color: colors.text.secondary }}>
+            Os itens diários chegam pelo Correio. Comprar de novo antes do fim soma mais 30 dias. Premium e Deluxe não somam os bônus entre si (vale o maior), mas somam com o VIP; as Moedas VIP e os Avanços somam.
+            {' '}Você tem {estado.moedasVip.toLocaleString('pt-BR')} Moedas VIP.
+          </p>
+          {(estado.bonusDosPasses.xp > 0 || estado.bonusDosPasses.ouro > 0) && (
+            <p className="text-[11px] font-semibold" style={{ color: '#7BC47F' }}>Passe ativo: +{estado.bonusDosPasses.xp}% de XP, +{estado.bonusDosPasses.ouro}% de ouro, -{estado.bonusDosPasses.desconto}% na Loja e na Forja.</p>
+          )}
+          <ul className="flex flex-col gap-1.5">
+            {estado.passes.map((p) => (
+              <li key={p.id} className="rounded-sm border px-2.5 py-2 flex flex-col gap-1" style={{ borderColor: p.diasRestantes > 0 ? OURO : '#4A3F2A', backgroundColor: colors.background.secondary }}>
+                <div className="flex justify-between gap-2">
+                  <span className="text-xs font-semibold" style={{ color: '#F5E3B3' }}>{p.nome}</span>
+                  <span className="text-[11px] font-bold shrink-0" style={{ color: OURO }}>{formatarReais(p.precoCentavos)}</span>
+                </div>
+                {p.beneficios.map((b) => (
+                  <span key={b.texto} className="text-[11px]" style={{ color: b.estado === 'ativo' ? colors.text.primary : colors.text.secondary }}>
+                    {b.estado === 'ativo' ? '✓' : '·'} {b.texto}{b.estado === 'emBreve' ? ' (em breve)' : ''}
+                  </span>
+                ))}
+                {p.diasRestantes > 0 && p.fim && (
+                  <span className="text-[11px] font-semibold" style={{ color: '#7BC47F' }}>Ativo: {p.diasRestantes} {p.diasRestantes === 1 ? 'dia' : 'dias'} restantes (até {p.fim.split('-').reverse().join('/')})</span>
+                )}
+                <button type="button" onClick={() => void comprar(p.produto)} disabled={ocupado || !estado.podeComprar || estado.dividaDeDiamantes > 0} className="rounded-sm border px-2 py-1.5 text-xs font-bold disabled:opacity-50" style={{ borderColor: OURO, backgroundColor: '#3A2F18', color: '#F5E3B3' }}>
+                  {p.diasRestantes > 0 ? `Renovar +30 dias · ${formatarReais(p.precoCentavos)}` : `Comprar · ${formatarReais(p.precoCentavos)}`}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {estado.aberta && (
         <section className="flex flex-col gap-1.5">

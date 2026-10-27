@@ -258,6 +258,7 @@ export async function estadoDoCorreio(uid: string, agora = new Date()): Promise<
   // import na hora: o Campeonato usa o Correio para mandar os prêmios
   await (await import('@/server/campeonato')).mandarPremiosDoCampeonato(uid, agora);
   await (await import('@/server/compras')).mandarOuroDoVip(uid, agora);
+  await (await import('@/server/compras')).mandarEntregasDosPasses(uid, agora);
   const char = await repositorio.lerPersonagem(uid);
   if (!char) throw new Error('Personagem não encontrado.');
   return montarEstado(char, await mensagensGerais(agora), agora);
@@ -276,7 +277,7 @@ export function entregarPresente(ctx: ContextoTransacao, char: CharacterDocument
     for (const s of SELOS_DE_BUSCA) if (presente.selos[s]) selos[s] = (selos[s] ?? 0) + presente.selos[s]!;
     patch.selosDeBusca = selos;
   }
-  for (const saldo of ['fragmentosDeMemoria', 'pedrasDaRecordacao', 'avancosDeExpedicao'] as const) {
+  for (const saldo of ['fragmentosDeMemoria', 'pedrasDaRecordacao', 'avancosDeExpedicao', 'moedasVip'] as const) {
     if (presente[saldo]) patch[saldo] = (doc[saldo] ?? 0) + presente[saldo]!;
   }
   if (presente.materiais) {

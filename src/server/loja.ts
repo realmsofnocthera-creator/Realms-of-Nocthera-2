@@ -14,7 +14,8 @@ import {
 } from '@/rules/loja';
 import type { ItemDoAnuncio } from '@/rules/mercado';
 import { sorteadorDaSemente } from '@/server/almas';
-import { alterarSaldoEm, carregarPersonagem, salvarPersonagem } from '@/server/characterService';
+import { comDescontoDoPasse } from '@/rules/passes';
+import { alterarSaldoEm, carregarPersonagem, descontoDosPasses, salvarPersonagem } from '@/server/characterService';
 import { comMensagem, novaMensagem } from '@/server/correio';
 import { entregarItem } from '@/server/mercado';
 import { repositorio } from '@/server/persistencia';
@@ -52,6 +53,8 @@ export interface EstadoDaLoja {
   /** Quando a parte da semana gira (segunda à meia-noite de Brasília). */
   giraEm: string;
   produtos: ProdutoNaTela[];
+  /** O desconto (%) do Passe ativo; os preços de `produtos` já vêm com ele. */
+  descontoDoPasse: number;
   /** O que os baús de escolha deixam escolher. */
   escolhas: { cartas: { id: string; nome: string; categoria: string }[]; emblemas: { id: string; nome: string }[] };
 }
@@ -67,9 +70,10 @@ export async function estadoDaLoja(uid: string, agora = new Date()): Promise<Est
     podeComprar: c.nivel >= NIVEL_DA_LOJA,
     saldos: { ouro: c.ouro ?? 0, diamantes: c.diamantes ?? 0, essenciaDeSoberano: c.essenciaDeSoberano ?? 0 },
     giraEm: giraEm(agora),
+    descontoDoPasse: descontoDosPasses(c, agora),
     produtos: catalogoDaSemana(semanaDe(agora)).map((p) => {
       const comprados = compradasNoMes(c.comprasNaLoja, p.chave, agora);
-      return { ...p, nomeDaRaridade: EMBLEMA_RARIDADE_MAP[p.raridade]?.nome ?? p.raridade, comprados, restantes: Math.max(0, p.limiteMensal - comprados) };
+      return { ...p, preco: comDescontoDoPasse(p.preco, descontoDosPasses(c, agora)), nomeDaRaridade: EMBLEMA_RARIDADE_MAP[p.raridade]?.nome ?? p.raridade, comprados, restantes: Math.max(0, p.limiteMensal - comprados) };
     }),
     escolhas: {
       cartas: CARTAS_EPICAS.map((t) => ({ id: t.id, nome: t.nome, categoria: t.categoria })),
@@ -111,9 +115,9 @@ export async function comprarNaLoja(uid: string, chaveBruta: unknown, quantidade
   const itens = itensDaCompra(produto, quantidade, escolha);
   const nomeDoItem = produto.tipo === 'escolhaCarta' ? CARTAS_EPICAS.find((t) => t.id === escolha)!.nome : produto.tipo === 'escolhaEmblema' ? EMBLEMAS_EPICOS.find((t) => t.id === escolha)!.nome : produto.nome;
   const rotulo = `${quantidade > 1 ? `${quantidade}× ` : ''}${nomeDoItem}`;
-  const total = produto.preco * quantidade;
   return repositorio.executarTransacao('loja:comprar', async (ctx) => {
     let eu = await carregarPersonagem(ctx, uid);
+    const total = comDescontoDoPasse(produto.preco, descontoDosPasses(eu, agora)) * quantidade;
     if (eu.nivel < NIVEL_DA_LOJA) throw new ErroDaLoja(`A loja abre no nível ${NIVEL_DA_LOJA}.`);
     const comprados = compradasNoMes(eu.comprasNaLoja, chave, agora);
     if (comprados + quantidade > produto.limiteMensal) {

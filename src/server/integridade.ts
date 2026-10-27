@@ -89,6 +89,7 @@ const SEM_RITMO = new Set([
   'guilda:consertar',
   'correio:arena',
   'correio:vip',
+  'correio:passes',
   'compra:criar',
   'compra:pagar',
   'compra:estornar',
