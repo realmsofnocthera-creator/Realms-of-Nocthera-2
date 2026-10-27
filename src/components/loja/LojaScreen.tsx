@@ -7,6 +7,7 @@ import { ABAS_DA_LOJA, NOME_DA_ABA, type AbaDaLoja, type MoedaDaLoja } from '@/r
 import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
 import type { EstadoDaLoja, ProdutoNaTela } from '@/server/loja';
 import { NOCTHERA_THEME } from '@/theme/theme';
+import { VipPainel } from '@/components/loja/VipPainel';
 
 type Token = () => Promise<string | null>;
 const OURO = '#C8A656';
@@ -101,7 +102,7 @@ export function LojaScreen({ tokenFresco }: { tokenFresco: Token }) {
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
   const [ocupado, setOcupado] = useState(false);
-  const [aba, setAba] = useState<AbaDaLoja>('materiais');
+  const [aba, setAba] = useState<AbaDaLoja | 'vip'>('materiais');
 
   const carregar = useCallback(async () => {
     const r = await chamar(tokenFresco);
@@ -127,6 +128,7 @@ export function LojaScreen({ tokenFresco }: { tokenFresco: Token }) {
   }
 
   const produtos = estado?.produtos.filter((p) => p.aba === aba) ?? [];
+  const naAbaVip = aba === 'vip';
   const gira = estado ? new Date(estado.giraEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit' }) : '';
 
   return (
@@ -161,7 +163,21 @@ export function LojaScreen({ tokenFresco }: { tokenFresco: Token }) {
                   {NOME_DA_ABA[a]}
                 </button>
               ))}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={naAbaVip}
+                onClick={() => setAba('vip')}
+                className="rounded-sm border px-2.5 py-1 text-xs font-bold font-cinzel"
+                style={{ borderColor: OURO, backgroundColor: naAbaVip ? OURO : '#221C16', color: naAbaVip ? '#1A140E' : '#F5E3B3' }}
+              >
+                VIP
+              </button>
             </div>
+            {naAbaVip ? (
+              <VipPainel tokenFresco={tokenFresco} />
+            ) : (
+              <>
             <p className="text-[11px]" style={{ color: colors.text.secondary }}>
               {produtos.some((p) => p.daSemana) ? `Os itens desta aba mudam ${gira} à meia-noite. ` : ''}O limite de cada item zera no dia 1 de cada mês.
             </p>
@@ -170,6 +186,8 @@ export function LojaScreen({ tokenFresco }: { tokenFresco: Token }) {
                 <Produto key={p.chave} p={p} estado={estado} ocupado={ocupado} comprar={(x, q, e) => void comprar(x, q, e)} />
               ))}
             </ul>
+              </>
+            )}
           </>
         )}
       </div>

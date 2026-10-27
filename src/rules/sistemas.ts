@@ -26,6 +26,7 @@ export const SISTEMAS = [
   { id: 'arenaRanqueada', nome: 'Arena ranqueada' },
   { id: 'campeonato', nome: 'Campeonato' },
   { id: 'chat', nome: 'Chat' },
+  { id: 'lojaVip', nome: 'Loja VIP (compras com dinheiro real)' },
 ] as const;
 export type SistemaId = (typeof SISTEMAS)[number]['id'];
 
@@ -34,6 +35,9 @@ export const NOME_DO_SISTEMA: Readonly<Record<SistemaId, string>> = Object.fromE
 export function ehSistema(v: unknown): v is SistemaId {
   return typeof v === 'string' && SISTEMAS.some((s) => s.id === v);
 }
+
+/** Sistemas que nascem desligados: o Dono liga quando tudo estiver pronto (a Loja VIP vende com dinheiro real). */
+export const DESLIGADOS_POR_PADRAO: readonly SistemaId[] = ['lojaVip'];
 
 export const MENSAGEM_MAXIMA = 300;
 export const MENSAGEM_PADRAO_MANUTENCAO = 'O jogo está em manutenção. Volte em instantes.';
@@ -61,7 +65,7 @@ export function configuracaoPadrao(): ConfiguracaoDeSistemas {
     manutencao: { ativa: false, mensagem: '' },
     campanha: { mapaInicial: '', aberturaCenaId: '' },
     guildas: { ...REGRAS_PADRAO_DE_GUILDA },
-    sistemas: Object.fromEntries(SISTEMAS.map((s) => [s.id, { ativo: true, mensagem: '' }])) as Record<SistemaId, EstadoDoSistema>,
+    sistemas: Object.fromEntries(SISTEMAS.map((s) => [s.id, { ativo: !DESLIGADOS_POR_PADRAO.includes(s.id), mensagem: '' }])) as Record<SistemaId, EstadoDoSistema>,
     atualizadoEm: '',
     atualizadoPor: '',
   };
@@ -86,7 +90,7 @@ export function configuracaoDoDocumento(bruto: unknown): ConfiguracaoDeSistemas 
   if (s && typeof s === 'object') {
     for (const sistema of SISTEMAS) {
       const e = s[sistema.id] as Record<string, unknown> | undefined;
-      if (e && typeof e === 'object') base.sistemas[sistema.id] = { ativo: e.ativo !== false, mensagem: texto(e.mensagem) };
+      if (e && typeof e === 'object') base.sistemas[sistema.id] = { ativo: DESLIGADOS_POR_PADRAO.includes(sistema.id) ? e.ativo === true : e.ativo !== false, mensagem: texto(e.mensagem) };
     }
   }
   base.atualizadoEm = texto(d.atualizadoEm);
@@ -106,6 +110,7 @@ export interface StatusPublico {
 export function statusPublico(c: ConfiguracaoDeSistemas): StatusPublico {
   return {
     manutencao: { ativa: c.manutencao.ativa, mensagem: c.manutencao.ativa ? mensagemDaManutencao(c) : '' },
-    desligados: SISTEMAS.filter((s) => !c.sistemas[s.id].ativo).map((s) => ({ id: s.id, nome: s.nome, mensagem: mensagemDoSistema(c, s.id) })),
+    // os que nascem desligados (Loja VIP) não são aviso de falha: a própria tela diz que ainda não abriu
+    desligados: SISTEMAS.filter((s) => !c.sistemas[s.id].ativo && !DESLIGADOS_POR_PADRAO.includes(s.id)).map((s) => ({ id: s.id, nome: s.nome, mensagem: mensagemDoSistema(c, s.id) })),
   };
 }

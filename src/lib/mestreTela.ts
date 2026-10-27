@@ -81,6 +81,9 @@ export function descreverAcao(e: Pick<EntradaLogAdmin, 'acao' | 'alvo' | 'antes'
     case 'guilda.dissolver':
       texto = `Dissolveu a guilda ${(e.antes as { nome?: string } | null | undefined)?.nome ?? alvo}`;
       break;
+    case 'compra.estornar':
+      texto = `Estornou um pedido de ${alvo}`;
+      break;
     case 'jogador.zerar':
       texto = `Zerou a progressão de ${alvo}`;
       break;
