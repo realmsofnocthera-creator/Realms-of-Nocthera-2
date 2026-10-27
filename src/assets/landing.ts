@@ -9,10 +9,14 @@ export interface CamadaDoTopo {
   src: string | null;
   /** 0 = parada; 1 = anda junto com a rolagem. Camadas da frente andam mais. */
   velocidade: number;
+  /** Posição da arte quando a tela corta (formato do object-position do CSS). */
+  posicao?: string;
+  /** true = arte em grade de pixels (ampliação sem suavizar); false = arte grande, suavizada. */
+  pixel?: boolean;
 }
 
 export const CAMADAS_DO_TOPO: readonly CamadaDoTopo[] = [
-  { id: 'ceu', src: '/images/landing-bg.webp', velocidade: 0.05 },
+  { id: 'ceu', src: '/images/landing-topo.webp', velocidade: 0.08, posicao: '22% 70%', pixel: false },
   { id: 'fundo', src: null, velocidade: 0.12 },
   { id: 'meio', src: null, velocidade: 0.2 },
   { id: 'frente', src: null, velocidade: 0.32 },

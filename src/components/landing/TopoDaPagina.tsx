@@ -12,7 +12,7 @@ function Camada({ camada, rolagem, parar }: { camada: CamadaDoTopo; rolagem: Mot
   return (
     <motion.div aria-hidden="true" className="absolute inset-x-0 -top-10 -bottom-10" style={{ y }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={camada.src} alt="" draggable={false} className="w-full h-full object-cover object-center select-none [image-rendering:pixelated]" />
+      <img src={camada.src} alt="" draggable={false} className={`w-full h-full object-cover select-none ${camada.pixel === false ? '' : '[image-rendering:pixelated]'}`} style={{ objectPosition: camada.posicao ?? 'center' }} />
     </motion.div>
   );
 }
