@@ -190,7 +190,7 @@ describe('Compras e VIP (8.5)', () => {
     const com = await applyCombatResult('u1', resultado(), 'Rato');
     expect(com.character.ouro).toBe(130);
     expect(com.character.xpAtual).toBe(23);
-    expect(com.mensagens.join(' ')).toMatch(/VIP: \+3 XP e \+30 de ouro/);
+    expect(com.mensagens.join(' ')).toMatch(/VIP e Passe: \+3 XP e \+30 de ouro/);
     // derrota não ganha nada
     await updateCharacter('u1', { ouro: 100, xpAtual: 0 });
     const perdeu = await applyCombatResult('u1', { ...resultado(), vencedor: 'monstro' }, 'Rato');

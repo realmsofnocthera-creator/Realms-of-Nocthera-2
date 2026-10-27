@@ -32,6 +32,8 @@ export interface PresenteDoCorreio {
   fragmentosDeMemoria?: number;
   pedrasDaRecordacao?: number;
   avancosDeExpedicao?: number;
+  /** Moedas VIP (dos Passes). */
+  moedasVip?: number;
   /** Materiais (de monstro ou de mundo): id → quantidade. */
   materiais?: Record<string, number>;
   /** Títulos do perfil (ranking e eventos). */
@@ -71,6 +73,7 @@ export const presenteVazio = (p: PresenteDoCorreio | undefined) =>
     !p.fragmentosDeMemoria &&
     !p.pedrasDaRecordacao &&
     !p.avancosDeExpedicao &&
+    !p.moedasVip &&
     !Object.keys(p.selos ?? {}).length &&
     !Object.keys(p.materiais ?? {}).length &&
     !p.titulos?.length &&
@@ -84,7 +87,7 @@ export function presenteDoDocumento(bruto: unknown): PresenteDoCorreio | undefin
   if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto)) return undefined;
   const o = bruto as Record<string, unknown>;
   const p: PresenteDoCorreio = {};
-  for (const campo of ['ouro', 'diamantes', 'essenciaDeSoberano', 'fragmentosDeMemoria', 'pedrasDaRecordacao', 'avancosDeExpedicao'] as const) {
+  for (const campo of ['ouro', 'diamantes', 'essenciaDeSoberano', 'fragmentosDeMemoria', 'pedrasDaRecordacao', 'avancosDeExpedicao', 'moedasVip'] as const) {
     const v = inteiroPositivo(o[campo]);
     if (v) p[campo] = v;
   }
@@ -155,6 +158,7 @@ export function textoDoPresente(p: PresenteDoCorreio | undefined): string[] {
   if (p.fragmentosDeMemoria) linhas.push(`${n(p.fragmentosDeMemoria)} Fragmentos de Memória`);
   if (p.pedrasDaRecordacao) linhas.push(`${n(p.pedrasDaRecordacao)} Pedras da Recordação`);
   if (p.avancosDeExpedicao) linhas.push(`${n(p.avancosDeExpedicao)} Avanços de expedição`);
+  if (p.moedasVip) linhas.push(`${n(p.moedasVip)} Moedas VIP`);
   for (const [id, q] of Object.entries(p.materiais ?? {})) linhas.push(`${n(q)}× ${MATERIAIS_MAP[id]?.nome ?? MATERIAIS_MUNDO_MAP[id]?.nome ?? id}`);
   for (const t of p.titulos ?? []) linhas.push(`Título: ${TITULO_MAP[t]?.nome ?? t}`);
   for (const c of p.cartas ?? []) linhas.push(`Carta: ${TIPO_DE_CARTA_MAP[c.tipo]?.nome ?? c.tipo}`);
