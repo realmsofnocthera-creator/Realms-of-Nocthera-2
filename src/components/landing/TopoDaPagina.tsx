@@ -40,7 +40,7 @@ export function TopoDaPagina() {
         <h1 className="nocthera-brilho">
           {LOGO_DA_PAGINA_INICIAL ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={LOGO_DA_PAGINA_INICIAL} alt="Realms of Nocthera" className="mx-auto w-full max-w-md [image-rendering:pixelated]" />
+            <img src={LOGO_DA_PAGINA_INICIAL} alt="Realms of Nocthera" className="mx-auto w-full max-w-xl drop-shadow-[0_4px_18px_rgba(0,0,0,0.9)]" />
           ) : (
             <span className="block font-[family-name:var(--font-pixel)] uppercase text-[#ED8A0C] leading-[1.6] text-xl sm:text-4xl md:text-5xl [text-shadow:0_4px_0_#7a4506,0_0_30px_rgba(0,0,0,0.9)]">
               Realms
