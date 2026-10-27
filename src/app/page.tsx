@@ -4,7 +4,8 @@ import React from 'react';
 import { RACES } from '@/rules/races';
 import { CLASSES } from '@/rules/classes';
 import { RACE_ICONS, CLASS_ICONS } from '@/assets/icons';
-import { WIZARD_RACE_IMAGES, WIZARD_CLASS_IMAGES } from '@/assets/wizard';
+import { WIZARD_RACE_IMAGES } from '@/assets/wizard';
+import { RETRATOS_DE_POVOS, RETRATOS_DE_VOCACOES, ICONES_DE_POVOS, ICONES_DE_VOCACOES } from '@/assets/landing';
 import { SectionDivider } from '@/components/landing/SectionDivider';
 import { EntityCarousel, EntityCarouselItem } from '@/components/landing/EntityCarousel';
 import { CombatFlowDiagram } from '@/components/landing/CombatFlowDiagram';
@@ -29,16 +30,18 @@ function summarizeDescription(text: string): string {
 const RACE_CAROUSEL_ITEMS: ReadonlyArray<EntityCarouselItem> = RACES.map((race) => ({
   id: race.id,
   nome: race.nome,
-  iconeUrl: RACE_ICONS[race.id] || race.iconeUrl || '',
-  imagemUrl: WIZARD_RACE_IMAGES[race.id],
+  iconeUrl: ICONES_DE_POVOS[race.id] || RACE_ICONS[race.id] || race.iconeUrl || '',
+  imagemUrl: RETRATOS_DE_POVOS[race.id] ?? WIZARD_RACE_IMAGES[race.id],
+  recorte: Boolean(RETRATOS_DE_POVOS[race.id]),
   descricaoCurta: summarizeDescription(race.descricao),
 }));
 
 const CLASS_CAROUSEL_ITEMS: ReadonlyArray<EntityCarouselItem> = CLASSES.map((cls) => ({
   id: cls.id,
   nome: cls.nome,
-  iconeUrl: CLASS_ICONS[cls.id] || '',
-  imagemUrl: WIZARD_CLASS_IMAGES[cls.id],
+  iconeUrl: ICONES_DE_VOCACOES[cls.id] || CLASS_ICONS[cls.id] || '',
+  imagemUrl: RETRATOS_DE_VOCACOES[cls.id],
+  recorte: Boolean(RETRATOS_DE_VOCACOES[cls.id]),
   descricaoCurta: summarizeDescription(cls.descricao),
 }));
 

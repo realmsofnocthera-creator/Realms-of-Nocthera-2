@@ -67,3 +67,19 @@
   .nocthera-brasa, .nocthera-brilho, .nocthera-pisca { animation: none; }
   .nocthera-brasa { display: none; }
 }
+
+/* Botão da página inicial: moldura de metal em 9 partes, 3 estados */
+.botao-pixel {
+  border-style: solid;
+  border-width: 26px;
+  border-image: url('/images/landing/botao-normal.webp') 60 fill / 26px stretch;
+  image-rendering: pixelated;
+}
+.botao-pixel:hover {
+  border-image-source: url('/images/landing/botao-hover.webp');
+  filter: drop-shadow(0 0 14px rgba(237, 138, 12, 0.6));
+}
+.botao-pixel:active {
+  border-image-source: url('/images/landing/botao-apertado.webp');
+  filter: none;
+}
