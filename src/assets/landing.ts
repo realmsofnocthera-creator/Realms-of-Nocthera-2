@@ -22,7 +22,7 @@ export const CAMADAS_DO_TOPO: readonly CamadaDoTopo[] = [
   { id: 'frente', src: null, velocidade: 0.32 },
 ];
 
-/** Logo em pixel (256×64). Sem a arte, o título aparece escrito na fonte pixel. */
-export const LOGO_DA_PAGINA_INICIAL: string | null = null;
+/** Logo (dragão e título, em dourado). Sem a arte, o título aparece escrito na fonte pixel. */
+export const LOGO_DA_PAGINA_INICIAL: string | null = '/images/landing-logo.webp';
 /** Herói de costas (128×192) no topo. */
 export const HEROI_DO_TOPO: string | null = null;
