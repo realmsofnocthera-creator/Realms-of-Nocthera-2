@@ -6,6 +6,7 @@ import { bausDeEscolhaDoDocumento } from '@/rules/arenaRanqueada';
 import { campeonatoDoDocumento, type CampeonatoDoDia } from '@/rules/campeonato';
 import { bloqueadosDoDocumento, canalDoDocumento, type CanalDocumento } from '@/rules/chat';
 import { comprasNaLojaDoDocumento } from '@/rules/loja';
+import { pedidosDoDocumento } from '@/rules/compras';
 import { normalizarHabilidadesEquipadas, ZEROS_ATRIBUTOS } from '@/game';
 import { lerArmasPersonagem } from '@/game/forja';
 import { lerArmadurasPersonagem } from '@/game/armaduraForja';
@@ -432,6 +433,11 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
       ? { comprasNoMercado: (data.comprasNoMercado as unknown[]).filter((v): v is { de: string; em: string } => !!v && typeof (v as { de?: unknown }).de === 'string' && typeof (v as { em?: unknown }).em === 'string').slice(-30) }
       : {}),
     ...(comprasNaLojaDoDocumento(data.comprasNaLoja) ? { comprasNaLoja: comprasNaLojaDoDocumento(data.comprasNaLoja) } : {}),
+    ...(quantidadePositiva(data.gastoReal) ? { gastoReal: quantidadePositiva(data.gastoReal) } : {}),
+    ...(pedidosDoDocumento(data.pedidosDeCompra) ? { pedidosDeCompra: pedidosDoDocumento(data.pedidosDeCompra) } : {}),
+    ...(data.primeiraCompraFeita === true ? { primeiraCompraFeita: true } : {}),
+    ...(quantidadePositiva(data.dividaDeDiamantes) ? { dividaDeDiamantes: quantidadePositiva(data.dividaDeDiamantes) } : {}),
+    ...(typeof data.vipOuroDiario === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.vipOuroDiario) ? { vipOuroDiario: data.vipOuroDiario } : {}),
     ...(estatisticasDoDocumento(data.estatisticas) ? { estatisticas: estatisticasDoDocumento(data.estatisticas) } : {}),
     ...(conquistasDoDocumento(data.conquistas) ? { conquistas: conquistasDoDocumento(data.conquistas) } : {}),
     ...(titulosDoDocumento(data.titulos) ? { titulos: titulosDoDocumento(data.titulos) } : {}),
@@ -529,6 +535,11 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.anunciosNoMercado?.length ? { anunciosNoMercado: char.anunciosNoMercado } : {}),
     ...(char.comprasNoMercado?.length ? { comprasNoMercado: char.comprasNoMercado } : {}),
     ...(char.comprasNaLoja ? { comprasNaLoja: char.comprasNaLoja } : {}),
+    ...(char.gastoReal ? { gastoReal: char.gastoReal } : {}),
+    ...(char.pedidosDeCompra?.length ? { pedidosDeCompra: semUndefined(char.pedidosDeCompra) } : {}),
+    ...(char.primeiraCompraFeita ? { primeiraCompraFeita: true } : {}),
+    ...(char.dividaDeDiamantes ? { dividaDeDiamantes: char.dividaDeDiamantes } : {}),
+    ...(char.vipOuroDiario ? { vipOuroDiario: char.vipOuroDiario } : {}),
     ...(char.estatisticas && Object.keys(char.estatisticas).length ? { estatisticas: semUndefined(char.estatisticas) } : {}),
     ...(char.conquistas && Object.keys(char.conquistas).length ? { conquistas: char.conquistas } : {}),
     ...(char.titulos?.length ? { titulos: char.titulos } : {}),

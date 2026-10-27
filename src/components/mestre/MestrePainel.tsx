@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Layers, Lock, MessageCircle, Power, ScrollText, ShieldCheck, Swords, UserSearch, Users } from 'lucide-react';
+import { ArrowLeft, Coins, Layers, Lock, MessageCircle, Power, ScrollText, ShieldCheck, Swords, UserSearch, Users } from 'lucide-react';
 import { NOME_DA_PERMISSAO, NOME_DO_PAPEL, PAPEIS_MESTRE, type PapelMestre, type PermissaoMestre } from '@/rules/mestre';
 import { dataDoLog, descreverAcao } from '@/lib/mestreTela';
 import type { EntradaLogAdmin } from '@/server/persistencia';
@@ -12,6 +12,7 @@ import { Cartao, chamar, EVENTO_SESSAO_EXPIRADA, OURO, VERMELHO } from '@/compon
 import { logoutUser } from '@/lib/firebase';
 import { ConteudoPainel } from '@/components/mestre/ConteudoPainel';
 import { ChatPainel } from '@/components/mestre/ChatPainel';
+import { ComprasPainel } from '@/components/mestre/ComprasPainel';
 import { GuildasPainel } from '@/components/mestre/GuildasPainel';
 import { JogadoresPainel } from '@/components/mestre/JogadoresPainel';
 import { SistemasPainel } from '@/components/mestre/SistemasPainel';
@@ -26,7 +27,7 @@ export interface SessaoDoPainel {
   permissoes: PermissaoMestre[];
 }
 
-type Aba = 'geral' | 'conteudo' | 'jogadores' | 'guildas' | 'chat' | 'sistemas' | 'papeis' | 'log';
+type Aba = 'geral' | 'conteudo' | 'jogadores' | 'guildas' | 'chat' | 'compras' | 'sistemas' | 'papeis' | 'log';
 
 const MODULOS_EM_BREVE = [
   'Salas, conexões, objetos e gatilhos dos mapas; jogar o mapa',
@@ -53,6 +54,7 @@ export function MestrePainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel; 
     ...(podeJogadores ? [{ id: 'jogadores' as const, nome: 'Jogadores', icone: <UserSearch className="w-3.5 h-3.5" /> }] : []),
     ...(podeJogadores ? [{ id: 'guildas' as const, nome: 'Guildas', icone: <Swords className="w-3.5 h-3.5" /> }] : []),
     ...(podeJogadores ? [{ id: 'chat' as const, nome: 'Chat', icone: <MessageCircle className="w-3.5 h-3.5" /> }] : []),
+    ...(podeJogadores ? [{ id: 'compras' as const, nome: 'Compras', icone: <Coins className="w-3.5 h-3.5" /> }] : []),
     { id: 'sistemas' as const, nome: 'Sistemas', icone: <Power className="w-3.5 h-3.5" /> },
     ...(podePapeis ? [{ id: 'papeis' as const, nome: 'Papéis', icone: <Users className="w-3.5 h-3.5" /> }] : []),
     ...(podeLog ? [{ id: 'log' as const, nome: 'Log', icone: <ScrollText className="w-3.5 h-3.5" /> }] : []),
@@ -109,6 +111,7 @@ export function MestrePainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel; 
         {aba === 'jogadores' && podeJogadores && <JogadoresPainel sessao={sessao} tokenFresco={tokenFresco} />}
         {aba === 'chat' && podeJogadores && <ChatPainel sessao={sessao} tokenFresco={tokenFresco} />}
         {aba === 'guildas' && podeJogadores && <GuildasPainel sessao={sessao} tokenFresco={tokenFresco} />}
+        {aba === 'compras' && podeJogadores && <ComprasPainel sessao={sessao} tokenFresco={tokenFresco} />}
         {aba === 'sistemas' && <SistemasPainel sessao={sessao} tokenFresco={tokenFresco} />}
         {aba === 'papeis' && podePapeis && <Papeis sessao={sessao} tokenFresco={tokenFresco} />}
         {aba === 'log' && podeLog && <Log tokenFresco={tokenFresco} />}

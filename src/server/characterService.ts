@@ -2,6 +2,8 @@ import { bonusDasCartas, bonusVazio, type BonusDeAlma } from '@/game/almas';
 import { atributosDosColecionaveis } from '@/game/colecionaveis';
 import type { ColecionaveisDoJogador, SelosDoJogador } from '@/rules/colecionaveis';
 import type { ComprasNaLoja } from '@/rules/loja';
+import type { PedidoDeCompra } from '@/rules/compras';
+import { bonusDoVip } from '@/rules/vip';
 import type { ExpedicaoEmAndamento } from '@/rules/expedicao';
 import type { CorreioGeralDoJogador, MensagemDoCorreio } from '@/rules/correio';
 import type { ParticipacaoNoChefeMundial } from '@/rules/chefeMundial';
@@ -295,6 +297,12 @@ export interface CharacterDocument {
   comprasNoMercado?: { de: string; em: string }[];
   /** Loja normal: quantas unidades de cada produto foram compradas no mês (o limite zera no dia 1). */
   comprasNaLoja?: ComprasNaLoja;
+  /** VIP (8.5): o gasto real acumulado em centavos (compras estornadas já descontadas), os pedidos recentes, se a primeira compra de Diamantes já foi feita, os Diamantes de estorno ainda não cobertos e o último dia do ouro diário. */
+  gastoReal?: number;
+  pedidosDeCompra?: PedidoDeCompra[];
+  primeiraCompraFeita?: boolean;
+  dividaDeDiamantes?: number;
+  vipOuroDiario?: string;
   /** Feiticeiro (1.5.2): o elemento escolhido, usado nas habilidades da classe que não têm elemento próprio. */
   elementoDaClasse?: Elemento;
   /** Conquistas: os totais contados (vitórias, forjas…), os degraus já resgatados, os títulos e o título escolhido. */
@@ -1570,13 +1578,25 @@ function aplicarResultadoCombateEm(
   const mensagens: string[] = [...resultado.mensagens];
   let transaction: TransactionDocument | undefined;
 
-  if (resultado.vencedor === 'personagem' && current.bonusDeGuilda) {
-    // Pesquisa da guilda (7.3): +% de XP e de ouro em todas as lutas
-    const xpExtra = Math.floor((resultado.xpGanho * current.bonusDeGuilda.xp) / 100);
-    const ouroExtra = Math.floor((resultado.ouroGanho * current.bonusDeGuilda.ouro) / 100);
-    resultado.xpGanho += xpExtra;
-    resultado.ouroGanho += ouroExtra;
-    if (xpExtra || ouroExtra) mensagens.push(`Pesquisa da guilda: +${xpExtra} XP e +${ouroExtra} de ouro.`);
+  if (resultado.vencedor === 'personagem') {
+    // Os dois bônus são percentuais sobre o mesmo valor base da luta, então somam entre si.
+    const baseXp = resultado.xpGanho;
+    const baseOuro = resultado.ouroGanho;
+    if (current.bonusDeGuilda) {
+      // Pesquisa da guilda (7.3): +% de XP e de ouro em todas as lutas
+      const xpExtra = Math.floor((baseXp * current.bonusDeGuilda.xp) / 100);
+      const ouroExtra = Math.floor((baseOuro * current.bonusDeGuilda.ouro) / 100);
+      resultado.xpGanho += xpExtra;
+      resultado.ouroGanho += ouroExtra;
+      if (xpExtra || ouroExtra) mensagens.push(`Pesquisa da guilda: +${xpExtra} XP e +${ouroExtra} de ouro.`);
+    }
+    // VIP (8.5): o bônus do nível atual, só nos ganhos de combate contra monstros (nunca no PvP)
+    const vip = bonusDoVip(current.gastoReal);
+    const xpVip = Math.floor((baseXp * vip.xp) / 100);
+    const ouroVip = Math.floor((baseOuro * vip.ouro) / 100);
+    resultado.xpGanho += xpVip;
+    resultado.ouroGanho += ouroVip;
+    if (xpVip || ouroVip) mensagens.push(`VIP: +${xpVip} XP e +${ouroVip} de ouro.`);
   }
 
   if (resultado.vencedor === 'personagem') {
@@ -2224,7 +2244,10 @@ export async function executarBatalhaSangrenta(
       character = alterarSaldoEm(ctx, character, 'fragmentosAlma', recompensa.fragmentosAlma, motivo).character;
     }
     // Pesquisa da guilda (7.3): +% de ouro também na Batalha Sangrenta
-    if (recompensa.ouro > 0 && current.bonusDeGuilda?.ouro) recompensa.ouro += Math.floor((recompensa.ouro * current.bonusDeGuilda.ouro) / 100);
+    // VIP (8.5): o bônus de ouro do nível, calculado sobre o mesmo valor base
+    const ouroBase = recompensa.ouro;
+    if (ouroBase > 0 && current.bonusDeGuilda?.ouro) recompensa.ouro += Math.floor((ouroBase * current.bonusDeGuilda.ouro) / 100);
+    if (ouroBase > 0) recompensa.ouro += Math.floor((ouroBase * bonusDoVip(current.gastoReal).ouro) / 100);
     if (recompensa.ouro > 0) {
       character = alterarSaldoEm(ctx, character, 'ouro', recompensa.ouro, `${motivo}: ${venceuTudo ? 'vitória' : 'derrota'}`).character;
     }
