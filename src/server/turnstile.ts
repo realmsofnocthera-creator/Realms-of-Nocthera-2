@@ -21,6 +21,15 @@ export class ErroDoTurnstile extends Error {
   }
 }
 
+/**
+ * Domínios que podem enviar o token (TURNSTILE_HOSTNAMES, separados por vírgula). Sem a variável, não confere o domínio
+ * (como antes). Com ela, o token precisa vir de um destes domínios; em produção, não inclua localhost.
+ */
+export function dominiosPermitidosDoTurnstile(): Set<string> | null {
+  const lista = process.env.TURNSTILE_HOSTNAMES?.split(',').map((h) => h.trim().toLowerCase()).filter(Boolean) ?? [];
+  return lista.length > 0 ? new Set(lista) : null;
+}
+
 /** A chave pública da tela, ou null se o Turnstile não está ligado. */
 export function chaveDoSiteDoTurnstile(): string | null {
   return (process.env.TURNSTILE_SECRET_KEY?.trim() && process.env.TURNSTILE_SITE_KEY?.trim()) || null;
@@ -31,7 +40,7 @@ export async function exigirHumano(token: unknown, ip: string, buscar: typeof fe
   const segredo = process.env.TURNSTILE_SECRET_KEY?.trim();
   if (!segredo) return;
   if (typeof token !== 'string' || !token || token.length > TAMANHO_MAXIMO_DO_TOKEN) throw new ErroDoTurnstile();
-  let resposta: { success?: unknown; 'error-codes'?: unknown };
+  let resposta: { success?: unknown; hostname?: unknown; 'error-codes'?: unknown };
   try {
     const corpo = new URLSearchParams({ secret: segredo, response: token, ...(ip && ip !== 'desconhecido' ? { remoteip: ip } : {}) });
     const res = await buscar(URL_DA_VERIFICACAO, { method: 'POST', body: corpo, signal: AbortSignal.timeout(TEMPO_MAXIMO_MS) });
@@ -40,7 +49,13 @@ export async function exigirHumano(token: unknown, ip: string, buscar: typeof fe
     registrarLog('ERROR', 'turnstile.indisponivel', descreverErro(error));
     return;
   }
-  if (resposta.success === true) return;
-  registrarLog('WARNING', 'turnstile.recusado', { codigos: Array.isArray(resposta['error-codes']) ? resposta['error-codes'] : [] });
+  const dominiosPermitidos = dominiosPermitidosDoTurnstile();
+  const dominioDoToken = typeof resposta.hostname === 'string' ? resposta.hostname.toLowerCase() : '';
+  const dominioRecusado = dominiosPermitidos !== null && !dominiosPermitidos.has(dominioDoToken);
+  if (resposta.success === true && !dominioRecusado) return;
+  registrarLog('WARNING', 'turnstile.recusado', {
+    codigos: Array.isArray(resposta['error-codes']) ? resposta['error-codes'] : [],
+    ...(dominioRecusado ? { dominio: dominioDoToken } : {}),
+  });
   throw new ErroDoTurnstile();
 }
