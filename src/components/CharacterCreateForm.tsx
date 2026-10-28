@@ -29,6 +29,7 @@ import {
 } from '@/assets/wizard';
 import { resolveAvatarSrc } from '@/assets/avatars';
 import { ICONES_DE_POVOS, ICONES_DE_VOCACOES, RETRATOS_DE_POVOS, RETRATOS_DE_VOCACOES } from '@/assets/landing';
+import { RETRATOS_GRANDES_DE_POVOS, RETRATOS_GRANDES_DE_VOCACOES } from '@/assets/criacao';
 import { CaixaDoTurnstile } from '@/components/CaixaDoTurnstile';
 import { FundoDoPortal } from '@/components/login/FundoDoPortal';
 import type { AceiteDoCliente } from '@/rules/termos';
@@ -106,6 +107,8 @@ interface ShowcaseOption {
   descricao: string;
   bonusAtributos: Attributes;
   artSrc: string;
+  /** Fundo temático do povo ou da vocação (a arte antiga), atrás do retrato. */
+  fundoSrc?: string;
   /** Ícone quadrado (rosto ou símbolo) para a miniatura; sem ele, a miniatura recorta o retrato. */
   miniaturaSrc?: string;
   emblemSrc?: string | null;
@@ -231,47 +234,30 @@ function WizardSelectionShowcase({
       role="radiogroup"
       aria-label={stepTitle}
     >
-      {/* Fundo dramático escuro com silhueta ampliada animada no canto superior direito */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-br from-[#2B090D]/55 via-[#0B0809] to-[#080607] pointer-events-none"
-      />
-      <motion.img
-        key={`bg-silhouette-${activeOption.id}`}
-        src={activeOption.artSrc}
-        alt=""
-        aria-hidden="true"
-        initial={{ opacity: 0, scale: 1.04 }}
-        animate={{
-          opacity: [0.12, 0.2, 0.12],
-          scale: [1.02, 1.07, 1.02],
-          x: [0, -6, 0],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-        className="absolute -right-8 top-4 w-[62%] h-[55%] object-cover object-top mix-blend-lighten blur-[1px] pointer-events-none"
-      />
+      {/* Fundo temático do povo ou da vocação (a arte antiga), ocupando a tela toda */}
+      <div aria-hidden="true" className="absolute inset-0 bg-[#080607] pointer-events-none" />
+      <AnimatePresence mode="wait">
+        <motion.img
+          key={`fundo-${activeOption.id}`}
+          src={activeOption.fundoSrc ?? activeOption.artSrc}
+          alt=""
+          aria-hidden="true"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.26, ease: 'easeOut' }}
+          draggable={false}
+          className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none"
+        />
+      </AnimatePresence>
 
-      {/* Halo pulsante atrás da arte principal */}
+      {/* Brilho suave atrás do retrato */}
       <motion.div
         aria-hidden="true"
-        animate={{
-          opacity: [0.2, 0.38, 0.2],
-          scale: [0.94, 1.05, 0.94],
-        }}
-        transition={{
-          duration: 4.2,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-        className="absolute bottom-[14%] left-1/2 -translate-x-1/2 z-0 w-56 h-72 rounded-full blur-3xl pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(212,175,55,0.28) 0%, rgba(138,17,23,0.16) 55%, transparent 75%)',
-        }}
+        animate={{ opacity: [0.18, 0.34, 0.18], scale: [0.96, 1.05, 0.96] }}
+        transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute bottom-[16%] left-1/2 -translate-x-1/2 z-0 w-64 h-80 rounded-full blur-3xl pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(237,138,12,0.30) 0%, rgba(138,17,23,0.16) 55%, transparent 75%)' }}
       />
 
       {/* Arte principal de corpo inteiro centralizada com entrada + respiração contínua */}
@@ -298,7 +284,7 @@ function WizardSelectionShowcase({
               repeat: Infinity,
               ease: 'easeInOut',
             }}
-            className="h-[86%] sm:h-[90%] w-auto max-w-[85%] object-contain object-bottom drop-shadow-[0_14px_30px_rgba(0,0,0,0.95)]"
+            className="h-[92%] w-auto max-w-[118%] object-contain object-bottom translate-x-[4%] drop-shadow-[0_14px_30px_rgba(0,0,0,0.95)]"
           />
         </motion.div>
       </AnimatePresence>
@@ -306,7 +292,7 @@ function WizardSelectionShowcase({
       {/* Gradientes sutis de leitura à esquerda e na base */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 z-10 bg-gradient-to-r from-[#080607]/85 via-[#080607]/25 to-transparent pointer-events-none"
+        className="absolute inset-0 z-10 bg-gradient-to-r from-[#080607]/70 via-[#080607]/10 to-transparent pointer-events-none"
       />
       <div
         aria-hidden="true"
@@ -453,7 +439,7 @@ function WizardSelectionShowcase({
                         <img
                           src={ATTRIBUTE_ICONS[attr]}
                           alt={ATTRIBUTE_SHORT_NAMES[attr]}
-                          className="w-3 h-3 object-contain shrink-0"
+                          className="w-4 h-4 object-contain shrink-0"
                         />
                         <span className="text-[9px] sm:text-[10px] font-cinzel text-[#F5F3E0] truncate">
                           {ATTRIBUTE_SHORT_NAMES[attr]}
@@ -532,10 +518,9 @@ function WizardSelectionShowcase({
             onClick={onConfirm}
             whileHover={confirmDisabled ? undefined : { scale: 1.04 }}
             whileTap={confirmDisabled ? undefined : { scale: 0.96 }}
-            className="inline-flex items-center justify-center gap-1.5 bg-[#140C0D]/90 hover:bg-[#221315] disabled:opacity-35 disabled:cursor-not-allowed text-[#F5E3A6] font-cinzel font-semibold uppercase tracking-[0.18em] text-xs sm:text-sm py-2.5 px-5 rounded border border-[#D4AF37]/85 hover:border-[#F5C542] shadow-[0_4px_16px_rgba(0,0,0,0.85)] transition-all cursor-pointer shrink-0"
-          >
+            className="inline-flex items-center justify-center gap-1.5 bg-gradient-to-b from-[#F7D26B] to-[#D99B26] hover:from-[#FFE08A] hover:to-[#E8AE3A] disabled:opacity-40 disabled:cursor-not-allowed text-[#1A120B] font-cinzel font-extrabold uppercase tracking-[0.14em] text-xs sm:text-sm py-3 px-6 border-[3px] border-[#1A120B] shadow-[0_0_0_2px_#F5C542,0_6px_18px_rgba(0,0,0,0.85)] transition-all cursor-pointer shrink-0">
             <span>Selecionar</span>
-            <ChevronRight className="w-4 h-4 text-[#F5C542]" />
+            <ChevronRight className="w-4 h-4 text-[#1A120B]" />
           </motion.button>
         </div>
       </motion.div>
@@ -786,7 +771,8 @@ export function CharacterCreateForm({
     nome: r.nome,
     descricao: r.descricao,
     bonusAtributos: r.bonusAtributos,
-    artSrc: RETRATOS_DE_POVOS[r.id] || WIZARD_RACE_IMAGES[r.id] || WIZARD_RACE_IMAGES.humano,
+    artSrc: RETRATOS_GRANDES_DE_POVOS[r.id] || RETRATOS_DE_POVOS[r.id] || WIZARD_RACE_IMAGES[r.id] || WIZARD_RACE_IMAGES.humano,
+    fundoSrc: WIZARD_RACE_IMAGES[r.id] || WIZARD_RACE_IMAGES.humano,
     miniaturaSrc: ICONES_DE_POVOS[r.id],
     emblemSrc: RACE_ICONS[r.id] || r.iconeUrl,
   }));
@@ -796,7 +782,8 @@ export function CharacterCreateForm({
     nome: c.nome,
     descricao: c.descricao,
     bonusAtributos: c.bonusAtributos,
-    artSrc: RETRATOS_DE_VOCACOES[c.id] || WIZARD_CLASS_IMAGES[c.id] || WIZARD_CLASS_IMAGES.barbaro,
+    artSrc: RETRATOS_GRANDES_DE_VOCACOES[c.id] || RETRATOS_DE_VOCACOES[c.id] || WIZARD_CLASS_IMAGES[c.id] || WIZARD_CLASS_IMAGES.barbaro,
+    fundoSrc: WIZARD_CLASS_IMAGES[c.id] || WIZARD_CLASS_IMAGES.barbaro,
     miniaturaSrc: ICONES_DE_VOCACOES[c.id],
     emblemSrc: CLASS_ICONS[c.id],
   }));
@@ -1474,7 +1461,7 @@ export function CharacterCreateForm({
                       {/* 2. Personagem que fica no Hub (sprite transparente) ACIMA do background */}
                       <div className="absolute inset-x-0 bottom-4 top-2 z-20 flex items-end justify-center pointer-events-none overflow-hidden">
                         <motion.img
-                          src={RETRATOS_DE_VOCACOES[selectedClass.id] || resolveAvatarSrc(undefined, selectedClass.id)}
+                          src={RETRATOS_GRANDES_DE_VOCACOES[selectedClass.id] || RETRATOS_DE_VOCACOES[selectedClass.id] || resolveAvatarSrc(undefined, selectedClass.id)}
                           alt={selectedClass.nome}
                           style={{ transformOrigin: 'bottom center' }}
                           animate={{

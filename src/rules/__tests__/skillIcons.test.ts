@@ -29,9 +29,9 @@ describe('skillIcons', () => {
     }
   });
 
-  it('aponta ativa e passiva do anão para o mesmo caminho /icons/skills/anao-ativa.webp', () => {
+  it('aponta o anão para um ícone próprio na ativa e outro na passiva', () => {
     expect(RACE_SKILL_ICONS['anao'].ativa).toBe('/icons/skills/anao-ativa.webp');
-    expect(RACE_SKILL_ICONS['anao'].passiva).toBe('/icons/skills/anao-ativa.webp');
+    expect(RACE_SKILL_ICONS['anao'].passiva).toBe('/icons/skills/anao-passiva.webp');
   });
 
   it('nenhum caminho de ícone começa com http', () => {

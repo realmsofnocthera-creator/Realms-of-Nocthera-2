@@ -5,7 +5,7 @@ export const RACE_SKILL_ICONS: Record<string, { ativa: string; passiva: string }
   },
   anao: {
     ativa: '/icons/skills/anao-ativa.webp',
-    passiva: '/icons/skills/anao-ativa.webp',
+    passiva: '/icons/skills/anao-passiva.webp',
   },
   elfo: {
     ativa: '/icons/skills/elfo-ativa.webp',
