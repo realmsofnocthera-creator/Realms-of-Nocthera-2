@@ -31,8 +31,9 @@ export const HEROI_DO_TOPO: string | null = null;
 
 const PASTA = '/images/landing/';
 
-/** Retratos de corpo inteiro (240×360, fundo transparente). Povo sem retrato (Anão) usa a arte antiga do assistente. */
+/** Retratos de corpo inteiro (240×360, fundo transparente). */
 export const RETRATOS_DE_POVOS: Readonly<Record<string, string>> = {
+  anao: `${PASTA}povo-anao.webp`,
   humano: `${PASTA}povo-humano.webp`,
   elfo: `${PASTA}povo-elfo.webp`,
   orc: `${PASTA}povo-orc.webp`,
@@ -51,6 +52,7 @@ export const RETRATOS_DE_VOCACOES: Readonly<Record<string, string>> = {
 
 /** Ícones quadrados (128×128): rosto do povo e símbolo da vocação. */
 export const ICONES_DE_POVOS: Readonly<Record<string, string>> = {
+  anao: `${PASTA}icone-povo-anao.webp`,
   humano: `${PASTA}icone-povo-humano.webp`,
   elfo: `${PASTA}icone-povo-elfo.webp`,
   orc: `${PASTA}icone-povo-orc.webp`,
@@ -68,3 +70,32 @@ export const ICONES_DE_VOCACOES: Readonly<Record<string, string>> = {
 };
 
 /** O botão em 3 estados (384×194, moldura de 9 partes) fica em `.botao-pixel`, no globals.css: botao-normal, botao-hover e botao-apertado em /images/landing/. */
+
+/** Os seis deuses (300×450). Sem arte (Gwyndolin ainda), o cartão mostra só o nome. */
+export interface DeusDaPagina {
+  id: string;
+  nome: string;
+  /** Lautrec veio como cartão retangular com fundo próprio; os outros são recortes. */
+  src?: string;
+  cartao?: boolean;
+}
+
+export const DEUSES_DA_PAGINA: readonly DeusDaPagina[] = [
+  { id: 'lautrec', nome: 'Lautrec', src: `${PASTA}deus-lautrec.webp`, cartao: true },
+  { id: 'lana', nome: 'Lana', src: `${PASTA}deus-lana.webp` },
+  { id: 'azgher', nome: 'Azgher', src: `${PASTA}deus-azgher.webp` },
+  { id: 'nimb', nome: 'Nimb', src: `${PASTA}deus-nimb.webp` },
+  { id: 'yggdrasil', nome: 'Yggdrasil', src: `${PASTA}deus-yggdrasil.webp` },
+  { id: 'gwyndolin', nome: 'Gwyndolin' },
+];
+
+/** Cenas das Provações na página inicial (a moldura dourada já faz parte da arte). Chave = id em `PROVACOES`. */
+export const CENAS_DAS_PROVACOES: Readonly<Record<string, string>> = {
+  expedicao: `${PASTA}prov-expedicao.webp`,
+  cacada: `${PASTA}prov-cacada.webp`,
+  'chefe-mundial': `${PASTA}prov-chefe-mundial.webp`,
+  'batalha-sangrenta': `${PASTA}prov-batalha-sangrenta.webp`,
+  'torre-celestial': `${PASTA}prov-torre-celestial.webp`,
+  'teste-equipe': `${PASTA}prov-teste-equipe.webp`,
+  guerreiro: `${PASTA}prov-guerreiro.webp`,
+};
