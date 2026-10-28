@@ -1,3 +1,4 @@
+import type { AceiteLegal } from '@/rules/termos';
 import { bonusDasCartas, bonusVazio, type BonusDeAlma } from '@/game/almas';
 import { atributosDosColecionaveis } from '@/game/colecionaveis';
 import type { ColecionaveisDoJogador, SelosDoJogador } from '@/rules/colecionaveis';
@@ -312,6 +313,8 @@ export interface CharacterDocument {
   moedasVip?: number;
   /** Pacote do Iniciante já comprado (1 por conta; o estorno não devolve o direito). */
   iniciantePago?: boolean;
+  /** Aceite dos Termos e confirmação da idade mínima (16 anos) feitos na criação do personagem. Contas antigas não têm. */
+  aceiteLegal?: AceiteLegal;
   /** Loja de Moedas VIP: quantas unidades de cada item foram compradas no mês. */
   comprasMoedasVip?: ComprasNaLoja;
   primeiraCompraFeita?: boolean;
@@ -803,7 +806,7 @@ function toPublicCharacterProfile(char: CharacterDocument): PublicCharacterProfi
 export async function createCharacter(
   uid: string,
   input: CreateCharacterInput,
-  opcoes: { rede?: string | null; agora?: Date } = {}
+  opcoes: { rede?: string | null; agora?: Date; aceite?: AceiteLegal } = {}
 ): Promise<CharacterDocument> {
   const existing = await getCharacterByUid(uid);
   if (existing) {
@@ -963,6 +966,7 @@ export async function createCharacter(
     ouro: 0,
     diamantes: 0,
     ...derivados,
+    ...(opcoes.aceite ? { aceiteLegal: opcoes.aceite } : {}),
     criadoEm: new Date().toISOString(),
   };
 

@@ -83,3 +83,18 @@
   border-image-source: url('/images/landing/botao-apertado.webp');
   filter: none;
 }
+
+/* Variações do botão de metal em pixel para formulários (o tamanho padrão fica na página inicial) */
+.botao-pixel-medio {
+  border-width: 16px;
+  border-image-width: 16px;
+}
+.botao-pixel:disabled {
+  opacity: 0.55;
+  filter: grayscale(0.7);
+  cursor: not-allowed;
+}
+/* Campo de data com o seletor do navegador no tema escuro */
+.campo-data-escuro {
+  color-scheme: dark;
+}

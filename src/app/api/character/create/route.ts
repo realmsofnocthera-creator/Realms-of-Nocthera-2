@@ -7,6 +7,8 @@ import { repositorio } from '@/server/persistencia';
 import { respostaErroPersistencia } from '@/server/respostaErro';
 import { ErroDoTurnstile, exigirHumano } from '@/server/turnstile';
 import { ipDaRequisicao, limitarPorConta, limitarPorIp } from '@/server/rateLimit';
+import { validarIdadeMinima } from '@/rules/idadeMinima';
+import { VERSAO_DOS_TERMOS, type AceiteLegal } from '@/rules/termos';
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,6 +38,15 @@ export async function POST(req: NextRequest) {
       throw error;
     }
 
+    // Idade mínima (16 anos) e aceite dos Termos: sem isso o personagem não é criado. A data de nascimento não é gravada.
+    const agora = new Date();
+    const erroIdade = validarIdadeMinima(body?.aceite?.dataNascimento, agora);
+    if (erroIdade) return NextResponse.json({ error: erroIdade, aceite: true }, { status: 400 });
+    if (body?.aceite?.termosVersao !== VERSAO_DOS_TERMOS) {
+      return NextResponse.json({ error: 'Aceite os Termos de Uso e a Política de Privacidade para continuar.', aceite: true }, { status: 400 });
+    }
+    const aceite: AceiteLegal = { termosVersao: VERSAO_DOS_TERMOS, aceitoEm: agora.toISOString() };
+
     let character;
     try {
       character = await createCharacter(
@@ -48,7 +59,7 @@ export async function POST(req: NextRequest) {
           linhagem: typeof body.linhagem === 'string' ? body.linhagem : undefined,
           pontos: body.pontos,
         },
-        { rede: marcaDaRede(ipDaRequisicao(req)) }
+        { rede: marcaDaRede(ipDaRequisicao(req)), aceite }
       );
     } catch (error) {
       if (!(error instanceof ErroDeMulticonta)) throw error;
