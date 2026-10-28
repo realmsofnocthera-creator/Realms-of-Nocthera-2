@@ -6,6 +6,7 @@ import { ArrowLeft, Home, Lock } from 'lucide-react';
 import { CharacterDocument } from '@/server/characterService';
 import { PROVACOES, ProvacaoDefinition, ProvacaoId } from '@/rules/provacoes';
 import { PROVACOES_IMAGES } from '@/assets/provacoes';
+import { CENAS_DAS_PROVACOES } from '@/assets/landing';
 import { NOCTHERA_THEME } from '@/theme/theme';
 
 export interface ProvacoesScreenProps {
@@ -54,8 +55,28 @@ function OrnateCorners({ locked }: { locked: boolean }) {
   );
 }
 
-/** A arte da provação (já contém o título na própria imagem); sem arte, o nome escrito sobre um fundo escuro. */
+/** A cena da provação com o nome escrito por cima; sem cena nova, a arte antiga (que já traz o título) ou o nome sobre um fundo escuro. */
 function ArteDaProvacao({ provacao, bloqueada = false }: { provacao: ProvacaoDefinition; bloqueada?: boolean }) {
+  const cena = CENAS_DAS_PROVACOES[provacao.id];
+  if (cena) {
+    return (
+      <>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={cena}
+          alt={provacao.nome}
+          className={`absolute inset-0 w-full h-full object-cover object-[50%_35%] select-none pointer-events-none${bloqueada ? ' grayscale-[45%]' : ''}`}
+        />
+        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 to-transparent pointer-events-none" />
+        <span
+          className="absolute bottom-2 left-3 right-3 z-10 font-cinzel font-extrabold uppercase tracking-widest text-sm sm:text-base drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] pointer-events-none"
+          style={{ color: '#F5E3B3' }}
+        >
+          {provacao.nome}
+        </span>
+      </>
+    );
+  }
   if (!provacao.assetKey) {
     return (
       <div
