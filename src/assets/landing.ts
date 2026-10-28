@@ -71,7 +71,7 @@ export const ICONES_DE_VOCACOES: Readonly<Record<string, string>> = {
 
 /** O botão em 3 estados (384×194, moldura de 9 partes) fica em `.botao-pixel`, no globals.css: botao-normal, botao-hover e botao-apertado em /images/landing/. */
 
-/** Os seis deuses (300×450). Sem arte (Gwyndolin ainda), o cartão mostra só o nome. */
+/** Os seis deuses (300×450). Sem arte, o cartão mostra só o nome. */
 export interface DeusDaPagina {
   id: string;
   nome: string;
@@ -86,7 +86,7 @@ export const DEUSES_DA_PAGINA: readonly DeusDaPagina[] = [
   { id: 'azgher', nome: 'Azgher', src: `${PASTA}deus-azgher.webp` },
   { id: 'nimb', nome: 'Nimb', src: `${PASTA}deus-nimb.webp` },
   { id: 'yggdrasil', nome: 'Yggdrasil', src: `${PASTA}deus-yggdrasil.webp` },
-  { id: 'gwyndolin', nome: 'Gwyndolin' },
+  { id: 'gwyndolin', nome: 'Gwyndolin', src: `${PASTA}deus-gwyndolin.webp` },
 ];
 
 /** Cenas das Provações na página inicial (a moldura dourada já faz parte da arte). Chave = id em `PROVACOES`. */
