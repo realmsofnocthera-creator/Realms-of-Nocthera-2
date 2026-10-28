@@ -30,12 +30,16 @@ import {
 import { resolveAvatarSrc } from '@/assets/avatars';
 import { ICONES_DE_POVOS, ICONES_DE_VOCACOES, RETRATOS_DE_POVOS, RETRATOS_DE_VOCACOES } from '@/assets/landing';
 import { CaixaDoTurnstile } from '@/components/CaixaDoTurnstile';
+import { FundoDoPortal } from '@/components/login/FundoDoPortal';
+import type { AceiteDoCliente } from '@/rules/termos';
 import { SkillIcon } from '@/components/skills';
 import { getRaceSkillIcon, getClassSkillIcon } from '@/rules/skillIcons';
 import { auth } from '@/lib/firebase';
 
 interface CharacterCreateFormProps {
   idToken: string;
+  /** Data de nascimento (só conferida no servidor) e versão dos Termos aceita; obrigatório para o servidor criar o personagem. */
+  aceite?: AceiteDoCliente;
   onCharacterCreated: () => void;
   onLogout: () => void;
   userEmail: string;
@@ -541,6 +545,7 @@ function WizardSelectionShowcase({
 
 export function CharacterCreateForm({
   idToken,
+  aceite,
   onCharacterCreated,
   onLogout,
   userEmail,
@@ -741,6 +746,7 @@ export function CharacterCreateForm({
             : {}),
           pontos,
           ...(tokenDoTurnstile ? { turnstile: tokenDoTurnstile } : {}),
+          ...(aceite ? { aceite } : {}),
         }),
       });
 
@@ -797,6 +803,7 @@ export function CharacterCreateForm({
 
   return (
     <div className="fixed inset-0 z-40 bg-[#070506] flex items-center justify-center overflow-hidden text-[#F5F3E0]">
+      <FundoDoPortal />
       <div className="relative w-full h-[100dvh] sm:max-w-[460px] md:max-w-[500px] sm:h-[95dvh] sm:rounded-2xl sm:border border-[#C8A656]/55 bg-[#0A0708] shadow-[0_24px_80px_rgba(0,0,0,0.98)] flex flex-col overflow-hidden">
         {/* Barra de Progresso Flutuante Discreta no Topo (mantém navegação clicável entre etapas + botão Sair) */}
         <header className="absolute top-0 inset-x-0 z-30 px-2.5 pt-2 pb-1.5 bg-gradient-to-b from-black/85 via-black/55 to-transparent flex flex-col gap-1.5">

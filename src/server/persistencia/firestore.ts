@@ -57,6 +57,12 @@ import {
   VersaoConteudo,
 } from './tipos';
 
+function aceiteLegalDoDocumento(valor: unknown): { termosVersao: string; aceitoEm: string } | undefined {
+  if (!valor || typeof valor !== 'object') return undefined;
+  const v = valor as { termosVersao?: unknown; aceitoEm?: unknown };
+  return typeof v.termosVersao === 'string' && typeof v.aceitoEm === 'string' ? { termosVersao: v.termosVersao, aceitoEm: v.aceitoEm } : undefined;
+}
+
 /** A coleção de cada modo da Arena (7.5). */
 const colecaoDaArena = (modo: ModoDaArena = 'arena') => (modo === 'ranqueada' ? 'arenaRanqueada' : 'arena');
 
@@ -444,6 +450,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(comprasMensaisDoDocumento(data.comprasMensais) ? { comprasMensais: comprasMensaisDoDocumento(data.comprasMensais) } : {}),
     ...(passesDoDocumento(data.passes) ? { passes: passesDoDocumento(data.passes) } : {}),
     ...(data.iniciantePago === true ? { iniciantePago: true } : {}),
+    ...(aceiteLegalDoDocumento(data.aceiteLegal) ? { aceiteLegal: aceiteLegalDoDocumento(data.aceiteLegal) } : {}),
     ...(comprasNaLojaDoDocumento(data.comprasMoedasVip) ? { comprasMoedasVip: comprasNaLojaDoDocumento(data.comprasMoedasVip) } : {}),
     ...(quantidadePositiva(data.moedasVip) ? { moedasVip: quantidadePositiva(data.moedasVip) } : {}),
     ...(data.primeiraCompraFeita === true ? { primeiraCompraFeita: true } : {}),
@@ -553,6 +560,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.passes ? { passes: char.passes } : {}),
     ...(char.moedasVip ? { moedasVip: char.moedasVip } : {}),
     ...(char.iniciantePago ? { iniciantePago: true } : {}),
+    ...(char.aceiteLegal ? { aceiteLegal: char.aceiteLegal } : {}),
     ...(char.comprasMoedasVip ? { comprasMoedasVip: char.comprasMoedasVip } : {}),
     ...(char.primeiraCompraFeita ? { primeiraCompraFeita: true } : {}),
     ...(char.dividaDeDiamantes ? { dividaDeDiamantes: char.dividaDeDiamantes } : {}),

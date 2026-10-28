@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET as apelacaoGet, POST as apelacaoPost } from '@/app/api/apelacao/route';
+import { ACEITE_DE_TESTE } from '@/test/aceiteDeTeste';
 import { POST as criarRota } from '@/app/api/character/create/route';
 import { GET as statusRota } from '@/app/api/status/route';
 import { limparCacheRevogacao, verifyAuthToken } from '@/server/auth';
@@ -79,11 +80,11 @@ describe('Etapa 6.5, parte 3', () => {
     it('a criação do personagem pede o Turnstile quando ele está ligado', async () => {
       process.env.TURNSTILE_SECRET_KEY = 'segredo';
       vi.stubGlobal('fetch', respostaDoCloudflare({ success: false }));
-      const sem = await criarRota(pedido('/api/character/create', 'n1', { nome: 'Novato', racaId: 'elfo', classeId: 'cavaleiro', pontos: PONTOS }));
+      const sem = await criarRota(pedido('/api/character/create', 'n1', { nome: 'Novato', racaId: 'elfo', classeId: 'cavaleiro', pontos: PONTOS, aceite: ACEITE_DE_TESTE }));
       expect(sem.status).toBe(400);
       expect(await sem.json()).toMatchObject({ turnstile: true, error: expect.stringMatching(/não é um robô/) });
       vi.stubGlobal('fetch', respostaDoCloudflare({ success: true }));
-      expect((await criarRota(pedido('/api/character/create', 'n1', { nome: 'Novato', racaId: 'elfo', classeId: 'cavaleiro', pontos: PONTOS, turnstile: 'ok' }))).status).toBe(201);
+      expect((await criarRota(pedido('/api/character/create', 'n1', { nome: 'Novato', racaId: 'elfo', classeId: 'cavaleiro', pontos: PONTOS, turnstile: 'ok', aceite: ACEITE_DE_TESTE }))).status).toBe(201);
     });
   });
 

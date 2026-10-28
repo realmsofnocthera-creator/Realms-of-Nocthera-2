@@ -1,3 +1,4 @@
+import { ACEITE_DE_TESTE } from '@/test/aceiteDeTeste';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   createCharacter,
@@ -495,6 +496,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
           racaId: 'anao',
           classeId: 'cavaleiro',
           pontos: { vigor: 5, sorte: 0, forca: 2, vitalidade: 3, arcano: 0, inteligencia: 0, agilidade: 0 },
+          aceite: ACEITE_DE_TESTE,
         }),
       });
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
+import { ACEITE_DE_TESTE } from '@/test/aceiteDeTeste';
 import { POST as criarRota } from '@/app/api/character/create/route';
 import { GET as filaGet, POST as filaPost } from '@/app/api/mestre/revisao/route';
 import { exigirEmailVerificado, limparCacheRevogacao, verifyAuthToken } from '@/server/auth';
@@ -34,7 +35,7 @@ const pedidoDeCriacao = (uid: string, nome: string, xff: string) =>
   new NextRequest('http://t/api/character/create', {
     method: 'POST',
     headers: { authorization: `Bearer ${tokenDeTeste(uid)}`, 'content-type': 'application/json', 'x-forwarded-for': xff },
-    body: JSON.stringify({ nome, racaId: 'elfo', classeId: 'cavaleiro', pontos: PONTOS }),
+    body: JSON.stringify({ nome, racaId: 'elfo', classeId: 'cavaleiro', pontos: PONTOS, aceite: ACEITE_DE_TESTE }),
   });
 const mestre = (uid: string, metodo = 'GET', corpo?: unknown) =>
   new NextRequest('http://t/api/mestre/revisao', { method: metodo, headers: { authorization: `Bearer ${tokenDeTeste(uid)}`, 'content-type': 'application/json' }, body: corpo ? JSON.stringify(corpo) : undefined });
