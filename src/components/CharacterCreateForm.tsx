@@ -28,6 +28,7 @@ import {
   WIZARD_RACE_IMAGES,
 } from '@/assets/wizard';
 import { resolveAvatarSrc } from '@/assets/avatars';
+import { ICONES_DE_POVOS, ICONES_DE_VOCACOES, RETRATOS_DE_POVOS, RETRATOS_DE_VOCACOES } from '@/assets/landing';
 import { CaixaDoTurnstile } from '@/components/CaixaDoTurnstile';
 import { SkillIcon } from '@/components/skills';
 import { getRaceSkillIcon, getClassSkillIcon } from '@/rules/skillIcons';
@@ -101,6 +102,8 @@ interface ShowcaseOption {
   descricao: string;
   bonusAtributos: Attributes;
   artSrc: string;
+  /** Ícone quadrado (rosto ou símbolo) para a miniatura; sem ele, a miniatura recorta o retrato. */
+  miniaturaSrc?: string;
   emblemSrc?: string | null;
 }
 
@@ -384,15 +387,19 @@ function WizardSelectionShowcase({
               <div className="w-full h-full bg-[#140E0C] overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={opt.artSrc}
+                  src={opt.miniaturaSrc ?? opt.artSrc}
                   alt={opt.nome}
-                  style={{
-                    objectFit: 'cover',
-                    objectPosition: '50% 14%',
-                    transform: 'scale(1.85)',
-                    transformOrigin: '50% 18%',
-                  }}
-                  className="w-full h-full pointer-events-none select-none"
+                  style={
+                    opt.miniaturaSrc
+                      ? { objectFit: 'contain' }
+                      : {
+                          objectFit: 'cover',
+                          objectPosition: '50% 14%',
+                          transform: 'scale(1.85)',
+                          transformOrigin: '50% 18%',
+                        }
+                  }
+                  className={`w-full h-full pointer-events-none select-none${opt.miniaturaSrc ? ' p-0.5' : ''}`}
                 />
               </div>
               <div className="absolute inset-x-0 bottom-0 bg-black/80 px-0.5 py-[1px] text-center">
@@ -773,7 +780,8 @@ export function CharacterCreateForm({
     nome: r.nome,
     descricao: r.descricao,
     bonusAtributos: r.bonusAtributos,
-    artSrc: WIZARD_RACE_IMAGES[r.id] || WIZARD_RACE_IMAGES.humano,
+    artSrc: RETRATOS_DE_POVOS[r.id] || WIZARD_RACE_IMAGES[r.id] || WIZARD_RACE_IMAGES.humano,
+    miniaturaSrc: ICONES_DE_POVOS[r.id],
     emblemSrc: RACE_ICONS[r.id] || r.iconeUrl,
   }));
 
@@ -782,7 +790,8 @@ export function CharacterCreateForm({
     nome: c.nome,
     descricao: c.descricao,
     bonusAtributos: c.bonusAtributos,
-    artSrc: WIZARD_CLASS_IMAGES[c.id] || WIZARD_CLASS_IMAGES.barbaro,
+    artSrc: RETRATOS_DE_VOCACOES[c.id] || WIZARD_CLASS_IMAGES[c.id] || WIZARD_CLASS_IMAGES.barbaro,
+    miniaturaSrc: ICONES_DE_VOCACOES[c.id],
     emblemSrc: CLASS_ICONS[c.id],
   }));
 
@@ -1458,7 +1467,7 @@ export function CharacterCreateForm({
                       {/* 2. Personagem que fica no Hub (sprite transparente) ACIMA do background */}
                       <div className="absolute inset-x-0 bottom-4 top-2 z-20 flex items-end justify-center pointer-events-none overflow-hidden">
                         <motion.img
-                          src={resolveAvatarSrc(undefined, selectedClass.id)}
+                          src={RETRATOS_DE_VOCACOES[selectedClass.id] || resolveAvatarSrc(undefined, selectedClass.id)}
                           alt={selectedClass.nome}
                           style={{ transformOrigin: 'bottom center' }}
                           animate={{
@@ -1484,6 +1493,7 @@ export function CharacterCreateForm({
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={
+                            ICONES_DE_POVOS[selectedRace.id] ||
                             WIZARD_RACE_IMAGES[selectedRace.id] ||
                             RACE_ICONS[selectedRace.id] ||
                             ''
