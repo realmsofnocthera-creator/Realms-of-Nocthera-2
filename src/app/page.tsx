@@ -13,6 +13,7 @@ import { TopoDaPagina } from '@/components/landing/TopoDaPagina';
 import { HistoriaDeNocthera } from '@/components/landing/HistoriaDeNocthera';
 import { ModosDeJogo } from '@/components/landing/ModosDeJogo';
 import { RodapeDaPagina } from '@/components/landing/RodapeDaPagina';
+import { ExplicacaoDoCombate } from '@/components/landing/ExplicacaoDoCombate';
 import { Revelar } from '@/components/landing/Revelar';
 import { TituloDeSecao } from '@/components/landing/TituloDeSecao';
 
@@ -76,9 +77,10 @@ export default function HomePage() {
           <Revelar className="space-y-6">
             <TituloDeSecao id="section-combat" titulo="Sistema de Combate" />
             <p className="text-center max-w-3xl mx-auto text-sm sm:text-base text-[#E2D6B6] leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
-              O combate em Realms of Nocthera é automático: seu personagem luta sozinho, aplicando dano físico ou mágico conforme sua classe e progredindo em poder à medida que sobe de nível. Cada classe desenvolve habilidades próprias ao longo da jornada — de golpes básicos a técnicas devastadoras desbloqueadas nos níveis mais altos. A defesa combina Sobreescudo e resistência física ou mágica, e cada escolha de raça e classe molda um estilo de luta diferente.
+              O combate em Realms of Nocthera é automático: seu personagem luta sozinho, um contra um, e o resultado nasce do que você montou fora da luta, com atributos, vocação, povo e equipamento. Entenda abaixo como cada golpe é calculado.
             </p>
             <CombatFlowDiagram />
+            <ExplicacaoDoCombate />
           </Revelar>
         </section>
 

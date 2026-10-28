@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
 import { CAMADAS_DO_TOPO, HEROI_DO_TOPO, LOGO_DA_PAGINA_INICIAL, type CamadaDoTopo } from '@/assets/landing';
 import { Brasas } from './Brasas';
@@ -24,6 +24,8 @@ function Camada({ camada, rolagem, parar }: { camada: CamadaDoTopo; rolagem: Mot
 export function TopoDaPagina() {
   const ref = useRef<HTMLElement>(null);
   const reduzir = useReducedMotion() ?? false;
+  // Se a logo não carregar (rede ruim, cache antigo), o título aparece escrito em vez de ficar um buraco na tela
+  const [logoFalhou, setLogoFalhou] = useState(false);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
 
   return (
@@ -41,9 +43,9 @@ export function TopoDaPagina() {
           <img src={HEROI_DO_TOPO} alt="" className="mx-auto mb-6 w-24 [image-rendering:pixelated]" />
         )}
         <h1 className="nocthera-brilho">
-          {LOGO_DA_PAGINA_INICIAL ? (
+          {LOGO_DA_PAGINA_INICIAL && !logoFalhou ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={LOGO_DA_PAGINA_INICIAL} alt="Realms of Nocthera" className="mx-auto w-full max-w-xl drop-shadow-[0_4px_18px_rgba(0,0,0,0.9)]" />
+            <img src={LOGO_DA_PAGINA_INICIAL} alt="Realms of Nocthera" width={1000} height={136} fetchPriority="high" onError={() => setLogoFalhou(true)} className="mx-auto w-full max-w-xl drop-shadow-[0_4px_18px_rgba(0,0,0,0.9)]" />
           ) : (
             <span className="block font-[family-name:var(--font-pixel)] uppercase text-[#ED8A0C] leading-[1.6] text-xl sm:text-4xl md:text-5xl [text-shadow:0_4px_0_#7a4506,0_0_30px_rgba(0,0,0,0.9)]">
               Realms
