@@ -20,7 +20,6 @@ import {
   CLASS_ICONS,
   ATTRIBUTE_ICONS,
   RESOURCE_ICONS,
-  ProvisionalLineageSvg,
 } from '@/assets/icons';
 import {
   WIZARD_BACKGROUNDS,
@@ -32,6 +31,7 @@ import { ICONES_DE_POVOS, ICONES_DE_VOCACOES, RETRATOS_DE_POVOS, RETRATOS_DE_VOC
 import { RETRATOS_GRANDES_DE_POVOS, RETRATOS_GRANDES_DE_VOCACOES } from '@/assets/criacao';
 import { CaixaDoTurnstile } from '@/components/CaixaDoTurnstile';
 import { FundoDoPortal } from '@/components/login/FundoDoPortal';
+import { IconeDeElemento } from '@/components/IconeDeElemento';
 import type { AceiteDoCliente } from '@/rules/termos';
 import { SkillIcon } from '@/components/skills';
 import { getRaceSkillIcon, getClassSkillIcon } from '@/rules/skillIcons';
@@ -417,11 +417,11 @@ function WizardSelectionShowcase({
         {extraContent}
 
         <div className="flex items-end justify-between gap-2">
-          <div className="space-y-1.5 w-[220px] sm:w-[260px] max-w-[82vw]">
-            {/* Painel compacto de Atributos Base (7 barras reais com ícones attr-*.png) */}
-            <div className="bg-[#0D0A09]/90 border border-[#C8A656]/60 rounded-md p-2 shadow-[0_6px_18px_rgba(0,0,0,0.85)] space-y-1">
-              <div className="flex items-center justify-between border-b border-[#C8A656]/35 pb-0.5">
-                <span className="font-cinzel font-bold text-[10px] sm:text-xs text-[#F5C542] tracking-wider uppercase">
+          <div className="space-y-1.5 w-[240px] sm:w-[280px] max-w-[86vw]">
+            {/* Tabela de Atributos Base: moldura de pixel, 7 linhas com ícone, barra em blocos e o bônus */}
+            <div className="border-4 border-[#1A120B] shadow-[0_0_0_2px_#B2A66C,0_8px_20px_rgba(0,0,0,0.85)] bg-[#0D0A09]/92 backdrop-blur-[2px] p-2 space-y-1.5">
+              <div className="flex items-center justify-between pb-1.5 border-b-2 border-[#B2A66C]/40">
+                <span className="font-[family-name:var(--font-pixel)] text-[8px] sm:text-[9px] text-[#ED8A0C] uppercase leading-none [text-shadow:0_2px_0_#7a4506]">
                   Atributos Base
                 </span>
               </div>
@@ -432,22 +432,24 @@ function WizardSelectionShowcase({
                   return (
                     <div
                       key={attr}
-                      className="grid grid-cols-[68px_1fr_20px] sm:grid-cols-[78px_1fr_22px] items-center gap-1.5"
+                      className={`grid grid-cols-[100px_1fr_24px] sm:grid-cols-[112px_1fr_26px] items-center gap-1.5 ${bonusVal > 0 ? '' : 'opacity-60'}`}
                     >
-                      <div className="flex items-center gap-1 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={ATTRIBUTE_ICONS[attr]}
-                          alt={ATTRIBUTE_SHORT_NAMES[attr]}
-                          className="w-4 h-4 object-contain shrink-0"
+                          alt=""
+                          width={20}
+                          height={20}
+                          className="w-5 h-5 object-contain shrink-0 drop-shadow-[0_1px_0_rgba(0,0,0,0.8)]"
                         />
-                        <span className="text-[9px] sm:text-[10px] font-cinzel text-[#F5F3E0] truncate">
+                        <span className="font-[family-name:var(--font-silk)] text-[9px] sm:text-[10px] uppercase tracking-normal text-[#F5F3E0] truncate">
                           {ATTRIBUTE_SHORT_NAMES[attr]}
                         </span>
                       </div>
 
-                      {/* Barra segmentada compacta (escala 0..5) */}
-                      <div className="grid grid-cols-5 gap-0.5 h-1.5 bg-[#1B1613] p-[1px] rounded-[2px] border border-[#C8A656]/25">
+                      {/* Barra em blocos (escala 0..5): cada bloco cheio é um ponto de bônus */}
+                      <div className="grid grid-cols-5 gap-[3px]">
                         {Array.from({ length: BONUS_BAR_SEGMENTS }).map((_, idx) => {
                           const filled = idx < bonusVal;
                           return (
@@ -457,10 +459,10 @@ function WizardSelectionShowcase({
                               animate={{ scaleX: 1, opacity: 1 }}
                               transition={{ duration: 0.2, delay: idx * 0.04 }}
                               style={{ transformOrigin: 'left center' }}
-                              className={`h-full rounded-[1px] ${
+                              className={`h-2.5 border border-[#1A120B] ${
                                 filled
-                                  ? 'bg-gradient-to-r from-[#D99B26] to-[#F5C542]'
-                                  : 'bg-[#2C2520]'
+                                  ? 'bg-[#F5C542] shadow-[inset_0_2px_0_#FFE9A0,inset_0_-2px_0_#B8791A]'
+                                  : 'bg-[#2C2520] shadow-[inset_0_-2px_0_#1A1511]'
                               }`}
                             />
                           );
@@ -468,8 +470,8 @@ function WizardSelectionShowcase({
                       </div>
 
                       <span
-                        className={`text-[9px] font-cinzel font-bold text-right tabular-nums ${
-                          bonusVal > 0 ? 'text-[#F5C542]' : 'text-[#D5C7A4]/40'
+                        className={`font-[family-name:var(--font-pixel)] text-[8px] sm:text-[9px] text-right tabular-nums leading-none ${
+                          bonusVal > 0 ? 'text-[#F5C542]' : 'text-[#D5C7A4]/50'
                         }`}
                       >
                         +{bonusVal}
@@ -483,10 +485,10 @@ function WizardSelectionShowcase({
             {/* Seção Habilidades com ícones reais e balão explicativo ao tocar */}
             <div className="space-y-1">
               <div className="flex items-center gap-1.5">
-                <span className="font-cinzel font-bold text-[10px] sm:text-xs text-[#F5C542] tracking-wider uppercase">
-                  {category === 'raca' ? 'Habilidades Raciais' : 'Habilidades (Progressão)'}
+                <span className="font-[family-name:var(--font-pixel)] text-[8px] sm:text-[9px] text-[#ED8A0C] uppercase leading-none [text-shadow:0_2px_0_#7a4506]">
+                  {category === 'raca' ? 'Habilidades Raciais' : 'Habilidades'}
                 </span>
-                <div className="flex-1 h-px bg-gradient-to-r from-[#C8A656]/50 to-transparent" />
+                <div className="flex-1 h-0.5 bg-gradient-to-r from-[#B2A66C]/70 to-transparent" />
               </div>
 
               <div className="flex items-center gap-0.5 overflow-x-auto py-0.5 scrollbar-none">
@@ -1013,22 +1015,16 @@ export function CharacterCreateForm({
                   confirmDisabled={!isStep2Valid}
                   extraContent={
                     selectedRace.id === 'draconiano' && selectedRace.linhagens ? (
-                      <div className="bg-[#120C0A]/95 border border-[#F5C542]/75 rounded-md p-2 space-y-1 shadow-lg max-w-[310px]">
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-[10px] font-cinzel uppercase tracking-wider text-[#F5C542] font-bold">
-                            Linhagem Elemental
+                      <div className="border-4 border-[#1A120B] shadow-[0_0_0_2px_#B2A66C,0_8px_20px_rgba(0,0,0,0.85)] bg-[#0D0A09]/92 p-2 space-y-1.5 max-w-[330px]">
+                        <div className="flex items-center justify-between gap-1 pb-1.5 border-b-2 border-[#B2A66C]/40">
+                          <span className="font-[family-name:var(--font-pixel)] text-[8px] sm:text-[9px] text-[#ED8A0C] uppercase leading-none [text-shadow:0_2px_0_#7a4506]">
+                            Linhagem
                           </span>
-                          <span className="text-[9px] text-[#D5C7A4] truncate">
-                            {selectedLinhagem
-                              ? LINEAGE_LABELS[selectedLinhagem].nome
-                              : 'Obrigatório'}
+                          <span className="font-[family-name:var(--font-silk)] text-[10px] uppercase tracking-wide text-[#D5C7A4] truncate">
+                            {selectedLinhagem ? LINEAGE_LABELS[selectedLinhagem].nome : 'Obrigatório'}
                           </span>
                         </div>
-                        <div
-                          className="grid grid-cols-5 gap-1"
-                          role="radiogroup"
-                          aria-label="Linhagens Dracônicas"
-                        >
+                        <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label="Linhagens Dracônicas">
                           {selectedRace.linhagens.map((linhagemKey) => {
                             const info = LINEAGE_LABELS[linhagemKey];
                             const isLinhagemSelected = selectedLinhagem === linhagemKey;
@@ -1040,23 +1036,25 @@ export function CharacterCreateForm({
                                 aria-checked={isLinhagemSelected}
                                 title={`${info.nome}: ${info.efeitoSopro}`}
                                 onClick={() => setSelectedLinhagem(linhagemKey)}
-                                className={`p-1 rounded border text-center transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
+                                className={`py-1 px-0.5 border-[3px] text-center transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
                                   isLinhagemSelected
-                                    ? 'bg-[#2B1D14] border-[#F5C542] text-[#F5F3E0]'
-                                    : 'bg-[#1A1412] border-[#C8A656]/40 text-[#E2D6B6] hover:border-[#F5C542]/70'
+                                    ? 'border-[#ED8A0C] bg-[#ED8A0C]/15 shadow-[0_0_10px_rgba(237,138,12,0.6)] -translate-y-0.5'
+                                    : 'border-[#1A120B] bg-[#17120E] opacity-80 hover:opacity-100 hover:border-[#B2A66C]'
                                 }`}
                               >
-                                <ProvisionalLineageSvg
-                                  lineage={linhagemKey}
-                                  className="w-3.5 h-3.5"
-                                />
-                                <span className="block font-cinzel font-bold text-[8px] text-[#F5F3E0] truncate w-full">
+                                <IconeDeElemento elemento={linhagemKey} variante="detalhado" tamanho={34} />
+                                <span className="block font-[family-name:var(--font-silk)] text-[8px] uppercase tracking-tight text-[#F5F3E0] truncate w-full">
                                   {info.nome}
                                 </span>
                               </button>
                             );
                           })}
                         </div>
+                        {selectedLinhagem && (
+                          <p className="text-[10px] leading-snug text-[#E2D6B6]">
+                            Sopro: {LINEAGE_LABELS[selectedLinhagem].efeitoSopro}
+                          </p>
+                        )}
                       </div>
                     ) : null
                   }

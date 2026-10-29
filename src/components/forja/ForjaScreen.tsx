@@ -1,5 +1,6 @@
 'use client';
 
+import { IconesDeElementos } from '@/components/IconeDeElemento';
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, Check, Coins, Lock, Shield, Slice, Sword, WandSparkles, X } from 'lucide-react';
@@ -355,7 +356,7 @@ function FolhaDetalhe({ detalhe: d, categoria, ocupado, erro, onFechar, onForjar
           <Linha rotulo={d.tipoDano + (d.subtipo ? ` (${d.subtipo})` : '')} valor={d.danoFixo} cor="#F5E3B3" />
           <Linha rotulo="Atributo sorteado" valor={d.atributoSorteado} />
           {d.minha && <Linha rotulo="Sua arma" valor={`${d.minha.atributo} +${d.minha.pontos} · ${d.minha.reforjas} reforja(s)`} cor="#BFEFC6" />}
-          {d.elementos.length > 0 && <Linha rotulo="Elemento" valor={d.elementos.join(' + ')} />}
+          {d.elementos.length > 0 && <Linha rotulo="Elemento" valor={<span className="inline-flex items-center gap-1"><IconesDeElementos elementos={d.elementos} tamanho={16} />{d.elementos.join(' + ')}</span>} />}
           {d.status.length > 0 && <Linha rotulo="Status" valor={d.status.join(', ')} />}
           <Linha rotulo="Bônus da categoria" valor={d.bonus} cor="#5FCB6A" />
           <Linha rotulo="Penalidade" valor={d.penalidade} cor="#E5736B" />
@@ -415,7 +416,7 @@ export function FolhaMinhaArma({ detalhe: d, ocupado, erro, onFechar, onReforjar
           <Linha rotulo={d.tipoDano} valor={d.danoFixo === d.danoFixoBase ? d.danoFixo : `${d.danoFixo} (base ${d.danoFixoBase})`} cor="#F5E3B3" />
           <Linha rotulo="Atributo sorteado" valor={`${d.atributo} +${d.pontos}`} cor="#BFEFC6" />
           <Linha rotulo="Reforjas feitas" valor={d.reforjas} />
-          {d.elementos.length > 0 && <Linha rotulo="Elemento" valor={d.elementos.join(' + ')} />}
+          {d.elementos.length > 0 && <Linha rotulo="Elemento" valor={<span className="inline-flex items-center gap-1"><IconesDeElementos elementos={d.elementos} tamanho={16} />{d.elementos.join(' + ')}</span>} />}
           {d.status.length > 0 && <Linha rotulo="Status" valor={d.status.join(', ')} />}
         </div>
 
