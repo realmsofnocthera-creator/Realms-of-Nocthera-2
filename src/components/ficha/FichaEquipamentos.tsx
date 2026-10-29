@@ -1,5 +1,6 @@
 'use client';
 
+import { IconesDeElementos } from '@/components/IconeDeElemento';
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import type { CharacterDocument } from '@/server/characterService';
@@ -92,7 +93,12 @@ export function FichaResumoEquipamento({ character, className = '' }: { characte
           )}
           {(r.elementos.length > 0 || r.status.length > 0) && (
             <p className="text-[10px]" style={{ color: '#F3C769' }}>
-              {r.elementos.length > 0 && `Elemento: ${r.elementos.join(' e ')}`}
+              {r.elementos.length > 0 && (
+                <>
+                  {`Elemento: ${r.elementos.join(' e ')} `}
+                  <IconesDeElementos elementos={r.elementos} tamanho={14} />
+                </>
+              )}
               {r.elementos.length > 0 && r.status.length > 0 && ' · '}
               {r.status.length > 0 && `Status: ${r.status.join(', ')}`}
             </p>

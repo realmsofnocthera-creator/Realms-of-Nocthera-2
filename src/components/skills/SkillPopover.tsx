@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useRef, useCallback, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { NOCTHERA_THEME } from '@/theme/theme';
 
 export interface SkillPopoverProps {
   isOpen: boolean;
@@ -18,9 +17,14 @@ export interface SkillPopoverProps {
   recargaTurnos?: number;
   duracaoTurnos?: number;
   zIndex?: number | string;
+  /** Ícone da habilidade, mostrado no cabeçalho do balão. */
+  icone?: string | null;
 }
 
 const emptySubscribe = () => () => {};
+
+const LARGURA_DO_BALAO = 300;
+const EM_DEGRAUS = (t: number) => Math.floor(t * 4) / 4;
 
 export function SkillPopover({
   isOpen,
@@ -35,6 +39,7 @@ export function SkillPopover({
   recargaTurnos,
   duracaoTurnos,
   zIndex,
+  icone,
 }: SkillPopoverProps) {
   const isClient = useSyncExternalStore(
     emptySubscribe,
@@ -64,7 +69,7 @@ export function SkillPopover({
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    const maxWidth = Math.min(280, viewportWidth - 16);
+    const maxWidth = Math.min(LARGURA_DO_BALAO, viewportWidth - 16);
     const popoverWidth = maxWidth;
 
     // Centro do ícone horizontalmente
@@ -83,7 +88,7 @@ export function SkillPopover({
     // Decisão de posicionamento vertical (abaixo preferencial, acima se faltar espaço)
     const spaceBelow = viewportHeight - rect.bottom;
     const spaceAbove = rect.top;
-    const estimatedHeight = 150;
+    const estimatedHeight = 190;
 
     let placement: 'top' | 'bottom' = 'bottom';
     let top = rect.bottom + 8;
@@ -155,6 +160,10 @@ export function SkillPopover({
 
   const descFinal = descricao && descricao.trim() ? descricao : 'Descrição ainda não definida';
 
+  const mostraRecarga = recargaTurnos !== undefined;
+  const mostraDuracao = duracaoTurnos !== undefined && duracaoTurnos > 0;
+  const textoDaEtiqueta = bloqueada && nivelRequerido !== undefined ? `Nv ${nivelRequerido} (Bloqueada)` : etiqueta;
+
   return createPortal(
     <AnimatePresence>
       {isOpen && coords && (
@@ -162,80 +171,76 @@ export function SkillPopover({
           ref={popoverRef}
           role="tooltip"
           aria-live="polite"
-          initial={{ opacity: 0, scale: 0.94 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.94 }}
-          transition={{ duration: 0.15, ease: 'easeOut' }}
+          initial={{ opacity: 0, y: coords.placement === 'bottom' ? -6 : 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: EM_DEGRAUS }}
           style={{
             position: 'fixed',
             top: coords.placement === 'bottom' ? coords.top : undefined,
             bottom: coords.placement === 'top' ? window.innerHeight - coords.top : undefined,
             left: coords.left,
-            width: Math.min(280, window.innerWidth - 16),
-            backgroundColor: NOCTHERA_THEME.colors.background.card, // #1C1B18
-            borderColor: NOCTHERA_THEME.colors.border.default, // #B2A66C
-            color: NOCTHERA_THEME.colors.text.primary, // #F5F3E0
+            width: Math.min(LARGURA_DO_BALAO, window.innerWidth - 16),
             zIndex: zIndex ?? 9999,
           }}
-          className="rounded-md border p-3 shadow-2xl backdrop-blur-sm select-none"
+          className="border-4 border-[#1A120B] bg-[#17120E] p-3 shadow-[0_0_0_2px_#B2A66C,0_14px_34px_rgba(0,0,0,0.92)] select-none"
         >
           {/* Seta apontando para o ícone */}
           <div
             aria-hidden="true"
             style={{
               left: coords.arrowLeft,
-              top: coords.placement === 'bottom' ? -6 : undefined,
-              bottom: coords.placement === 'top' ? -6 : undefined,
-              backgroundColor: NOCTHERA_THEME.colors.background.card,
-              borderColor: NOCTHERA_THEME.colors.border.default,
+              top: coords.placement === 'bottom' ? -11 : undefined,
+              bottom: coords.placement === 'top' ? -11 : undefined,
             }}
-            className={`absolute w-3 h-3 -translate-x-1/2 rotate-45 border ${
+            className={`absolute w-3 h-3 -translate-x-1/2 rotate-45 bg-[#17120E] border-2 border-[#B2A66C] ${
               coords.placement === 'bottom' ? 'border-b-0 border-r-0' : 'border-t-0 border-l-0'
             }`}
           />
 
-          {/* Cabeçalho: Título + Etiqueta */}
-          <div className="flex items-start justify-between gap-2 border-b border-[#B2A66C]/30 pb-1.5 mb-2">
-            <h4
-              style={{ color: NOCTHERA_THEME.colors.accent.primary }}
-              className="font-cinzel font-extrabold text-sm tracking-wide leading-tight"
-            >
-              {nome}
-            </h4>
-            <span
-              className={`shrink-0 text-[10px] font-cinzel font-bold px-1.5 py-0.5 rounded border leading-none ${
-                bloqueada
-                  ? 'bg-[#2A0E12] border-[#D9383A]/60 text-[#F5A6A6]'
-                  : 'bg-[#2B2824] border-[#B2A66C]/60 text-[#D5C7A4]'
-              }`}
-            >
-              {bloqueada && nivelRequerido !== undefined ? `Nv ${nivelRequerido} (Bloqueada)` : etiqueta}
-            </span>
+          {/* Cabeçalho: ícone, nome e etiqueta */}
+          <div className="flex items-start gap-2.5 pb-2 mb-2 border-b-2 border-[#B2A66C]/40">
+            {icone && (
+              <div className="shrink-0 w-11 h-11 border-[3px] border-[#1A120B] bg-[#0D0A09] shadow-[0_0_0_2px_#B2A66C]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={icone} alt="" draggable={false} className={`w-full h-full object-contain ${bloqueada ? 'grayscale opacity-60' : ''}`} />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <h4 className="font-[family-name:var(--font-pixel)] text-[10px] leading-snug text-[#ED8A0C] uppercase [text-shadow:0_2px_0_#7a4506] break-words">
+                {nome}
+              </h4>
+              <span
+                className={`inline-block mt-1.5 font-[family-name:var(--font-silk)] text-[10px] uppercase tracking-wide leading-none px-1.5 py-1 border-2 ${
+                  bloqueada ? 'bg-[#2A0E12] border-[#D9383A]/70 text-[#F5A6A6]' : 'bg-[#2B2824] border-[#B2A66C]/70 text-[#D5C7A4]'
+                }`}
+              >
+                {textoDaEtiqueta}
+              </span>
+            </div>
           </div>
 
           {/* Descrição */}
-          <p className="text-xs text-[#F5F3E0] leading-relaxed mb-2 font-normal">
-            {descFinal}
-          </p>
+          <p className="text-xs text-[#E2D6B6] leading-relaxed">{descFinal}</p>
 
-          {/* Detalhes de combate se existirem (Recarga, Duração) */}
-          {(recargaTurnos !== undefined || duracaoTurnos !== undefined) && (
-            <div className="pt-1.5 border-t border-[#B2A66C]/20 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-[#D5C7A4] font-cinzel">
-              {recargaTurnos !== undefined && (
-                <span>
-                  Recarga:{' '}
-                  <strong className="text-[#ED8A0C]">
+          {/* Recarga e duração, em quadros separados */}
+          {(mostraRecarga || mostraDuracao) && (
+            <div className="mt-2.5 pt-2 border-t-2 border-[#B2A66C]/25 flex flex-wrap gap-2">
+              {mostraRecarga && (
+                <div className="border-2 border-[#1A120B] bg-[#0D0A09] shadow-[0_0_0_1px_#B2A66C99] px-2 py-1">
+                  <span className="block font-[family-name:var(--font-silk)] text-[9px] uppercase tracking-wide text-[#D5C7A4]">Recarga</span>
+                  <span className="block font-[family-name:var(--font-pixel)] text-[9px] text-[#ED8A0C] leading-relaxed">
                     {recargaTurnos} {recargaTurnos === 1 ? 'rodada' : 'rodadas'}
-                  </strong>
-                </span>
+                  </span>
+                </div>
               )}
-              {duracaoTurnos !== undefined && duracaoTurnos > 0 && (
-                <span>
-                  Duração:{' '}
-                  <strong className="text-[#F5C542]">
+              {mostraDuracao && (
+                <div className="border-2 border-[#1A120B] bg-[#0D0A09] shadow-[0_0_0_1px_#B2A66C99] px-2 py-1">
+                  <span className="block font-[family-name:var(--font-silk)] text-[9px] uppercase tracking-wide text-[#D5C7A4]">Duração</span>
+                  <span className="block font-[family-name:var(--font-pixel)] text-[9px] text-[#F5C542] leading-relaxed">
                     {duracaoTurnos} {duracaoTurnos === 1 ? 'turno' : 'turnos'}
-                  </strong>
-                </span>
+                  </span>
+                </div>
               )}
             </div>
           )}

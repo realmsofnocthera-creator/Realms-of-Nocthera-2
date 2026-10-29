@@ -76,22 +76,22 @@ export function SkillIcon({
         {src ? (
           <div
             style={sizeStyle}
-            className={`relative ${sizeClasses} transition-all ${
+            className={`relative ${sizeClasses} border-[3px] border-[#1A120B] bg-[#0D0A09] transition-all ${
               isPopoverOpen
-                ? 'scale-105 drop-shadow-[0_0_10px_rgba(237,138,12,0.85)]'
-                : 'hover:scale-105 hover:drop-shadow-[0_0_6px_rgba(237,138,12,0.4)] drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]'
+                ? 'scale-105 shadow-[0_0_0_2px_#ED8A0C,0_0_12px_rgba(237,138,12,0.8)]'
+                : 'shadow-[0_0_0_2px_#B2A66C] hover:scale-105 hover:shadow-[0_0_0_2px_#ED8A0C]'
             } ${bloqueada ? 'opacity-40 grayscale' : 'opacity-100'}`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={src}
               alt={nome}
-              className="w-full h-full object-contain select-none pointer-events-none rounded-full"
+              className="w-full h-full object-contain select-none pointer-events-none"
             />
 
             {/* Número ordinal da habilidade (1, 2, 3, etc) no canto inferior direito */}
             {badgeIndex !== undefined && (
-              <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-[#120F0C] border border-[#F5C542] text-[#F5C542] flex items-center justify-center font-cinzel font-bold text-[8px] sm:text-[9px] shadow-sm pointer-events-none z-10">
+              <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 sm:w-[18px] sm:h-[18px] bg-[#120F0C] border-2 border-[#F5C542] text-[#F5C542] flex items-center justify-center font-[family-name:var(--font-pixel)] text-[7px] pointer-events-none z-10">
                 {badgeIndex}
               </div>
             )}
@@ -100,7 +100,7 @@ export function SkillIcon({
             {nivelRequerido !== undefined && nivelRequerido > 1 && badgeIndex === undefined ? (
               <div className="absolute -bottom-1 inset-x-0 flex justify-center pointer-events-none">
                 <span
-                  className={`inline-block font-cinzel font-bold text-[8px] tracking-tight truncate leading-tight px-1 py-0.5 rounded-full bg-black/90 ${
+                  className={`inline-block font-[family-name:var(--font-pixel)] text-[6px] whitespace-nowrap leading-none px-1 py-[3px] border border-[#1A120B] bg-black/90 ${
                     bloqueada ? 'text-[#F5A6A6]' : 'text-[#F5C542]'
                   }`}
                 >
@@ -109,7 +109,7 @@ export function SkillIcon({
               </div>
             ) : bloqueada && badgeIndex === undefined ? (
               <div className="absolute -bottom-1 inset-x-0 flex justify-center pointer-events-none">
-                <span className="inline-block font-cinzel font-bold text-[8px] text-[#F5A6A6] tracking-tight truncate leading-tight px-1 py-0.5 rounded-full bg-black/90">
+                <span className="inline-block font-[family-name:var(--font-pixel)] text-[6px] text-[#F5A6A6] truncate leading-none px-1 py-[3px] border border-[#1A120B] bg-black/90">
                   Bloq
                 </span>
               </div>
@@ -151,6 +151,7 @@ export function SkillIcon({
         bloqueada={bloqueada}
         recargaTurnos={recargaTurnos}
         duracaoTurnos={duracaoTurnos}
+        icone={src}
       />
     </>
   );

@@ -21,6 +21,9 @@ import {
   VENENO_DURACAO_RODADAS,
   VENENO_PERCENTUAL_HP_MAX,
 } from '@/rules/statusEffects';
+import { IconeDeElemento } from '@/components/IconeDeElemento';
+import { NOMES_DOS_ELEMENTOS } from '@/assets/elementos';
+import type { Elemento } from '@/rules/elements';
 import { Revelar } from './Revelar';
 
 /**
@@ -65,7 +68,6 @@ const MARCOS = [
   { nivel: 30, nome: 'Ultimate', texto: 'O golpe mais forte da vocação, acionado automaticamente.' },
 ] as const;
 
-const ELEMENTOS = ['Fogo', 'Gelo', 'Relâmpago', 'Terra', 'Vento', 'Sagrado', 'Sombrio'] as const;
 
 const STATUS = [
   { nome: 'Sangramento', texto: `Dano imediato de ${SANGRAMENTO_PERCENTUAL_HP_MAX}% do HP máximo de quem sofre.` },
@@ -149,9 +151,10 @@ export function ExplicacaoDoCombate() {
           <Cartao>
             <p className="font-[family-name:var(--font-pixel)] text-[10px] uppercase leading-relaxed text-[#F5F3E0]">7 elementos</p>
             <ul className="mt-3 flex flex-wrap gap-2">
-              {ELEMENTOS.map((e) => (
-                <li key={e} className="border-2 border-[#B2A66C]/70 bg-[#120F0C] px-3 py-1 font-[family-name:var(--font-silk)] text-xs uppercase tracking-wider text-[#F5F3E0]">
-                  {e}
+              {(Object.keys(NOMES_DOS_ELEMENTOS) as Elemento[]).map((e) => (
+                <li key={e} className="flex items-center gap-1.5 border-2 border-[#B2A66C]/70 bg-[#120F0C] pl-1.5 pr-3 py-1 font-[family-name:var(--font-silk)] text-xs uppercase tracking-wider text-[#F5F3E0]">
+                  <IconeDeElemento elemento={e} variante="detalhado" tamanho={26} />
+                  {NOMES_DOS_ELEMENTOS[e]}
                 </li>
               ))}
             </ul>
