@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Home } from 'lucide-react';
+import { ArrowLeft, Home, X } from 'lucide-react';
 import { CharacterDocument } from '@/server/characterService';
 import { MENU_PRINCIPAL, MenuPrincipalId } from '@/rules/menuPrincipal';
 import { MENU_PRINCIPAL_IMAGES } from '@/assets/menuPrincipal';
@@ -16,6 +16,8 @@ import { useAnunciosNovos } from '@/lib/useAnunciosNovos';
 
 export interface MenuScreenProps {
   personagem?: CharacterDocument | null;
+  /** Com ele, o Menu aparece como painel sobre o Hub (o livro) e o botão Voltar vira Fechar. */
+  onFechar?: () => void;
 }
 
 const MENU_GRID_AREAS = `
@@ -40,7 +42,7 @@ const NOME_NA_ARTE: Partial<Record<MenuPrincipalId, { y: number; claro: boolean 
 const CONTORNO_DO_NOME =
   '2px 0 #1A120B, -2px 0 #1A120B, 0 2px #1A120B, 0 -2px #1A120B, 2px 2px #1A120B, -2px -2px #1A120B, 2px -2px #1A120B, -2px 2px #1A120B';
 
-export function MenuScreen({ personagem }: MenuScreenProps) {
+export function MenuScreen({ personagem, onFechar }: MenuScreenProps) {
   // Pontos de aviso do Menu: check-in por fazer e anúncio novo
   const avisos = useAvisos();
   const anuncioNovo = useAnunciosNovos();
@@ -49,7 +51,9 @@ export function MenuScreen({ personagem }: MenuScreenProps) {
 
   return (
     <main
-      className="min-h-dvh w-full flex flex-col items-center px-2.5 sm:px-5 py-3 sm:py-6 select-none"
+      className={`w-full flex flex-col items-center px-2.5 sm:px-5 py-3 sm:py-6 select-none ${
+        onFechar ? 'h-full overflow-y-auto overscroll-contain' : 'min-h-dvh'
+      }`}
       style={{
         backgroundColor: colors.background.primary,
         backgroundImage:
@@ -62,6 +66,20 @@ export function MenuScreen({ personagem }: MenuScreenProps) {
         <header className="w-full flex flex-col gap-1.5">
           <div className="w-full flex items-center justify-between">
             <div className="flex items-center gap-2">
+              {onFechar ? (
+                <button
+                  type="button"
+                  onClick={onFechar}
+                  aria-label="Fechar o Menu"
+                  className="caixa-pixel relative inline-flex items-center gap-1.5 pl-2 pr-3 py-1.5 cursor-pointer"
+                >
+                  <X className="w-4 h-4 text-[#F5E3B3]" aria-hidden="true" />
+                  <span className="font-[family-name:var(--font-pixel)] text-[8px] leading-none uppercase text-[#F5E3B3] [text-shadow:1px_1px_0_#1A120B]">
+                    Fechar
+                  </span>
+                </button>
+              ) : (
+                <>
               <Link
                 href="/hub"
                 aria-label="Voltar ao Hub"
@@ -89,6 +107,8 @@ export function MenuScreen({ personagem }: MenuScreenProps) {
               >
                 <Home className="w-3.5 h-3.5 -rotate-45" />
               </Link>
+                </>
+              )}
             </div>
 
             {personagem && (

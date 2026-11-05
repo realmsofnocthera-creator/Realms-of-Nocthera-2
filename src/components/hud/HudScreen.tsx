@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
 import { CharacterDocument } from '@/server/characterService';
@@ -8,6 +8,7 @@ import { NOCTHERA_THEME } from '@/theme/theme';
 import { HUD_IMAGES } from '@/assets/hud';
 import { resolveAvatarSrc } from '@/assets/avatars';
 import { PerfilPublicoModal } from '@/components/perfil/PerfilPublicoModal';
+import { MenuEmLivro } from '@/components/menu/MenuEmLivro';
 import { HudHeader } from './HudHeader';
 import { HudMenu } from './HudMenu';
 
@@ -24,6 +25,7 @@ export function HudScreen({
   const { colors } = NOCTHERA_THEME;
   const [pulseKey, setPulseKey] = useState(0);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(false);
   const [customSobre, setCustomSobre] = useState<string | null>(null);
   const [customAvatarId, setCustomAvatarId] = useState<string | null>(null);
   const [customPerfilEquip, setCustomPerfilEquip] = useState<string[] | null>(null);
@@ -47,9 +49,24 @@ export function HudScreen({
     router.push('/provacoes');
   };
 
+  // O Menu abre por cima do Hub e entra no histórico: o voltar do celular fecha o livro em vez de sair do jogo
   const handleNavigateMenu = () => {
-    router.push('/menu');
+    window.history.pushState({ menuAberto: true }, '');
+    setMenuAberto(true);
   };
+
+  const fecharMenu = useCallback(() => {
+    if (window.history.state?.menuAberto) window.history.back();
+    else setMenuAberto(false);
+  }, []);
+
+  useEffect(() => {
+    // Voltando de uma tela aberta pelo Menu, o livro reaparece aberto
+    if (window.history.state?.menuAberto) setMenuAberto(true);
+    const aoVoltar = () => setMenuAberto(Boolean(window.history.state?.menuAberto));
+    window.addEventListener('popstate', aoVoltar);
+    return () => window.removeEventListener('popstate', aoVoltar);
+  }, []);
 
   const handleCharacterTap = () => {
     setPulseKey((prev) => prev + 1);
@@ -153,6 +170,8 @@ export function HudScreen({
           onNavigateMenu={handleNavigateMenu}
         />
       </div>
+
+      <MenuEmLivro aberto={menuAberto} onFechar={fecharMenu} personagem={localPersonagem} />
 
       {/* Overlay de Perfil Público (abre ao clicar no avatar do header) */}
       <PerfilPublicoModal
