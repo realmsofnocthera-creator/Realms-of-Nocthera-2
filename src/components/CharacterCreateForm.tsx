@@ -23,8 +23,6 @@ import {
 } from '@/assets/icons';
 import {
   WIZARD_BACKGROUNDS,
-  WIZARD_CLASS_IMAGES,
-  WIZARD_RACE_IMAGES,
 } from '@/assets/wizard';
 import { resolveAvatarSrc } from '@/assets/avatars';
 import { ICONES_DE_POVOS, ICONES_DE_VOCACOES, RETRATOS_DE_POVOS, RETRATOS_DE_VOCACOES } from '@/assets/landing';
@@ -107,8 +105,6 @@ interface ShowcaseOption {
   descricao: string;
   bonusAtributos: Attributes;
   artSrc: string;
-  /** Fundo temático do povo ou da vocação (a arte antiga), atrás do retrato. */
-  fundoSrc?: string;
   /** Ícone quadrado (rosto ou símbolo) para a miniatura; sem ele, a miniatura recorta o retrato. */
   miniaturaSrc?: string;
   emblemSrc?: string | null;
@@ -234,12 +230,12 @@ function WizardSelectionShowcase({
       role="radiogroup"
       aria-label={stepTitle}
     >
-      {/* Fundo temático do povo ou da vocação (a arte antiga), ocupando a tela toda */}
+      {/* Fundo do povo ou da vocação: o próprio retrato novo, ampliado, desfocado e escurecido */}
       <div aria-hidden="true" className="absolute inset-0 bg-[#080607] pointer-events-none" />
       <AnimatePresence mode="wait">
         <motion.img
           key={`fundo-${activeOption.id}`}
-          src={activeOption.fundoSrc ?? activeOption.artSrc}
+          src={activeOption.artSrc}
           alt=""
           aria-hidden="true"
           initial={{ opacity: 0 }}
@@ -247,7 +243,7 @@ function WizardSelectionShowcase({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.26, ease: 'easeOut' }}
           draggable={false}
-          className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none"
+          className="absolute inset-0 w-full h-full object-cover object-center scale-125 blur-2xl brightness-[0.38] saturate-125 pointer-events-none select-none"
         />
       </AnimatePresence>
 
@@ -773,8 +769,7 @@ export function CharacterCreateForm({
     nome: r.nome,
     descricao: r.descricao,
     bonusAtributos: r.bonusAtributos,
-    artSrc: RETRATOS_GRANDES_DE_POVOS[r.id] || RETRATOS_DE_POVOS[r.id] || WIZARD_RACE_IMAGES[r.id] || WIZARD_RACE_IMAGES.humano,
-    fundoSrc: WIZARD_RACE_IMAGES[r.id] || WIZARD_RACE_IMAGES.humano,
+    artSrc: RETRATOS_GRANDES_DE_POVOS[r.id] || RETRATOS_DE_POVOS[r.id] || RETRATOS_GRANDES_DE_POVOS.humano,
     miniaturaSrc: ICONES_DE_POVOS[r.id],
     emblemSrc: RACE_ICONS[r.id] || r.iconeUrl,
   }));
@@ -784,8 +779,7 @@ export function CharacterCreateForm({
     nome: c.nome,
     descricao: c.descricao,
     bonusAtributos: c.bonusAtributos,
-    artSrc: RETRATOS_GRANDES_DE_VOCACOES[c.id] || RETRATOS_DE_VOCACOES[c.id] || WIZARD_CLASS_IMAGES[c.id] || WIZARD_CLASS_IMAGES.barbaro,
-    fundoSrc: WIZARD_CLASS_IMAGES[c.id] || WIZARD_CLASS_IMAGES.barbaro,
+    artSrc: RETRATOS_GRANDES_DE_VOCACOES[c.id] || RETRATOS_DE_VOCACOES[c.id] || RETRATOS_GRANDES_DE_VOCACOES.barbaro,
     miniaturaSrc: ICONES_DE_VOCACOES[c.id],
     emblemSrc: CLASS_ICONS[c.id],
   }));
@@ -1486,7 +1480,6 @@ export function CharacterCreateForm({
                         <img
                           src={
                             ICONES_DE_POVOS[selectedRace.id] ||
-                            WIZARD_RACE_IMAGES[selectedRace.id] ||
                             RACE_ICONS[selectedRace.id] ||
                             ''
                           }

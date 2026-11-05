@@ -4,7 +4,6 @@ import React from 'react';
 import { RACES } from '@/rules/races';
 import { CLASSES } from '@/rules/classes';
 import { RACE_ICONS, CLASS_ICONS } from '@/assets/icons';
-import { WIZARD_RACE_IMAGES } from '@/assets/wizard';
 import { RETRATOS_DE_POVOS, RETRATOS_DE_VOCACOES, ICONES_DE_POVOS, ICONES_DE_VOCACOES } from '@/assets/landing';
 import { SectionDivider } from '@/components/landing/SectionDivider';
 import { EntityCarousel, EntityCarouselItem } from '@/components/landing/EntityCarousel';
@@ -32,7 +31,7 @@ const RACE_CAROUSEL_ITEMS: ReadonlyArray<EntityCarouselItem> = RACES.map((race) 
   id: race.id,
   nome: race.nome,
   iconeUrl: ICONES_DE_POVOS[race.id] || RACE_ICONS[race.id] || race.iconeUrl || '',
-  imagemUrl: RETRATOS_DE_POVOS[race.id] ?? WIZARD_RACE_IMAGES[race.id],
+  imagemUrl: RETRATOS_DE_POVOS[race.id],
   recorte: Boolean(RETRATOS_DE_POVOS[race.id]),
   descricaoCurta: summarizeDescription(race.descricao),
 }));

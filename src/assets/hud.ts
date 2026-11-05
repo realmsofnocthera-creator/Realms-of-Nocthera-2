@@ -1,5 +1,4 @@
 import backgroundHubImg from './images/hud/background-hub.webp';
-import avatarPersonagemImg from './images/hud/avatar-personagem.png';
 import molduraPerfilImg from './images/hud/moldura-perfil.png';
 
 import ouroIcon from './icons/hud/ouro.webp';
@@ -21,7 +20,6 @@ import { srcDaImagem } from '@/assets/srcDaImagem';
 
 export const HUD_IMAGES = {
   backgroundHub: srcDaImagem(backgroundHubImg),
-  avatarPersonagem: srcDaImagem(avatarPersonagemImg),
   molduraPerfil: srcDaImagem(molduraPerfilImg),
 } as const;
 
