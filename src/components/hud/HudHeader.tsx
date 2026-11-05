@@ -8,6 +8,7 @@ import { onAuthStateChanged, sendEmailVerification, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { CharacterDocument } from '@/server/characterService';
 import { xpParaProximoNivel } from '@/game';
+import { formatarCompacto, formatarTotal } from '@/rules/numerosCompactos';
 import { XP_TABLE } from '@/rules/xpTable';
 import { GAME_CONFIG } from '@/rules/config';
 import { NOCTHERA_THEME } from '@/theme/theme';
@@ -37,6 +38,15 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
     xpProximoNivel > 0
       ? Math.min(100, Math.max(0, Math.floor((personagem.xpAtual / xpProximoNivel) * 100)))
       : 0;
+
+  // Toque em Ouro, Diamantes ou XP: mostra o total por extenso por alguns segundos (a tela mostra K, M e B)
+  const [totalAberto, setTotalAberto] = useState<'ouro' | 'diamantes' | 'xp' | null>(null);
+  useEffect(() => {
+    if (!totalAberto) return;
+    const t = setTimeout(() => setTotalAberto(null), 3000);
+    return () => clearTimeout(t);
+  }, [totalAberto]);
+  const alternarTotal = (qual: 'ouro' | 'diamantes' | 'xp') => setTotalAberto((atual) => (atual === qual ? null : qual));
 
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [emailVerified, setEmailVerified] = useState<boolean>(true);
@@ -106,7 +116,7 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
   };
 
   return (
-    <header className="relative z-20 w-full flex flex-col gap-1 px-2 sm:px-4 pt-2 sm:pt-3 pointer-events-auto">
+    <header className="relative z-30 w-full flex flex-col gap-1 px-2 sm:px-4 pt-2 sm:pt-3 pointer-events-auto">
       <div className="w-full flex items-start justify-between gap-1.5 sm:gap-3">
       {/* TOPO ESQUERDO: Retrato com Moldura + Faixa Horizontal Compacta com Nome, Lv e Barra de XP */}
       <div className="flex items-center min-w-0 shrink">
@@ -143,7 +153,7 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
         </button>
 
         {/* Placa em pixel acoplada à direita da moldura: nome, nível e barra de XP em blocos */}
-        <div className="caixa-pixel relative -ml-3 sm:-ml-4 pl-5 sm:pl-6 pr-3 sm:pr-4 py-1.5 sm:py-2 min-w-[112px] max-w-[140px] sm:min-w-[176px] sm:max-w-[230px]">
+        <div className="caixa-pixel relative -ml-3 sm:-ml-4 pl-4 sm:pl-6 pr-2 sm:pr-4 py-1.5 sm:py-2 min-w-[84px] max-w-[110px] sm:min-w-[176px] sm:max-w-[230px]">
           <h1 className="font-[family-name:var(--font-silk)] text-[12px] sm:text-[15px] font-bold truncate leading-none text-[#F5F3E0] [text-shadow:1px_1px_0_#1A120B]">
             {personagem.nome}
           </h1>
@@ -153,47 +163,62 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
               LV{personagem.nivel}
             </span>
 
-            <div
-              className="barra-pixel relative w-9 sm:w-20 md:w-24 h-2 sm:h-2.5 shrink-0 overflow-hidden"
-              role="progressbar"
-              aria-valuenow={personagem.xpAtual}
-              aria-valuemin={0}
-              aria-valuemax={xpProximoNivel}
-              aria-label="Progresso de XP"
+            {/* Barra de XP (e os números no computador): o toque mostra o total */}
+            <button
+              type="button"
+              onClick={() => alternarTotal('xp')}
+              aria-label={`XP: ${formatarTotal(personagem.xpAtual)} de ${formatarTotal(xpProximoNivel)}`}
+              className="relative flex items-center gap-1.5 sm:gap-2 cursor-pointer min-w-0"
             >
               <div
-                className="h-full transition-all duration-300"
-                style={{
-                  width: `${percentualXp}%`,
-                  backgroundColor: '#2EE6D6',
-                  boxShadow: 'inset 0 -2px 0 #1FA89C',
-                }}
-              />
-            </div>
-
-            <span className="font-[family-name:var(--font-silk)] text-[8px] sm:text-[10px] shrink-0 text-[#E2D6B6]">
-              {personagem.xpAtual}/{xpProximoNivel}
-            </span>
+                className="barra-pixel relative w-7 sm:w-20 md:w-24 h-2 sm:h-2.5 shrink-0 overflow-hidden"
+                role="progressbar"
+                aria-valuenow={personagem.xpAtual}
+                aria-valuemin={0}
+                aria-valuemax={xpProximoNivel}
+                aria-label="Progresso de XP"
+              >
+                <div
+                  className="h-full transition-all duration-300"
+                  style={{
+                    width: `${percentualXp}%`,
+                    backgroundColor: '#2EE6D6',
+                    boxShadow: 'inset 0 -2px 0 #1FA89C',
+                  }}
+                />
+              </div>
+              <span className="hidden sm:inline font-[family-name:var(--font-silk)] text-[10px] shrink-0 text-[#E2D6B6]">
+                {formatarCompacto(personagem.xpAtual)}/{formatarCompacto(xpProximoNivel)}
+              </span>
+              {totalAberto === 'xp' && (
+                <span role="status" className="caixa-pixel absolute left-0 top-full z-40 mt-2 whitespace-nowrap px-2 py-1 text-[11px] text-[#F5F3E0]">
+                  XP {formatarTotal(personagem.xpAtual)} / {formatarTotal(xpProximoNivel)}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </div>
 
       {/* TOPO DIREITO: Ouro + Diamante (travado) + Mail (com NotificationBadge) + Configurações */}
       <div className="flex items-center gap-1 sm:gap-2 shrink-0 pt-0.5 sm:pt-1">
-        {/* Pílula de Ouro */}
-        <div
-          className="pilula-pixel relative flex items-center gap-1 sm:gap-1.5 pl-1 pr-1.5 sm:pr-2 py-0.5 tabular-nums"
-          aria-label="Ouro do personagem"
+        {/* Pílula de Ouro: valor abreviado; o toque mostra o total */}
+        <button
+          type="button"
+          onClick={() => alternarTotal('ouro')}
+          className="pilula-pixel relative flex items-center gap-1 sm:gap-1.5 pl-1 pr-1.5 sm:pr-2 py-0.5 tabular-nums cursor-pointer"
+          aria-label={`Ouro: ${formatarTotal(personagem.ouro)}`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={HUD_ICONS.ouro}
-            alt="Ouro"
-            className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0 select-none"
+            alt=""
+            aria-hidden="true"
+            className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0 select-none pointer-events-none"
             style={{ imageRendering: 'pixelated' }}
           />
           <span className="font-[family-name:var(--font-silk)] text-[11px] sm:text-[13px] font-bold text-[#F5F3E0] [text-shadow:1px_1px_0_#1A120B]">
-            {personagem.ouro}
+            {formatarCompacto(personagem.ouro)}
           </span>
           <span
             className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full flex items-center justify-center opacity-70"
@@ -202,13 +227,20 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
           >
             <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
           </span>
-        </div>
+          {totalAberto === 'ouro' && (
+            <span role="status" className="caixa-pixel absolute right-0 top-full z-40 mt-2 whitespace-nowrap px-2 py-1 text-[11px] text-[#F5F3E0]">
+              Ouro {formatarTotal(personagem.ouro)}
+            </span>
+          )}
+        </button>
 
-        {/* Pílula de Diamantes, com o saldo (a loja de Diamantes ainda não existe) */}
-        <div
+        {/* Pílula de Diamantes: valor abreviado; o toque mostra o total (a loja de Diamantes ainda não existe) */}
+        <button
+          type="button"
+          onClick={() => alternarTotal('diamantes')}
           title="Diamantes"
-          aria-label={`Diamantes: ${personagem.diamantes ?? 0}`}
-          className="pilula-pixel relative flex items-center gap-1 sm:gap-1.5 pl-1 pr-1.5 sm:pr-2 py-0.5 select-none"
+          aria-label={`Diamantes: ${formatarTotal(personagem.diamantes ?? 0)}`}
+          className="pilula-pixel relative flex items-center gap-1 sm:gap-1.5 pl-1 pr-1.5 sm:pr-2 py-0.5 tabular-nums cursor-pointer"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -218,9 +250,14 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
             className="w-3.5 h-3.5 sm:w-5 sm:h-5 object-contain shrink-0 select-none pointer-events-none"
           />
           <span className="font-[family-name:var(--font-silk)] text-[11px] sm:text-[13px] font-bold text-[#F5F3E0] [text-shadow:1px_1px_0_#1A120B]">
-            {personagem.diamantes ?? 0}
+            {formatarCompacto(personagem.diamantes ?? 0)}
           </span>
-        </div>
+          {totalAberto === 'diamantes' && (
+            <span role="status" className="caixa-pixel absolute right-0 top-full z-40 mt-2 whitespace-nowrap px-2 py-1 text-[11px] text-[#F5F3E0]">
+              Diamantes {formatarTotal(personagem.diamantes ?? 0)}
+            </span>
+          )}
+        </button>
 
         {/* Botão do Correio (o ponto aparece quando há presente para resgatar) */}
         <Link
