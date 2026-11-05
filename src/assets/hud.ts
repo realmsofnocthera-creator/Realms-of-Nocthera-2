@@ -2,11 +2,11 @@ import backgroundHubImg from './images/hud/background-hub.webp';
 import avatarPersonagemImg from './images/hud/avatar-personagem.png';
 import molduraPerfilImg from './images/hud/moldura-perfil.png';
 
-import ouroIcon from './icons/hud/ouro.png';
-import diamanteIcon from './icons/hud/diamante.png';
-import notificacaoIcon from './icons/hud/notificacao.png';
-import configuracoesIcon from './icons/hud/configuracoes.png';
-import mailIcon from './icons/hud/mail.png';
+import ouroIcon from './icons/hud/ouro.webp';
+import diamanteIcon from './icons/hud/diamante.webp';
+import notificacaoIcon from './icons/hud/notificacao.webp';
+import configuracoesIcon from './icons/hud/configuracoes.webp';
+import mailIcon from './icons/hud/mail.webp';
 import menuArenaIcon from './icons/hud/menu-arena.webp';
 import menuProvacoesIcon from './icons/hud/menu-provacoes.webp';
 import menuGuildaIcon from './icons/hud/menu-guilda.webp';
@@ -15,7 +15,8 @@ import menuPersonagemIcon from './icons/hud/menu-personagem.webp';
 import menuMenuIcon from './icons/hud/menu-menu.webp';
 import menuEventosIcon from './icons/hud/menu-eventos.png';
 import menuHistoriaIcon from './icons/hud/menu-historia.webp';
-import menuPasseBatalhaIcon from './icons/hud/menu-passe-batalha.png';
+import menuMissoesIcon from './icons/hud/menu-missoes.webp';
+import menuPasseBatalhaIcon from './icons/hud/menu-passe-batalha.webp';
 import { srcDaImagem } from '@/assets/srcDaImagem';
 
 export const HUD_IMAGES = {
@@ -38,5 +39,6 @@ export const HUD_ICONS = {
   menuMenu: srcDaImagem(menuMenuIcon),
   menuEventos: srcDaImagem(menuEventosIcon),
   menuHistoria: srcDaImagem(menuHistoriaIcon),
+  menuMissoes: srcDaImagem(menuMissoesIcon),
   menuPasseBatalha: srcDaImagem(menuPasseBatalhaIcon),
 } as const;
