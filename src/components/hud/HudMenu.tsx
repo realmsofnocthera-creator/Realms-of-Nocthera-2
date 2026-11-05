@@ -60,8 +60,7 @@ export function HudMenu({
       iconSrc: HUD_ICONS.menuHistoria,
       enabled: true,
       onClick: handleHistoriaClick,
-      accentBorder: '#C8A656',
-      bgGradient: 'linear-gradient(135deg, rgba(20,26,48,0.92) 0%, rgba(42,36,78,0.88) 100%)',
+      caixa: 'caixa-pixel-arcana',
     },
     {
       id: 'combate',
@@ -69,8 +68,7 @@ export function HudMenu({
       iconSrc: HUD_ICONS.menuArena,
       enabled: true,
       onClick: onNavigateCombate,
-      accentBorder: colors.accent.primary,
-      bgGradient: 'linear-gradient(135deg, rgba(45,12,16,0.94) 0%, rgba(92,20,28,0.90) 100%)',
+      caixa: 'caixa-pixel-ardente',
     },
     {
       id: 'provacoes',
@@ -78,8 +76,7 @@ export function HudMenu({
       iconSrc: HUD_ICONS.menuProvacoes,
       enabled: true,
       onClick: handleProvacoesClick,
-      accentBorder: '#6B4CE6',
-      bgGradient: 'linear-gradient(135deg, rgba(16,14,38,0.92) 0%, rgba(38,24,82,0.88) 100%)',
+      caixa: '',
     },
   ] as const;
 
@@ -185,74 +182,27 @@ export function HudMenu({
         {/* Coluna Direita: História, Arena (Ativo -> /combate), Provações */}
         <div className="pointer-events-auto flex flex-col items-end gap-1.5 sm:gap-2 pr-2 sm:pr-4 mb-2 sm:mb-3">
           {rightStackItems.map((item) => {
-            if (item.enabled) {
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={item.onClick}
-                  className="group relative w-28 sm:w-40 md:w-48 h-9 sm:h-12 md:h-14 rounded-md sm:rounded-lg border sm:border-2 overflow-hidden flex items-center justify-between px-2 sm:px-3.5 shadow-xl transition-transform duration-150 cursor-pointer hover:scale-[1.03] active:scale-[0.98] -skew-x-6"
-                  style={{
-                    background: item.bgGradient,
-                    borderColor: item.accentBorder,
-                    color: colors.text.primary,
-                  }}
-                >
-                  <div className="flex items-center gap-1.5 sm:gap-2 z-10 skew-x-6">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={item.iconSrc}
-                      alt=""
-                      aria-hidden="true"
-                      className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 object-contain drop-shadow select-none pointer-events-none"
-                    />
-                    <span className="font-cinzel font-extrabold text-xs sm:text-base md:text-lg tracking-wide drop-shadow">
-                      {item.label}
-                    </span>
-                  </div>
-                  {pontoDe(item.id) && <NotificationBadge />}
-                </button>
-              );
-            }
-
             return (
               <button
                 key={item.id}
                 type="button"
-                disabled
-                aria-disabled="true"
-                title="Em breve"
-                className="relative w-28 sm:w-40 md:w-48 h-9 sm:h-12 md:h-14 rounded-md sm:rounded-lg border overflow-hidden flex items-center justify-between px-2 sm:px-3.5 shadow-lg opacity-75 cursor-not-allowed -skew-x-6"
-                style={{
-                  background: item.bgGradient,
-                  borderColor: `${item.accentBorder}88`,
-                  color: colors.text.primary,
-                }}
+                onClick={item.onClick}
+                className={`caixa-pixel ${item.caixa} group relative w-[7.5rem] sm:w-44 md:w-52 h-10 sm:h-12 md:h-14 flex items-center px-2 sm:px-3 cursor-pointer transition-transform duration-150 hover:scale-[1.03] active:scale-[0.98]`}
               >
-                <div className="flex items-center gap-1.5 sm:gap-2 z-10 skew-x-6">
+                <div className="flex items-center gap-2 sm:gap-2.5 z-10">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={item.iconSrc}
                     alt=""
                     aria-hidden="true"
-                    className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 object-contain opacity-85 select-none pointer-events-none"
+                    className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 object-contain drop-shadow select-none pointer-events-none"
+                    style={{ imageRendering: 'pixelated' }}
                   />
-                  <span className="font-cinzel font-bold text-xs sm:text-base md:text-lg tracking-wide drop-shadow">
+                  <span className="font-[family-name:var(--font-pixel)] text-[8px] sm:text-[11px] md:text-[12px] leading-none uppercase text-[#F5E3B3] [text-shadow:1px_1px_0_#1A120B]">
                     {item.label}
                   </span>
                 </div>
-
-                <span
-                  className="z-10 skew-x-6 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border flex items-center justify-center shrink-0"
-                  style={{
-                    backgroundColor: colors.background.primary,
-                    borderColor: `${colors.border.default}80`,
-                    color: colors.text.muted,
-                  }}
-                  aria-hidden="true"
-                >
-                  <Lock className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
-                </span>
+                {pontoDe(item.id) && <NotificationBadge />}
               </button>
             );
           })}
@@ -283,14 +233,7 @@ export function HudMenu({
 
         {/* Barra Inferior Esquerda: Menu, Personagem (Ativo -> /personagem), Loja, Guilda */}
         <div className="w-full flex items-end justify-start">
-          <div
-            className="pointer-events-auto flex items-end gap-0.5 sm:gap-1.5 px-1.5 sm:px-3.5 py-1 sm:py-2 rounded-tr-xl sm:rounded-tr-2xl border-t border-r backdrop-blur-md shadow-2xl"
-            style={{
-              background:
-                'linear-gradient(90deg, rgba(13,13,13,0.95) 0%, rgba(18,15,12,0.92) 85%, rgba(18,15,12,0.45) 100%)',
-              borderColor: `${colors.border.default}80`,
-            }}
-          >
+          <div className="pilula-pixel pointer-events-auto ml-1 sm:ml-2 mb-1 flex items-end gap-0.5 sm:gap-1.5 px-1.5 sm:px-3.5 py-1 sm:py-2">
             {bottomDockItems.map((item) => {
               if (item.enabled) {
                 return (
@@ -310,10 +253,7 @@ export function HudMenu({
                       />
                       {pontoDe(item.id) && <NotificationBadge />}
                     </div>
-                    <span
-                      className="mt-0.5 font-cinzel font-bold text-[9px] sm:text-[11px] leading-none tracking-wide"
-                      style={{ color: colors.text.primary }}
-                    >
+                    <span className="mt-0.5 font-[family-name:var(--font-silk)] font-bold text-[9px] sm:text-[11px] leading-none text-[#F5E3B3] [text-shadow:1px_1px_0_#1A120B]">
                       {item.label}
                     </span>
                   </button>
