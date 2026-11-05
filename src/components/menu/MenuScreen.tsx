@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Home } from 'lucide-react';
 import { CharacterDocument } from '@/server/characterService';
-import { MENU_PRINCIPAL } from '@/rules/menuPrincipal';
+import { MENU_PRINCIPAL, MenuPrincipalId } from '@/rules/menuPrincipal';
 import { MENU_PRINCIPAL_IMAGES } from '@/assets/menuPrincipal';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { AtalhoMestre } from '@/components/mestre/AtalhoMestre';
@@ -18,41 +18,27 @@ export interface MenuScreenProps {
   personagem?: CharacterDocument | null;
 }
 
-function OrnateCorners() {
-  const borderColor = '#D4AF37';
-  return (
-    <>
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute top-1 left-1 w-2.5 h-2.5 border-t-2 border-l-2 z-20"
-        style={{ borderColor }}
-      />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute top-1 right-1 w-2.5 h-2.5 border-t-2 border-r-2 z-20"
-        style={{ borderColor }}
-      />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute bottom-1 left-1 w-2.5 h-2.5 border-b-2 border-l-2 z-20"
-        style={{ borderColor }}
-      />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute bottom-1 right-1 w-2.5 h-2.5 border-b-2 border-r-2 z-20"
-        style={{ borderColor }}
-      />
-    </>
-  );
-}
-
-const MENU_BENTO_GRID_AREAS = `
-  "conquistas conquistas conquistas conquistas conquistas conquistas"
-  "colecao colecao colecao buscar buscar buscar"
-  "colecao colecao colecao producao producao producao"
-  "mochila mochila mochila resgate resgate resgate"
-  "ranking ranking checkin checkin anuncios anuncios"
+const MENU_GRID_AREAS = `
+  "conquistas conquistas conquistas"
+  "colecao buscar mochila"
+  "colecao producao resgate"
+  "ranking checkin anuncios"
 `;
+
+// Onde o nome entra em cada arte (altura em % do cartão) e a cor: as artes deixam o espaço do nome vazio; o Conquistas já traz o nome
+const NOME_NA_ARTE: Partial<Record<MenuPrincipalId, { y: number; claro: boolean }>> = {
+  colecao: { y: 66, claro: true },
+  buscar: { y: 79, claro: false },
+  producao: { y: 79, claro: false },
+  mochila: { y: 80, claro: true },
+  resgate: { y: 79, claro: true },
+  ranking: { y: 77, claro: true },
+  checkin: { y: 79, claro: true },
+  anuncios: { y: 79, claro: true },
+};
+
+const CONTORNO_DO_NOME =
+  '2px 0 #1A120B, -2px 0 #1A120B, 0 2px #1A120B, 0 -2px #1A120B, 2px 2px #1A120B, -2px -2px #1A120B, 2px -2px #1A120B, -2px 2px #1A120B';
 
 export function MenuScreen({ personagem }: MenuScreenProps) {
   // Pontos de aviso do Menu: check-in por fazer e anúncio novo
@@ -136,15 +122,15 @@ export function MenuScreen({ personagem }: MenuScreenProps) {
         {/* Grid Bento Nomeado com os 9 Cards em Vitrine */}
         <section
           aria-label="Opções do Menu Principal"
-          className="w-full grid gap-2.5 sm:gap-3"
+          className="w-full grid gap-2 sm:gap-2.5"
           style={{
-            gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
-            gridTemplateRows: '124px 102px 102px 112px 86px',
-            gridTemplateAreas: MENU_BENTO_GRID_AREAS,
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            gridTemplateAreas: MENU_GRID_AREAS,
           }}
         >
           {MENU_PRINCIPAL.map((item) => {
             const imgSrc = MENU_PRINCIPAL_IMAGES[item.assetKey];
+            const nome = NOME_NA_ARTE[item.id];
             // Conquistas: o ponto aparece quando há degrau batido para resgatar
             const comPonto =
               (item.id === 'conquistas' && !!personagem && degrausProntos(personagem, personagem.conquistas) > 0) ||
@@ -168,22 +154,33 @@ export function MenuScreen({ personagem }: MenuScreenProps) {
                   // O card Resgate abre o Mercado (Troca entre jogadores; a loja normal e o leilão entram depois)
                   if (item.id === 'resgate') router.push('/mercado');
                 }}
-                style={{
-                  gridArea: item.id,
-                  backgroundColor: colors.background.secondary,
-                  borderColor: '#C8A656',
-                }}
-                className="group relative w-full h-full rounded-sm border-2 overflow-hidden flex flex-col justify-end shadow-xl select-none cursor-pointer"
+                style={{ gridArea: item.id }}
+                className={`group relative w-full select-none cursor-pointer transition-transform duration-150 hover:scale-[1.03] active:scale-[0.98] ${
+                  item.id === 'conquistas' ? 'aspect-[960/274]' : item.id === 'colecao' ? 'h-full min-h-0' : 'aspect-square'
+                }`}
               >
-                <OrnateCorners />
-
-                {/* Imagem de fundo (já contém o título na própria arte) */}
+                {/* A arte já traz a moldura; o nome entra no espaço deixado nela (o Conquistas já traz o nome) */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imgSrc}
                   alt={item.nome}
-                  className="absolute inset-0 w-full h-full object-cover object-center select-none pointer-events-none"
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-contain object-center select-none pointer-events-none"
+                  style={{ imageRendering: 'pixelated' }}
                 />
+                {nome && (
+                  <span
+                    className="absolute inset-x-[9%] text-center font-[family-name:var(--font-pixel)] text-[8px] sm:text-[10px] leading-none uppercase tracking-tight pointer-events-none"
+                    style={{
+                      top: `${nome.y}%`,
+                      transform: 'translateY(-50%)',
+                      color: nome.claro ? '#F5E3B3' : '#3B2410',
+                      textShadow: nome.claro ? CONTORNO_DO_NOME : 'none',
+                    }}
+                  >
+                    {item.nome}
+                  </span>
+                )}
                 {comPonto && <NotificationBadge className="!top-2 !right-2 z-30" />}
               </article>
             );
