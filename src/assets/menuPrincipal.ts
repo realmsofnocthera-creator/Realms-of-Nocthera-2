@@ -1,13 +1,13 @@
 import { MenuPrincipalAssetKey } from '@/rules/menuPrincipal';
-import menuConquistasImg from './images/menu/menu-conquistas.png';
+import menuConquistasImg from './images/menu/menu-conquistas.webp';
 import menuColecaoImg from './images/menu/menu-colecao.webp';
-import menuBuscarImg from './images/menu/menu-buscar.jpg';
-import menuProducaoImg from './images/menu/menu-producao.jpg';
+import menuBuscarImg from './images/menu/menu-buscar.webp';
+import menuProducaoImg from './images/menu/menu-producao.webp';
 import menuMochilaImg from './images/menu/menu-mochila.webp';
-import menuResgateImg from './images/menu/menu-resgate.jpg';
-import menuRankingImg from './images/menu/menu-ranking.jpg';
-import menuCheckinImg from './images/menu/menu-checkin.jpg';
-import menuAnunciosImg from './images/menu/menu-anuncios.jpg';
+import menuResgateImg from './images/menu/menu-resgate.webp';
+import menuRankingImg from './images/menu/menu-ranking.webp';
+import menuCheckinImg from './images/menu/menu-checkin.webp';
+import menuAnunciosImg from './images/menu/menu-anuncios.webp';
 import { srcDaImagem } from '@/assets/srcDaImagem';
 
 export const MENU_PRINCIPAL_IMAGES: Record<MenuPrincipalAssetKey, string> = {

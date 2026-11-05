@@ -121,51 +121,32 @@ export function HudMenu({
     >
       {/* FAIXA SUPERIOR SECUNDÁRIA: Passe de Batalha (esquerda) + Eventos / Temporada (direita) */}
       <div className="w-full flex items-start justify-between gap-1.5 px-2 sm:px-4 pt-1 sm:pt-1.5">
-        {/* Esquerda abaixo do Perfil: Passe de Batalha (travado) */}
+        {/* Esquerda abaixo do Perfil: Passe de Temporada (travado; Nv 0/60 até o sistema existir) */}
         <button
           type="button"
           disabled
           aria-disabled="true"
-          title="Passe de Batalha (Em breve)"
-          aria-label="Passe de Batalha (Em breve)"
-          className="pointer-events-auto relative flex items-center opacity-85 cursor-not-allowed group"
+          title="Passe de Temporada (Em breve)"
+          aria-label="Passe de Temporada 0, nível 0 de 60 (Em breve)"
+          className="caixa-pixel pointer-events-auto relative flex items-center gap-1.5 sm:gap-2 pl-1.5 pr-2 py-1 opacity-90 cursor-not-allowed"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={HUD_ICONS.menuPasseBatalha}
-            alt="Passe de Batalha"
-            className="w-24 sm:w-36 md:w-40 h-auto object-contain drop-shadow-lg select-none pointer-events-none"
-          />
-          <span
-            className="absolute top-0.5 right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border flex items-center justify-center shadow"
-            style={{
-              backgroundColor: colors.background.primary,
-              borderColor: `${colors.border.default}80`,
-              color: colors.text.muted,
-            }}
-            aria-hidden="true"
-          >
-            <Lock className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
-          </span>
-        </button>
-
-        {/* Missões diárias e semanais e Check-in (o ponto aparece com baú pronto ou check-in por fazer) */}
-        <button
-          type="button"
-          onClick={() => router.push('/missoes')}
-          aria-label={avisos.missoes || avisos.checkin ? 'Missões (há algo para resgatar)' : 'Missões'}
-          className="pointer-events-auto relative flex flex-col items-center gap-0.5 px-2 sm:px-3 py-1 rounded-md border sm:border-2 shadow-lg cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-150"
-          style={{ background: 'linear-gradient(135deg, rgba(20,26,48,0.92) 0%, rgba(42,36,78,0.88) 100%)', borderColor: '#C8A656', color: colors.text.primary }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={HUD_ICONS.menuMissoes}
             alt=""
             aria-hidden="true"
-            className="w-6 h-6 sm:w-8 sm:h-8 object-contain select-none pointer-events-none"
+            className="w-8 h-6 sm:w-10 sm:h-7 object-contain select-none pointer-events-none"
+            style={{ imageRendering: 'pixelated' }}
           />
-          <span className="font-cinzel font-bold text-[9px] sm:text-[11px] leading-none tracking-wide">Missões</span>
-          {(avisos.missoes > 0 || avisos.checkin) && <NotificationBadge />}
+          <span className="flex flex-col items-start gap-1">
+            <span className="font-[family-name:var(--font-pixel)] text-[6px] sm:text-[8px] leading-none uppercase text-[#F5E3B3] [text-shadow:1px_1px_0_#1A120B]">
+              Passe de Temporada 0
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="font-[family-name:var(--font-silk)] text-[9px] sm:text-[11px] leading-none text-[#E2D6B6]">Nv 0/60</span>
+              <Lock className="w-2.5 h-2.5 text-[#B2A66C]" aria-hidden="true" />
+            </span>
+          </span>
         </button>
 
         {/* Direita abaixo das moedas: Eventos / Temporada (travados) */}
@@ -275,6 +256,29 @@ export function HudMenu({
               </button>
             );
           })}
+        </div>
+
+        {/* Missões diárias e semanais e Check-in, logo acima da barra do Menu (o ponto aparece com baú pronto ou check-in por fazer) */}
+        <div className="w-full flex items-end justify-start px-2 sm:px-4 mb-1 sm:mb-1.5">
+          <button
+            type="button"
+            onClick={() => router.push('/missoes')}
+            aria-label={avisos.missoes || avisos.checkin ? 'Missões (há algo para resgatar)' : 'Missões'}
+            className="caixa-pixel pointer-events-auto relative flex items-center gap-1.5 sm:gap-2 pl-1.5 pr-3 py-1 cursor-pointer transition-transform duration-150 hover:scale-105 active:scale-95"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={HUD_ICONS.menuMissoes}
+              alt=""
+              aria-hidden="true"
+              className="w-7 h-7 sm:w-9 sm:h-9 object-contain select-none pointer-events-none"
+              style={{ imageRendering: 'pixelated' }}
+            />
+            <span className="font-[family-name:var(--font-pixel)] text-[8px] sm:text-[10px] leading-none uppercase text-[#F5E3B3] [text-shadow:1px_1px_0_#1A120B]">
+              Missões
+            </span>
+            {(avisos.missoes > 0 || avisos.checkin) && <NotificationBadge />}
+          </button>
         </div>
 
         {/* Barra Inferior Esquerda: Menu, Personagem (Ativo -> /personagem), Loja, Guilda */}
