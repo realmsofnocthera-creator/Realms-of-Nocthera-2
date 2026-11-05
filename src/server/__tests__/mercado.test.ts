@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET as mercadoGet, POST as mercadoPost } from '@/app/api/mercado/route';
 import { limparCacheRevogacao } from '@/server/auth';
@@ -194,9 +194,15 @@ describe('Troca entre jogadores (7.2)', () => {
     expect(barato).toEqual(['material', 'emblema', 'arma']); // por preço por unidade: 2, 50, 300
     expect((await estadoDoMercado('u2', true, { ordem: 'maiorPreco' }, T0)).anuncios[0].categoria).toBe('arma');
     expect((await estadoDoMercado('u2', true, { busca: 'emblema' }, T0)).anuncios.map((a) => a.categoria)).toEqual(['emblema']);
-    const g = await mercadoGet(pedido('u2', undefined, '?categoria=arma'));
-    expect(g.status).toBe(200);
-    expect((await g.json()).anuncios).toHaveLength(1);
+    // a rota lê o relógio real; sem fixar a data, o anúncio de T0 já teria vencido
+    vi.useFakeTimers({ toFake: ['Date'], now: T0 });
+    try {
+      const g = await mercadoGet(pedido('u2', undefined, '?categoria=arma'));
+      expect(g.status).toBe(200);
+      expect((await g.json()).anuncios).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
     expect((await mercadoPost(pedido('u2', { acao: 'xyz' }))).status).toBe(400);
     expect((await mercadoGet(new NextRequest('http://t/api/mercado'))).status).toBe(401);
   });
