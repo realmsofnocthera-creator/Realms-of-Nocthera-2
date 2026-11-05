@@ -86,7 +86,7 @@
 
 /* Caixa em pixel do Hub (Passe de Temporada e Missões): contorno marrom escuro, filete dourado e cantos com rebite */
 .caixa-pixel {
-  background: linear-gradient(180deg, #3A1F4D 0%, #24132F 100%);
+  background: linear-gradient(180deg, var(--caixa-a, #3A1F4D) 0%, var(--caixa-b, #24132F) 100%);
   box-shadow:
     0 0 0 2px #1A120B,
     inset 0 0 0 2px #B2A66C,
@@ -107,7 +107,29 @@
 }
 .caixa-pixel::before { top: 1px; left: 1px; }
 .caixa-pixel::after { bottom: 1px; right: 1px; }
+/* Cores das caixas do Hub: arcana (azul-índigo) para a História, ardente (vermelho) para a Arena, violeta é o padrão */
+.caixa-pixel-arcana { --caixa-a: #26345E; --caixa-b: #141C38; }
+.caixa-pixel-ardente { --caixa-a: #5C1A22; --caixa-b: #33090F; }
 .caixa-pixel:active:not(:disabled) { transform: translateY(2px); }
+
+/* Pílula em pixel (Ouro e Diamantes): contorno marrom escuro e filete dourado fino */
+.pilula-pixel {
+  background: linear-gradient(180deg, #2A1E14 0%, #17100A 100%);
+  box-shadow:
+    0 0 0 2px #1A120B,
+    inset 0 0 0 1px #B2A66C,
+    0 3px 0 2px #1A120B;
+  image-rendering: pixelated;
+}
+
+/* Barra de XP em blocos: cada 10% é um bloco */
+.barra-pixel {
+  background:
+    repeating-linear-gradient(90deg, transparent 0, transparent calc(10% - 2px), #1A120B calc(10% - 2px), #1A120B 10%),
+    #0B0806;
+  box-shadow: 0 0 0 2px #1A120B, inset 0 0 0 1px #4A3A22;
+  image-rendering: pixelated;
+}
 
 /* Variações do botão de metal em pixel para formulários (o tamanho padrão fica na página inicial) */
 .botao-pixel-medio {

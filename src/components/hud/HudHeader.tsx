@@ -142,43 +142,19 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
           />
         </button>
 
-        {/* Faixa escura acoplada à direita da moldura */}
-        <div
-          className="-ml-3 sm:-ml-4 pl-4 sm:pl-5 pr-2.5 sm:pr-3.5 py-1 sm:py-1.5 rounded-r-md sm:rounded-r-lg border-y border-r backdrop-blur-md shadow-lg min-w-[108px] max-w-[138px] sm:min-w-[170px] sm:max-w-[220px]"
-          style={{
-            background:
-              'linear-gradient(90deg, rgba(16,24,36,0.92) 0%, rgba(16,24,36,0.78) 75%, rgba(16,24,36,0.25) 100%)',
-            borderColor: `${colors.border.default}66`,
-          }}
-        >
-          <h1
-            className="text-[11px] sm:text-sm font-cinzel font-bold tracking-wide truncate leading-tight drop-shadow"
-            style={{ color: colors.text.primary }}
-          >
+        {/* Placa em pixel acoplada à direita da moldura: nome, nível e barra de XP em blocos */}
+        <div className="caixa-pixel relative -ml-3 sm:-ml-4 pl-5 sm:pl-6 pr-3 sm:pr-4 py-1.5 sm:py-2 min-w-[112px] max-w-[140px] sm:min-w-[176px] sm:max-w-[230px]">
+          <h1 className="font-[family-name:var(--font-silk)] text-[12px] sm:text-[15px] font-bold truncate leading-none text-[#F5F3E0] [text-shadow:1px_1px_0_#1A120B]">
             {personagem.nome}
           </h1>
 
-          <div
-            className="my-0.5 sm:my-1 h-px w-full"
-            style={{
-              background: `linear-gradient(90deg, ${colors.border.default}88 0%, transparent 100%)`,
-            }}
-          />
-
-          <div className="flex items-center gap-1 sm:gap-1.5 tabular-nums">
-            <span
-              className="text-[9px] sm:text-[11px] font-cinzel font-bold shrink-0"
-              style={{ color: colors.text.primary }}
-            >
-              Lv.{personagem.nivel}
+          <div className="mt-1 sm:mt-1.5 flex items-center gap-1.5 sm:gap-2 tabular-nums">
+            <span className="font-[family-name:var(--font-pixel)] text-[7px] sm:text-[9px] leading-none shrink-0 text-[#ED8A0C] [text-shadow:1px_1px_0_#1A120B]">
+              LV{personagem.nivel}
             </span>
 
             <div
-              className="w-8 sm:w-16 md:w-20 h-1.5 sm:h-2 rounded-full overflow-hidden border shrink-0"
-              style={{
-                backgroundColor: colors.background.primary,
-                borderColor: `${colors.border.default}66`,
-              }}
+              className="barra-pixel relative w-9 sm:w-20 md:w-24 h-2 sm:h-2.5 shrink-0 overflow-hidden"
               role="progressbar"
               aria-valuenow={personagem.xpAtual}
               aria-valuemin={0}
@@ -190,14 +166,12 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
                 style={{
                   width: `${percentualXp}%`,
                   backgroundColor: '#2EE6D6',
+                  boxShadow: 'inset 0 -2px 0 #1FA89C',
                 }}
               />
             </div>
 
-            <span
-              className="text-[8px] sm:text-[10px] font-semibold shrink-0"
-              style={{ color: colors.text.primary }}
-            >
+            <span className="font-[family-name:var(--font-silk)] text-[8px] sm:text-[10px] shrink-0 text-[#E2D6B6]">
               {personagem.xpAtual}/{xpProximoNivel}
             </span>
           </div>
@@ -208,23 +182,17 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
       <div className="flex items-center gap-1 sm:gap-2 shrink-0 pt-0.5 sm:pt-1">
         {/* Pílula de Ouro */}
         <div
-          className="relative flex items-center gap-1 sm:gap-1.5 pl-1 pr-1.5 sm:pr-2 py-0.5 rounded-full border backdrop-blur-md shadow-md tabular-nums"
-          style={{
-            backgroundColor: 'rgba(14, 20, 30, 0.88)',
-            borderColor: `${colors.border.default}80`,
-          }}
+          className="pilula-pixel relative flex items-center gap-1 sm:gap-1.5 pl-1 pr-1.5 sm:pr-2 py-0.5 tabular-nums"
           aria-label="Ouro do personagem"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={HUD_ICONS.ouro}
             alt="Ouro"
-            className="w-3.5 h-3.5 sm:w-5 sm:h-5 object-contain shrink-0 select-none"
+            className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0 select-none"
+            style={{ imageRendering: 'pixelated' }}
           />
-          <span
-            className="text-[10px] sm:text-xs font-bold"
-            style={{ color: colors.text.primary }}
-          >
+          <span className="font-[family-name:var(--font-silk)] text-[11px] sm:text-[13px] font-bold text-[#F5F3E0] [text-shadow:1px_1px_0_#1A120B]">
             {personagem.ouro}
           </span>
           <span
@@ -240,11 +208,7 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
         <div
           title="Diamantes"
           aria-label={`Diamantes: ${personagem.diamantes ?? 0}`}
-          className="relative flex items-center gap-1 sm:gap-1.5 pl-1 pr-1.5 sm:pr-2 py-0.5 rounded-full border backdrop-blur-md shadow-md select-none"
-          style={{
-            backgroundColor: 'rgba(14, 20, 30, 0.88)',
-            borderColor: `${colors.border.default}66`,
-          }}
+          className="pilula-pixel relative flex items-center gap-1 sm:gap-1.5 pl-1 pr-1.5 sm:pr-2 py-0.5 select-none"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -253,10 +217,7 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
             aria-hidden="true"
             className="w-3.5 h-3.5 sm:w-5 sm:h-5 object-contain shrink-0 select-none pointer-events-none"
           />
-          <span
-            className="text-[10px] sm:text-xs font-bold"
-            style={{ color: colors.text.primary }}
-          >
+          <span className="font-[family-name:var(--font-silk)] text-[11px] sm:text-[13px] font-bold text-[#F5F3E0] [text-shadow:1px_1px_0_#1A120B]">
             {personagem.diamantes ?? 0}
           </span>
         </div>
