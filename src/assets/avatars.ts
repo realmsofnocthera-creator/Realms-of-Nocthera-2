@@ -24,42 +24,18 @@ export const AVATAR_IMAGES: Record<AvatarAssetKey, string> = {
 
 /**
  * Enquadramento individual por classe para recortar/focar a região da cabeça/rosto
- * a partir da mesma arte de corpo inteiro (533x800).
+ * a partir da mesma arte de corpo inteiro (480x720, a mesma da criação de personagem).
  */
 export const AVATAR_FACE_FRAMING: Record<
   AvatarId,
   { objectPosition: string; transformOrigin: string; scale: number }
 > = {
-  barbaro: {
-    objectPosition: '54% 8%',
-    transformOrigin: '54% 12%',
-    scale: 2.35,
-  },
-  bandido: {
-    objectPosition: '47% 8%',
-    transformOrigin: '47% 12%',
-    scale: 2.35,
-  },
-  cavaleiro: {
-    objectPosition: '58% 8%',
-    transformOrigin: '58% 12%',
-    scale: 2.35,
-  },
-  feiticeiro: {
-    objectPosition: '55% 6%',
-    transformOrigin: '55% 10%',
-    scale: 2.25,
-  },
-  profeta: {
-    objectPosition: '51% 8%',
-    transformOrigin: '51% 12%',
-    scale: 2.35,
-  },
-  samurai: {
-    objectPosition: '50% 8%',
-    transformOrigin: '50% 12%',
-    scale: 2.35,
-  },
+  barbaro: { objectPosition: '50% 0%', transformOrigin: '42% 5%', scale: 1.9 },
+  bandido: { objectPosition: '50% 0%', transformOrigin: '50% 5%', scale: 1.9 },
+  cavaleiro: { objectPosition: '50% 0%', transformOrigin: '50% 1%', scale: 1.9 },
+  feiticeiro: { objectPosition: '50% 0%', transformOrigin: '58% 1%', scale: 1.9 },
+  profeta: { objectPosition: '50% 0%', transformOrigin: '50% 1%', scale: 1.9 },
+  samurai: { objectPosition: '50% 0%', transformOrigin: '50% 1%', scale: 1.9 },
 };
 
 export function resolveAvatarDefinition(
