@@ -1,8 +1,10 @@
-import molduraEsquerdaImg from './images/perfil/perfil-moldura-esquerda.webp';
-import fundoDireitaImg from './images/perfil/perfil-fundo-direita.webp';
-import { srcDaImagem } from '@/assets/srcDaImagem';
-
+/**
+ * Peças do kit do perfil (public/images/perfil): faixa roxa, pergaminho, botões, X, divisor, slot e losango.
+ * Os caminhos ficam em public/ porque o CSS (border-image) também as usa.
+ */
 export const PERFIL_IMAGES = {
-  molduraEsquerda: srcDaImagem(molduraEsquerdaImg),
-  fundoDireita: srcDaImagem(fundoDireitaImg),
+  faixa: '/images/perfil/faixa.webp',
+  x: '/images/perfil/x.webp',
+  divisor: '/images/perfil/divisor.webp',
+  losango: '/images/perfil/losango.webp',
 } as const;

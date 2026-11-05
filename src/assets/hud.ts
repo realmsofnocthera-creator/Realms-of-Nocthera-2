@@ -1,5 +1,5 @@
 import backgroundHubImg from './images/hud/background-hub.webp';
-import molduraPerfilImg from './images/hud/moldura-perfil.png';
+import molduraPerfilImg from './images/hud/moldura-perfil.webp';
 
 import ouroIcon from './icons/hud/ouro.webp';
 import diamanteIcon from './icons/hud/diamante.webp';

@@ -52,13 +52,13 @@ export function PerfilEquipamentos({ itens, editavel, equipados = [], salvando =
           ) : editavel ? (
             <span className="m-auto flex flex-col items-center gap-0.5 text-[#D4AF37]">
               <Plus className="w-4 h-4" />
-              <span className="text-[8px] sm:text-[9px] font-cinzel leading-tight">Escolher</span>
+              <span className="hidden sm:block text-[9px] font-cinzel leading-tight">Escolher</span>
             </span>
           ) : (
             <span className="m-auto text-[8px] sm:text-[9px] font-cinzel text-[#9E8F73] leading-tight">Vazio</span>
           );
-          const classe = 'aspect-[3/4] rounded bg-gradient-to-b from-[#2A221E] to-[#171210] flex flex-col p-1 text-left shadow-sm';
-          const estilo = { border: item ? `1px solid ${item.cor}` : '1px dashed #C8A65699' };
+          const classe = 'slot-kit aspect-[3/4] flex flex-col p-0.5 text-left';
+          const estilo = item ? { boxShadow: `inset 0 0 0 1px ${item.cor}` } : undefined;
           return editavel ? (
             <button
               key={i}

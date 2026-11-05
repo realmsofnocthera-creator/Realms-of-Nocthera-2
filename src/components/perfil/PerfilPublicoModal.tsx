@@ -297,10 +297,11 @@ export function PerfilPublicoModal({
           {/* Fundo da moldura esquerda */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={PERFIL_IMAGES.molduraEsquerda}
+            src={PERFIL_IMAGES.faixa}
             alt=""
             aria-hidden="true"
             className="absolute inset-0 w-full h-full object-fill pointer-events-none"
+            style={{ imageRendering: 'pixelated' }}
           />
 
           {/* Arte de corpo inteiro do personagem centralizada sobre a moldura */}
@@ -313,49 +314,33 @@ export function PerfilPublicoModal({
             />
           </div>
 
-          {/* Faixa diagonal inferior com o Nome do personagem e Raça/Classe (fiel à referência) */}
-          <div className="relative z-20 w-full pb-4 sm:pb-6 pt-2 px-2 overflow-hidden">
-            <div className="bg-gradient-to-r from-[#140B24]/95 via-[#24143D]/95 to-[#140B24]/90 border-y-2 border-[#D4AF37]/85 py-1.5 sm:py-2 px-2 -mx-3 -rotate-[6deg] shadow-[0_6px_16px_rgba(0,0,0,0.9)] text-center">
-              <h2 className="font-cinzel font-extrabold text-sm sm:text-xl md:text-2xl tracking-wide text-[#F7E396] drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] truncate">
-                {viewedProfile.nome}
-              </h2>
-              <p className="font-cinzel font-bold text-[8px] sm:text-[10px] tracking-[0.14em] uppercase text-[#D4AF37] truncate">
-                {viewedProfile.raca} · {viewedProfile.classe}
-              </p>
-            </div>
+          {/* Nome e Raça/Classe na parte de baixo da faixa roxa, sobre o filete dourado */}
+          <div className="relative z-20 w-full pb-5 sm:pb-7 pt-2 px-3 text-center">
+            <h2 className="font-cinzel font-extrabold text-sm sm:text-xl md:text-2xl tracking-wide text-[#F7E396] [text-shadow:0_2px_0_#1A120B,0_0_6px_rgba(0,0,0,0.9)] truncate">
+              {viewedProfile.nome}
+            </h2>
+            <p className="font-cinzel font-bold text-[8px] sm:text-[10px] tracking-[0.14em] uppercase text-[#E2D6B6] [text-shadow:0_1px_0_#1A120B] truncate">
+              {viewedProfile.raca} · {viewedProfile.classe}
+            </p>
           </div>
         </div>
 
         {/* COLUNA DIREITA: Fundo pergaminho claro com as seções empilhadas como na referência */}
-        <div className="relative z-10 flex flex-col justify-between rounded-r-md overflow-hidden text-[#2B2118] py-2.5 sm:py-4 pl-3 sm:pl-5 pr-2.5 sm:pr-4">
-          {/* Imagem de fundo de pergaminho */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={PERFIL_IMAGES.fundoDireita}
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-fill pointer-events-none"
-          />
-
-          {/* Velo pergaminho claro sutil para uniformizar a leitura dos textos escuros */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-1 rounded bg-[#EBE3D0]/78 pointer-events-none"
-          />
-
+        <div className="perfil-pergaminho relative z-10 flex flex-col justify-between text-[#2B2118] -ml-1 py-0 pl-1 sm:pl-2 pr-0.5 sm:pr-1">
           {/* Botão Fechar (X) em formato de brasão no canto superior direito */}
           <button
             type="button"
             onClick={handleCloseModal}
             aria-label="Fechar Perfil Público"
-            className="absolute top-1.5 right-1.5 z-30 w-7 h-8 sm:w-8 sm:h-9 bg-gradient-to-b from-[#4E2375] to-[#2B1145] hover:from-[#642E94] hover:to-[#3A185C] text-[#F7E396] border-2 border-[#D4AF37] rounded-b-lg flex items-center justify-center shadow-md cursor-pointer transition-transform active:scale-95"
+            className="absolute -top-3 -right-3 z-30 w-8 h-8 sm:w-9 sm:h-9 cursor-pointer transition-transform active:scale-95 hover:brightness-110"
           >
-            <X className="w-4 h-4 stroke-[2.75]" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={PERFIL_IMAGES.x} alt="" aria-hidden="true" className="w-full h-full pointer-events-none" style={{ imageRendering: 'pixelated' }} />
           </button>
 
           <div className="relative z-10 flex flex-col gap-2 sm:gap-2.5">
             {/* Cabeçalho: PERFIL DO JOGADOR */}
-            <div className="border-b border-[#B8A88A] pb-1 pr-7">
+            <div className="perfil-divisor-b pb-1 pr-7">
               <span className="font-cinzel font-bold text-[10px] sm:text-xs tracking-[0.16em] uppercase text-[#7A6A58] block">
                 ✦ Perfil do Jogador
               </span>
@@ -376,7 +361,7 @@ export function PerfilPublicoModal({
                   type="submit"
                   disabled={searchLoading}
                   aria-label="Buscar"
-                  className="inline-flex items-center justify-center gap-1 bg-[#4E2375] hover:bg-[#612C91] disabled:opacity-50 text-[#F7E396] font-cinzel font-bold uppercase text-[9px] sm:text-[10px] px-2 py-1 rounded border border-[#D4AF37] cursor-pointer shrink-0"
+                  className="botao-kit inline-flex items-center justify-center gap-1 text-[#F7E396] font-cinzel font-bold uppercase text-[9px] sm:text-[10px] px-1 py-0.5 shrink-0"
                 >
                   <Search className="w-3 h-3" />
                   <span className="hidden sm:inline">
@@ -392,7 +377,7 @@ export function PerfilPublicoModal({
                       setSearchQuery('');
                     }}
                     title="Voltar ao meu perfil"
-                    className="inline-flex items-center justify-center bg-[#D5C7AD] hover:bg-[#C7B698] text-[#2B2118] border border-[#9E8C70] font-cinzel font-bold uppercase text-[9px] px-1.5 py-1 rounded cursor-pointer shrink-0"
+                    className="botao-kit botao-kit-cinza inline-flex items-center justify-center text-[#2B2118] font-cinzel font-bold uppercase text-[9px] px-0.5 py-0.5 shrink-0"
                   >
                     <UserIcon className="w-3 h-3" />
                   </button>
@@ -409,7 +394,7 @@ export function PerfilPublicoModal({
             <div className="relative flex items-center gap-2 sm:gap-3 pt-0.5">
               {/* Avatar circular com rosto recortado + moldura-perfil.png + ícone de troca (só no próprio perfil) */}
               <div className="relative w-13 h-13 sm:w-16 sm:h-16 flex items-center justify-center shrink-0">
-                <div className="w-[76%] h-[76%] rounded-full overflow-hidden bg-[#16120E]">
+                <div className="w-[86%] h-[86%] rounded-full overflow-hidden bg-[#16120E]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={avatarSrc}
@@ -659,7 +644,7 @@ export function PerfilPublicoModal({
             </div>
 
             {/* Linha de Nível + Barra decorativa + Raça/Classe */}
-            <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-[#B8A88A]">
+            <div className="flex items-center justify-between gap-2 pb-1.5 perfil-divisor-b">
               <span className="font-cinzel font-extrabold text-[11px] sm:text-xs text-[#2B2118] shrink-0">
                 Nv. {viewedProfile.nivel}
               </span>
@@ -672,7 +657,7 @@ export function PerfilPublicoModal({
             </div>
 
             {/* LINHA DIVIDIDA: Poder Total (Esquerda) | Guilda (Direita) */}
-            <div className="grid grid-cols-2 border-b border-[#B8A88A] pb-2">
+            <div className="grid grid-cols-2 perfil-divisor-b pb-2">
               <div className="pr-2 border-r border-[#B8A88A]">
                 <span className="text-[9px] sm:text-[10px] font-cinzel font-semibold text-[#6E5D4F] block">
                   Poder Total
@@ -699,7 +684,7 @@ export function PerfilPublicoModal({
             </div>
 
             {/* SEÇÃO SOBRE (com divisória ornamental e ícone de lápis à direita se for o próprio perfil) */}
-            <div className="space-y-1 border-b border-[#B8A88A] pb-2">
+            <div className="space-y-1 perfil-divisor-b pb-2">
               <div className="flex items-center gap-1.5">
                 <span className="font-cinzel font-bold text-[10px] sm:text-xs text-[#4A3B2C] shrink-0">
                   Sobre
@@ -749,7 +734,7 @@ export function PerfilPublicoModal({
                           setIsEditingSobre(false);
                           setSobreError(null);
                         }}
-                        className="text-[9px] font-cinzel font-bold uppercase px-2 py-0.5 rounded border border-[#9E8C70] text-[#4A3B2C] bg-[#DFD5C0] cursor-pointer"
+                        className="botao-kit botao-kit-cinza text-[9px] font-cinzel font-bold uppercase px-1.5 text-[#2B2118]"
                       >
                         Cancelar
                       </button>
@@ -757,7 +742,7 @@ export function PerfilPublicoModal({
                         type="button"
                         disabled={savingSobre}
                         onClick={handleSaveSobre}
-                        className="inline-flex items-center gap-0.5 text-[9px] font-cinzel font-bold uppercase px-2 py-0.5 rounded bg-[#4E2375] text-[#F7E396] border border-[#D4AF37] cursor-pointer disabled:opacity-50"
+                        className="botao-kit inline-flex items-center gap-0.5 text-[9px] font-cinzel font-bold uppercase px-1.5 text-[#F7E396]"
                       >
                         <Check className="w-2.5 h-2.5 stroke-[2.5]" />
                         <span>{savingSobre ? '...' : 'Salvar'}</span>
@@ -777,7 +762,7 @@ export function PerfilPublicoModal({
             </div>
 
             {/* SEÇÃO EQUIPAMENTOS PRINCIPAIS (fileira de cards verticais travados como na referência) */}
-            <div className="space-y-1.5 border-b border-[#B8A88A] pb-2">
+            <div className="space-y-1.5 perfil-divisor-b pb-2">
               <div className="flex items-center gap-1.5">
                 <span className="font-cinzel font-bold text-[10px] sm:text-xs text-[#4A3B2C] shrink-0">
                   ✦ Equipamentos Principais
@@ -810,13 +795,15 @@ export function PerfilPublicoModal({
                   const c = viewedProfile.conquistasEmDestaque?.[i];
                   return (
                     <div key={i} className={`flex flex-col items-center gap-0.5 ${c ? '' : 'opacity-60'}`}>
-                      <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg rotate-45 bg-gradient-to-br from-[#3E245B] to-[#1F1230] border border-[#D4AF37] flex items-center justify-center shadow-sm my-1">
+                      <div className="relative w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center my-0.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={PERFIL_IMAGES.losango} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full pointer-events-none" style={{ imageRendering: 'pixelated' }} />
                         {c ? (
-                          <span className="-rotate-45 font-cinzel font-extrabold text-[10px] text-[#F7E396]">
+                          <span className="relative font-cinzel font-extrabold text-[10px] text-[#F7E396]">
                             {c.degraus}/{DEGRAUS}
                           </span>
                         ) : (
-                          <Lock className="-rotate-45 w-3.5 h-3.5 text-[#F7E396]" />
+                          <Lock className="relative w-3.5 h-3.5 text-[#F7E396]" />
                         )}
                       </div>
                       <span className="text-[8px] sm:text-[9px] font-cinzel font-semibold text-[#5C4D3C] leading-tight">
