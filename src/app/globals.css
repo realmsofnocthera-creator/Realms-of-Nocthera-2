@@ -145,3 +145,36 @@
 .campo-data-escuro {
   color-scheme: dark;
 }
+
+/* Kit do perfil: pergaminho com cantos de metal, botões e slot em 9 partes (as peças ficam em public/images/perfil) */
+.perfil-pergaminho {
+  border-style: solid;
+  border-width: 18px;
+  border-image: url('/images/perfil/pergaminho.webp') 26 fill / 18px stretch;
+  image-rendering: pixelated;
+}
+.botao-kit {
+  border-style: solid;
+  border-width: 9px;
+  border-image: url('/images/perfil/botao-roxo.webp') 26 fill / 9px stretch;
+  image-rendering: pixelated;
+  cursor: pointer;
+}
+.botao-kit-dourado { border-image-source: url('/images/perfil/botao-dourado.webp'); }
+.botao-kit-cinza { border-image-source: url('/images/perfil/botao-cinza.webp'); }
+.botao-kit:hover:not(:disabled) { filter: brightness(1.15); }
+.botao-kit:active:not(:disabled) { filter: brightness(0.9); transform: translateY(1px); }
+.botao-kit:disabled { opacity: 0.55; cursor: not-allowed; }
+.slot-kit {
+  border-style: solid;
+  border-width: 6px;
+  border-image: url('/images/perfil/slot.webp') 16 fill / 6px stretch;
+  image-rendering: pixelated;
+}
+
+/* Linha separadora do perfil: o divisor do kit embaixo da seção */
+.perfil-divisor-b {
+  background: url('/images/perfil/divisor.webp') bottom center / 100% 8px no-repeat;
+  padding-bottom: 0.75rem !important;
+  image-rendering: pixelated;
+}

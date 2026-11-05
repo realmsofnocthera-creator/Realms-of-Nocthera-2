@@ -118,7 +118,7 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
           aria-label="Abrir Perfil Público do personagem"
           title="Ver Perfil Público"
         >
-          <div className="w-[74%] h-[74%] rounded-full overflow-hidden bg-[#16120E] group-hover:brightness-110 transition-all">
+          <div className="w-[86%] h-[86%] rounded-full overflow-hidden bg-[#16120E] group-hover:brightness-110 transition-all">
             <motion.div
               animate={{ y: [0, -1.5, 0] }}
               transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}
