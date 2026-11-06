@@ -3,6 +3,8 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { BuscaScreen } from '@/components/colecionaveis/BuscaScreen';
 import { ColecaoScreen, contagemDoQuadro } from '@/components/colecao/ColecaoScreen';
+import { arteDoColecionavel } from '@/assets/colecionaveis';
+import { COLECIONAVEIS } from '@/rules/colecionaveis';
 import type { CharacterDocument } from '@/server/characterService';
 
 describe('Telas do Buscar e da Coleção', () => {
@@ -28,5 +30,12 @@ describe('Telas do Buscar e da Coleção', () => {
     expect(contagemDoQuadro(p, 'sonatas').tenho).toBe(1);
     expect(contagemDoQuadro(p, 'memorias').tenho).toBe(0);
     expect(contagemDoQuadro(p, 'alma').tenho).toBe(2);
+  });
+
+  it('artes dos colecionáveis: as 30 Relíquias têm arte e cada código do catálogo existe', () => {
+    const reliquias = COLECIONAVEIS.filter((c) => c.categoria === 'reliquias');
+    expect(reliquias).toHaveLength(30);
+    for (const c of reliquias) expect(arteDoColecionavel(c.id), c.id).toBeTruthy();
+    expect(arteDoColecionavel('XX-C01')).toBeUndefined();
   });
 });
