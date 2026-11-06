@@ -29,7 +29,16 @@ describe('detalheDaVitoria (Conquistas de Monstros)', () => {
     );
     expect(d.monstroId).toBe('lobo-cinzento');
     // o dano do monstro e o status que ficou no próprio personagem não contam
-    expect(d.contadores).toEqual({ danoCausado: 100, golpesCriticos: 3, statusAplicados: 1 });
+    expect(d.contadores).toEqual({ danoCausado: 100, golpesCriticos: 3, statusAplicados: 1, habilidadesUsadas: 0 });
+  });
+
+  it('habilidades usadas: só as do personagem e sem os ataques básicos', () => {
+    const com = (nome: string, hab?: string) => ({ ...ataque(nome, 'Lobo', 10), ...(hab ? { habilidadeAcionada: hab } : {}) });
+    const d = detalheDaVitoria(
+      luta({ logTurnos: [{ numeroTurno: 1, ataques: [com('Ana', 'Explosão Arcana'), com('Ana', 'Faísca Arcana'), com('Ana'), com('Lobo', 'Explosão Arcana')], eventosEfeitos: [] }] }),
+      'Ana',
+    );
+    expect(d.contadores.habilidadesUsadas).toBe(1);
   });
 
   it('vida cheia: só quando nenhum golpe nem dano contínuo atingiu o personagem', () => {
@@ -82,7 +91,7 @@ describe('resumoDoPvp (Conquistas de PvP)', () => {
 
   it('conta a luta, o dano de quem atacou e a vitória, a sequência e a vocação', () => {
     const r = resumoDoPvp(pvp('a', 80, [{ atacante: 'Ana', danoEfetivo: 40 }, { atacante: 'Beto', danoEfetivo: 99 }, { atacante: 'Ana', danoEfetivo: 60 }]), { nivel: 10, sequenciaAtual: 2, maiorSequencia: 4 }, { nivel: 10, classeId: 'samurai' });
-    expect(r.ganhos).toEqual({ lutasPvp: 1, danoPvp: 100, vitoriasPvp: 1 });
+    expect(r.ganhos).toEqual({ lutasPvp: 1, danoPvp: 100, habilidadesUsadas: 0, vitoriasPvp: 1 });
     expect([r.sequenciaAtual, r.maiorSequencia, r.vocacaoDerrotada]).toEqual([3, 4, 'samurai']);
     // a sequência passa a maior
     expect(resumoDoPvp(pvp('a'), { nivel: 10, sequenciaAtual: 4, maiorSequencia: 4 }, { nivel: 10 }).maiorSequencia).toBe(5);
@@ -91,7 +100,7 @@ describe('resumoDoPvp (Conquistas de PvP)', () => {
   it('derrota e empate zeram a sequência, não contam vitória nem vocação', () => {
     for (const v of ['b', 'ninguem'] as const) {
       const r = resumoDoPvp(pvp(v), { nivel: 10, sequenciaAtual: 3, maiorSequencia: 3 }, { nivel: 20, classeId: 'bandido' });
-      expect(r.ganhos).toEqual({ lutasPvp: 1, danoPvp: 0 });
+      expect(r.ganhos).toEqual({ lutasPvp: 1, danoPvp: 0, habilidadesUsadas: 0 });
       expect([r.sequenciaAtual, r.maiorSequencia, r.vocacaoDerrotada]).toEqual([0, 3, undefined]);
     }
   });

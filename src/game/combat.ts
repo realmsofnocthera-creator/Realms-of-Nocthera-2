@@ -354,7 +354,7 @@ export {
 };
 
 /** Ataques básicos das classes: não contam como "usar uma habilidade" (Frenesi). */
-const ATAQUES_BASICOS: ReadonlySet<string> = new Set(['Golpe Bárbaro', 'Golpe do Guardião', 'Faísca Arcana', 'Golpe Rápido', 'Luz Sagrada', 'Corte Preciso']);
+export const ATAQUES_BASICOS: ReadonlySet<string> = new Set(['Golpe Bárbaro', 'Golpe do Guardião', 'Faísca Arcana', 'Golpe Rápido', 'Luz Sagrada', 'Corte Preciso']);
 
 export interface Combatente {
   nome: string;

@@ -53,6 +53,7 @@ describe('Missões diárias, semanais e Check-in: servidor', () => {
     expect(r.estado.checkin.feitoHoje).toBe(true);
     expect(r.estado.avisos.checkin).toBe(false);
     expect((await getCharacterByUid('u1'))!.ouro).toBe(11000);
+    expect((await getCharacterByUid('u1'))!.estatisticas?.checkins).toBe(1);
     expect(getTransactionsByUid('u1').some((t) => t.moeda === 'ouro' && t.quantidade === 1000 && t.motivo === 'Check-in (dia 1)')).toBe(true);
     expect((await erro(agirNoDiario('u1', 'checkin', {}, new Date(T0.getTime() + HORA_MS))))?.message).toMatch(/já fez o Check-in/);
     const amanha = await agirNoDiario('u1', 'checkin', {}, new Date(T0.getTime() + UM_DIA));

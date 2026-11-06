@@ -83,6 +83,7 @@ describe('Alma (7.8): servidor', () => {
     await updateCharacter('u1', { poeiraDeAlma: 60 });
     const r = await agirNaAlma('u1', 'despertar', { id: ids[0] });
     expect(r.character.poeiraDeAlma).toBe(40);
+    expect(r.character.estatisticas?.poeiraGasta).toBe(20);
     expect(r.character.cartasItens).toHaveLength(1);
     expect(r.character.cartasItens![0]).toMatchObject({ id: ids[0], despertar: 1 });
   });

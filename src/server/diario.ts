@@ -20,7 +20,7 @@ import {
   type ProgressoDeMissoes,
 } from '@/rules/diario';
 import { expedicaoPronta } from '@/rules/expedicao';
-import { carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
+import { carregarPersonagem, contarNoPatch, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { entregarPresente } from '@/server/correio';
 import { repositorio } from '@/server/persistencia';
 import { exigirSistemaLigado } from '@/server/sistemasLeitura';
@@ -167,6 +167,7 @@ export async function agirNoDiario(uid: string, acao: unknown, pedido: { tipo?: 
         ...patch,
         checkin: { ultimoDia: dia, feitos: n % DIAS_DO_CHECKIN },
         diario: somarDiario(eu.diario, { checkin: 1 }, dia, semana),
+        ...contarNoPatch(eu, { checkins: 1 }),
       });
       return { mensagem: `Check-in do dia ${n} feito: ${textoDoPresente(presente).join(', ')}.`, estado: estadoDe(salvo, agora) };
     }
@@ -179,7 +180,7 @@ export async function agirNoDiario(uid: string, acao: unknown, pedido: { tipo?: 
     if (!prontos.length) throw new ErroDoDiario(`Não há degrau do baú ${diario ? 'diário' : 'semanal'} para resgatar agora.`);
     const diamantes = somaDiamantes(prontos);
     const { doc, patch } = entregarPresente(ctx, eu, { diamantes }, `Baú ${diario ? 'diário' : 'semanal'} de missões`);
-    const salvo = salvarPersonagem(ctx, doc, { ...patch, diario: { ...d, ...(diario ? { bausDiarios: abertos } : { bausSemanais: abertos }) } });
+    const salvo = salvarPersonagem(ctx, doc, { ...patch, diario: { ...d, ...(diario ? { bausDiarios: abertos } : { bausSemanais: abertos }) }, ...contarNoPatch(eu, { bausDeMissao: prontos.length }) });
     return { mensagem: `${prontos.length === 1 ? '1 degrau do baú resgatado' : `${prontos.length} degraus do baú resgatados`}: ${diamantes} Diamantes.`, estado: estadoDe(salvo, agora) };
   });
 }
