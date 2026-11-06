@@ -1,8 +1,34 @@
 import { srcDaImagem } from '@/assets/srcDaImagem';
-import imgSONATAC from './images/colecionaveis/SONATA-C.webp';
-import imgSONATAMR from './images/colecionaveis/SONATA-MR.webp';
-import imgSONATAL from './images/colecionaveis/SONATA-L.webp';
-import imgSONATAM from './images/colecionaveis/SONATA-M.webp';
+import imgMEC01 from './images/colecionaveis/ME-C01.webp';
+import imgMEC02 from './images/colecionaveis/ME-C02.webp';
+import imgMEC03 from './images/colecionaveis/ME-C03.webp';
+import imgMEC04 from './images/colecionaveis/ME-C04.webp';
+import imgMEC05 from './images/colecionaveis/ME-C05.webp';
+import imgMEC06 from './images/colecionaveis/ME-C06.webp';
+import imgMEC07 from './images/colecionaveis/ME-C07.webp';
+import imgMEC08 from './images/colecionaveis/ME-C08.webp';
+import imgMEC09 from './images/colecionaveis/ME-C09.webp';
+import imgMEC10 from './images/colecionaveis/ME-C10.webp';
+import imgMEC11 from './images/colecionaveis/ME-C11.webp';
+import imgMEC12 from './images/colecionaveis/ME-C12.webp';
+import imgMEC13 from './images/colecionaveis/ME-C13.webp';
+import imgMEC14 from './images/colecionaveis/ME-C14.webp';
+import imgMEC15 from './images/colecionaveis/ME-C15.webp';
+import imgMEL01 from './images/colecionaveis/ME-L01.webp';
+import imgMEL02 from './images/colecionaveis/ME-L02.webp';
+import imgMEL03 from './images/colecionaveis/ME-L03.webp';
+import imgMEL04 from './images/colecionaveis/ME-L04.webp';
+import imgMEM01 from './images/colecionaveis/ME-M01.webp';
+import imgMEM02 from './images/colecionaveis/ME-M02.webp';
+import imgMEMR01 from './images/colecionaveis/ME-MR01.webp';
+import imgMEMR02 from './images/colecionaveis/ME-MR02.webp';
+import imgMEMR03 from './images/colecionaveis/ME-MR03.webp';
+import imgMEMR04 from './images/colecionaveis/ME-MR04.webp';
+import imgMEMR05 from './images/colecionaveis/ME-MR05.webp';
+import imgMEMR06 from './images/colecionaveis/ME-MR06.webp';
+import imgMEMR07 from './images/colecionaveis/ME-MR07.webp';
+import imgMEMR08 from './images/colecionaveis/ME-MR08.webp';
+import imgMEMR09 from './images/colecionaveis/ME-MR09.webp';
 import imgRIC01 from './images/colecionaveis/RI-C01.webp';
 import imgRIC02 from './images/colecionaveis/RI-C02.webp';
 import imgRIC03 from './images/colecionaveis/RI-C03.webp';
@@ -33,9 +59,43 @@ import imgRIMR06 from './images/colecionaveis/RI-MR06.webp';
 import imgRIMR07 from './images/colecionaveis/RI-MR07.webp';
 import imgRIMR08 from './images/colecionaveis/RI-MR08.webp';
 import imgRIMR09 from './images/colecionaveis/RI-MR09.webp';
+import imgSONATAC from './images/colecionaveis/SONATA-C.webp';
+import imgSONATAMR from './images/colecionaveis/SONATA-MR.webp';
+import imgSONATAL from './images/colecionaveis/SONATA-L.webp';
+import imgSONATAM from './images/colecionaveis/SONATA-M.webp';
 
 /** A arte própria de cada colecionável (128×128, fundo transparente), pelo código do catálogo. Só há as que o Yuri já mandou; o resto fica sem arte. */
 const ARTES: Readonly<Record<string, string>> = {
+  'ME-C01': srcDaImagem(imgMEC01),
+  'ME-C02': srcDaImagem(imgMEC02),
+  'ME-C03': srcDaImagem(imgMEC03),
+  'ME-C04': srcDaImagem(imgMEC04),
+  'ME-C05': srcDaImagem(imgMEC05),
+  'ME-C06': srcDaImagem(imgMEC06),
+  'ME-C07': srcDaImagem(imgMEC07),
+  'ME-C08': srcDaImagem(imgMEC08),
+  'ME-C09': srcDaImagem(imgMEC09),
+  'ME-C10': srcDaImagem(imgMEC10),
+  'ME-C11': srcDaImagem(imgMEC11),
+  'ME-C12': srcDaImagem(imgMEC12),
+  'ME-C13': srcDaImagem(imgMEC13),
+  'ME-C14': srcDaImagem(imgMEC14),
+  'ME-C15': srcDaImagem(imgMEC15),
+  'ME-L01': srcDaImagem(imgMEL01),
+  'ME-L02': srcDaImagem(imgMEL02),
+  'ME-L03': srcDaImagem(imgMEL03),
+  'ME-L04': srcDaImagem(imgMEL04),
+  'ME-M01': srcDaImagem(imgMEM01),
+  'ME-M02': srcDaImagem(imgMEM02),
+  'ME-MR01': srcDaImagem(imgMEMR01),
+  'ME-MR02': srcDaImagem(imgMEMR02),
+  'ME-MR03': srcDaImagem(imgMEMR03),
+  'ME-MR04': srcDaImagem(imgMEMR04),
+  'ME-MR05': srcDaImagem(imgMEMR05),
+  'ME-MR06': srcDaImagem(imgMEMR06),
+  'ME-MR07': srcDaImagem(imgMEMR07),
+  'ME-MR08': srcDaImagem(imgMEMR08),
+  'ME-MR09': srcDaImagem(imgMEMR09),
   'RI-C01': srcDaImagem(imgRIC01),
   'RI-C02': srcDaImagem(imgRIC02),
   'RI-C03': srcDaImagem(imgRIC03),
