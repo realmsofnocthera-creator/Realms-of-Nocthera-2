@@ -25,7 +25,7 @@ import { CARTAS_MAXIMAS } from '@/rules/almas';
 import { espacosExtrasDoVip } from '@/rules/vip';
 import { MAX_ARMAS_POR_PERSONAGEM } from '@/game/forja';
 import { MAX_ARMADURAS_POR_PERSONAGEM } from '@/game/armaduraForja';
-import { alterarSaldoEm, carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
+import { alterarSaldoEm, carregarPersonagem, contarNoPatch, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { comRegistro, ErroMestre, exigir, type SessaoMestre } from '@/server/mestre';
 import { repositorio, type ContextoTransacao } from '@/server/persistencia';
 import { comLimiteSilencioso } from '@/server/sancoes';
@@ -355,6 +355,7 @@ export async function agirNoCorreio(uid: string, acao: unknown, pedido: { id?: u
     const resgatadas = new Set(minhas.map((m) => m.id));
     salvarPersonagem(ctx, doc, {
       ...patch,
+      ...contarNoPatch(doc, { presentesDoCorreio: minhas.length + deTodos.length }, patch),
       correio: caixa.map((m) => (resgatadas.has(m.id) ? { ...m, resgatada: true } : m)),
       correioGeral: { ...marcas, ...Object.fromEntries(deTodos.map((g) => [g.id, 'resgatada' as const])) },
     });

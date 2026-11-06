@@ -119,6 +119,8 @@ describe('Party e Teste de Equipe (7.4)', () => {
     expect(depois.cacosDeAlma).toBe(10);
     expect(depois.poeiraDeAlma ?? 0).toBe(0);
     expect(depois.testeEquipeConcluidas).toEqual(['corpo:1']);
+    // a luta em party conta nas Conquistas (e a vitória, nas Vitórias)
+    expect(depois.estatisticas).toMatchObject({ lutasEmParty: 1, vitorias: 1 });
     expect(depois.cartasItens).toHaveLength(3);
     for (const c of depois.cartasItens!) expect(TIPO_DE_CARTA_MAP[c.tipo]).toMatchObject({ categoria: 'corpo', raridade: 'comum' });
     const e = await estadoDoTeste('u2');

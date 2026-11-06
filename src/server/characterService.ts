@@ -327,6 +327,8 @@ export interface CharacterDocument {
   estatisticas?: EstatisticasDoJogador;
   /** Os monstros (por id) que o jogador já derrotou, sem repetir: o Bestiário, as Subespécies e os Chefes especiais das Conquistas. */
   monstrosDerrotados?: string[];
+  /** Quando o jogador entrou na guilda em que está (ISO): as Conquistas contam os dias. */
+  guildaDesde?: string;
   conquistas?: ConquistasDoJogador;
   titulos?: string[];
   tituloId?: string;
@@ -650,6 +652,18 @@ export function progressoDasVitorias(
     ...(mudouOsIds ? { monstrosDerrotados: [...ids].sort() } : {}),
     ...progressoDoDia(char, { vitorias: vitorias.length, chefes }, agora),
   };
+}
+
+/**
+ * Soma contadores das Conquistas (Comunidade) no patch de uma gravação que a ação já faz: nenhuma gravação nova.
+ * `patchAtual` entra quando o mesmo patch já traz `estatisticas` (as vitórias).
+ */
+export function contarNoPatch(
+  char: Pick<CharacterDocument, 'estatisticas'>,
+  ganhos: Partial<Record<Contador, number>>,
+  patchAtual?: { estatisticas?: EstatisticasDoJogador }
+): { estatisticas: EstatisticasDoJogador } {
+  return { estatisticas: somarEstatisticas(patchAtual?.estatisticas ?? char.estatisticas, ganhos) };
 }
 
 /** Atributos que valem em combate e nos derivados: os gravados, o Reforço de Habilidade e o equipamento equipado. */

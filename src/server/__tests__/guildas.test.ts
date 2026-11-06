@@ -49,6 +49,8 @@ describe('Guildas (7.3)', () => {
       const eu = (await getCharacterByUid('u1'))!;
       expect(eu.ouro).toBe(1000);
       expect(eu.guildaNome).toBe('Folhaviva');
+      // as Conquistas contam os dias de guilda a partir daqui
+      expect(Date.now() - Date.parse(eu.guildaDesde!)).toBeLessThan(60_000);
       const g = (await repositorio.lerGuilda(id))!;
       expect(g.membros).toEqual([expect.objectContaining({ uid: 'u1', cargo: 'lider' })]);
       expect(g.descricao).toBe('Guardiões da floresta');
@@ -355,6 +357,7 @@ describe('Níveis e Quadro de contratos (7.3)', () => {
     await updateCharacter('u1', { inventario: { [entregar.alvo]: entregar.quantidade + 2 } });
     await agir('u1', 'entregarContrato', { contratoId: 'c2' });
     expect((await getCharacterByUid('u1'))!.inventario?.[entregar.alvo]).toBe(2);
+    expect((await getCharacterByUid('u1'))!.estatisticas?.contratosDeGuilda).toBe(1);
   });
 
   it('XP suficiente sobe a guilda de nível e abre mais vagas; contratos de outro dia não entregam', async () => {
@@ -417,6 +420,8 @@ describe('Incursões e Pesquisa (7.3)', () => {
     const e = (await estadoDaGuilda('u1')).minha!.incursao;
     expect(e.minhasLutasHoje).toBe(3);
     expect(e.participantes[0].lutas + e.participantes[1].lutas).toBe(4);
+    // cada luta de Incursão conta nas Conquistas (u1 lutou 3 vezes, u2 uma)
+    expect([(await getCharacterByUid('u1'))!.estatisticas?.incursoesDeGuilda, (await getCharacterByUid('u2'))!.estatisticas?.incursoesDeGuilda]).toEqual([3, 1]);
   });
 
   it('chefe derrotado: quem lutou e ainda está na guilda recebe; a guilda ganha XP e passa ao próximo nível', async () => {
@@ -460,6 +465,8 @@ describe('Incursões e Pesquisa (7.3)', () => {
     await updateCharacter('u2', { inventario: { 'pelo-de-rato': 40 } });
     const { mensagem } = await agir('u2', 'doarPesquisa', { ramo: 'xp', materiais: { 'pelo-de-rato': 40 } });
     expect(mensagem).toMatch(/subiu para o nível 1/);
+    // as doações bem-sucedidas contam nas Conquistas (u1 doou 1 vez, u2 doou 1 vez)
+    expect([(await getCharacterByUid('u1'))!.estatisticas?.doacoesDePesquisa, (await getCharacterByUid('u2'))!.estatisticas?.doacoesDePesquisa]).toEqual([1, 1]);
     expect((await getCharacterByUid('u2'))!.inventario?.['pelo-de-rato']).toBe(10);
     ramo = (await estadoDaGuilda('u1')).minha!.pesquisa.ramos.find((r) => r.id === 'xp')!;
     expect(ramo).toMatchObject({ nivel: 1, bonus: 1, ouro: 0, materiais: 0 });
@@ -511,6 +518,8 @@ describe('Chefe de guildas (7.3)', () => {
     expect(e.membros.u1.dano).toBeGreaterThan(0);
     expect(e.total).toBe(e.membros.u1.dano + e.membros.u2.dano);
     expect((await getCharacterByUid('u1'))!.chefeSemanal).toEqual([{ semana: '2026-10-19', guildaId: id }]);
+    // lutar duas vezes na mesma semana conta uma vez só nas Conquistas
+    expect((await getCharacterByUid('u1'))!.estatisticas?.semanasDeChefeDeGuilda).toBe(1);
   });
 
   it('ranking entre guildas e resgate pela posição final, só depois da semana', async () => {

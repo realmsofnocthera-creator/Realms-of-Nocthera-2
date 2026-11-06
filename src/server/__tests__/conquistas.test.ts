@@ -106,6 +106,8 @@ describe('Conquistas: servidor', () => {
     await enviarMensagemDoMestre(dono, { destino: 'u1', titulo: 'Evento', texto: 'Parabéns!', titulos: ['campeao-do-chefe-mundial'] }, undefined, T0);
     await agirNoCorreio('u1', 'resgatarTudo', {}, T0);
     expect((await getCharacterByUid('u1'))!.titulos).toEqual(['campeao-do-chefe-mundial']);
+    // resgatar um presente do Correio conta nas Conquistas
+    expect((await getCharacterByUid('u1'))!.estatisticas?.presentesDoCorreio).toBe(1);
     await expect(enviarMensagemDoMestre(dono, { destino: 'u1', titulo: 'Evento', texto: 'Parabéns!', titulos: ['falso'] }, undefined, T0)).rejects.toMatchObject({ status: 400 });
   });
 
