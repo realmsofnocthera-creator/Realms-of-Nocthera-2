@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, HelpCircle } from 'lucide-react';
 import {
   CATEGORIAS_DE_CONQUISTA,
   DEGRAUS,
@@ -15,14 +15,15 @@ import {
 import { formatarCompacto, formatarTotal } from '@/rules/numerosCompactos';
 import type { ConquistaNaTela, EstadoDasConquistas } from '@/server/conquistas';
 import { HUD_ICONS } from '@/assets/hud';
-import { AREAS_DA_MESA, ICONES_DAS_CATEGORIAS, MESA_DAS_CONQUISTAS, PROPORCAO_DA_MESA, TROFEUS } from '@/assets/conquistas';
+import { AREAS_DA_MESA, ICONES_DAS_CATEGORIAS, MESA_DAS_CONQUISTAS, TROFEUS } from '@/assets/conquistas';
+import { PERFIL_IMAGES } from '@/assets/perfil';
 import { NOCTHERA_THEME } from '@/theme/theme';
 
 type Token = () => Promise<string | null>;
 const VERMELHO = '#E5484D';
 const VERDE = '#7BC47F';
-/** O que a tela mostra: a mesa, uma categoria ou os títulos. */
-type Vista = 'mesa' | 'titulos' | CategoriaDeConquista;
+/** O que a tela mostra: a mesa ou uma categoria. */
+type Vista = 'mesa' | CategoriaDeConquista;
 
 async function chamar(tokenFresco: Token, corpo?: unknown): Promise<{ ok: boolean; dados: Record<string, unknown> }> {
   try {
@@ -150,6 +151,7 @@ export function ConquistasScreen({ tokenFresco }: { tokenFresco: Token }) {
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [vista, setVista] = useState<Vista>('mesa');
+  const [infoAberta, setInfoAberta] = useState(false);
 
   const carregar = useCallback(async () => {
     const r = await chamar(tokenFresco);
@@ -197,93 +199,77 @@ export function ConquistasScreen({ tokenFresco }: { tokenFresco: Token }) {
     return { feitas: l.reduce((t, c) => t + c.resgatados, 0), total: l.length * DEGRAUS };
   };
 
+  const botaoDeVoltar = (
+    <Link href="/menu" aria-label="Voltar ao Menu" className="caixa-pixel relative inline-flex items-center gap-1.5 pl-2 pr-3 py-1.5">
+      <ArrowLeft className="w-4 h-4 text-[#F5E3B3]" aria-hidden="true" />
+      <span className={`font-[family-name:var(--font-pixel)] text-[8px] leading-none uppercase text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>Menu</span>
+    </Link>
+  );
+  const botaoDeInfo = (
+    <button type="button" onClick={() => setInfoAberta(true)} aria-label="Como funcionam as conquistas" className="caixa-pixel relative inline-flex items-center justify-center w-8 h-8 cursor-pointer">
+      <HelpCircle className="w-4 h-4 text-[#F5E3B3]" aria-hidden="true" />
+    </button>
+  );
+
+  // A mesa: a imagem cobre a tela toda, com o voltar e o "?" por cima
+  if (vista === 'mesa') {
+    return (
+      <main className="fixed inset-0 overflow-hidden select-none bg-[#0D0D0D]">
+        <div className="mesa-conquistas">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={MESA_DAS_CONQUISTAS} alt="Mesa com um objeto para cada categoria de conquistas" className="absolute inset-0 w-full h-full pointer-events-none" style={{ imageRendering: 'pixelated' }} />
+          {estado &&
+            CATEGORIAS_DE_CONQUISTA.map((cat) => {
+              const { feitas, total } = estrelasDe(cat);
+              const prontas = prontasDe(cat);
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => abrir(cat)}
+                  aria-label={`${NOME_DA_CATEGORIA[cat]}: ${feitas} de ${total} estrelas${prontas ? `, ${prontas} para resgatar` : ''}`}
+                  className="absolute group cursor-pointer focus:outline-none"
+                  style={AREAS_DA_MESA[cat]}
+                >
+                  <span className="absolute inset-0 border-2 border-transparent group-hover:border-[#F2C94C]/80 group-focus-visible:border-[#F2C94C] group-active:bg-[#F2C94C]/20" />
+                  <span className={`caixa-pixel absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 whitespace-nowrap px-1.5 py-1 font-[family-name:var(--font-pixel)] text-[6px] sm:text-[8px] leading-none uppercase text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>
+                    {NOME_DA_CATEGORIA[cat]}
+                  </span>
+                  {prontas > 0 && (
+                    <span className="absolute -top-2 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#ED8A0C] text-[#1A120B] font-[family-name:var(--font-silk)] font-bold text-[10px] shadow-[0_0_0_2px_#1A120B] animate-pulse motion-reduce:animate-none">{prontas}</span>
+                  )}
+                </button>
+              );
+            })}
+        </div>
+        <header className="absolute top-0 inset-x-0 z-10 flex items-center gap-2 px-2.5 pt-3 sm:px-5">
+          {botaoDeVoltar}
+          {botaoDeInfo}
+        </header>
+        {!estado && !erroAoCarregar && <p className={`absolute bottom-4 inset-x-0 text-center text-sm text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>Carregando...</p>}
+        {erroAoCarregar && <p role="alert" className="absolute bottom-4 inset-x-4 text-center text-sm font-semibold" style={{ color: VERMELHO }}>Não foi possível carregar agora. Tente de novo em instantes.</p>}
+        {aviso && <p role={aviso.erro ? 'alert' : 'status'} className="absolute bottom-4 inset-x-4 text-center text-sm font-semibold" style={{ color: aviso.erro ? VERMELHO : VERDE }}>{aviso.texto}</p>}
+        {infoAberta && <InfoDasConquistas aoFechar={() => setInfoAberta(false)} />}
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-dvh w-full flex flex-col items-center px-2.5 sm:px-5 py-3 sm:py-6 select-none" style={{ backgroundColor: colors.background.primary, backgroundImage: 'radial-gradient(ellipse at top, rgba(32, 24, 18, 0.92) 0%, rgba(13, 13, 13, 1) 75%)', color: colors.text.primary }}>
       <div className="w-full max-w-[480px] flex flex-col gap-3">
         <header className="flex items-center gap-2">
-          {vista === 'mesa' ? (
-            <Link href="/menu" aria-label="Voltar ao Menu" className="caixa-pixel relative inline-flex items-center gap-1.5 pl-2 pr-3 py-1.5">
-              <ArrowLeft className="w-4 h-4 text-[#F5E3B3]" aria-hidden="true" />
-              <span className={`font-[family-name:var(--font-pixel)] text-[8px] leading-none uppercase text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>Menu</span>
-            </Link>
-          ) : (
-            <button type="button" onClick={voltarParaAMesa} aria-label="Voltar para a mesa" className="caixa-pixel relative inline-flex items-center gap-1.5 pl-2 pr-3 py-1.5 cursor-pointer">
-              <ArrowLeft className="w-4 h-4 text-[#F5E3B3]" aria-hidden="true" />
-              <span className={`font-[family-name:var(--font-pixel)] text-[8px] leading-none uppercase text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>Mesa</span>
-            </button>
-          )}
-          <h1 className={`text-xl sm:text-2xl font-cinzel font-extrabold italic tracking-widest uppercase text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>
-            {vista === 'mesa' ? 'Conquistas' : vista === 'titulos' ? 'Títulos' : NOME_DA_CATEGORIA[vista]}
-          </h1>
+          <button type="button" onClick={voltarParaAMesa} aria-label="Voltar para a mesa" className="caixa-pixel relative inline-flex items-center gap-1.5 pl-2 pr-3 py-1.5 cursor-pointer">
+            <ArrowLeft className="w-4 h-4 text-[#F5E3B3]" aria-hidden="true" />
+            <span className={`font-[family-name:var(--font-pixel)] text-[8px] leading-none uppercase text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>Mesa</span>
+          </button>
+          {botaoDeInfo}
+          <h1 className={`text-xl sm:text-2xl font-cinzel font-extrabold italic tracking-widest uppercase text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>{NOME_DA_CATEGORIA[vista]}</h1>
         </header>
         {aviso && <p role={aviso.erro ? 'alert' : 'status'} className="text-sm font-semibold" style={{ color: aviso.erro ? VERMELHO : VERDE }}>{aviso.texto}</p>}
         {erroAoCarregar ? (
           <p role="alert" className="text-sm" style={{ color: VERMELHO }}>Não foi possível carregar agora. Tente de novo em instantes.</p>
         ) : !estado ? (
           <p className="text-sm" style={{ color: colors.text.secondary }}>Carregando...</p>
-        ) : vista === 'mesa' ? (
-          <>
-            <p className="text-xs" style={{ color: colors.text.secondary }}>Toque num objeto da mesa. Cada conquista tem 5 estrelas, e a raridade sobe com elas: Bronze, Prata, Ouro e Diamante.</p>
-            {estado.prontos > 1 && (
-              <div>
-                <Botao disabled={ocupado} onClick={() => void agir({ acao: 'resgatarTudo' })}>Resgatar tudo ({estado.prontos})</Botao>
-              </div>
-            )}
-            <div className="relative w-full overflow-hidden border-2 border-[#1A120B] shadow-[0_0_0_2px_#B2A66C]" style={{ aspectRatio: PROPORCAO_DA_MESA }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={MESA_DAS_CONQUISTAS} alt="Mesa com um objeto para cada categoria de conquistas" className="absolute inset-0 w-full h-full object-cover pointer-events-none" style={{ imageRendering: 'pixelated' }} />
-              {CATEGORIAS_DE_CONQUISTA.map((cat) => {
-                const { feitas, total } = estrelasDe(cat);
-                const prontas = prontasDe(cat);
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => abrir(cat)}
-                    aria-label={`${NOME_DA_CATEGORIA[cat]}: ${feitas} de ${total} estrelas${prontas ? `, ${prontas} para resgatar` : ''}`}
-                    className="absolute group cursor-pointer focus:outline-none"
-                    style={AREAS_DA_MESA[cat]}
-                  >
-                    <span className="absolute inset-0 border-2 border-transparent group-hover:border-[#F2C94C]/80 group-focus-visible:border-[#F2C94C] group-active:bg-[#F2C94C]/20" />
-                    <span className={`caixa-pixel absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 whitespace-nowrap px-1.5 py-1 font-[family-name:var(--font-pixel)] text-[6px] sm:text-[8px] leading-none uppercase text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>
-                      {NOME_DA_CATEGORIA[cat]}
-                    </span>
-                    {prontas > 0 && (
-                      <span className="absolute -top-2 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#ED8A0C] text-[#1A120B] font-[family-name:var(--font-silk)] font-bold text-[10px] shadow-[0_0_0_2px_#1A120B] animate-pulse motion-reduce:animate-none">{prontas}</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-            <div>
-              <Botao cinza onClick={() => abrir('titulos')}>Títulos ({estado.titulos.length})</Botao>
-            </div>
-          </>
-        ) : vista === 'titulos' ? (
-          <section aria-label="Seus títulos" className="flex flex-col gap-2">
-            {estado.titulos.length === 0 ? (
-              <p className="text-sm" style={{ color: colors.text.secondary }}>Nenhum título ainda. Eles vêm do último degrau de algumas conquistas, do ranking e dos eventos.</p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {estado.titulos.map((t) => {
-                  const emUso = estado.tituloId === t.id;
-                  return (
-                    <li key={t.id} className={`caixa-pixel relative p-2 flex items-center justify-between gap-2 ${emUso ? '' : 'opacity-95'}`}>
-                      <span className="flex flex-col">
-                        <span className={`font-cinzel font-bold text-sm text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>{t.nome}</span>
-                        <span className="text-[10px] text-[#B2A66C]">{t.origem}</span>
-                      </span>
-                      {emUso ? (
-                        <Botao cinza disabled={ocupado} onClick={() => void agir({ acao: 'titulo', titulo: '' })}>Tirar do perfil</Botao>
-                      ) : (
-                        <Botao disabled={ocupado} onClick={() => void agir({ acao: 'titulo', titulo: t.id })}>Usar</Botao>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
         ) : (
           <>
             {/* Troca de categoria: as miniaturas dos objetos da mesa */}
@@ -320,6 +306,30 @@ export function ConquistasScreen({ tokenFresco }: { tokenFresco: Token }) {
           </>
         )}
       </div>
+      {infoAberta && <InfoDasConquistas aoFechar={() => setInfoAberta(false)} />}
     </main>
+  );
+}
+
+/** O "?": como funcionam as conquistas, num painel em pixel por cima da tela. */
+function InfoDasConquistas({ aoFechar }: { aoFechar: () => void }) {
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => e.key === 'Escape' && aoFechar();
+    window.addEventListener('keydown', tecla);
+    return () => window.removeEventListener('keydown', tecla);
+  }, [aoFechar]);
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Como funcionam as conquistas" onClick={aoFechar} className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+      <div onClick={(e) => e.stopPropagation()} className="caixa-pixel relative w-full max-w-[360px] p-4 flex flex-col gap-2 text-[#E2D6B6]">
+        <button type="button" onClick={aoFechar} aria-label="Fechar" className="absolute -top-3 -right-3 w-8 h-8 cursor-pointer hover:brightness-110">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={PERFIL_IMAGES.x} alt="" aria-hidden="true" className="w-full h-full pointer-events-none" style={{ imageRendering: 'pixelated' }} />
+        </button>
+        <h2 className={`font-cinzel font-extrabold text-lg text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>Como funcionam</h2>
+        <p className="text-sm leading-snug">Toque num objeto da mesa para ver as conquistas daquela categoria.</p>
+        <p className="text-sm leading-snug">Cada conquista tem {DEGRAUS} estrelas. O progresso sobe jogando; quando bater a meta de uma estrela, resgate a recompensa.</p>
+        <p className="text-sm leading-snug">A raridade sobe com as estrelas: Bronze, Prata, Ouro e Diamante. Algumas conquistas dão um título na última estrela.</p>
+      </div>
+    </div>
   );
 }
