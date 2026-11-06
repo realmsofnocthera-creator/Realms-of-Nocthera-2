@@ -23,6 +23,7 @@ import {
   type CategoriaDeColecionavel,
   type Colecionavel,
 } from '@/rules/colecionaveis';
+import { arteDoColecionavel } from '@/assets/colecionaveis';
 import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { chamarColecionaveis, type EstadoDosColecionaveis, type Token } from './api';
@@ -134,8 +135,18 @@ export function ColecionaveisPainel({ tokenFresco, categoriaInicial = 'reliquias
                 const expandido = aberto === c.id;
                 return (
                   <li key={c.id} className="rounded-sm border text-xs" style={{ borderColor: ativo ? def.cor : '#4A3F2A', backgroundColor: colors.background.secondary }}>
-                    <button type="button" onClick={() => setAberto(expandido ? null : c.id)} aria-expanded={expandido} className="w-full px-2 py-1.5 flex justify-between gap-2 text-left">
-                      <span>
+                    <button type="button" onClick={() => setAberto(expandido ? null : c.id)} aria-expanded={expandido} className="w-full px-2 py-1.5 flex items-center justify-between gap-2 text-left">
+                      {arteDoColecionavel(c.id) && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={arteDoColecionavel(c.id)}
+                          alt=""
+                          aria-hidden="true"
+                          className="w-10 h-10 shrink-0 object-contain"
+                          style={{ imageRendering: 'pixelated', ...(ativo ? {} : { filter: 'grayscale(1) brightness(0.4)', opacity: 0.85 }) }}
+                        />
+                      )}
+                      <span className="min-w-0 flex-1">
                         <span className="font-semibold" style={{ color: ativo ? def.cor : colors.text.primary }}>{c.nome}</span>
                         <span style={{ color: colors.text.secondary }}> · {ATTRIBUTE_DISPLAY_NAMES[c.atributo]}</span>
                       </span>
