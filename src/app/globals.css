@@ -198,3 +198,22 @@
     --t: 0.5;
   }
 }
+
+/* O hub da Coleção: o fundo (941×1672) cobre a tela toda, como a mesa das Conquistas */
+.hub-colecao {
+  --r: 0.5628;
+  --w: max(100vw, calc(100dvh * var(--r)));
+  --h: calc(var(--w) / var(--r));
+  --t: 0.5;
+  position: absolute;
+  width: var(--w);
+  height: var(--h);
+  left: calc((100vw - var(--w)) * var(--t));
+  top: calc((100dvh - var(--h)) * 0.5);
+}
+@media (min-aspect-ratio: 941/1672) {
+  .hub-colecao {
+    --w: calc(100dvh * var(--r));
+    --t: 0.5;
+  }
+}
