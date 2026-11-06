@@ -1,4 +1,34 @@
 import { srcDaImagem } from '@/assets/srcDaImagem';
+import imgEEC01 from './images/colecionaveis/EE-C01.webp';
+import imgEEC02 from './images/colecionaveis/EE-C02.webp';
+import imgEEC03 from './images/colecionaveis/EE-C03.webp';
+import imgEEC04 from './images/colecionaveis/EE-C04.webp';
+import imgEEC05 from './images/colecionaveis/EE-C05.webp';
+import imgEEC06 from './images/colecionaveis/EE-C06.webp';
+import imgEEC07 from './images/colecionaveis/EE-C07.webp';
+import imgEEC08 from './images/colecionaveis/EE-C08.webp';
+import imgEEC09 from './images/colecionaveis/EE-C09.webp';
+import imgEEC10 from './images/colecionaveis/EE-C10.webp';
+import imgEEC11 from './images/colecionaveis/EE-C11.webp';
+import imgEEC12 from './images/colecionaveis/EE-C12.webp';
+import imgEEC13 from './images/colecionaveis/EE-C13.webp';
+import imgEEC14 from './images/colecionaveis/EE-C14.webp';
+import imgEEC15 from './images/colecionaveis/EE-C15.webp';
+import imgEEL01 from './images/colecionaveis/EE-L01.webp';
+import imgEEL02 from './images/colecionaveis/EE-L02.webp';
+import imgEEL03 from './images/colecionaveis/EE-L03.webp';
+import imgEEL04 from './images/colecionaveis/EE-L04.webp';
+import imgEEL05 from './images/colecionaveis/EE-L05.webp';
+import imgEEM01 from './images/colecionaveis/EE-M01.webp';
+import imgEEMR01 from './images/colecionaveis/EE-MR01.webp';
+import imgEEMR02 from './images/colecionaveis/EE-MR02.webp';
+import imgEEMR03 from './images/colecionaveis/EE-MR03.webp';
+import imgEEMR04 from './images/colecionaveis/EE-MR04.webp';
+import imgEEMR05 from './images/colecionaveis/EE-MR05.webp';
+import imgEEMR06 from './images/colecionaveis/EE-MR06.webp';
+import imgEEMR07 from './images/colecionaveis/EE-MR07.webp';
+import imgEEMR08 from './images/colecionaveis/EE-MR08.webp';
+import imgEEMR09 from './images/colecionaveis/EE-MR09.webp';
 import imgMEC01 from './images/colecionaveis/ME-C01.webp';
 import imgMEC02 from './images/colecionaveis/ME-C02.webp';
 import imgMEC03 from './images/colecionaveis/ME-C03.webp';
@@ -64,8 +94,38 @@ import imgSONATAMR from './images/colecionaveis/SONATA-MR.webp';
 import imgSONATAL from './images/colecionaveis/SONATA-L.webp';
 import imgSONATAM from './images/colecionaveis/SONATA-M.webp';
 
-/** A arte própria de cada colecionável (128×128, fundo transparente), pelo código do catálogo. Só há as que o Yuri já mandou; o resto fica sem arte. */
+/** A arte própria de cada colecionável (128×128, fundo transparente), pelo código do catálogo. As Sonatas usam uma arte por raridade (abaixo). */
 const ARTES: Readonly<Record<string, string>> = {
+  'EE-C01': srcDaImagem(imgEEC01),
+  'EE-C02': srcDaImagem(imgEEC02),
+  'EE-C03': srcDaImagem(imgEEC03),
+  'EE-C04': srcDaImagem(imgEEC04),
+  'EE-C05': srcDaImagem(imgEEC05),
+  'EE-C06': srcDaImagem(imgEEC06),
+  'EE-C07': srcDaImagem(imgEEC07),
+  'EE-C08': srcDaImagem(imgEEC08),
+  'EE-C09': srcDaImagem(imgEEC09),
+  'EE-C10': srcDaImagem(imgEEC10),
+  'EE-C11': srcDaImagem(imgEEC11),
+  'EE-C12': srcDaImagem(imgEEC12),
+  'EE-C13': srcDaImagem(imgEEC13),
+  'EE-C14': srcDaImagem(imgEEC14),
+  'EE-C15': srcDaImagem(imgEEC15),
+  'EE-L01': srcDaImagem(imgEEL01),
+  'EE-L02': srcDaImagem(imgEEL02),
+  'EE-L03': srcDaImagem(imgEEL03),
+  'EE-L04': srcDaImagem(imgEEL04),
+  'EE-L05': srcDaImagem(imgEEL05),
+  'EE-M01': srcDaImagem(imgEEM01),
+  'EE-MR01': srcDaImagem(imgEEMR01),
+  'EE-MR02': srcDaImagem(imgEEMR02),
+  'EE-MR03': srcDaImagem(imgEEMR03),
+  'EE-MR04': srcDaImagem(imgEEMR04),
+  'EE-MR05': srcDaImagem(imgEEMR05),
+  'EE-MR06': srcDaImagem(imgEEMR06),
+  'EE-MR07': srcDaImagem(imgEEMR07),
+  'EE-MR08': srcDaImagem(imgEEMR08),
+  'EE-MR09': srcDaImagem(imgEEMR09),
   'ME-C01': srcDaImagem(imgMEC01),
   'ME-C02': srcDaImagem(imgMEC02),
   'ME-C03': srcDaImagem(imgMEC03),
