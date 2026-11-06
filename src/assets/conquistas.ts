@@ -15,7 +15,6 @@ import { srcDaImagem } from '@/assets/srcDaImagem';
 
 /** A mesa (1027×1532) onde cada objeto é uma categoria. */
 export const MESA_DAS_CONQUISTAS = srcDaImagem(mesaImg);
-export const PROPORCAO_DA_MESA = 1027 / 1532;
 
 /** Troféu de cada raridade (a fileira de cima da folha do Yuri). */
 export const TROFEUS: Readonly<Record<RaridadeDeConquista, string>> = {

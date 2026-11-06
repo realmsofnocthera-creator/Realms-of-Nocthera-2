@@ -178,3 +178,23 @@
   padding-bottom: 0.75rem !important;
   image-rendering: pixelated;
 }
+
+/* Mesa das Conquistas: a imagem cobre a tela toda (celular em pé); em tela larga ela fica inteira, centralizada.
+   As áreas clicáveis são em % da imagem, então andam junto com ela. --t é onde a janela fica na folga (1 = direita). */
+.mesa-conquistas {
+  --r: 0.6703;
+  --w: max(100vw, calc(100dvh * var(--r)));
+  --h: calc(var(--w) / var(--r));
+  --t: 0.8;
+  position: absolute;
+  width: var(--w);
+  height: var(--h);
+  left: calc((100vw - var(--w)) * var(--t));
+  top: calc((100dvh - var(--h)) * 0.5);
+}
+@media (min-aspect-ratio: 1027/1532) {
+  .mesa-conquistas {
+    --w: calc(100dvh * var(--r));
+    --t: 0.5;
+  }
+}
