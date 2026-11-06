@@ -51,7 +51,7 @@ describe('Conquistas: servidor', () => {
     await agirNosColecionaveis('u1', 'buscar', { selo: 'desgastado', vezes: 10 }, 3);
     await lutarChefeMundial('u1', 11, T0);
     await lutarChefeMundial('u1', 12, T0);
-    expect((await getCharacterByUid('u1'))!.estatisticas).toEqual({ vitorias: 1, forjas: 1, expedicoes: 1, buscas: 10, diasDeChefeMundial: 1, danoCausado: 300, vitoriasVidaCheia: 1 });
+    expect((await getCharacterByUid('u1'))!.estatisticas).toEqual({ vitorias: 1, forjas: 1, expedicoes: 1, buscas: 10, diasDeChefeMundial: 1, danoCausado: 300, vitoriasVidaCheia: 1, armasForjadas: 1, ouroNaForja: 100, materiaisNaForja: 11 });
     // o Bestiário guarda o monstro derrotado, sem repetir
     expect((await getCharacterByUid('u1'))!.monstrosDerrotados).toEqual(['rato-da-peste']);
     const e = await estadoDasConquistas('u1');

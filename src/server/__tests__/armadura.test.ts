@@ -32,6 +32,9 @@ describe('Armaduras (servidor)', () => {
     const c = (await getCharacterByUid('a1'))!;
     expect(c.armaduras).toHaveLength(1);
     expect(c.ouro).toBe(5000 - custo.ouro);
+    // Conquistas: peça fabricada, ouro e materiais gastos na Forja
+    expect(c.estatisticas).toMatchObject({ armadurasForjadas: 1, ouroNaForja: custo.ouro });
+    expect(c.estatisticas!.materiaisNaForja).toBeGreaterThan(0);
     expect(c.inventario).toEqual({});
     expect(getTransactionsByUid('a1').some((t) => t.moeda === 'ouro' && t.quantidade === custo.ouro)).toBe(true);
   });
@@ -52,6 +55,7 @@ describe('Armaduras (servidor)', () => {
     const { armadura } = await fabricarArmadura('a3', PECA, { aleatorio: () => 0 });
     const r = await reforjarArmadura('a3', armadura.id, { aleatorio: () => 0.999 });
     expect(r.armadura).toMatchObject({ atributo: 'arcano', pontos: 3, reforjas: 1 });
+    expect((await getCharacterByUid('a3'))!.estatisticas).toMatchObject({ armadurasForjadas: 1, reforjas: 1 });
     const o = await usarOrbesArmadura('a3', armadura.id, { 'orbe-de-armadura': 3 });
     expect([o.xpGanho, o.nivelDepois, o.armadura.xp]).toEqual([30, 1, 30]);
     expect(o.character.inventario).toEqual({});

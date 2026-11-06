@@ -54,6 +54,7 @@ describe('Emblemas (servidor)', () => {
     const c = (await getCharacterByUid('e3'))!;
     expect(c.emblemasItens).toHaveLength(2);
     expect(c.emblemasItens!.map((i) => i.estrelas).sort()).toEqual([1, 2]);
+    expect(c.estatisticas?.emblemasFundidos).toBe(1);
     await expect(fundirEmblemasDoPersonagem('e3', 'dargan', 2)).rejects.toThrow('insuficientes');
 
     await setup('e4', ['a', 'b', 'c'].map((id) => ({ id, tipo: 'vesper', estrelas: 2 })));

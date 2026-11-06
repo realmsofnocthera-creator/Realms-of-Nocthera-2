@@ -49,6 +49,8 @@ describe('Batalha Sangrenta (servidor)', () => {
     expect(r.ondas.every((o) => o.vencedor === 'personagem')).toBe(true);
     for (let i = 1; i < r.ondas.length; i++) expect(r.ondas[i].hpInicial).toBe(r.ondas[i - 1].hpFinal);
     expect(r.chefeVencido).toBe(true);
+    // Conquistas: a vitória completa conta uma vez, e cada onda vencida conta nas vitórias
+    expect((await getCharacterByUid('b2'))!.estatisticas).toMatchObject({ vitoriasBatalhaSangrenta: 1, vitorias: 5 });
     expect(r.fragmentosAlma).toBeGreaterThanOrEqual(1);
     expect(r.fragmentosAlma).toBeLessThanOrEqual(3);
     expect(r.fragmentosAlma).toBe(recompensaDaBatalha(DIFICULDADES_BATALHA_MAP.facil, true, 11).fragmentosAlma);
