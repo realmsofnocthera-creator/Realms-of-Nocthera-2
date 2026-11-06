@@ -1,4 +1,8 @@
 import { srcDaImagem } from '@/assets/srcDaImagem';
+import imgSONATAC from './images/colecionaveis/SONATA-C.webp';
+import imgSONATAMR from './images/colecionaveis/SONATA-MR.webp';
+import imgSONATAL from './images/colecionaveis/SONATA-L.webp';
+import imgSONATAM from './images/colecionaveis/SONATA-M.webp';
 import imgRIC01 from './images/colecionaveis/RI-C01.webp';
 import imgRIC02 from './images/colecionaveis/RI-C02.webp';
 import imgRIC03 from './images/colecionaveis/RI-C03.webp';
@@ -30,7 +34,7 @@ import imgRIMR07 from './images/colecionaveis/RI-MR07.webp';
 import imgRIMR08 from './images/colecionaveis/RI-MR08.webp';
 import imgRIMR09 from './images/colecionaveis/RI-MR09.webp';
 
-/** A arte de cada colecionável (128×128, fundo transparente), pelo código do catálogo. Só há as que o Yuri já mandou; o resto fica sem arte. */
+/** A arte própria de cada colecionável (128×128, fundo transparente), pelo código do catálogo. Só há as que o Yuri já mandou; o resto fica sem arte. */
 const ARTES: Readonly<Record<string, string>> = {
   'RI-C01': srcDaImagem(imgRIC01),
   'RI-C02': srcDaImagem(imgRIC02),
@@ -64,4 +68,17 @@ const ARTES: Readonly<Record<string, string>> = {
   'RI-MR09': srcDaImagem(imgRIMR09),
 };
 
-export const arteDoColecionavel = (id: string): string | undefined => ARTES[id];
+/** Arte única por raridade (as Sonatas usam uma básica para cada raridade): chave = prefixo da categoria + sufixo da raridade. */
+const ARTE_POR_RARIDADE: Readonly<Record<string, string>> = {
+  'SO-C': srcDaImagem(imgSONATAC),
+  'SO-MR': srcDaImagem(imgSONATAMR),
+  'SO-L': srcDaImagem(imgSONATAL),
+  'SO-M': srcDaImagem(imgSONATAM),
+};
+
+export function arteDoColecionavel(id: string): string | undefined {
+  const propria = ARTES[id];
+  if (propria) return propria;
+  const m = /^([A-Z]{2}-[A-Z]+)\d+$/.exec(id);
+  return m ? ARTE_POR_RARIDADE[m[1]] : undefined;
+}
