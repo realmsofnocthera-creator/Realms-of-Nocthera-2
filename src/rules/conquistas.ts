@@ -63,6 +63,16 @@ export const CONTADORES = [
   'emblemasFundidos',
   'ouroNaForja',
   'materiaisNaForja',
+  // PvP (fase 5)
+  'lutasPvp',
+  'vitoriasPvp',
+  'sequenciaAtualPvp',
+  'maiorSequenciaPvp',
+  'vitoriasContraNivelMaior',
+  'danoPvp',
+  'viradasPvp',
+  // o maior número de pontos que o jogador já fez na Arena ranqueada (um valor, não uma soma)
+  'maiorPontuacaoRanqueada',
 ] as const;
 export type Contador = (typeof CONTADORES)[number];
 export type EstatisticasDoJogador = Partial<Record<Contador, number>>;
@@ -126,6 +136,7 @@ export interface FichaDeConquistas {
   /** Quando o jogador entrou na guilda de agora (ISO). */
   guildaDesde?: string;
   chefeSemanal?: readonly unknown[];
+  vocacoesDerrotadasPvp?: readonly string[];
 }
 
 export interface Conquista {
@@ -256,6 +267,14 @@ export const CONQUISTAS: readonly Conquista[] = [
   { id: 'duelista', nome: 'Duelista', categoria: 'provacoes', meta: 'Vença o Guerreiro {n} vezes', metaDeUm: 'Vença o Guerreiro 1 vez', metas: [1, 10, 40, 120, 300], progresso: contador('vitoriasDoGuerreiro') },
   { id: 'chavesDaProvacao', nome: 'Chaves da Provação', categoria: 'provacoes', meta: 'Use {n} chaves de Provação', metaDeUm: 'Use 1 chave de Provação', metas: [1, 5, 20, 60, 150], progresso: contador('chavesDeProvacaoUsadas') },
   // PvP
+  { id: 'gladiador', nome: 'Gladiador', categoria: 'pvp', meta: 'Lute {n} vezes no PvP', metas: [5, 30, 120, 400, 1000], progresso: contador('lutasPvp') },
+  { id: 'vitoriasPvp', nome: 'Vitórias no PvP', categoria: 'pvp', meta: 'Vença {n} lutas no PvP', metaDeUm: 'Vença 1 luta no PvP', metas: [1, 10, 50, 200, 600], progresso: contador('vitoriasPvp') },
+  { id: 'sequenciaPvp', nome: 'Sequência', categoria: 'pvp', meta: 'Vença {n} lutas seguidas no PvP', metas: [2, 3, 5, 8, 12], progresso: contador('maiorSequenciaPvp') },
+  { id: 'zebra', nome: 'Zebra', categoria: 'pvp', meta: 'Vença {n} jogadores de nível maior', metaDeUm: 'Vença 1 jogador de nível maior', metas: [1, 5, 20, 60, 150], progresso: contador('vitoriasContraNivelMaior') },
+  { id: 'todasAsVocacoes', nome: 'Todas as vocações', categoria: 'pvp', meta: 'Vença jogadores de {n} vocações diferentes', metaDeUm: 'Vença um jogador de 1 vocação', metas: [1, 3, 4, 5, 6], progresso: (f) => f.vocacoesDerrotadasPvp?.length ?? 0 },
+  { id: 'danoPvp', nome: 'Dano em PvP', categoria: 'pvp', meta: 'Cause {n} de dano no PvP', metas: [5000, 100000, 1000000, 10000000, 100000000], progresso: contador('danoPvp') },
+  { id: 'virada', nome: 'Virada', categoria: 'pvp', meta: 'Vença {n} lutas de PvP com menos de 10% de vida', metaDeUm: 'Vença 1 luta de PvP com menos de 10% de vida', metas: [1, 5, 20, 60, 150], progresso: contador('viradasPvp') },
+  { id: 'ranqueadaPontos', nome: 'Ranqueada', categoria: 'pvp', meta: 'Chegue a {n} pontos na Arena ranqueada', metas: [250, 700, 1350, 2200, 2700], progresso: contador('maiorPontuacaoRanqueada') },
   { id: 'arenaSemanas', nome: 'Prêmio da Arena', categoria: 'pvp', meta: 'Receba o prêmio de {n} semanas da Arena', metaDeUm: 'Receba o prêmio de 1 semana da Arena', metas: [1, 3, 8, 20, 50], progresso: (f) => semanasPremiadas(f.arena) },
   { id: 'ranqueadaSemanas', nome: 'Prêmio da Ranqueada', categoria: 'pvp', meta: 'Receba o prêmio de {n} semanas da Ranqueada', metaDeUm: 'Receba o prêmio de 1 semana da Ranqueada', metas: [1, 3, 8, 20, 50], progresso: (f) => semanasPremiadas(f.ranqueada) },
   { id: 'campeonatos', nome: 'Campeonatos', categoria: 'pvp', meta: 'Participe de {n} campeonatos', metaDeUm: 'Participe de 1 campeonato', metas: [1, 2, 4, 8, 16], progresso: (f) => f.campeonatos?.length ?? 0 },
@@ -330,6 +349,13 @@ export function conquistasDoDocumento(bruto: unknown): ConquistasDoJogador | und
 
 /** Quantos monstros derrotados guardamos por personagem (o documento do banco tem tamanho máximo). */
 export const MAXIMO_DE_MONSTROS_DERROTADOS = 1000;
+
+/** Lê do banco as vocações já derrotadas no PvP: só textos curtos, sem repetir, no máximo 12. */
+export function vocacoesDerrotadasDoDocumento(bruto: unknown): string[] | undefined {
+  if (!Array.isArray(bruto)) return undefined;
+  const lista = [...new Set(bruto.filter((x): x is string => typeof x === 'string' && x.length > 0 && x.length <= 40))].slice(0, 12);
+  return lista.length ? lista : undefined;
+}
 
 /** Lê do banco a lista de monstros derrotados: só textos, sem repetir e dentro do limite. */
 export function monstrosDerrotadosDoDocumento(bruto: unknown): string[] | undefined {

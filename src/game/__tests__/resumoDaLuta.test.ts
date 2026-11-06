@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { ResultadoCombate } from '@/game/combat';
-import { detalheDaVitoria } from '@/game/resumoDaLuta';
+import type { ResultadoCombate, ResultadoCombatePvp } from '@/game/combat';
+import { detalheDaVitoria, resumoDoPvp } from '@/game/resumoDaLuta';
 import { monstrosDerrotadosDoDocumento } from '@/rules/conquistas';
 
 const luta = (partes: Partial<ResultadoCombate> & Pick<ResultadoCombate, 'logTurnos'>): ResultadoCombate => ({
@@ -66,5 +66,42 @@ describe('monstrosDerrotadosDoDocumento', () => {
     expect(monstrosDerrotadosDoDocumento(['a', 'a', 'b', 7, '', null, 'x'.repeat(81)])).toEqual(['a', 'b']);
     expect(monstrosDerrotadosDoDocumento([])).toBeUndefined();
     expect(monstrosDerrotadosDoDocumento('a')).toBeUndefined();
+  });
+});
+
+describe('resumoDoPvp (Conquistas de PvP)', () => {
+  const pvp = (vencedor: 'a' | 'b' | 'ninguem', hp = 100, ataques: { atacante: string; danoEfetivo: number }[] = []) =>
+    ({
+      vencedor,
+      motivoFim: 'derrota',
+      logTurnos: [{ numeroTurno: 1, ataques: ataques.map((a) => ({ ...a, defensor: 'x', danoBruto: a.danoEfetivo, sobreescudoRestante: 0, hpRestante: 0, mensagem: '' })), eventosEfeitos: [] }],
+      mensagens: [],
+      finalA: { nome: 'Ana', hp, hpMax: 100 },
+      finalB: { nome: 'Beto', hp: 0, hpMax: 100 },
+    }) as unknown as ResultadoCombatePvp;
+
+  it('conta a luta, o dano de quem atacou e a vitória, a sequência e a vocação', () => {
+    const r = resumoDoPvp(pvp('a', 80, [{ atacante: 'Ana', danoEfetivo: 40 }, { atacante: 'Beto', danoEfetivo: 99 }, { atacante: 'Ana', danoEfetivo: 60 }]), { nivel: 10, sequenciaAtual: 2, maiorSequencia: 4 }, { nivel: 10, classeId: 'samurai' });
+    expect(r.ganhos).toEqual({ lutasPvp: 1, danoPvp: 100, vitoriasPvp: 1 });
+    expect([r.sequenciaAtual, r.maiorSequencia, r.vocacaoDerrotada]).toEqual([3, 4, 'samurai']);
+    // a sequência passa a maior
+    expect(resumoDoPvp(pvp('a'), { nivel: 10, sequenciaAtual: 4, maiorSequencia: 4 }, { nivel: 10 }).maiorSequencia).toBe(5);
+  });
+
+  it('derrota e empate zeram a sequência, não contam vitória nem vocação', () => {
+    for (const v of ['b', 'ninguem'] as const) {
+      const r = resumoDoPvp(pvp(v), { nivel: 10, sequenciaAtual: 3, maiorSequencia: 3 }, { nivel: 20, classeId: 'bandido' });
+      expect(r.ganhos).toEqual({ lutasPvp: 1, danoPvp: 0 });
+      expect([r.sequenciaAtual, r.maiorSequencia, r.vocacaoDerrotada]).toEqual([0, 3, undefined]);
+    }
+  });
+
+  it('nível maior do adversário e virada (menos de 10% de vida) só contam na vitória', () => {
+    const zebra = resumoDoPvp(pvp('a', 9), { nivel: 10 }, { nivel: 11 });
+    expect(zebra.ganhos).toMatchObject({ vitoriasContraNivelMaior: 1, viradasPvp: 1 });
+    const igual = resumoDoPvp(pvp('a', 10), { nivel: 10 }, { nivel: 10 });
+    expect(igual.ganhos.vitoriasContraNivelMaior).toBeUndefined();
+    expect(igual.ganhos.viradasPvp).toBeUndefined();
+    expect(resumoDoPvp(pvp('b', 5), { nivel: 10 }, { nivel: 30 }).ganhos.vitoriasContraNivelMaior).toBeUndefined();
   });
 });

@@ -64,6 +64,16 @@ describe('Arena (7.5): servidor', () => {
     const r = await lutar('u1', alvo.uid, IP, AGORA);
     const esperado = pontosDepoisDaLuta(1000, 1000, r.combate.vencedor);
     expect(r.pontos).toBe(esperado.atacante);
+    // Conquistas de PvP: o atacante conta a luta, o dano e, se venceu, a vitória, a sequência e a vocação do adversário
+    const venceu = r.combate.vencedor === 'a';
+    const eu = (await getCharacterByUid('u1'))!;
+    expect(eu.estatisticas!.lutasPvp).toBe(1);
+    expect(eu.estatisticas!.vitoriasPvp ?? 0).toBe(venceu ? 1 : 0);
+    expect([eu.estatisticas!.sequenciaAtualPvp, eu.estatisticas!.maiorSequenciaPvp]).toEqual(venceu ? [1, 1] : [0, 0]);
+    expect(eu.estatisticas!.danoPvp).toBeGreaterThan(0);
+    expect(eu.vocacoesDerrotadasPvp).toEqual(venceu ? [(await getCharacterByUid(alvo.uid))!.classeId] : undefined);
+    // quem defendeu não ganha nada nas Conquistas
+    expect((await getCharacterByUid(alvo.uid))!.estatisticas?.lutasPvp).toBeUndefined();
     const depois = await estadoDaArena('u1', AGORA);
     expect(depois).toMatchObject({ pontos: esperado.atacante, lutasRestantes: 4 });
     expect(depois.historico[0]).toMatchObject({ atacou: true, adversario: alvo.nome, pontos: esperado.atacante - 1000 });
@@ -85,6 +95,7 @@ describe('Arena (7.5): servidor', () => {
   it('5 lutas por dia, até 5 compradas por 5 Diamantes; no dia seguinte zera', async () => {
     const e = await estadoDaArena('u1', AGORA);
     for (let i = 0; i < 5; i++) await lutar('u1', e.adversarios[i % 5].uid, IP, AGORA);
+    expect((await getCharacterByUid('u1'))!.estatisticas?.lutasPvp).toBe(5);
     expect((await erro(lutar('u1', e.adversarios[0].uid, IP, AGORA)))?.message).toMatch(/acabaram/);
     await comprarLuta('u1', AGORA);
     expect((await getCharacterByUid('u1'))!.diamantes).toBe(95);
