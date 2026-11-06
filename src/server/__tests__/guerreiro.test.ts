@@ -50,6 +50,7 @@ describe('Provação do Guerreiro (servidor)', () => {
     const r = await executarGuerreiro('g2', 1, { seed: 7, combateId: 'guerreiro-0001', agora: HOJE });
     expect(r.resultado.vencedor).toBe('personagem');
     expect(r.guerreiro).toMatchObject({ dificuldade: 1, nome: 'Astaroth, o Louco', venceu: true, primeiraVitoria: true });
+    expect((await getCharacterByUid('g2'))!.estatisticas).toMatchObject({ vitoriasDoGuerreiro: 1 });
     expect(r.guerreiro.emblemas).toHaveLength(4);
     expect(r.guerreiro.emblemas.every((e) => e.raridade === 'comum' && ['dargan', 'vesper'].includes(e.tipoId))).toBe(true);
     const c = (await getCharacterByUid('g2'))!;

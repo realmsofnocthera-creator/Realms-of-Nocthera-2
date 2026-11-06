@@ -118,13 +118,15 @@ export async function mandarRecompensasDoChefeMundial(uid: string, agora = new D
   const resultados = await Promise.all(
     pendentes.map(async (p) => {
       const entrada = (oculto ? await repositorio.lerEntradaChefeMundial(p.dia, uid, true) : null) ?? (await repositorio.lerEntradaChefeMundial(p.dia, uid));
-      if (!entrada) return { dia: p.dia, mensagem: null };
+      if (!entrada) return { dia: p.dia, mensagem: null, posicao: 0, dano: 0 };
       const contada = (await repositorio.contarAcimaNoChefeMundial(p.dia, entrada.dano)) + 1;
       const posicao = oculto ? Math.max(contada, FAIXAS_DO_CHEFE_MUNDIAL[FAIXAS_DO_CHEFE_MUNDIAL.length - 1].de) : contada;
       const faixa = faixaDoChefeMundial(posicao);
       const [ano, mes, d] = p.dia.split('-');
       return {
         dia: p.dia,
+        posicao,
+        dano: entrada.dano,
         mensagem: novaMensagem(
           {
             titulo: `Chefe Mundial: ${faixa.nome}`,
@@ -141,14 +143,19 @@ export async function mandarRecompensasDoChefeMundial(uid: string, agora = new D
     const eu = await carregarPersonagem(ctx, uid);
     let caixa = eu.correio ?? [];
     const enviados = new Set<string>();
+    // Conquistas: o melhor dano de cada dia e os dias em que ficou no Top 10, contados na mesma gravação do prêmio
+    let danoDosDias = 0;
+    let diasNoTop = 0;
     for (const r of resultados) {
       const p = (eu.chefeMundial ?? []).find((x) => x.dia === r.dia);
       if (!p || p.enviada) continue;
       enviados.add(r.dia);
+      danoDosDias += r.dano;
+      if (r.posicao >= 1 && r.posicao <= 10) diasNoTop++;
       if (r.mensagem) caixa = comMensagem(caixa, r.mensagem, agora);
     }
     if (!enviados.size) return;
-    salvarPersonagem(ctx, eu, { correio: caixa, chefeMundial: (eu.chefeMundial ?? []).map((x) => (enviados.has(x.dia) ? { ...x, enviada: true } : x)) });
+    salvarPersonagem(ctx, eu, { ...contarNoPatch(eu, { danoNoChefeMundial: danoDosDias, topsDoChefeMundial: diasNoTop }), correio: caixa, chefeMundial: (eu.chefeMundial ?? []).map((x) => (enviados.has(x.dia) ? { ...x, enviada: true } : x)) });
   });
 }
 

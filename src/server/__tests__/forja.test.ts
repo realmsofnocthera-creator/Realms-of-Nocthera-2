@@ -49,6 +49,7 @@ describe('Forja (servidor)', () => {
     await setup('f3', { inventario: { 'pelo-de-rato': 9, 'mundo-osso-bruto': 3, 'mundo-minerio-de-ferro-bruto': 3, 'mundo-fibra-silvestre': 2 } });
     const { arma } = await fabricarArma('f3', { baseId: 'ferro-de-cacada', categoria: 'cajado' }, { aleatorio: () => 0 });
     const r = await reforjarArma('f3', arma.id, { aleatorio: () => 0.999 });
+    expect((await getCharacterByUid('f3'))!.estatisticas).toMatchObject({ armasForjadas: 1, reforjas: 1 });
     expect(r.arma).toMatchObject({ id: arma.id, atributo: arma.atributo, pontos: 9, reforjas: 1 });
     expect(r.character.ouro).toBe(1000 - 100 - 50);
     expect(r.character.inventario).toEqual({});

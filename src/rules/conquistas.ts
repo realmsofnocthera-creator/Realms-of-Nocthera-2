@@ -51,6 +51,18 @@ export const CONTADORES = [
   'vendasNoMercado',
   'comprasNoMercado',
   'presentesDoCorreio',
+  // Provações e Forja (fase 4)
+  'danoNoChefeMundial',
+  'topsDoChefeMundial',
+  'vitoriasBatalhaSangrenta',
+  'vitoriasDoGuerreiro',
+  'chavesDeProvacaoUsadas',
+  'armasForjadas',
+  'armadurasForjadas',
+  'reforjas',
+  'emblemasFundidos',
+  'ouroNaForja',
+  'materiaisNaForja',
 ] as const;
 export type Contador = (typeof CONTADORES)[number];
 export type EstatisticasDoJogador = Partial<Record<Contador, number>>;
@@ -201,6 +213,12 @@ export const CONQUISTAS: readonly Conquista[] = [
   { id: 'vendas', nome: 'Comerciante', categoria: 'comunidade', meta: 'Venda {n} itens no Mercado', metaDeUm: 'Venda 1 item no Mercado', metas: [1, 5, 20, 60, 150], progresso: contador('vendasNoMercado') },
   { id: 'compras', nome: 'Cliente', categoria: 'comunidade', meta: 'Compre {n} itens no Mercado', metaDeUm: 'Compre 1 item no Mercado', metas: [1, 5, 20, 60, 150], progresso: contador('comprasNoMercado') },
   { id: 'correio', nome: 'Correio', categoria: 'comunidade', meta: 'Resgate {n} presentes do Correio', metaDeUm: 'Resgate 1 presente do Correio', metas: [1, 10, 40, 120, 300], progresso: contador('presentesDoCorreio') },
+  { id: 'armeiro', nome: 'Armeiro', categoria: 'forja', meta: 'Fabrique {n} armas', metaDeUm: 'Fabrique 1 arma', metas: [1, 5, 20, 60, 150], progresso: contador('armasForjadas') },
+  { id: 'armadureiro', nome: 'Armadureiro', categoria: 'forja', meta: 'Fabrique {n} armaduras', metaDeUm: 'Fabrique 1 armadura', metas: [1, 5, 20, 60, 150], progresso: contador('armadurasForjadas') },
+  { id: 'reforjas', nome: 'Reforjas', categoria: 'forja', meta: 'Reforje itens {n} vezes', metaDeUm: 'Reforje um item 1 vez', metas: [1, 10, 40, 120, 300], progresso: contador('reforjas') },
+  { id: 'fusaoDeEmblemas', nome: 'Fusão de emblemas', categoria: 'forja', meta: 'Funda {n} emblemas', metaDeUm: 'Funda 1 emblema', metas: [1, 5, 20, 50, 120], progresso: contador('emblemasFundidos') },
+  { id: 'maoDeObra', nome: 'Mão de obra', categoria: 'forja', meta: 'Gaste {n} de ouro na Forja', metas: [1000, 20000, 200000, 2000000, 20000000], progresso: contador('ouroNaForja') },
+  { id: 'fornalha', nome: 'Fornalha', categoria: 'forja', meta: 'Gaste {n} materiais na Forja', metas: [10, 100, 500, 2000, 8000], progresso: contador('materiaisNaForja') },
   // Mundo aberto
   { id: 'expedicao', nome: 'Expedição', categoria: 'mundo', meta: 'Colete {n} expedições', metaDeUm: 'Colete 1 expedição', metas: [1, 10, 50, 150, 500], progresso: contador('expedicoes'), titulo: 'explorador-incansavel', comAvancos: true },
   { id: 'buscas', nome: 'Buscas', categoria: 'mundo', meta: 'Faça {n} buscas', metas: [10, 50, 200, 500, 1000], progresso: contador('buscas'), comAvancos: true },
@@ -232,6 +250,11 @@ export const CONQUISTAS: readonly Conquista[] = [
       [(f.torreAndar ?? 0) > 0, (f.guerreiroVencidas?.length ?? 0) > 0, (f.batalhaSangrentaVencidas?.length ?? 0) > 0, (f.testeEquipeConcluidas?.length ?? 0) > 0, (f.estatisticas?.diasDeChefeMundial ?? 0) > 0].filter(Boolean).length,
   },
   { id: 'abismo', nome: 'Selos do Abismo', categoria: 'provacoes', meta: 'Reúna {n} Selos do Abismo', metaDeUm: 'Reúna 1 Selo do Abismo', metas: [1, 5, 15, 30, 60], progresso: (f) => f.selosDoAbismo ?? 0 },
+  { id: 'golpeDeSoberano', nome: 'Golpe de soberano', categoria: 'provacoes', meta: 'Cause {n} de dano em Chefes Mundiais (a soma do seu melhor de cada dia)', metas: [1000, 50000, 500000, 5000000, 50000000], progresso: contador('danoNoChefeMundial') },
+  { id: 'destaqueMundial', nome: 'Destaque', categoria: 'provacoes', meta: 'Fique no Top 10 de {n} Chefes Mundiais', metaDeUm: 'Fique no Top 10 de 1 Chefe Mundial', metas: [1, 3, 6, 12, 24], progresso: contador('topsDoChefeMundial') },
+  { id: 'sedeDeSangue', nome: 'Sede de sangue', categoria: 'provacoes', meta: 'Vença a Batalha Sangrenta {n} vezes', metaDeUm: 'Vença a Batalha Sangrenta 1 vez', metas: [1, 10, 40, 120, 300], progresso: contador('vitoriasBatalhaSangrenta') },
+  { id: 'duelista', nome: 'Duelista', categoria: 'provacoes', meta: 'Vença o Guerreiro {n} vezes', metaDeUm: 'Vença o Guerreiro 1 vez', metas: [1, 10, 40, 120, 300], progresso: contador('vitoriasDoGuerreiro') },
+  { id: 'chavesDaProvacao', nome: 'Chaves da Provação', categoria: 'provacoes', meta: 'Use {n} chaves de Provação', metaDeUm: 'Use 1 chave de Provação', metas: [1, 5, 20, 60, 150], progresso: contador('chavesDeProvacaoUsadas') },
   // PvP
   { id: 'arenaSemanas', nome: 'Prêmio da Arena', categoria: 'pvp', meta: 'Receba o prêmio de {n} semanas da Arena', metaDeUm: 'Receba o prêmio de 1 semana da Arena', metas: [1, 3, 8, 20, 50], progresso: (f) => semanasPremiadas(f.arena) },
   { id: 'ranqueadaSemanas', nome: 'Prêmio da Ranqueada', categoria: 'pvp', meta: 'Receba o prêmio de {n} semanas da Ranqueada', metaDeUm: 'Receba o prêmio de 1 semana da Ranqueada', metas: [1, 3, 8, 20, 50], progresso: (f) => semanasPremiadas(f.ranqueada) },

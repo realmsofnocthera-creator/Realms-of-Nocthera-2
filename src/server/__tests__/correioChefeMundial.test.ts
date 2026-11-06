@@ -73,6 +73,10 @@ describe('Correio e Chefe Mundial: servidor', () => {
     expect(c1.naoResgatadas).toBe(1);
     expect((await estadoDoCorreio('u1', AMANHA)).mensagens).toHaveLength(1);
     expect((await estadoDoCorreio('u2', AMANHA)).mensagens[0].titulo).toBe('Chefe Mundial: 2º lugar');
+    // Conquistas: o dano do dia e o Top 10 entram na mesma gravação do prêmio (uma vez só)
+    const e1 = (await getCharacterByUid('u1'))!.estatisticas!;
+    const dano1 = (await repositorio.lerEntradaChefeMundial('2026-10-22', 'u1'))!.dano;
+    expect([e1.danoNoChefeMundial, e1.topsDoChefeMundial]).toEqual([dano1, 1]);
     const antes = (await getCharacterByUid('u1'))!;
     const r = await agirNoCorreio('u1', 'resgatar', { id: c1.mensagens[0].id }, AMANHA);
     expect(r.estado.naoResgatadas).toBe(0);

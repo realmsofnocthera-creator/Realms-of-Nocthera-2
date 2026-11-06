@@ -25,8 +25,8 @@ import { comTitulos, TITULO_MAP, TITULOS, titulosDoDocumento } from '@/rules/tit
 const ficha = (extra: Partial<FichaDeConquistas> = {}): FichaDeConquistas => ({ nivel: 1, ...extra });
 
 describe('Conquistas: regras', () => {
-  it('56 conquistas (fases 1 a 3 da lista nova) em 7 categorias, 5 degraus com metas crescentes; os títulos existem', () => {
-    expect(CONQUISTAS).toHaveLength(56);
+  it('67 conquistas (fases 1 a 4 da lista nova) em 7 categorias, 5 degraus com metas crescentes; os títulos existem', () => {
+    expect(CONQUISTAS).toHaveLength(67);
     expect(CONQUISTAS.filter((c) => c.categoria === 'monstros')).toHaveLength(18);
     expect(CATEGORIAS_DE_CONQUISTA).toHaveLength(7);
     for (const c of CONQUISTAS) expect(CATEGORIAS_DE_CONQUISTA, c.id).toContain(c.categoria);
@@ -63,9 +63,9 @@ describe('Conquistas: regras', () => {
     ]);
     // Nível não dá título
     expect(recompensaDoDegrau(CONQUISTA_MAP.nivel, 4).titulo).toBeUndefined();
-    // tudo junto: 12 Diamantes por conquista (eram 78), 672 no total
+    // tudo junto: 12 Diamantes por conquista (eram 78), 804 no total
     const total = somarRecompensas(CONQUISTAS.flatMap((c) => [0, 1, 2, 3, 4].map((d) => recompensaDoDegrau(c, d))));
-    expect(total.diamantes).toBe(56 * 12);
+    expect(total.diamantes).toBe(67 * 12);
     expect(total.titulos).toHaveLength(12);
   });
 
@@ -79,7 +79,7 @@ describe('Conquistas: regras', () => {
       colecionaveis: { 'RI-C01': { fragmentos: 0, nivel: 1 }, 'RI-C02': { nivel: 0, fragmentos: 5 } },
       maestrias: { 'arma:katana': { xp: xpAteONivel(27) }, forja: { xp: xpAteONivel(12) } },
       cartasDescobertas: ['a', 'b', 'c', 'd', 'e', 'f'],
-      estatisticas: { vitorias: 150, vitoriasContraChefes: 4, forjas: 5, expedicoes: 9, buscas: 10, diasDeChefeMundial: 1, vitoriasFogo: 12, vitoriasGelo: 60, vitoriasVidaCheia: 2, vitoriasNoLimite: 1, golpesCriticos: 30, danoCausado: 6000, statusAplicados: 15, contratosDeGuilda: 12, semanasDeChefeDeGuilda: 5, doacoesDePesquisa: 1, lutasEmParty: 45, vendasNoMercado: 3, comprasNoMercado: 22, presentesDoCorreio: 9 },
+      estatisticas: { vitorias: 150, vitoriasContraChefes: 4, forjas: 5, expedicoes: 9, buscas: 10, diasDeChefeMundial: 1, vitoriasFogo: 12, vitoriasGelo: 60, vitoriasVidaCheia: 2, vitoriasNoLimite: 1, golpesCriticos: 30, danoCausado: 6000, statusAplicados: 15, contratosDeGuilda: 12, semanasDeChefeDeGuilda: 5, doacoesDePesquisa: 1, lutasEmParty: 45, vendasNoMercado: 3, comprasNoMercado: 22, presentesDoCorreio: 9, danoNoChefeMundial: 60000, topsDoChefeMundial: 4, vitoriasBatalhaSangrenta: 11, vitoriasDoGuerreiro: 2, chavesDeProvacaoUsadas: 6, armasForjadas: 6, armadurasForjadas: 1, reforjas: 12, emblemasFundidos: 0, ouroNaForja: 25000, materiaisNaForja: 130 },
       monstrosDerrotados: ['rato-da-floresta', 'rato-das-cinzas', 'darius-carrasco-escarlate'],
       guildaDesde: new Date(Date.now() - 40 * 86_400_000 - 3_600_000).toISOString(),
       chefeSemanal: [{}, {}],
@@ -107,6 +107,8 @@ describe('Conquistas: regras', () => {
       elemento_fogo: 12, elemento_gelo: 60, elemento_relampago: 0, elemento_terra: 0, elemento_vento: 0, elemento_sagrado: 0, elemento_sombrio: 0,
       intocavel: 2, noLimite: 1, criticos: 30, destruidor: 6000, statusAplicados: 15,
       guildaDias: 40, contratos: 12, incursoes: 0, chefeDaGuilda: 5, pesquisa: 1, party: 45, vendas: 3, compras: 22, correio: 9,
+      armeiro: 6, armadureiro: 1, reforjas: 12, fusaoDeEmblemas: 0, maoDeObra: 25000, fornalha: 130,
+      golpeDeSoberano: 60000, destaqueMundial: 4, sedeDeSangue: 11, duelista: 2, chavesDaProvacao: 6,
       forja: 5, arsenal: 1, guardaRoupa: 2, materiais: 2,
       expedicao: 9, buscas: 10, baus: 2, cenas: 1, missoesCampanha: 1,
       torre: 120, guerreiro: 3, batalhaSangrenta: 1, testeEquipe: 2, chefeMundial: 1, provacoesDiferentes: 5, abismo: 3,
@@ -114,9 +116,9 @@ describe('Conquistas: regras', () => {
     });
     expect(degrausBatidos(CONQUISTA_MAP.vitorias, 150)).toBe(2);
     expect(degrausBatidos(CONQUISTA_MAP.torre, 300)).toBe(5);
-    // soma dos degraus batidos de todas as conquistas: 73 (vitórias 2, nível 3, torre 3, Provado em tudo 5, Em grupo 3…)
-    expect(degrausProntos(f, undefined)).toBe(73);
-    expect(degrausProntos(f, { vitorias: 2, nivel: 1 })).toBe(70);
+    // soma dos degraus batidos de todas as conquistas: 91 (vitórias 2, nível 3, torre 3, Provado em tudo 5, Em grupo 3, Mão de obra 2…)
+    expect(degrausProntos(f, undefined)).toBe(91);
+    expect(degrausProntos(f, { vitorias: 2, nivel: 1 })).toBe(88);
     expect(degrausProntos(ficha(), undefined)).toBe(0);
   });
 

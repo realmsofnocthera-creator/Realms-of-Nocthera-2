@@ -2337,12 +2337,14 @@ export async function executarBatalhaSangrenta(
     // Cada onda vencida conta nos contratos de guilda do dia
     const contratos = contarVitorias(character.contratos, ondas.filter((o) => o.vencedor === 'personagem').map((o) => o.monstroId), diaDeBrasilia(agora));
     const vitoriasDasOndas = ondas.flatMap((o, i) => (o.vencedor === 'personagem' ? [plano[i]?.chefe === true] : []));
+    const progressoDasOndas = progressoDasVitorias(character, vitoriasDasOndas, agora, detalhesDasOndas.filter((d): d is DetalheDaVitoria => d !== undefined));
     character = salvarPersonagem(ctx, character, {
       fragmentosSubclasse,
       batalhaSangrenta: estadoTentativas,
       batalhaSangrentaVencidas: vencidas,
       ...(contratos ? { contratos } : {}),
-      ...progressoDasVitorias(character, vitoriasDasOndas, agora, detalhesDasOndas.filter((d): d is DetalheDaVitoria => d !== undefined)),
+      ...progressoDasOndas,
+      ...(venceuTudo ? contarNoPatch(character, { vitoriasBatalhaSangrenta: 1 }, progressoDasOndas) : {}),
     });
 
     const nomeSubclasse = recompensa.fragmentosSubclasse
@@ -2585,12 +2587,13 @@ export async function executarGuerreiro(uid: string, dificuldadeId: unknown, opc
 
     const contratosDoGuerreiro = venceu ? contarVitorias(current.contratos, [monstro.id], diaDeBrasilia(agora)) : null;
     const novosEmblemas: EmblemaItem[] = emblemasGanhos.map((e) => ({ id: randomUUID(), tipo: e.tipoId, estrelas: 1 }));
+    const progressoDoGuerreiro = venceu ? progressoDasVitorias(current, [true], agora, [detalheDaVitoria(resultado, current.nome, monstro)]) : {};
     const character = salvarPersonagem(ctx, current, {
       ...gastarTentativaDoGuerreiro(current.guerreiroTentativas, current.guerreiroExtras, dificuldade, agora),
       guerreiroVencidas: primeiraVitoria ? [...(current.guerreiroVencidas ?? []), dificuldade].sort((a, b) => a - b) : current.guerreiroVencidas ?? [],
       emblemasItens: [...(current.emblemasItens ?? []), ...novosEmblemas],
       ...(contratosDoGuerreiro ? { contratos: contratosDoGuerreiro } : {}),
-      ...(venceu ? progressoDasVitorias(current, [true], agora, [detalheDaVitoria(resultado, current.nome, monstro)]) : {}),
+      ...(venceu ? { ...progressoDoGuerreiro, ...contarNoPatch(current, { vitoriasDoGuerreiro: 1 }, progressoDoGuerreiro) } : {}),
     });
 
     const mensagens: string[] = [
@@ -2661,7 +2664,7 @@ export function fundirEmblemasDoPersonagem(uid: string, tipoId: unknown, estrela
     const current = await carregarPersonagem(ctx, uid);
     const r = fundirEmblemas(current.emblemasItens ?? [], current.emblemasEquipados ?? [], tipoId, estrelas, randomUUID());
     if (!r.ok) throw new Error(MENSAGEM_BLOQUEIO_EMBLEMA[r.motivo]);
-    return { character: salvarPersonagem(ctx, current, { emblemasItens: r.itens }), criado: r.criado };
+    return { character: salvarPersonagem(ctx, current, { emblemasItens: r.itens, ...contarNoPatch(current, { emblemasFundidos: 1 }) }), criado: r.criado };
   });
 }
 
@@ -2686,21 +2689,33 @@ function estadoForja(char: CharacterDocument): EstadoForja {
   return { inventario: char.inventario ?? {}, ouro: char.ouro, armas: char.armas ?? [], espacosExtras: espacosExtrasDoVip(char.gastoReal) };
 }
 
-/** XP na maestria de Forja (com o teto do dia) e, ao fabricar, o total da conquista de Forja, para salvar junto. */
+/**
+ * XP na maestria de Forja (com o teto do dia) e, ao fabricar, o total da conquista de Forja, para salvar junto;
+ * `ganhos` soma os outros contadores das Conquistas (armas, reforjas, ouro, materiais…).
+ */
 function maestriaDaForja(
   current: CharacterDocument,
   xp: number,
   fabricou = false,
   /** Fabricar e reforjar contam na missão do dia; usar orbes não. */
-  contaNaMissao = true
+  contaNaMissao = true,
+  ganhos: Partial<Record<Contador, number>> = {}
 ): { maestrias?: MaestriasDoJogador; estatisticas?: EstatisticasDoJogador; diario?: DiarioDoJogador } {
   const agora = new Date();
   const novas = ganharXpDeMaestria(current.maestrias, { forja: xp }, diaDeBrasilia(agora));
+  const todos: Partial<Record<Contador, number>> = { ...(fabricou ? { forjas: 1 } : {}), ...ganhos };
   return {
     ...(novas ? { maestrias: novas } : {}),
-    ...(fabricou ? { estatisticas: somarEstatisticas(current.estatisticas, { forjas: 1 }) } : {}),
+    ...(Object.keys(todos).length ? { estatisticas: somarEstatisticas(current.estatisticas, todos) } : {}),
     ...(contaNaMissao ? progressoDoDia(current, { forja: 1 }, agora) : {}),
   };
+}
+
+/** Quantos materiais (soma das quantidades) saíram do inventário entre dois estados dele. */
+export function materiaisGastos(antes: Readonly<Record<string, number>>, depois: Readonly<Record<string, number>>): number {
+  let total = 0;
+  for (const [id, qtd] of Object.entries(antes)) total += Math.max(0, qtd - (depois[id] ?? 0));
+  return total;
 }
 
 /**
@@ -2714,16 +2729,19 @@ function gravarForja(
   motivo: string,
   xpDeForja = 0,
   descontaMateriais = true,
-  fabricou = false
+  fabricou = false,
+  /** O que a ação conta nas Conquistas além do ouro e dos materiais (armas fabricadas, reforjas). */
+  contagem: Partial<Record<Contador, number>> = {}
 ): RespostaForja {
   const { inventario, ouroGasto: ouroDaMaestria } = descontoDaForja(current.maestrias, current.inventario ?? {}, plano, descontaMateriais);
   const ouroGasto = comDescontoDoPasse(ouroDaMaestria, descontoDosPasses(current));
   const pago = alterarSaldoEm(ctx, current, 'ouro', -ouroGasto, motivo);
+  const ganhos: Partial<Record<Contador, number>> = { ...contagem, ouroNaForja: ouroGasto, materiaisNaForja: materiaisGastos(current.inventario ?? {}, inventario) };
   const character = salvarPersonagem(ctx, current, {
     ouro: pago.character.ouro,
     inventario,
     armas: plano.armas,
-    ...(xpDeForja > 0 ? maestriaDaForja(current, xpDeForja, fabricou) : {}),
+    ...(xpDeForja > 0 ? maestriaDaForja(current, xpDeForja, fabricou, true, ganhos) : contarNoPatch(current, ganhos)),
   });
   return { character, arma: plano.arma, transaction: pago.transaction };
 }
@@ -2744,7 +2762,7 @@ export async function fabricarArma(
     });
     if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_FORJA[plano.motivo]);
     const nome = plano.base.nomes[plano.arma.categoria];
-    return gravarForja(ctx, current, plano, `Forja: ${plano.base.consome ? 'evoluir para' : 'fabricar'} ${nome}`, xpDeForjaAoFabricar(plano.base.estrela), true, true);
+    return gravarForja(ctx, current, plano, `Forja: ${plano.base.consome ? 'evoluir para' : 'fabricar'} ${nome}`, xpDeForjaAoFabricar(plano.base.estrela), true, true, { armasForjadas: 1 });
   });
 }
 
@@ -2755,7 +2773,7 @@ export async function reforjarArma(uid: string, armaId: unknown, opcoes: OpcoesF
     const current = await carregarPersonagem(ctx, uid);
     const plano = planejarReforja(estadoForja(current), armaId, { aleatorio: opcoes.aleatorio ?? aleatorioDoServidor });
     if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_FORJA[plano.motivo]);
-    return gravarForja(ctx, current, plano, `Forja: reforjar (${plano.percentual}% da receita)`, xpDeForjaAoReforjar(ARMAS_BASE_MAP[plano.arma.baseId]?.estrela ?? 1));
+    return gravarForja(ctx, current, plano, `Forja: reforjar (${plano.percentual}% da receita)`, xpDeForjaAoReforjar(ARMAS_BASE_MAP[plano.arma.baseId]?.estrela ?? 1), true, false, { reforjas: 1 });
   });
 }
 
@@ -2802,7 +2820,7 @@ export async function fabricarArmadura(uid: string, pecaId: unknown, opcoes: Opc
       ouro: pago.character.ouro,
       inventario,
       armaduras: plano.armaduras,
-      ...maestriaDaForja(current, xpDeForjaAoFabricar(plano.peca.estrela), true),
+      ...maestriaDaForja(current, xpDeForjaAoFabricar(plano.peca.estrela), true, true, { armadurasForjadas: 1, ouroNaForja: ouroGasto, materiaisNaForja: materiaisGastos(current.inventario ?? {}, inventario) }),
     });
     return { character, armadura: plano.armadura, transaction: pago.transaction };
   });
@@ -2822,7 +2840,7 @@ export async function reforjarArmadura(uid: string, armaduraId: unknown, opcoes:
       ouro: pago.character.ouro,
       inventario,
       armaduras: plano.armaduras,
-      ...maestriaDaForja(current, xpDeForjaAoReforjar(plano.peca.estrela)),
+      ...maestriaDaForja(current, xpDeForjaAoReforjar(plano.peca.estrela), false, true, { reforjas: 1, ouroNaForja: ouroGasto, materiaisNaForja: materiaisGastos(current.inventario ?? {}, inventario) }),
     });
     return { character, armadura: plano.armadura, transaction: pago.transaction };
   });

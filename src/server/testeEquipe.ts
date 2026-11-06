@@ -315,7 +315,7 @@ export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificu
       const selosDepoisDaEntrada = (doc.selosDoAbismo ?? 0) - (pedeSelo ? 1 : 0);
       const custo = pedeSelo ? { selosDoAbismo: selosDepoisDaEntrada || undefined } : { chavesDaProvacao: gastarChave(chavesDoDia(doc.chavesDaProvacao, hoje), tentativaExtraDoVip(doc.gastoReal, 'testeEquipe'))! };
       if (!venceu) {
-        salvarPersonagem(ctx, doc, { ...custo, ...contarNoPatch(doc, { lutasEmParty: 1 }) });
+        salvarPersonagem(ctx, doc, { ...custo, ...contarNoPatch(doc, { lutasEmParty: 1, ...(pedeSelo ? {} : { chavesDeProvacaoUsadas: 1 }) }) });
         continue;
       }
       const conclusao = chaveDeConclusao(categoria, dificuldade);
@@ -340,7 +340,7 @@ export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificu
         ...(primeira ? { testeEquipeConcluidas: [...(doc.testeEquipeConcluidas ?? []), conclusao] } : {}),
         ...(contratos ? { contratos } : {}),
         ...progressoDaVitoria,
-        ...contarNoPatch(doc, { lutasEmParty: 1 }, progressoDaVitoria),
+        ...contarNoPatch(doc, { lutasEmParty: 1, ...(pedeSelo ? {} : { chavesDeProvacaoUsadas: 1 }) }, progressoDaVitoria),
       });
     }
     const resultado: ResultadoDaParty = { categoria, dificuldade, venceu, rodadas: r.rodadas, em: new Date().toISOString(), aliados: r.aliados };
