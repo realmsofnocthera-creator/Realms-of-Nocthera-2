@@ -39,6 +39,13 @@ describe('Telas do Buscar e da Coleção', () => {
     expect(arteDoColecionavel('XX-C01')).toBeUndefined();
   });
 
+  it('artes das Memórias: as 30 têm arte própria e cada uma é diferente', () => {
+    const memorias = COLECIONAVEIS.filter((c) => c.categoria === 'memorias');
+    expect(memorias).toHaveLength(30);
+    for (const c of memorias) expect(arteDoColecionavel(c.id), c.id).toBeTruthy();
+    expect(new Set(memorias.map((c) => arteDoColecionavel(c.id))).size).toBe(30);
+  });
+
   it('artes das Sonatas: uma por raridade, igual para todas da mesma raridade', () => {
     const sonatas = COLECIONAVEIS.filter((c) => c.categoria === 'sonatas');
     expect(sonatas).toHaveLength(30);
@@ -46,7 +53,6 @@ describe('Telas do Buscar e da Coleção', () => {
     expect(arteDoColecionavel('SO-C01')).toBe(arteDoColecionavel('SO-C15'));
     expect(new Set(['SO-C01', 'SO-MR01', 'SO-L01', 'SO-M01'].map(arteDoColecionavel)).size).toBe(4);
     // as outras categorias continuam sem arte até o Yuri mandar
-    expect(arteDoColecionavel('ME-C01')).toBeUndefined();
     expect(arteDoColecionavel('EE-L01')).toBeUndefined();
   });
 });
