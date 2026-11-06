@@ -5,7 +5,7 @@ import { limparCacheRevogacao } from '@/server/auth';
 import { createCharacter, executarCombate, fabricarArma, getCharacterByUid, getPublicCharacterByName, updateCharacter } from '@/server/characterService';
 import { lutarChefeMundial } from '@/server/chefeMundial';
 import { agirNosColecionaveis } from '@/server/colecionaveis';
-import { agirNasConquistas, ErroDeConquista, estadoDasConquistas } from '@/server/conquistas';
+import { agirNasConquistas, ErroDeConquista, estadoDasConquistas, estadoDe } from '@/server/conquistas';
 import { agirNoCorreio, enviarMensagemDoMestre, limparCacheDoCorreio } from '@/server/correio';
 import { agirNaExpedicao } from '@/server/expedicao';
 import { DONOS_DO_PROJETO, type SessaoMestre } from '@/server/mestre';
@@ -42,7 +42,7 @@ describe('Conquistas: servidor', () => {
     delete process.env.MESTRE_DONO_UIDS;
   });
 
-  it('os totais contam jogando: vitórias, forja, expedição, buscas e dias de Chefe Mundial', async () => {
+  it('os totais contam jogando: vitórias (com dano e vida cheia), monstros derrotados, forja, expedição, buscas e dias de Chefe Mundial', async () => {
     const luta = await executarCombate('u1', 'rato-da-peste', { seed: 7 });
     expect(luta.resultado.vencedor).toBe('personagem');
     await fabricarArma('u1', { baseId: 'ferro-de-cacada', categoria: 'lanca' }, { aleatorio: () => 0.5 });
@@ -51,10 +51,22 @@ describe('Conquistas: servidor', () => {
     await agirNosColecionaveis('u1', 'buscar', { selo: 'desgastado', vezes: 10 }, 3);
     await lutarChefeMundial('u1', 11, T0);
     await lutarChefeMundial('u1', 12, T0);
-    expect((await getCharacterByUid('u1'))!.estatisticas).toEqual({ vitorias: 1, forjas: 1, expedicoes: 1, buscas: 10, diasDeChefeMundial: 1 });
+    expect((await getCharacterByUid('u1'))!.estatisticas).toEqual({ vitorias: 1, forjas: 1, expedicoes: 1, buscas: 10, diasDeChefeMundial: 1, danoCausado: 300, vitoriasVidaCheia: 1 });
+    // o Bestiário guarda o monstro derrotado, sem repetir
+    expect((await getCharacterByUid('u1'))!.monstrosDerrotados).toEqual(['rato-da-peste']);
     const e = await estadoDasConquistas('u1');
     const por = (id: string) => e.conquistas.find((c) => c.id === id)!;
     expect([por('vitorias').progresso, por('forja').prontos, por('buscas').prontos, por('chefeMundial').prontos, por('nivel').prontos]).toEqual([1, 1, 1, 1, 3]);
+  });
+
+  it('Monstros: vencer o mesmo monstro de novo soma as vitórias e o dano, mas o Bestiário não repete', async () => {
+    await executarCombate('u1', 'rato-da-peste', { seed: 7 });
+    await executarCombate('u1', 'rato-da-peste', { seed: 8 });
+    const c = (await getCharacterByUid('u1'))!;
+    expect(c.monstrosDerrotados).toEqual(['rato-da-peste']);
+    expect(c.estatisticas).toMatchObject({ vitorias: 2, danoCausado: 600 });
+    const por = (id: string) => estadoDe(c).conquistas.find((x) => x.id === id)!;
+    expect([por('bestiario').progresso, por('subespecies').progresso, por('chefesEspeciais').progresso, por('destruidor').progresso]).toEqual([1, 0, 0, 600]);
   });
 
   it('resgatar entrega Diamantes (com extrato), selos e Avanços, e não resgata duas vezes', async () => {
