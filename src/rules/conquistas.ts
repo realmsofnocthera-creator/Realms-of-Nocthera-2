@@ -42,6 +42,15 @@ export const CONTADORES = [
   'golpesCriticos',
   'danoCausado',
   'statusAplicados',
+  // Comunidade (fase 3): o que o jogador fez com os outros
+  'contratosDeGuilda',
+  'incursoesDeGuilda',
+  'semanasDeChefeDeGuilda',
+  'doacoesDePesquisa',
+  'lutasEmParty',
+  'vendasNoMercado',
+  'comprasNoMercado',
+  'presentesDoCorreio',
 ] as const;
 export type Contador = (typeof CONTADORES)[number];
 export type EstatisticasDoJogador = Partial<Record<Contador, number>>;
@@ -102,6 +111,9 @@ export interface FichaDeConquistas {
   campeonatosVencidos?: number;
   cacadaChavesVencidas?: readonly number[];
   monstrosDerrotados?: readonly string[];
+  /** Quando o jogador entrou na guilda de agora (ISO). */
+  guildaDesde?: string;
+  chefeSemanal?: readonly unknown[];
 }
 
 export interface Conquista {
@@ -124,6 +136,12 @@ const contador = (c: Contador) => (f: FichaDeConquistas) => f.estatisticas?.[c] 
 
 export const TOTAL_DE_TESTES = CATEGORIAS_DO_TESTE.length * DIFICULDADES_DO_TESTE;
 export const TOTAL_DE_CARTAS = TIPOS_DE_CARTA.length;
+
+/** Dias inteiros desde uma data ISO (0 se não há data ou ela é inválida). */
+const diasDesde = (iso: string | undefined) => {
+  const t = iso ? Date.parse(iso) : NaN;
+  return Number.isFinite(t) ? Math.max(0, Math.floor((Date.now() - t) / 86_400_000)) : 0;
+};
 
 const IDS_DE_SUBESPECIES: ReadonlySet<string> = new Set(SUBESPECIES_CACADA.map((x) => x.id));
 
@@ -172,6 +190,17 @@ export const CONQUISTAS: readonly Conquista[] = [
   { id: 'arsenal', nome: 'Arsenal', categoria: 'forja', meta: 'Tenha {n} armas', metaDeUm: 'Tenha 1 arma', metas: [1, 5, 15, 30, 60], progresso: (f) => f.armas?.length ?? 0 },
   { id: 'guardaRoupa', nome: 'Guarda-roupa', categoria: 'forja', meta: 'Tenha {n} armaduras', metaDeUm: 'Tenha 1 armadura', metas: [1, 5, 15, 30, 60], progresso: (f) => f.armaduras?.length ?? 0 },
   { id: 'materiais', nome: 'Materiais', categoria: 'forja', meta: 'Reúna {n} tipos de material', metas: [3, 8, 15, 25, 40], progresso: (f) => Object.values(f.inventario ?? {}).filter((q) => q > 0).length },
+  // Comunidade
+  { id: 'guildaDias', nome: 'Membro de guilda', categoria: 'comunidade', meta: 'Fique {n} dias em uma guilda', metaDeUm: 'Fique 1 dia em uma guilda', metas: [1, 7, 30, 90, 180], progresso: (f) => diasDesde(f.guildaDesde) },
+  { id: 'contratos', nome: 'Contratos', categoria: 'comunidade', meta: 'Conclua {n} contratos de guilda', metaDeUm: 'Conclua 1 contrato de guilda', metas: [1, 10, 40, 120, 300], progresso: contador('contratosDeGuilda') },
+  { id: 'incursoes', nome: 'Incursões', categoria: 'comunidade', meta: 'Faça {n} incursões de guilda', metaDeUm: 'Faça 1 incursão de guilda', metas: [1, 5, 20, 60, 150], progresso: contador('incursoesDeGuilda') },
+  // o histórico guarda só as últimas 4 semanas: vale o maior entre ele e o contador
+  { id: 'chefeDaGuilda', nome: 'Chefe da guilda', categoria: 'comunidade', meta: 'Lute em {n} chefes semanais de guilda', metaDeUm: 'Lute em 1 chefe semanal de guilda', metas: [1, 3, 8, 20, 50], progresso: (f) => Math.max(f.estatisticas?.semanasDeChefeDeGuilda ?? 0, f.chefeSemanal?.length ?? 0) },
+  { id: 'pesquisa', nome: 'Pesquisa', categoria: 'comunidade', meta: 'Contribua com {n} pesquisas da guilda', metaDeUm: 'Contribua com 1 pesquisa da guilda', metas: [1, 5, 20, 60, 150], progresso: contador('doacoesDePesquisa') },
+  { id: 'party', nome: 'Em grupo', categoria: 'comunidade', meta: 'Jogue {n} lutas em party', metaDeUm: 'Jogue 1 luta em party', metas: [1, 10, 40, 120, 300], progresso: contador('lutasEmParty') },
+  { id: 'vendas', nome: 'Comerciante', categoria: 'comunidade', meta: 'Venda {n} itens no Mercado', metaDeUm: 'Venda 1 item no Mercado', metas: [1, 5, 20, 60, 150], progresso: contador('vendasNoMercado') },
+  { id: 'compras', nome: 'Cliente', categoria: 'comunidade', meta: 'Compre {n} itens no Mercado', metaDeUm: 'Compre 1 item no Mercado', metas: [1, 5, 20, 60, 150], progresso: contador('comprasNoMercado') },
+  { id: 'correio', nome: 'Correio', categoria: 'comunidade', meta: 'Resgate {n} presentes do Correio', metaDeUm: 'Resgate 1 presente do Correio', metas: [1, 10, 40, 120, 300], progresso: contador('presentesDoCorreio') },
   // Mundo aberto
   { id: 'expedicao', nome: 'Expedição', categoria: 'mundo', meta: 'Colete {n} expedições', metaDeUm: 'Colete 1 expedição', metas: [1, 10, 50, 150, 500], progresso: contador('expedicoes'), titulo: 'explorador-incansavel', comAvancos: true },
   { id: 'buscas', nome: 'Buscas', categoria: 'mundo', meta: 'Faça {n} buscas', metas: [10, 50, 200, 500, 1000], progresso: contador('buscas'), comAvancos: true },

@@ -35,7 +35,7 @@ import {
   type PartyDocumento,
   type ResultadoDaParty,
 } from '@/rules/testeEquipe';
-import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, progressoDasVitorias, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
+import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, contarNoPatch, progressoDasVitorias, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { gerarSementeCombate } from '@/server/combateSemente';
 import { entregarCartas, sorteadorDaSemente, sortearTipoDaRaridade } from '@/server/almas';
 import { sortearRaridadePorPesos } from '@/rules/almas';
@@ -315,7 +315,7 @@ export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificu
       const selosDepoisDaEntrada = (doc.selosDoAbismo ?? 0) - (pedeSelo ? 1 : 0);
       const custo = pedeSelo ? { selosDoAbismo: selosDepoisDaEntrada || undefined } : { chavesDaProvacao: gastarChave(chavesDoDia(doc.chavesDaProvacao, hoje), tentativaExtraDoVip(doc.gastoReal, 'testeEquipe'))! };
       if (!venceu) {
-        salvarPersonagem(ctx, doc, custo);
+        salvarPersonagem(ctx, doc, { ...custo, ...contarNoPatch(doc, { lutasEmParty: 1 }) });
         continue;
       }
       const conclusao = chaveDeConclusao(categoria, dificuldade);
@@ -329,6 +329,7 @@ export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificu
       const ganhouSelo = dificuldade === DIFICULDADE_QUE_DA_SELO && sorteio() < CHANCE_DO_SELO;
       if (ganhouSelo) selosGanhos++;
       const selos = selosDepoisDaEntrada + (ganhouSelo ? 1 : 0);
+      const progressoDaVitoria = progressoDasVitorias(doc, [true], agora());
       salvarPersonagem(ctx, doc, {
         ...custo,
         ...carta.patch,
@@ -338,7 +339,8 @@ export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificu
         diamantes: doc.diamantes,
         ...(primeira ? { testeEquipeConcluidas: [...(doc.testeEquipeConcluidas ?? []), conclusao] } : {}),
         ...(contratos ? { contratos } : {}),
-        ...progressoDasVitorias(doc, [true], agora()),
+        ...progressoDaVitoria,
+        ...contarNoPatch(doc, { lutasEmParty: 1 }, progressoDaVitoria),
       });
     }
     const resultado: ResultadoDaParty = { categoria, dificuldade, venceu, rodadas: r.rodadas, em: new Date().toISOString(), aliados: r.aliados };

@@ -73,7 +73,7 @@ import {
 import { escolherTipoDaRaridade, type EmblemaItem } from '@/game/emblemas';
 import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
 import { PREFIXO_MAXIMO_DA_BUSCA, PREFIXO_MINIMO_DA_BUSCA } from '@/rules/social';
-import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, ganharXp, progressoDasVitorias, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
+import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, contarNoPatch, ganharXp, progressoDasVitorias, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { xpParaProximoNivel } from '@/game';
 import { chaveDoNome, chaveDoNomeDeGuilda, repositorio, type ContextoTransacao } from '@/server/persistencia';
 import { comLimiteSilencioso } from '@/server/sancoes';
@@ -110,7 +110,7 @@ const agora = () => new Date().toISOString();
 const sem = (lista: readonly string[] | undefined, id: string) => (lista ?? []).filter((x) => x !== id);
 const vazioParaUndefined = (lista: string[]) => (lista.length ? lista : undefined);
 /** O que sai do personagem quando ele deixa a guilda (inclui o bônus da Pesquisa). */
-const SEM_GUILDA = { guildaId: undefined, guildaNome: undefined, bonusDeGuilda: undefined } as const;
+const SEM_GUILDA = { guildaId: undefined, guildaNome: undefined, guildaDesde: undefined, bonusDeGuilda: undefined } as const;
 
 export async function regras(): Promise<RegrasDeGuilda> {
   return (await lerConfiguracaoDeSistemas()).guildas;
@@ -162,7 +162,7 @@ function entrarNoContexto(ctx: ContextoTransacao, guilda: GuildaDocumento, jogad
     convites: guilda.convites.filter((c) => c.uid !== jogador.uid),
     pedidos: guilda.pedidos.filter((p) => p.uid !== jogador.uid),
   });
-  salvarPersonagem(ctx, jogador, { guildaId: guilda.id, guildaNome: guilda.nome, convitesDeGuilda: undefined, pedidosDeGuilda: undefined, bonusDeGuilda: bonusDosMembros(guilda.pesquisa) });
+  salvarPersonagem(ctx, jogador, { guildaId: guilda.id, guildaNome: guilda.nome, guildaDesde: new Date().toISOString(), convitesDeGuilda: undefined, pedidosDeGuilda: undefined, bonusDeGuilda: bonusDosMembros(guilda.pesquisa) });
 }
 
 function exigirVaga(guilda: GuildaDocumento, r: RegrasDeGuilda) {
@@ -444,7 +444,7 @@ const ACOES: Record<AcaoDeGuilda, Acao> = {
       const em = agora();
       ctx.gravarGuilda({ id, nome: nome.nome, nomeBusca: chaveDoNomeDaGuilda(nome.nome), descricao: descricao.descricao, criadaEm: em, membros: [{ uid, nome: eu.nome, cargo: 'lider', entrouEm: em }], convites: [], pedidos: [], quantidadeMembros: 1, xp: 0 });
       ctx.reservarNomeDeGuilda(chave, id, nome.nome);
-      salvarPersonagem(ctx, eu, { ouro: eu.ouro, guildaId: id, guildaNome: nome.nome, convitesDeGuilda: undefined, pedidosDeGuilda: undefined });
+      salvarPersonagem(ctx, eu, { ouro: eu.ouro, guildaId: id, guildaNome: nome.nome, guildaDesde: em, convitesDeGuilda: undefined, pedidosDeGuilda: undefined });
       return { mensagem: `A guilda ${nome.nome} foi criada. Você é o Líder.` };
     });
   },
@@ -699,7 +699,7 @@ async function entregarContrato(uid: string, pedido: PedidoDeAcao): Promise<{ me
     const ouroDoContrato = Math.floor((contrato.recompensa.ouro * (100 + bonusDoRamo(guilda.pesquisa, 'contratos'))) / 100);
     if (ouroDoContrato > 0) eu = alterarSaldoEm(ctx, eu, 'ouro', ouroDoContrato, `Contrato de guilda: ${contrato.nomeAlvo}`).character;
     const contratos = { dia: hoje, lista: eu.contratos!.lista.map((c) => (c.id === contrato.id ? { ...c, entregue: true } : c)) };
-    salvarPersonagem(ctx, eu, { ouro: eu.ouro, inventario, contratos });
+    salvarPersonagem(ctx, eu, { ouro: eu.ouro, inventario, contratos, ...contarNoPatch(eu, { contratosDeGuilda: 1 }) });
     const antes = nivelDaGuilda(guilda.xp, await regras());
     // Pesquisa da guilda: Renome (+% de XP de guilda) e Comércio (+% de ouro dos contratos)
     const xpGuilda = Math.floor((contrato.recompensa.xpGuilda * (100 + bonusDoRamo(guilda.pesquisa, 'xpGuilda'))) / 100);
@@ -820,10 +820,12 @@ export async function lutarIncursao(uid: string, r: RegrasDeGuilda, semente: num
     const hp = Math.max(0, inc.hp - dano);
     const info = nivelDeIncursao(inc.nivel);
     const contratos = resultado.vencedor === 'personagem' ? contarVitorias(eu.contratos, [chefe.id], hoje) : null;
+    const progressoDaLuta = resultado.vencedor === 'personagem' ? progressoDasVitorias(eu, [true], new Date()) : {};
     let euDepois = salvarPersonagem(ctx, eu, {
       incursaoTentativas: { dia: hoje, usadas: usadas + 1 },
       ...(contratos ? { contratos } : {}),
-      ...(resultado.vencedor === 'personagem' ? progressoDasVitorias(eu, [true], new Date()) : {}),
+      ...progressoDaLuta,
+      ...contarNoPatch(eu, { incursoesDeGuilda: 1 }, progressoDaLuta),
     });
     const restantes = LUTAS_DE_INCURSAO_POR_DIA - usadas - 1;
 
@@ -926,9 +928,9 @@ export async function doarPesquisa(uid: string, pedido: PedidoDeAcao, r: RegrasD
       const bonusDeGuilda = bonusDosMembros(pesquisa);
       const outros = await Promise.all(guilda.membros.filter((m) => m.uid !== uid).map((m) => ctx.lerPersonagem(m.uid)));
       for (const o of outros) if (o && o.guildaId === guilda.id) ctx.gravarPersonagem({ ...o, bonusDeGuilda });
-      salvarPersonagem(ctx, eu, { ouro: eu.ouro, inventario, bonusDeGuilda });
+      salvarPersonagem(ctx, eu, { ouro: eu.ouro, inventario, bonusDeGuilda, ...contarNoPatch(eu, { doacoesDePesquisa: 1 }) });
     } else {
-      salvarPersonagem(ctx, eu, { ouro: eu.ouro, inventario });
+      salvarPersonagem(ctx, eu, { ouro: eu.ouro, inventario, ...contarNoPatch(eu, { doacoesDePesquisa: 1 }) });
     }
     ctx.gravarGuilda({ ...guilda, pesquisa });
     const doado = [ouro > 0 ? `${ouro} de ouro` : '', ...usados].filter(Boolean).join(', ');
@@ -1019,7 +1021,7 @@ export async function lutarChefeSemanal(uid: string, r: RegrasDeGuilda, semente:
       ctx.gravarEntradaChefeSemanal({ ...entrada, nomeDaGuilda: guilda.nome, membros, total: totalDosMembros(membros) });
     }
     if (!(eu.chefeSemanal ?? []).some((p) => p.semana === semana && p.guildaId === guilda.id)) {
-      salvarPersonagem(ctx, eu, { chefeSemanal: [...(eu.chefeSemanal ?? []), { semana, guildaId: guilda.id }].slice(-4) });
+      salvarPersonagem(ctx, eu, { chefeSemanal: [...(eu.chefeSemanal ?? []), { semana, guildaId: guilda.id }].slice(-4), ...contarNoPatch(eu, { semanasDeChefeDeGuilda: 1 }) });
     }
     topGuardado.delete(semana);
     return {

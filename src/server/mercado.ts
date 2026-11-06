@@ -41,7 +41,7 @@ import {
 } from '@/rules/mercado';
 import { SUBCLASSES } from '@/rules/subclasses';
 import { exigirEmailVerificado } from '@/server/auth';
-import { alterarSaldoEm, carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
+import { alterarSaldoEm, carregarPersonagem, contarNoPatch, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { comMensagem, novaMensagem } from '@/server/correio';
 import { registrarLog, descreverErro } from '@/server/log';
 import { repositorio, type ContextoTransacao } from '@/server/persistencia';
@@ -518,11 +518,12 @@ async function comprar(uid: string, emailVerificado: boolean, pedido: PedidoDoMe
     const unidade = precoPorUnidade(a);
     const atipico = precoAtipico(unidade, precos);
     ctx.gravarPrecosDoMercado(chaveDoPreco, [...precos, unidade].slice(-VENDAS_GUARDADAS_POR_ITEM));
-    salvarPersonagem(ctx, eu, { ...r.patch, ouro: eu.ouro, diamantes: eu.diamantes, correio: correioDoComprador, comprasNoMercado: compras });
+    salvarPersonagem(ctx, eu, { ...r.patch, ouro: eu.ouro, diamantes: eu.diamantes, correio: correioDoComprador, comprasNoMercado: compras, ...contarNoPatch(eu, { comprasNoMercado: 1 }) });
     salvarPersonagem(ctx, vendedor, {
       ouro: vendedor.ouro,
       diamantes: vendedor.diamantes,
       anunciosNoMercado: (vendedor.anunciosNoMercado ?? []).filter((x) => x !== a.id),
+      ...contarNoPatch(vendedor, { vendasNoMercado: 1 }),
       correio: comMensagem(vendedor.correio, novaMensagem({ titulo: 'Venda no Mercado', texto: `${eu.nome} comprou ${rotulo} por ${nomeDaMoeda(a.moeda, a.preco)}. O valor já está no seu saldo.`, de: 'Mercado' }, agora), agora),
     });
     ctx.apagarAnuncioDoMercado(a.id);

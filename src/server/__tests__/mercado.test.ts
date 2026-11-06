@@ -91,6 +91,8 @@ describe('Troca entre jogadores (7.2)', () => {
     expect([vendedor.ouro, comprador.ouro]).toEqual([1300, 3800]);
     expect(comprador.armas!.map((x) => x.id)).toEqual(['w1']);
     expect(vendedor.anunciosNoMercado ?? []).toEqual([]);
+    // as Conquistas contam a venda e a compra
+    expect([vendedor.estatisticas?.vendasNoMercado, comprador.estatisticas?.comprasNoMercado]).toEqual([1, 1]);
     expect(getTransactionsByUid('u2').at(-1)).toMatchObject({ moeda: 'ouro', tipo: 'perda', quantidade: 1200, saldoDepois: 3800 });
     expect(getTransactionsByUid('u1').some((t) => t.moeda === 'ouro' && t.tipo === 'ganho' && t.quantidade === 1200)).toBe(true);
     expect((await estadoDoCorreio('u1', T0)).mensagens[0]).toMatchObject({ titulo: 'Venda no Mercado', texto: expect.stringMatching(/Comprador comprou/) });
