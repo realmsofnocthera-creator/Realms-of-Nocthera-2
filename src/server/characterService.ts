@@ -329,6 +329,8 @@ export interface CharacterDocument {
   monstrosDerrotados?: string[];
   /** Quando o jogador entrou na guilda em que está (ISO): as Conquistas contam os dias. */
   guildaDesde?: string;
+  /** As vocações (classeId) de quem o jogador já venceu no PvP, sem repetir: o "todas as vocações" das Conquistas. */
+  vocacoesDerrotadasPvp?: string[];
   conquistas?: ConquistasDoJogador;
   titulos?: string[];
   tituloId?: string;

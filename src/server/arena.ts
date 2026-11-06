@@ -26,7 +26,8 @@ import {
 import { indiceDoRanque, pontosDepoisDasQuedas, pontosRanqueadosDepois, RANQUES, TIPOS_DE_BAU_DE_COMPRA, type BauDeEscolha } from '@/rules/arenaRanqueada';
 import type { SistemaId } from '@/rules/sistemas';
 import { sorteadorDaSemente } from '@/server/almas';
-import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
+import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, contarNoPatch, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
+import { resumoDoPvp } from '@/game/resumoDaLuta';
 import { gerarSementeCombate } from '@/server/combateSemente';
 import { comMensagem, mandarPremiosDaArena, novaMensagem } from '@/server/correio';
 import { marcaDaRede } from '@/server/integridade';
@@ -406,7 +407,16 @@ export async function lutar(uid: string, alvoBruto: unknown, ip: string, agora =
     ctx.gravarEntradaDaArena({ ...dele, nome: ele.nome, nivel: ele.nivel, classeId: ele.classeId, pontos: novos.defensor, historico: [...(dele.historico ?? []), deleLuta].slice(-LUTAS_GUARDADAS) });
     // as semanas no personagem: só grava na primeira luta (ou defesa) da semana
     const minhasSemanas = comSemana(eu, cfg, semana);
-    if (minhasSemanas) salvarPersonagem(ctx, eu, { [cfg.campo]: minhasSemanas });
+    // Conquistas de PvP: lutas, vitórias, dano, sequência… do atacante, na mesma gravação do personagem. Vitória contra
+    // conta da mesma rede (que não muda os pontos) também não conta, para não render com contas próprias.
+    const pvp = mesmaRede ? null : resumoDoPvp(combate, { nivel: eu.nivel, sequenciaAtual: eu.estatisticas?.sequenciaAtualPvp, maiorSequencia: eu.estatisticas?.maiorSequenciaPvp }, { nivel: ele.nivel, classeId: ele.classeId });
+    const doPvp = pvp
+      ? {
+          estatisticas: { ...contarNoPatch(eu, pvp.ganhos).estatisticas, sequenciaAtualPvp: pvp.sequenciaAtual, maiorSequenciaPvp: pvp.maiorSequencia },
+          ...(pvp.vocacaoDerrotada && !(eu.vocacoesDerrotadasPvp ?? []).includes(pvp.vocacaoDerrotada) ? { vocacoesDerrotadasPvp: [...(eu.vocacoesDerrotadasPvp ?? []), pvp.vocacaoDerrotada] } : {}),
+        }
+      : {};
+    if (minhasSemanas || pvp) salvarPersonagem(ctx, eu, { ...(minhasSemanas ? { [cfg.campo]: minhasSemanas } : {}), ...doPvp });
     const semanasDele = comSemana(ele, cfg, semana);
     if (semanasDele) salvarPersonagem(ctx, ele, { [cfg.campo]: semanasDele });
 
