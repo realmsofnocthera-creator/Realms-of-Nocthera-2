@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { arteDaCarta } from '@/assets/cartasDaAlma';
+import React, { useState } from 'react';
+import { MiniaturaDaCarta, VisualizadorDaCarta } from './ArteDaCarta';
 import { conjuntosCompletos } from '@/game/almas';
 import { BONUS_DO_CONJUNTO_PERCENTUAL, NOME_DA_CATEGORIA, RARIDADES_DE_CARTA, textoDoEfeito, tiposDaRaridadeDeCarta, TIPOS_DE_CARTA, valorFixoDaRaridade } from '@/rules/almas';
 import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
@@ -13,6 +13,7 @@ const OURO = '#C8A656';
 /** As cartas da Alma na Coleção (7.8): todas do catálogo, as descobertas e as que faltam; completar o conjunto de uma raridade dá bônus. */
 export function ColecaoDaAlma({ personagem }: { personagem: CharacterDocument }) {
   const { colors } = NOCTHERA_THEME;
+  const [aberta, setAberta] = useState<string | null>(null);
   const descobertas = personagem.cartasDescobertas ?? [];
   const completos = conjuntosCompletos(descobertas);
   const bonusTotal = completos.reduce((s, r) => s + BONUS_DO_CONJUNTO_PERCENTUAL[r], 0);
@@ -34,21 +35,15 @@ export function ColecaoDaAlma({ personagem }: { personagem: CharacterDocument })
             <ul className="grid grid-cols-1 gap-1">
               {tipos.map((t) => {
                 const achou = descobertas.includes(t.id);
-                const arte = arteDaCarta(t.id);
                 return (
                   <li key={t.id} className="rounded-sm border px-2 py-1 text-xs flex items-center gap-2" style={{ borderColor: achou ? def.cor : '#4A3F2A', opacity: achou ? 1 : 0.8 }}>
-                    {arte ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={arte}
-                        alt=""
-                        aria-hidden="true"
-                        className="w-9 h-[50px] shrink-0 object-contain"
-                        style={{ imageRendering: 'pixelated', ...(achou ? {} : { filter: 'grayscale(1) brightness(0.4)' }) }}
-                      />
-                    ) : (
-                      <span aria-hidden="true" className="w-9 h-[50px] shrink-0 border border-dashed flex items-center justify-center text-[10px]" style={{ borderColor: '#4A3F2A', color: '#8d8574' }}>?</span>
-                    )}
+                    <MiniaturaDaCarta
+                      tipoId={t.id}
+                      nome={t.nome}
+                      className="w-9 h-[50px] object-contain"
+                      style={achou ? undefined : { filter: 'grayscale(1) brightness(0.4)' }}
+                      aoAbrir={achou ? () => setAberta(t.id) : undefined}
+                    />
                     <span className="min-w-0 flex-1 flex justify-between gap-2">
                       <span>{achou ? t.nome : '???'} <span style={{ color: colors.text.secondary }}>· {NOME_DA_CATEGORIA[t.categoria]}</span></span>
                       <span style={{ color: colors.text.secondary }}>{achou ? textoDoEfeito(t.fixo, valorFixoDaRaridade(t.fixo, raridade)) : 'não descoberta'}</span>
@@ -60,6 +55,7 @@ export function ColecaoDaAlma({ personagem }: { personagem: CharacterDocument })
           </section>
         );
       })}
+      {aberta && <VisualizadorDaCarta tipoId={aberta} aoFechar={() => setAberta(null)} />}
     </div>
   );
 }

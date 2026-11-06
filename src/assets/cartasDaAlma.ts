@@ -8,6 +8,12 @@ import imgalma_epico_3 from './images/cartas-da-alma/alma-epico-3.webp';
 import imgalma_lendario_1 from './images/cartas-da-alma/alma-lendario-1.webp';
 import imgalma_lendario_2 from './images/cartas-da-alma/alma-lendario-2.webp';
 import imgalma_lendario_3 from './images/cartas-da-alma/alma-lendario-3.webp';
+import imgalma_mitico_1_fundo from './images/cartas-da-alma/alma-mitico-1-fundo.webp';
+import imgalma_mitico_1_personagem from './images/cartas-da-alma/alma-mitico-1-personagem.webp';
+import imgalma_mitico_2_fundo from './images/cartas-da-alma/alma-mitico-2-fundo.webp';
+import imgalma_mitico_2_personagem from './images/cartas-da-alma/alma-mitico-2-personagem.webp';
+import imgalma_mitico_3_fundo from './images/cartas-da-alma/alma-mitico-3-fundo.webp';
+import imgalma_mitico_3_personagem from './images/cartas-da-alma/alma-mitico-3-personagem.webp';
 import imgalma_muitoRaro_1 from './images/cartas-da-alma/alma-muitoRaro-1.webp';
 import imgalma_muitoRaro_2 from './images/cartas-da-alma/alma-muitoRaro-2.webp';
 import imgalma_muitoRaro_3 from './images/cartas-da-alma/alma-muitoRaro-3.webp';
@@ -23,6 +29,12 @@ import imgcorpo_epico_3 from './images/cartas-da-alma/corpo-epico-3.webp';
 import imgcorpo_lendario_1 from './images/cartas-da-alma/corpo-lendario-1.webp';
 import imgcorpo_lendario_2 from './images/cartas-da-alma/corpo-lendario-2.webp';
 import imgcorpo_lendario_3 from './images/cartas-da-alma/corpo-lendario-3.webp';
+import imgcorpo_mitico_1_fundo from './images/cartas-da-alma/corpo-mitico-1-fundo.webp';
+import imgcorpo_mitico_1_personagem from './images/cartas-da-alma/corpo-mitico-1-personagem.webp';
+import imgcorpo_mitico_2_fundo from './images/cartas-da-alma/corpo-mitico-2-fundo.webp';
+import imgcorpo_mitico_2_personagem from './images/cartas-da-alma/corpo-mitico-2-personagem.webp';
+import imgcorpo_mitico_3_fundo from './images/cartas-da-alma/corpo-mitico-3-fundo.webp';
+import imgcorpo_mitico_3_personagem from './images/cartas-da-alma/corpo-mitico-3-personagem.webp';
 import imgcorpo_muitoRaro_1 from './images/cartas-da-alma/corpo-muitoRaro-1.webp';
 import imgcorpo_muitoRaro_2 from './images/cartas-da-alma/corpo-muitoRaro-2.webp';
 import imgcorpo_muitoRaro_3 from './images/cartas-da-alma/corpo-muitoRaro-3.webp';
@@ -38,6 +50,12 @@ import imgmente_epico_3 from './images/cartas-da-alma/mente-epico-3.webp';
 import imgmente_lendario_1 from './images/cartas-da-alma/mente-lendario-1.webp';
 import imgmente_lendario_2 from './images/cartas-da-alma/mente-lendario-2.webp';
 import imgmente_lendario_3 from './images/cartas-da-alma/mente-lendario-3.webp';
+import imgmente_mitico_1_fundo from './images/cartas-da-alma/mente-mitico-1-fundo.webp';
+import imgmente_mitico_1_personagem from './images/cartas-da-alma/mente-mitico-1-personagem.webp';
+import imgmente_mitico_2_fundo from './images/cartas-da-alma/mente-mitico-2-fundo.webp';
+import imgmente_mitico_2_personagem from './images/cartas-da-alma/mente-mitico-2-personagem.webp';
+import imgmente_mitico_3_fundo from './images/cartas-da-alma/mente-mitico-3-fundo.webp';
+import imgmente_mitico_3_personagem from './images/cartas-da-alma/mente-mitico-3-personagem.webp';
 import imgmente_muitoRaro_1 from './images/cartas-da-alma/mente-muitoRaro-1.webp';
 import imgmente_muitoRaro_2 from './images/cartas-da-alma/mente-muitoRaro-2.webp';
 import imgmente_muitoRaro_3 from './images/cartas-da-alma/mente-muitoRaro-3.webp';
@@ -45,7 +63,7 @@ import imgmente_raro_1 from './images/cartas-da-alma/mente-raro-1.webp';
 import imgmente_raro_2 from './images/cartas-da-alma/mente-raro-2.webp';
 import imgmente_raro_3 from './images/cartas-da-alma/mente-raro-3.webp';
 
-/** A arte de cada carta da Alma (144×200, com a moldura), pelo id do tipo de carta. As míticas não têm arte ainda: terão efeitos especiais e animações. */
+/** A arte de cada carta da Alma (144×200, com a moldura), pelo id do tipo de carta. */
 const ARTES: Readonly<Record<string, string>> = {
   'alma-comum-1': srcDaImagem(imgalma_comum_1),
   'alma-comum-2': srcDaImagem(imgalma_comum_2),
@@ -94,4 +112,31 @@ const ARTES: Readonly<Record<string, string>> = {
   'mente-raro-3': srcDaImagem(imgmente_raro_3),
 };
 
-export const arteDaCarta = (tipoId: string): string | undefined => ARTES[tipoId];
+/** As míticas têm duas camadas: o fundo (216×300, com a moldura) e o personagem (recortado, em transparência), que fica na frente. */
+const FUNDOS_DAS_MITICAS: Readonly<Record<string, string>> = {
+  'alma-mitico-1': srcDaImagem(imgalma_mitico_1_fundo),
+  'alma-mitico-2': srcDaImagem(imgalma_mitico_2_fundo),
+  'alma-mitico-3': srcDaImagem(imgalma_mitico_3_fundo),
+  'corpo-mitico-1': srcDaImagem(imgcorpo_mitico_1_fundo),
+  'corpo-mitico-2': srcDaImagem(imgcorpo_mitico_2_fundo),
+  'corpo-mitico-3': srcDaImagem(imgcorpo_mitico_3_fundo),
+  'mente-mitico-1': srcDaImagem(imgmente_mitico_1_fundo),
+  'mente-mitico-2': srcDaImagem(imgmente_mitico_2_fundo),
+  'mente-mitico-3': srcDaImagem(imgmente_mitico_3_fundo),
+};
+
+const PERSONAGENS_DAS_MITICAS: Readonly<Record<string, string>> = {
+  'alma-mitico-1': srcDaImagem(imgalma_mitico_1_personagem),
+  'alma-mitico-2': srcDaImagem(imgalma_mitico_2_personagem),
+  'alma-mitico-3': srcDaImagem(imgalma_mitico_3_personagem),
+  'corpo-mitico-1': srcDaImagem(imgcorpo_mitico_1_personagem),
+  'corpo-mitico-2': srcDaImagem(imgcorpo_mitico_2_personagem),
+  'corpo-mitico-3': srcDaImagem(imgcorpo_mitico_3_personagem),
+  'mente-mitico-1': srcDaImagem(imgmente_mitico_1_personagem),
+  'mente-mitico-2': srcDaImagem(imgmente_mitico_2_personagem),
+  'mente-mitico-3': srcDaImagem(imgmente_mitico_3_personagem),
+};
+
+/** A arte da carta: a própria, ou o fundo no caso das míticas (o personagem vem de `personagemDaCarta`). */
+export const arteDaCarta = (tipoId: string): string | undefined => ARTES[tipoId] ?? FUNDOS_DAS_MITICAS[tipoId];
+export const personagemDaCarta = (tipoId: string): string | undefined => PERSONAGENS_DAS_MITICAS[tipoId];
