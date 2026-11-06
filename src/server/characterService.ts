@@ -159,7 +159,8 @@ import type { RitmoDoJogador } from '@/rules/integridade';
 import { MENSAGEM_DE_NOME_PROIBIDO, MENSAGEM_DE_TEXTO_PROIBIDO, temOfensa } from '@/rules/nomesProibidos';
 import { cadastrarNaRede } from '@/server/integridade';
 import { semanaDe } from '@/rules/chefeSemanal';
-import { conquistasEmDestaque, somarEstatisticas, type ConquistasDoJogador, type EstatisticasDoJogador } from '@/rules/conquistas';
+import { conquistasEmDestaque, somarEstatisticas, type ConquistasDoJogador, type Contador, type EstatisticasDoJogador } from '@/rules/conquistas';
+import { detalheDaVitoria, type DetalheDaVitoria } from '@/game/resumoDaLuta';
 import { TITULO_MAP } from '@/rules/titulos';
 import { ELEMENTOS, type Elemento } from '@/rules/elements';
 import { ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
@@ -324,6 +325,8 @@ export interface CharacterDocument {
   elementoDaClasse?: Elemento;
   /** Conquistas: os totais contados (vitórias, forjas…), os degraus já resgatados, os títulos e o título escolhido. */
   estatisticas?: EstatisticasDoJogador;
+  /** Os monstros (por id) que o jogador já derrotou, sem repetir: o Bestiário, as Subespécies e os Chefes especiais das Conquistas. */
+  monstrosDerrotados?: string[];
   conquistas?: ConquistasDoJogador;
   titulos?: string[];
   tituloId?: string;
@@ -623,17 +626,28 @@ export function progressoDoDia(char: Pick<CharacterDocument, 'diario'>, ganhos: 
  * de Chefes (com o teto do dia), os totais das conquistas e as missões do dia. Devolve o patch para salvar junto.
  */
 export function progressoDasVitorias(
-  char: Pick<CharacterDocument, 'maestrias' | 'equipamento' | 'armas' | 'estatisticas' | 'diario'>,
+  char: Pick<CharacterDocument, 'maestrias' | 'equipamento' | 'armas' | 'estatisticas' | 'diario' | 'monstrosDerrotados'>,
   vitorias: readonly boolean[],
-  agora: Date
-): { maestrias?: MaestriasDoJogador; estatisticas?: EstatisticasDoJogador; diario?: DiarioDoJogador } {
+  agora: Date,
+  /** O que cada vitória contou (na mesma ordem de `vitorias`); sem o detalhe, só os totais simples contam. */
+  detalhes?: readonly (DetalheDaVitoria | undefined)[]
+): { maestrias?: MaestriasDoJogador; estatisticas?: EstatisticasDoJogador; diario?: DiarioDoJogador; monstrosDerrotados?: string[] } {
   if (!vitorias.length) return {};
   const arma = char.equipamento?.armaId ? char.armas?.find((a) => a.id === char.equipamento!.armaId) : undefined;
   const novas = ganharXpDeMaestria(char.maestrias, xpDasVitorias(arma?.categoria, vitorias), diaDeBrasilia(agora));
   const chefes = vitorias.filter(Boolean).length;
+  const ganhos: Partial<Record<Contador, number>> = { vitorias: vitorias.length, vitoriasContraChefes: chefes };
+  const ids = new Set(char.monstrosDerrotados ?? []);
+  for (const d of detalhes ?? []) {
+    if (!d) continue;
+    for (const [k, v] of Object.entries(d.contadores) as [Contador, number][]) ganhos[k] = (ganhos[k] ?? 0) + v;
+    if (d.monstroId) ids.add(d.monstroId);
+  }
+  const mudouOsIds = ids.size !== (char.monstrosDerrotados?.length ?? 0);
   return {
     ...(novas ? { maestrias: novas } : {}),
-    estatisticas: somarEstatisticas(char.estatisticas, { vitorias: vitorias.length, vitoriasContraChefes: chefes }),
+    estatisticas: somarEstatisticas(char.estatisticas, ganhos),
+    ...(mudouOsIds ? { monstrosDerrotados: [...ids].sort() } : {}),
     ...progressoDoDia(char, { vitorias: vitorias.length, chefes }, agora),
   };
 }
@@ -1602,7 +1616,9 @@ function aplicarResultadoCombateEm(
   /** Para contar a vitória nos contratos de guilda do dia (7.3). */
   monstroId?: string,
   /** O monstro era chefe (XP de maestria de Chefes). */
-  contraChefe = false
+  contraChefe = false,
+  /** O monstro, para as Conquistas de Monstros (id, elementos de ataque). */
+  monstro?: MonsterDefinition
 ): ResultadoPosCombate {
   const mensagens: string[] = [...resultado.mensagens];
   let transaction: TransactionDocument | undefined;
@@ -1675,7 +1691,7 @@ function aplicarResultadoCombateEm(
       pontosDisponiveis,
       ouro: novoOuro,
       ...(contratos ? { contratos } : {}),
-      ...progressoDasVitorias(current, [contraChefe], new Date()),
+      ...progressoDasVitorias(current, [contraChefe], new Date(), [detalheDaVitoria(resultado, current.nome, monstro)]),
     });
     return { character, levelUps, transaction, mensagens };
   }
@@ -1854,7 +1870,7 @@ export async function executarCombate(
       }
     }
 
-    const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id, monstro.chefe === true);
+    const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id, monstro.chefe === true, monstro);
 
     const registro: RegistroCombate = {
       id: idRegistro,
@@ -1967,7 +1983,7 @@ export async function executarCacada(
       resultado.xpGanho = 0;
     }
 
-    const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id, monstro.chefe === true);
+    const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id, monstro.chefe === true, monstro);
     let character = pos.character;
     const mensagens = [...pos.mensagens];
 
@@ -2106,7 +2122,7 @@ export async function campanhaLutar(
     if (venceu) {
       // só XP e ouro, sem a trava da Caçada (o descanso da área faz esse papel); a passiva racial de XP entra por cima
       resultado.xpGanho = calcularXpComBonusRacial(monstro.xpConcedido, current.racaId);
-      pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id, monstro.chefe === true);
+      pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id, monstro.chefe === true, monstro);
     } else {
       // derrota sem penalidade: nada de ouro perdido; a vida volta ao máximo na próxima luta, como sempre
       resultado.xpGanho = 0;
@@ -2236,6 +2252,8 @@ export async function executarBatalhaSangrenta(
     const entradaCombatente = structuredClone(combatenteDoPersonagem(current));
 
     const ondas: OndaBatalhaResposta[] = [];
+    // O que cada onda vencida contou para as Conquistas de Monstros
+    const detalhesDasOndas: (DetalheDaVitoria | undefined)[] = [];
     let hpAtual = entradaCombatente.hp;
     let ondasVencidas = 0;
     for (const [indice, onda] of plano.entries()) {
@@ -2246,6 +2264,7 @@ export async function executarBatalhaSangrenta(
       const resultado = resolverCombate(combatente, monstro, sementeDaOnda(opcoes.seed, indice));
       const venceu = resultado.vencedor === 'personagem';
       const hpFinal = venceu ? resultado.personagemFinal.hp : 0;
+      detalhesDasOndas.push(venceu ? detalheDaVitoria(resultado, current.nome, monstro) : undefined);
       ondas.push({
         monstroId: monstro.id,
         nome: monstro.nome,
@@ -2309,7 +2328,7 @@ export async function executarBatalhaSangrenta(
       batalhaSangrenta: estadoTentativas,
       batalhaSangrentaVencidas: vencidas,
       ...(contratos ? { contratos } : {}),
-      ...progressoDasVitorias(character, vitoriasDasOndas, agora),
+      ...progressoDasVitorias(character, vitoriasDasOndas, agora, detalhesDasOndas.filter((d): d is DetalheDaVitoria => d !== undefined)),
     });
 
     const nomeSubclasse = recompensa.fragmentosSubclasse
@@ -2425,7 +2444,7 @@ export async function executarTorre(uid: string, opcoes: OpcoesCombate): Promise
     const motivo = `Torre Celestial (andar ${andar})`;
 
     if (venceu) {
-      const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id, monstro.chefe === true);
+      const pos = aplicarResultadoCombateEm(ctx, current, resultado, monstro.nome, monstro.id, monstro.chefe === true, monstro);
       character = pos.character;
       levelUps = pos.levelUps;
       transaction = pos.transaction;
@@ -2557,7 +2576,7 @@ export async function executarGuerreiro(uid: string, dificuldadeId: unknown, opc
       guerreiroVencidas: primeiraVitoria ? [...(current.guerreiroVencidas ?? []), dificuldade].sort((a, b) => a - b) : current.guerreiroVencidas ?? [],
       emblemasItens: [...(current.emblemasItens ?? []), ...novosEmblemas],
       ...(contratosDoGuerreiro ? { contratos: contratosDoGuerreiro } : {}),
-      ...(venceu ? progressoDasVitorias(current, [true], agora) : {}),
+      ...(venceu ? progressoDasVitorias(current, [true], agora, [detalheDaVitoria(resultado, current.nome, monstro)]) : {}),
     });
 
     const mensagens: string[] = [

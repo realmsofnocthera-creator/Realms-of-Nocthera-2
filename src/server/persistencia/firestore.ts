@@ -31,7 +31,7 @@ import { chavesDoDocumento, partyDoDocumento, type PartyDocumento } from '@/rule
 import { colecionaveisDoDocumento, contadorPorSeloDoDocumento } from '@/rules/colecionaveis';
 import { expedicoesDoDocumento } from '@/rules/expedicao';
 import { maestriasDoDocumento } from '@/rules/maestrias';
-import { conquistasDoDocumento, estatisticasDoDocumento } from '@/rules/conquistas';
+import { conquistasDoDocumento, estatisticasDoDocumento, MAXIMO_DE_MONSTROS_DERROTADOS, monstrosDerrotadosDoDocumento } from '@/rules/conquistas';
 import { ehTitulo, titulosDoDocumento } from '@/rules/titulos';
 import { checkinDoDocumento, diarioDoDocumento } from '@/rules/diario';
 import { revisaoDoDocumento, ritmoDoDocumento, type EntradaDeRevisao } from '@/rules/integridade';
@@ -457,6 +457,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(quantidadePositiva(data.dividaDeDiamantes) ? { dividaDeDiamantes: quantidadePositiva(data.dividaDeDiamantes) } : {}),
     ...(typeof data.vipOuroDiario === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.vipOuroDiario) ? { vipOuroDiario: data.vipOuroDiario } : {}),
     ...(estatisticasDoDocumento(data.estatisticas) ? { estatisticas: estatisticasDoDocumento(data.estatisticas) } : {}),
+    ...(monstrosDerrotadosDoDocumento(data.monstrosDerrotados) ? { monstrosDerrotados: monstrosDerrotadosDoDocumento(data.monstrosDerrotados) } : {}),
     ...(conquistasDoDocumento(data.conquistas) ? { conquistas: conquistasDoDocumento(data.conquistas) } : {}),
     ...(titulosDoDocumento(data.titulos) ? { titulos: titulosDoDocumento(data.titulos) } : {}),
     ...(ehTitulo(data.tituloId) && titulosDoDocumento(data.titulos)?.includes(data.tituloId) ? { tituloId: data.tituloId } : {}),
@@ -566,6 +567,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.dividaDeDiamantes ? { dividaDeDiamantes: char.dividaDeDiamantes } : {}),
     ...(char.vipOuroDiario ? { vipOuroDiario: char.vipOuroDiario } : {}),
     ...(char.estatisticas && Object.keys(char.estatisticas).length ? { estatisticas: semUndefined(char.estatisticas) } : {}),
+    ...(char.monstrosDerrotados?.length ? { monstrosDerrotados: char.monstrosDerrotados.slice(0, MAXIMO_DE_MONSTROS_DERROTADOS) } : {}),
     ...(char.conquistas && Object.keys(char.conquistas).length ? { conquistas: char.conquistas } : {}),
     ...(char.titulos?.length ? { titulos: char.titulos } : {}),
     ...(char.tituloId ? { tituloId: char.tituloId } : {}),

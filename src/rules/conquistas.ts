@@ -3,6 +3,9 @@ import { nivelDaTrilha, TRILHAS_DE_MAESTRIA, type MaestriasDoJogador } from './m
 import { TIPOS_DE_CARTA } from './almas';
 import { CATEGORIAS_DO_TESTE, DIFICULDADES_DO_TESTE } from './testeEquipe';
 import { TITULO_MAP } from './titulos';
+import type { Elemento } from './elements';
+import { CHEFES_ESPECIAIS_MAP } from './chefesEspeciais';
+import { SUBESPECIES_CACADA } from './cacadaSubespecies';
 
 /**
  * Conquistas (decididas pelo Yuri em 23/10/2026): metas com progresso e resgate. Cada conquista tem 5 degraus; o
@@ -19,9 +22,40 @@ import { TITULO_MAP } from './titulos';
 export const DEGRAUS = 5;
 
 /** Os totais que o jogo passa a contar (ficam em `estatisticas` no personagem). */
-export const CONTADORES = ['vitorias', 'vitoriasContraChefes', 'forjas', 'expedicoes', 'buscas', 'diasDeChefeMundial'] as const;
+export const CONTADORES = [
+  'vitorias',
+  'vitoriasContraChefes',
+  'forjas',
+  'expedicoes',
+  'buscas',
+  'diasDeChefeMundial',
+  // Combate (fase 2): vitórias por elemento do monstro, vitórias sem perder vida e no limite, golpes críticos, dano e status
+  'vitoriasFogo',
+  'vitoriasGelo',
+  'vitoriasRelampago',
+  'vitoriasTerra',
+  'vitoriasVento',
+  'vitoriasSagrado',
+  'vitoriasSombrio',
+  'vitoriasVidaCheia',
+  'vitoriasNoLimite',
+  'golpesCriticos',
+  'danoCausado',
+  'statusAplicados',
+] as const;
 export type Contador = (typeof CONTADORES)[number];
 export type EstatisticasDoJogador = Partial<Record<Contador, number>>;
+
+/** O contador de vitórias de cada elemento do monstro. */
+export const CONTADOR_DO_ELEMENTO: Readonly<Record<Elemento, Contador>> = {
+  fogo: 'vitoriasFogo',
+  gelo: 'vitoriasGelo',
+  relampago: 'vitoriasRelampago',
+  terra: 'vitoriasTerra',
+  vento: 'vitoriasVento',
+  sagrado: 'vitoriasSagrado',
+  sombrio: 'vitoriasSombrio',
+};
 
 /** As 7 categorias, na ordem da mesa: roupa, ovo, bigorna, mapa, banner de gato, escultura do dragão e cabana. */
 export const CATEGORIAS_DE_CONQUISTA = ['personagem', 'monstros', 'forja', 'mundo', 'comunidade', 'provacoes', 'pvp'] as const;
@@ -67,6 +101,7 @@ export interface FichaDeConquistas {
   campeonatos?: readonly string[];
   campeonatosVencidos?: number;
   cacadaChavesVencidas?: readonly number[];
+  monstrosDerrotados?: readonly string[];
 }
 
 export interface Conquista {
@@ -89,6 +124,8 @@ const contador = (c: Contador) => (f: FichaDeConquistas) => f.estatisticas?.[c] 
 
 export const TOTAL_DE_TESTES = CATEGORIAS_DO_TESTE.length * DIFICULDADES_DO_TESTE;
 export const TOTAL_DE_CARTAS = TIPOS_DE_CARTA.length;
+
+const IDS_DE_SUBESPECIES: ReadonlySet<string> = new Set(SUBESPECIES_CACADA.map((x) => x.id));
 
 const semanasPremiadas = (l: readonly { premiada?: boolean }[] | undefined) => (l ?? []).filter((x) => x.premiada).length;
 
@@ -115,6 +152,21 @@ export const CONQUISTAS: readonly Conquista[] = [
   { id: 'vitorias', nome: 'Vitórias', categoria: 'monstros', meta: 'Vença {n} lutas', metas: [10, 100, 500, 2000, 10000], progresso: contador('vitorias'), titulo: 'veterano-de-guerra' },
   { id: 'chefes', nome: 'Vitórias contra chefes', categoria: 'monstros', meta: 'Vença {n} chefes', metas: [5, 25, 100, 300, 1000], progresso: contador('vitoriasContraChefes'), titulo: 'matador-de-chefes' },
   { id: 'cacada', nome: 'Caçada', categoria: 'monstros', meta: 'Abra a estrela {n} da Caçada', metas: [1, 3, 5, 8, 10], progresso: (f) => f.cacadaChavesVencidas?.length ?? 0 },
+  { id: 'bestiario', nome: 'Bestiário', categoria: 'monstros', meta: 'Derrote {n} monstros diferentes', metas: [3, 8, 15, 30, 50], progresso: (f) => f.monstrosDerrotados?.length ?? 0 },
+  { id: 'subespecies', nome: 'Subespécies', categoria: 'monstros', meta: 'Derrote {n} subespécies diferentes', metaDeUm: 'Derrote 1 subespécie', metas: [1, 3, 6, 10, 15], progresso: (f) => (f.monstrosDerrotados ?? []).filter((id) => IDS_DE_SUBESPECIES.has(id)).length },
+  { id: 'chefesEspeciais', nome: 'Chefes especiais', categoria: 'monstros', meta: 'Derrote {n} chefes especiais diferentes', metaDeUm: 'Derrote 1 chefe especial', metas: [1, 3, 6, 10, 15], progresso: (f) => (f.monstrosDerrotados ?? []).filter((id) => id in CHEFES_ESPECIAIS_MAP).length },
+  { id: 'elemento_fogo', nome: 'Caçador de Fogo', categoria: 'monstros', meta: 'Vença {n} lutas contra monstros de Fogo', metas: [10, 50, 150, 400, 1000], progresso: contador('vitoriasFogo') },
+  { id: 'elemento_gelo', nome: 'Caçador de Gelo', categoria: 'monstros', meta: 'Vença {n} lutas contra monstros de Gelo', metas: [10, 50, 150, 400, 1000], progresso: contador('vitoriasGelo') },
+  { id: 'elemento_relampago', nome: 'Caçador de Relâmpago', categoria: 'monstros', meta: 'Vença {n} lutas contra monstros de Relâmpago', metas: [10, 50, 150, 400, 1000], progresso: contador('vitoriasRelampago') },
+  { id: 'elemento_terra', nome: 'Caçador de Terra', categoria: 'monstros', meta: 'Vença {n} lutas contra monstros de Terra', metas: [10, 50, 150, 400, 1000], progresso: contador('vitoriasTerra') },
+  { id: 'elemento_vento', nome: 'Caçador de Vento', categoria: 'monstros', meta: 'Vença {n} lutas contra monstros de Vento', metas: [10, 50, 150, 400, 1000], progresso: contador('vitoriasVento') },
+  { id: 'elemento_sagrado', nome: 'Caçador de Sagrado', categoria: 'monstros', meta: 'Vença {n} lutas contra monstros Sagrados', metas: [10, 50, 150, 400, 1000], progresso: contador('vitoriasSagrado') },
+  { id: 'elemento_sombrio', nome: 'Caçador de Sombrio', categoria: 'monstros', meta: 'Vença {n} lutas contra monstros Sombrios', metas: [10, 50, 150, 400, 1000], progresso: contador('vitoriasSombrio') },
+  { id: 'intocavel', nome: 'Intocável', categoria: 'monstros', meta: 'Vença {n} lutas sem perder vida', metaDeUm: 'Vença 1 luta sem perder vida', metas: [1, 10, 40, 120, 300], progresso: contador('vitoriasVidaCheia') },
+  { id: 'noLimite', nome: 'No limite', categoria: 'monstros', meta: 'Vença {n} lutas com menos de 10% de vida', metaDeUm: 'Vença 1 luta com menos de 10% de vida', metas: [1, 5, 20, 60, 150], progresso: contador('vitoriasNoLimite') },
+  { id: 'criticos', nome: 'Golpe crítico', categoria: 'monstros', meta: 'Acerte {n} golpes críticos', metas: [25, 200, 1000, 5000, 20000], progresso: contador('golpesCriticos') },
+  { id: 'destruidor', nome: 'Destruidor', categoria: 'monstros', meta: 'Cause {n} de dano nas lutas que vencer', metas: [5000, 100000, 1000000, 10000000, 100000000], progresso: contador('danoCausado') },
+  { id: 'statusAplicados', nome: 'Efeitos de status', categoria: 'monstros', meta: 'Aplique {n} efeitos de status nas lutas que vencer', metas: [10, 100, 500, 2000, 8000], progresso: contador('statusAplicados') },
   // Forja
   { id: 'forja', nome: 'Forja', categoria: 'forja', meta: 'Fabrique {n} itens', metaDeUm: 'Fabrique 1 item', metas: [1, 5, 25, 100, 300], progresso: contador('forjas'), titulo: 'mestre-ferreiro' },
   { id: 'arsenal', nome: 'Arsenal', categoria: 'forja', meta: 'Tenha {n} armas', metaDeUm: 'Tenha 1 arma', metas: [1, 5, 15, 30, 60], progresso: (f) => f.armas?.length ?? 0 },
@@ -222,6 +274,16 @@ export function conquistasDoDocumento(bruto: unknown): ConquistasDoJogador | und
     if (CONQUISTA_MAP[id] && n) saida[id] = n;
   }
   return Object.keys(saida).length ? saida : undefined;
+}
+
+/** Quantos monstros derrotados guardamos por personagem (o documento do banco tem tamanho máximo). */
+export const MAXIMO_DE_MONSTROS_DERROTADOS = 1000;
+
+/** Lê do banco a lista de monstros derrotados: só textos, sem repetir e dentro do limite. */
+export function monstrosDerrotadosDoDocumento(bruto: unknown): string[] | undefined {
+  if (!Array.isArray(bruto)) return undefined;
+  const lista = [...new Set(bruto.filter((x): x is string => typeof x === 'string' && x.length > 0 && x.length <= 80))].slice(0, MAXIMO_DE_MONSTROS_DERROTADOS);
+  return lista.length ? lista : undefined;
 }
 
 export function estatisticasDoDocumento(bruto: unknown): EstatisticasDoJogador | undefined {
