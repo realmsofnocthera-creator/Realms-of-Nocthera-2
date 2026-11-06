@@ -1312,6 +1312,7 @@ export async function distribuirPontos(
       atributos: resultado.atributos,
       pontosAlocadosPorNivel: resultado.alocados,
       pontosDisponiveis: character.pontosDisponiveis - resultado.gastos,
+      ...contarNoPatch(character, { pontosDeAtributo: resultado.gastos }),
     });
   });
 }

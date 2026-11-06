@@ -1,4 +1,4 @@
-import type { ResultadoCombate, ResultadoCombatePvp } from './combat';
+import { ATAQUES_BASICOS, type ResultadoCombate, type ResultadoCombatePvp } from './combat';
 import { CONTADOR_DO_ELEMENTO, type Contador } from '@/rules/conquistas';
 import type { Elemento } from '@/rules/elements';
 
@@ -25,12 +25,14 @@ export function detalheDaVitoria(
   let dano = 0;
   let criticos = 0;
   let status = 0;
+  let habilidades = 0;
   let perdeuVida = false;
   for (const turno of resultado.logTurnos) {
     for (const a of turno.ataques) {
       if (a.atacante === nomeDoPersonagem) {
         dano += Math.max(0, a.danoEfetivo ?? 0);
         criticos += a.golpesCriticos ?? 0;
+        if (a.habilidadeAcionada && !ATAQUES_BASICOS.has(a.habilidadeAcionada)) habilidades++;
       } else if (a.defensor === nomeDoPersonagem && (a.danoEfetivo ?? 0) > 0) {
         perdeuVida = true;
       }
@@ -47,6 +49,7 @@ export function detalheDaVitoria(
     danoCausado: dano,
     golpesCriticos: criticos,
     statusAplicados: status,
+    habilidadesUsadas: habilidades,
     ...(!perdeuVida ? { vitoriasVidaCheia: 1 } : {}),
     ...(hpMax > 0 && (hp / hpMax) * 100 < LIMITE_DA_VIDA_NO_LIMITE_PERCENTUAL ? { vitoriasNoLimite: 1 } : {}),
   };
@@ -75,12 +78,20 @@ export function resumoDoPvp(
 ): ResumoDoPvp {
   const nome = combate.finalA.nome;
   let dano = 0;
-  for (const turno of combate.logTurnos) for (const a of turno.ataques) if (a.atacante === nome) dano += Math.max(0, a.danoEfetivo ?? 0);
+  let habilidades = 0;
+  for (const turno of combate.logTurnos) {
+    for (const a of turno.ataques) {
+      if (a.atacante !== nome) continue;
+      dano += Math.max(0, a.danoEfetivo ?? 0);
+      if (a.habilidadeAcionada && !ATAQUES_BASICOS.has(a.habilidadeAcionada)) habilidades++;
+    }
+  }
   const venceu = combate.vencedor === 'a';
   const sequenciaAtual = venceu ? (eu.sequenciaAtual ?? 0) + 1 : 0;
   const ganhos: Partial<Record<Contador, number>> = {
     lutasPvp: 1,
     danoPvp: dano,
+    habilidadesUsadas: habilidades,
     ...(venceu ? { vitoriasPvp: 1 } : {}),
     ...(venceu && adversario.nivel > eu.nivel ? { vitoriasContraNivelMaior: 1 } : {}),
     ...(venceu && combate.finalA.hpMax > 0 && (combate.finalA.hp / combate.finalA.hpMax) * 100 < LIMITE_DA_VIDA_NO_LIMITE_PERCENTUAL ? { viradasPvp: 1 } : {}),

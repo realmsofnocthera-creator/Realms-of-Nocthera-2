@@ -55,6 +55,7 @@ describe('ORDEM 39 — Distribuição de Pontos e Reset de Atributos (Servidor)'
     expect(charDepois.hpMax).toBe(hpMaxAntes + 3 * GAME_CONFIG.HP_POR_PONTO_VIGOR);
     expect(charDepois.pontosDisponiveis).toBe(3);
     expect(charDepois.pontosAlocadosPorNivel?.vigor).toBe(3);
+    expect(charDepois.estatisticas?.pontosDeAtributo).toBe(3);
   });
 
   it('distribuir pontos em Vitalidade aumenta sobreescudoMax em SOBREESCUDO_POR_PONTO_VITALIDADE por ponto e Sorte aumenta a chance de crítico', async () => {

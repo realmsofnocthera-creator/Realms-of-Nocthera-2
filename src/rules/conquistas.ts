@@ -73,6 +73,12 @@ export const CONTADORES = [
   'viradasPvp',
   // o maior número de pontos que o jogador já fez na Arena ranqueada (um valor, não uma soma)
   'maiorPontuacaoRanqueada',
+  // Personagem (fase 6)
+  'pontosDeAtributo',
+  'checkins',
+  'bausDeMissao',
+  'habilidadesUsadas',
+  'poeiraGasta',
 ] as const;
 export type Contador = (typeof CONTADORES)[number];
 export type EstatisticasDoJogador = Partial<Record<Contador, number>>;
@@ -189,6 +195,11 @@ export const CONQUISTAS: readonly Conquista[] = [
   { id: 'colecionaveis', nome: 'Colecionáveis', categoria: 'personagem', meta: 'Ative {n} colecionáveis', metaDeUm: 'Ative 1 colecionável', metas: [1, 10, 30, 60, 120], progresso: (f) => Object.values(f.colecionaveis ?? {}).filter(estaAtivo).length, titulo: 'colecionador-supremo' },
   { id: 'alma', nome: 'Alma', categoria: 'personagem', meta: 'Descubra {n} cartas da Alma', metas: [5, 15, 30, 45, TOTAL_DE_CARTAS], progresso: (f) => f.cartasDescobertas?.length ?? 0, titulo: 'guardiao-de-almas' },
   { id: 'titulos', nome: 'Títulos', categoria: 'personagem', meta: 'Tenha {n} títulos', metaDeUm: 'Tenha 1 título', metas: [1, 3, 6, 10, 15], progresso: (f) => f.titulos?.length ?? 0 },
+  { id: 'atributos', nome: 'Atributos', categoria: 'personagem', meta: 'Distribua {n} pontos de atributo', metaDeUm: 'Distribua 1 ponto de atributo', metas: [10, 50, 150, 400, 1000], progresso: contador('pontosDeAtributo') },
+  { id: 'checkin', nome: 'Check-in', categoria: 'personagem', meta: 'Faça {n} check-ins diários', metaDeUm: 'Faça 1 check-in diário', metas: [3, 7, 15, 30, 60], progresso: contador('checkins') },
+  { id: 'baus-de-missao', nome: 'Baús de Missão', categoria: 'personagem', meta: 'Abra {n} degraus de baús de missão', metaDeUm: 'Abra 1 degrau de baú de missão', metas: [3, 15, 50, 120, 300], progresso: contador('bausDeMissao') },
+  { id: 'habilidades-usadas', nome: 'Habilidades', categoria: 'personagem', meta: 'Use {n} habilidades em combate', metaDeUm: 'Use 1 habilidade em combate', metas: [50, 300, 1500, 6000, 20000], progresso: contador('habilidadesUsadas') },
+  { id: 'poeira-gasta', nome: 'Poeira de Alma', categoria: 'personagem', meta: 'Gaste {n} de Poeira de Alma', metas: [10, 100, 500, 2000, 8000], progresso: contador('poeiraGasta') },
   // Monstros
   { id: 'vitorias', nome: 'Vitórias', categoria: 'monstros', meta: 'Vença {n} lutas', metas: [10, 100, 500, 2000, 10000], progresso: contador('vitorias'), titulo: 'veterano-de-guerra' },
   { id: 'chefes', nome: 'Vitórias contra chefes', categoria: 'monstros', meta: 'Vença {n} chefes', metas: [5, 25, 100, 300, 1000], progresso: contador('vitoriasContraChefes'), titulo: 'matador-de-chefes' },

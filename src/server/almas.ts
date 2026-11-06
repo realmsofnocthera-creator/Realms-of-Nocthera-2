@@ -3,7 +3,7 @@ import { desequiparCarta, despertarCarta, destruirCartas, equiparCarta, guardarC
 import { criarCarta, NIVEL_DA_ALMA, TIPO_DE_CARTA_MAP, tiposDaRaridadeDeCarta, type CartaItem, type CategoriaDeCarta } from '@/rules/almas';
 import { espacosExtrasDoVip } from '@/rules/vip';
 import type { EmblemaRaridade } from '@/rules/emblemas';
-import { carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
+import { carregarPersonagem, contarNoPatch, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { gerarSementeCombate } from '@/server/combateSemente';
 import { repositorio } from '@/server/persistencia';
 
@@ -98,7 +98,7 @@ export async function agirNaAlma(uid: string, acao: unknown, pedido: { id?: unkn
         const r = exigir(despertarCarta(itens, equipadas, eu.poeiraDeAlma ?? 0, pedido.id));
         const ainda = new Set(r.itens.map((i) => i.id));
         return {
-          character: salvarPersonagem(ctx, eu, { cartasItens: r.itens, poeiraDeAlma: r.poeira, cartasEquipadas: equipadas.filter((id) => ainda.has(id)) }),
+          character: salvarPersonagem(ctx, eu, { cartasItens: r.itens, poeiraDeAlma: r.poeira, cartasEquipadas: equipadas.filter((id) => ainda.has(id)), ...contarNoPatch(eu, { poeiraGasta: Math.max(0, (eu.poeiraDeAlma ?? 0) - r.poeira) }) }),
           mensagem: `Carta despertada: despertar ${['', 'I', 'II', 'III'][r.nivel]}.`,
         };
       }
