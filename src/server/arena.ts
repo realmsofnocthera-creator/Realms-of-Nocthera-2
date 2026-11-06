@@ -412,7 +412,13 @@ export async function lutar(uid: string, alvoBruto: unknown, ip: string, agora =
     const pvp = mesmaRede ? null : resumoDoPvp(combate, { nivel: eu.nivel, sequenciaAtual: eu.estatisticas?.sequenciaAtualPvp, maiorSequencia: eu.estatisticas?.maiorSequenciaPvp }, { nivel: ele.nivel, classeId: ele.classeId });
     const doPvp = pvp
       ? {
-          estatisticas: { ...contarNoPatch(eu, pvp.ganhos).estatisticas, sequenciaAtualPvp: pvp.sequenciaAtual, maiorSequenciaPvp: pvp.maiorSequencia },
+          estatisticas: {
+            ...contarNoPatch(eu, pvp.ganhos).estatisticas,
+            sequenciaAtualPvp: pvp.sequenciaAtual,
+            maiorSequenciaPvp: pvp.maiorSequencia,
+            // os degraus da Ranqueada são os pontos dos ranques (Veterano 250 … Eterno 2.700): vale o maior já feito
+            ...(cfg.modo === 'ranqueada' ? { maiorPontuacaoRanqueada: Math.max(eu.estatisticas?.maiorPontuacaoRanqueada ?? 0, novos.atacante) } : {}),
+          },
           ...(pvp.vocacaoDerrotada && !(eu.vocacoesDerrotadasPvp ?? []).includes(pvp.vocacaoDerrotada) ? { vocacoesDerrotadasPvp: [...(eu.vocacoesDerrotadasPvp ?? []), pvp.vocacaoDerrotada] } : {}),
         }
       : {};

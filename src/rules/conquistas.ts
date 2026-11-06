@@ -71,6 +71,8 @@ export const CONTADORES = [
   'vitoriasContraNivelMaior',
   'danoPvp',
   'viradasPvp',
+  // o maior número de pontos que o jogador já fez na Arena ranqueada (um valor, não uma soma)
+  'maiorPontuacaoRanqueada',
 ] as const;
 export type Contador = (typeof CONTADORES)[number];
 export type EstatisticasDoJogador = Partial<Record<Contador, number>>;
@@ -272,6 +274,7 @@ export const CONQUISTAS: readonly Conquista[] = [
   { id: 'todasAsVocacoes', nome: 'Todas as vocações', categoria: 'pvp', meta: 'Vença jogadores de {n} vocações diferentes', metaDeUm: 'Vença um jogador de 1 vocação', metas: [1, 3, 4, 5, 6], progresso: (f) => f.vocacoesDerrotadasPvp?.length ?? 0 },
   { id: 'danoPvp', nome: 'Dano em PvP', categoria: 'pvp', meta: 'Cause {n} de dano no PvP', metas: [5000, 100000, 1000000, 10000000, 100000000], progresso: contador('danoPvp') },
   { id: 'virada', nome: 'Virada', categoria: 'pvp', meta: 'Vença {n} lutas de PvP com menos de 10% de vida', metaDeUm: 'Vença 1 luta de PvP com menos de 10% de vida', metas: [1, 5, 20, 60, 150], progresso: contador('viradasPvp') },
+  { id: 'ranqueadaPontos', nome: 'Ranqueada', categoria: 'pvp', meta: 'Chegue a {n} pontos na Arena ranqueada', metas: [250, 700, 1350, 2200, 2700], progresso: contador('maiorPontuacaoRanqueada') },
   { id: 'arenaSemanas', nome: 'Prêmio da Arena', categoria: 'pvp', meta: 'Receba o prêmio de {n} semanas da Arena', metaDeUm: 'Receba o prêmio de 1 semana da Arena', metas: [1, 3, 8, 20, 50], progresso: (f) => semanasPremiadas(f.arena) },
   { id: 'ranqueadaSemanas', nome: 'Prêmio da Ranqueada', categoria: 'pvp', meta: 'Receba o prêmio de {n} semanas da Ranqueada', metaDeUm: 'Receba o prêmio de 1 semana da Ranqueada', metas: [1, 3, 8, 20, 50], progresso: (f) => semanasPremiadas(f.ranqueada) },
   { id: 'campeonatos', nome: 'Campeonatos', categoria: 'pvp', meta: 'Participe de {n} campeonatos', metaDeUm: 'Participe de 1 campeonato', metas: [1, 2, 4, 8, 16], progresso: (f) => f.campeonatos?.length ?? 0 },

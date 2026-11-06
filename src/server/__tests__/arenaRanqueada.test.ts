@@ -63,6 +63,8 @@ describe('Arena ranqueada (7.5): servidor', () => {
     expect(e).toMatchObject({ modo: 'ranqueada', pontos: 0, lutasRestantes: 5, podeComprarLuta: false });
     const alvo = e.adversarios[0];
     const r = await lutar('u1', alvo.uid, IP, AGORA, 'ranqueada');
+    // Conquistas: o maior número de pontos já feito na Ranqueada
+    expect((await getCharacterByUid('u1'))!.estatisticas!.maiorPontuacaoRanqueada).toBe(Math.max(0, r.pontos));
     expect(r.pontos).toBe(pontosRanqueadosDepois(0, r.venceu));
     expect((await estadoDaArena(alvo.uid, AGORA, 'ranqueada')).pontos).toBe(0);
     // a Arena normal não mudou
