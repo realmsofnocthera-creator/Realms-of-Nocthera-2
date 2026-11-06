@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  CATEGORIAS_DE_CONQUISTA,
   CONQUISTAS,
   conquistasDoDocumento,
+  RARIDADE_DO_DEGRAU,
   degrausBatidos,
   degrausProntos,
   estatisticasDoDocumento,
@@ -23,8 +25,13 @@ import { comTitulos, TITULO_MAP, TITULOS, titulosDoDocumento } from '@/rules/tit
 const ficha = (extra: Partial<FichaDeConquistas> = {}): FichaDeConquistas => ({ nivel: 1, ...extra });
 
 describe('Conquistas: regras', () => {
-  it('14 conquistas em 3 categorias, 5 degraus com metas crescentes; os títulos existem', () => {
-    expect(CONQUISTAS).toHaveLength(14);
+  it('32 conquistas (fase 1 da lista nova) em 7 categorias, 5 degraus com metas crescentes; os títulos existem', () => {
+    expect(CONQUISTAS).toHaveLength(32);
+    expect(CATEGORIAS_DE_CONQUISTA).toHaveLength(7);
+    for (const c of CONQUISTAS) expect(CATEGORIAS_DE_CONQUISTA, c.id).toContain(c.categoria);
+    // Comunidade ainda não tem conquista pronta (depende de contadores novos)
+    expect(CONQUISTAS.filter((c) => c.categoria === 'comunidade')).toHaveLength(0);
+    expect(RARIDADE_DO_DEGRAU).toEqual(['bronze', 'bronze', 'prata', 'ouro', 'diamante']);
     for (const c of CONQUISTAS) {
       expect(c.metas, c.id).toHaveLength(5);
       for (let i = 1; i < 5; i++) expect(c.metas[i], c.id).toBeGreaterThan(c.metas[i - 1]);
@@ -37,28 +44,28 @@ describe('Conquistas: regras', () => {
     expect(TITULOS).toHaveLength(27);
   });
 
-  it('recompensa por degrau: 3/5/10/20/40 Diamantes e selos que crescem; Expedição e Buscas trocam parte dos selos por Avanços', () => {
+  it('recompensa por degrau: 1/1/2/3/5 Diamantes e selos só nos dois últimos; Expedição e Buscas dão Avanços', () => {
     const v = CONQUISTA_MAP.vitorias;
     expect([0, 1, 2, 3, 4].map((d) => recompensaDoDegrau(v, d))).toEqual([
-      { diamantes: 3, selos: {}, avancosDeExpedicao: 0 },
-      { diamantes: 5, selos: { desgastado: 10 }, avancosDeExpedicao: 0 },
-      { diamantes: 10, selos: { encantado: 5 }, avancosDeExpedicao: 0 },
-      { diamantes: 20, selos: { eternidade: 3 }, avancosDeExpedicao: 0 },
-      { diamantes: 40, selos: { origem: 1 }, avancosDeExpedicao: 0, titulo: 'veterano-de-guerra' },
+      { diamantes: 1, selos: {}, avancosDeExpedicao: 0 },
+      { diamantes: 1, selos: {}, avancosDeExpedicao: 0 },
+      { diamantes: 2, selos: {}, avancosDeExpedicao: 0 },
+      { diamantes: 3, selos: { desgastado: 2 }, avancosDeExpedicao: 0 },
+      { diamantes: 5, selos: { encantado: 1 }, avancosDeExpedicao: 0, titulo: 'veterano-de-guerra' },
     ]);
     const e = CONQUISTA_MAP.expedicao;
     expect([0, 1, 2, 3, 4].map((d) => [recompensaDoDegrau(e, d).selos, recompensaDoDegrau(e, d).avancosDeExpedicao])).toEqual([
       [{}, 1],
-      [{}, 2],
-      [{}, 3],
-      [{ eternidade: 3 }, 5],
-      [{ origem: 1 }, 10],
+      [{}, 1],
+      [{}, 1],
+      [{ desgastado: 2 }, 2],
+      [{ encantado: 1 }, 3],
     ]);
     // Nível não dá título
     expect(recompensaDoDegrau(CONQUISTA_MAP.nivel, 4).titulo).toBeUndefined();
-    // tudo junto: 78 Diamantes por conquista, 1.092 no total
+    // tudo junto: 12 Diamantes por conquista (eram 78), 384 no total
     const total = somarRecompensas(CONQUISTAS.flatMap((c) => [0, 1, 2, 3, 4].map((d) => recompensaDoDegrau(c, d))));
-    expect(total.diamantes).toBe(1092);
+    expect(total.diamantes).toBe(32 * 12);
     expect(total.titulos).toHaveLength(12);
   });
 
@@ -73,23 +80,46 @@ describe('Conquistas: regras', () => {
       maestrias: { 'arma:katana': { xp: xpAteONivel(27) }, forja: { xp: xpAteONivel(12) } },
       cartasDescobertas: ['a', 'b', 'c', 'd', 'e', 'f'],
       estatisticas: { vitorias: 150, vitoriasContraChefes: 4, forjas: 5, expedicoes: 9, buscas: 10, diasDeChefeMundial: 1 },
+      reforcoHabilidade: 9,
+      ascensaoHabilidade: 2,
+      subclasseTiers: { a: 1, b: 0, c: 4 },
+      emblemasItens: [1, 2],
+      titulos: ['x'],
+      armas: [1],
+      armaduras: [1, 2],
+      inventario: { a: 1, b: 0, c: 2 },
+      campanha: { baus: ['1', '2'], cenas: ['a'], missoes: { m1: { estado: 'concluida' }, m2: { estado: 'ativa' } } },
+      selosDoAbismo: 3,
+      arena: [{ premiada: true }, {}],
+      ranqueada: [{ premiada: true }, { premiada: true }],
+      campeonatos: ['a', 'b', 'c'],
+      campeonatosVencidos: 1,
+      cacadaChavesVencidas: [1, 2, 3],
     });
     const p = Object.fromEntries(CONQUISTAS.map((c) => [c.id, c.progresso(f)]));
-    expect(p).toEqual({ vitorias: 150, chefes: 4, nivel: 16, torre: 120, guerreiro: 3, batalhaSangrenta: 1, testeEquipe: 2, chefeMundial: 1, forja: 5, expedicao: 9, colecionaveis: 1, buscas: 10, maestria: 27, alma: 6 });
+    expect(p).toEqual({
+      nivel: 16, maestria: 27, reforco: 9, ascensao: 2, subclasses: 2, emblemas: 2, colecionaveis: 1, alma: 6, titulos: 1,
+      vitorias: 150, chefes: 4, cacada: 3,
+      forja: 5, arsenal: 1, guardaRoupa: 2, materiais: 2,
+      expedicao: 9, buscas: 10, baus: 2, cenas: 1, missoesCampanha: 1,
+      torre: 120, guerreiro: 3, batalhaSangrenta: 1, testeEquipe: 2, chefeMundial: 1, provacoesDiferentes: 5, abismo: 3,
+      arenaSemanas: 1, ranqueadaSemanas: 2, campeonatos: 3, campeonatosVencidos: 1,
+    });
     expect(degrausBatidos(CONQUISTA_MAP.vitorias, 150)).toBe(2);
     expect(degrausBatidos(CONQUISTA_MAP.torre, 300)).toBe(5);
-    // vitórias 2, nível 3, torre 3, guerreiro 2, batalha 1, teste 1, chefe mundial 1, forja 2, expedição 1, colecionáveis 1, buscas 1, maestria 2, alma 1
-    expect(degrausProntos(f, undefined)).toBe(21);
-    expect(degrausProntos(f, { vitorias: 2, nivel: 1 })).toBe(18);
+    // soma dos degraus batidos de todas as conquistas: 46 (vitórias 2, nível 3, torre 3, Provado em tudo 5…)
+    expect(degrausProntos(f, undefined)).toBe(46);
+    expect(degrausProntos(f, { vitorias: 2, nivel: 1 })).toBe(43);
     expect(degrausProntos(ficha(), undefined)).toBe(0);
   });
 
   it('vitrine do perfil: as 4 mais avançadas', () => {
+    // empate no 1: vale a ordem da lista (Alma vem antes de Vitórias)
     expect(conquistasEmDestaque({ nivel: 3, torre: 5, vitorias: 1, forja: 2, alma: 1 })).toEqual([
       { nome: 'Torre Celestial', degraus: 5 },
       { nome: 'Nível', degraus: 3 },
       { nome: 'Forja', degraus: 2 },
-      { nome: 'Vitórias', degraus: 1 },
+      { nome: 'Alma', degraus: 1 },
     ]);
     expect(conquistasEmDestaque(undefined)).toEqual([]);
   });
@@ -97,10 +127,10 @@ describe('Conquistas: regras', () => {
   it('textos', () => {
     expect(textoDaMeta(CONQUISTA_MAP.vitorias, 4)).toBe('Vença 10.000 lutas');
     // metas de 1 no singular
-    for (const c of CONQUISTAS) if (c.metas[0] === 1) expect(textoDaMeta(c, 0), c.id).not.toMatch(/ 1 \S+s\b/);
+    for (const c of CONQUISTAS) if (c.metas[0] === 1) expect(textoDaMeta(c, 0), c.id).not.toMatch(/ 1 \p{L}+s(?!\p{L})/u);
     expect(textoDaMeta(CONQUISTA_MAP.chefeMundial, 0)).toBe('Lute em 1 dia');
     expect(textoDaMeta(CONQUISTA_MAP.chefeMundial, 1)).toBe('Lute em 5 dias');
-    expect(textoDaRecompensaDeConquista(recompensaDoDegrau(CONQUISTA_MAP.torre, 4))).toEqual(['40 Diamantes', '1× Selo da Origem', 'Título: Conquistador da Torre']);
+    expect(textoDaRecompensaDeConquista(recompensaDoDegrau(CONQUISTA_MAP.torre, 4))).toEqual(['5 Diamantes', '1× Selo Encantado', 'Título: Conquistador da Torre']);
   });
 
   it('leituras tolerantes do banco e somas', () => {

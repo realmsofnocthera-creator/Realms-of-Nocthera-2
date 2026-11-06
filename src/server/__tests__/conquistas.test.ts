@@ -61,17 +61,17 @@ describe('Conquistas: servidor', () => {
     await updateCharacter('u1', { estatisticas: { expedicoes: 10 } });
     // Nível 18: 3 degraus (5, 10 e 15)
     const r = await agirNasConquistas('u1', 'resgatar', { id: 'nivel' });
-    expect(r.mensagem).toMatch(/^3 degraus resgatados: 18 Diamantes, 15 selos de busca/);
+    expect(r.mensagem).toMatch(/^3 degraus resgatados: 4 Diamantes\./);
     let c = (await getCharacterByUid('u1'))!;
-    expect([c.diamantes, c.selosDeBusca, c.conquistas]).toEqual([18, { desgastado: 110, encantado: 5 }, { nivel: 3 }]);
-    expect(getTransactionsByUid('u1').some((t) => t.moeda === 'diamantes' && t.quantidade === 18 && t.motivo === 'Conquista: Nível')).toBe(true);
+    expect([c.diamantes, c.selosDeBusca, c.conquistas]).toEqual([4, { desgastado: 100 }, { nivel: 3 }]);
+    expect(getTransactionsByUid('u1').some((t) => t.moeda === 'diamantes' && t.quantidade === 4 && t.motivo === 'Conquista: Nível')).toBe(true);
     expect((await erro(agirNasConquistas('u1', 'resgatar', { id: 'nivel' })))?.message).toMatch(/Ainda não há degrau/);
     expect(await erro(agirNasConquistas('u1', 'resgatar', { id: 'xyz' }))).toBeInstanceOf(ErroDeConquista);
-    // Expedição: 2 degraus, com Avanços no lugar dos selos
+    // Tudo: Expedição (2 degraus, 1 + 1 Diamante e 1 + 1 Avanço) e Materiais (1 degrau, 1 Diamante: o personagem tem 4 tipos de material)
     const tudo = await agirNasConquistas('u1', 'resgatarTudo', {});
     c = (await getCharacterByUid('u1'))!;
-    expect(c.avancosDeExpedicao).toBe(3);
-    expect(c.diamantes).toBe(18 + 3 + 5);
+    expect(c.avancosDeExpedicao).toBe(2);
+    expect(c.diamantes).toBe(4 + 1 + 1 + 1);
     expect(tudo.estado.prontos).toBe(0);
     expect((await erro(agirNasConquistas('u1', 'resgatarTudo', {})))?.message).toMatch(/Não há conquistas/);
   });
@@ -80,7 +80,7 @@ describe('Conquistas: servidor', () => {
     await updateCharacter('u1', { torreAndar: 300 });
     expect((await erro(agirNasConquistas('u1', 'titulo', { titulo: 'conquistador-da-torre' })))?.message).toMatch(/ainda não tem/);
     const r = await agirNasConquistas('u1', 'resgatar', { id: 'torre' });
-    expect(r.mensagem).toMatch(/5 degraus resgatados: 78 Diamantes, .*o título Conquistador da Torre/);
+    expect(r.mensagem).toMatch(/5 degraus resgatados: 12 Diamantes, 3 selos de busca.*o título Conquistador da Torre/);
     expect(r.estado.titulos.map((t) => t.id)).toEqual(['conquistador-da-torre']);
     expect(r.estado.conquistas.find((c) => c.id === 'torre')).toMatchObject({ resgatados: 5, proximaMeta: null, recompensa: null });
     const escolhido = await agirNasConquistas('u1', 'titulo', { titulo: 'conquistador-da-torre' });
@@ -106,7 +106,8 @@ describe('Conquistas: servidor', () => {
   it('rotas', async () => {
     const g = await conquistasGet(req('u1'));
     expect(g.status).toBe(200);
-    expect((await g.json()).prontos).toBe(3);
+    // Nível (3 degraus) e Materiais (1 degrau)
+    expect((await g.json()).prontos).toBe(4);
     const p = await conquistasPost(req('u1', { acao: 'resgatar', id: 'nivel' }));
     expect(p.status).toBe(200);
     const ruim = await conquistasPost(req('u1', { acao: 'voar' }));
