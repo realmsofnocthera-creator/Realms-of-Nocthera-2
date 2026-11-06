@@ -3,7 +3,9 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { BuscaScreen } from '@/components/colecionaveis/BuscaScreen';
 import { ColecaoScreen, contagemDoQuadro } from '@/components/colecao/ColecaoScreen';
+import { arteDaCarta } from '@/assets/cartasDaAlma';
 import { arteDoColecionavel } from '@/assets/colecionaveis';
+import { TIPOS_DE_CARTA } from '@/rules/almas';
 import { COLECIONAVEIS } from '@/rules/colecionaveis';
 import type { CharacterDocument } from '@/server/characterService';
 
@@ -63,5 +65,13 @@ describe('Telas do Buscar e da Coleção', () => {
     for (const c of sonatas) expect(arteDoColecionavel(c.id), c.id).toBeTruthy();
     expect(arteDoColecionavel('SO-C01')).toBe(arteDoColecionavel('SO-C15'));
     expect(new Set(['SO-C01', 'SO-MR01', 'SO-L01', 'SO-M01'].map(arteDoColecionavel)).size).toBe(4);
+  });
+
+  it('artes das cartas da Alma: as 45 não míticas têm arte, todas diferentes; as míticas ainda não', () => {
+    const comuns = TIPOS_DE_CARTA.filter((t) => t.raridade !== 'mitico');
+    expect(comuns).toHaveLength(45);
+    for (const t of comuns) expect(arteDaCarta(t.id), t.id).toBeTruthy();
+    expect(new Set(comuns.map((t) => arteDaCarta(t.id))).size).toBe(45);
+    for (const t of TIPOS_DE_CARTA.filter((x) => x.raridade === 'mitico')) expect(arteDaCarta(t.id), t.id).toBeUndefined();
   });
 });
