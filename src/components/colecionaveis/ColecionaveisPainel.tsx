@@ -49,11 +49,11 @@ function custoDeVariosNiveis(c: Colecionavel, nivel: number, niveis: number) {
 }
 
 /** A aba Colecionáveis: os 120 colecionáveis, os ativados, os fragmentos e o reforço e as estrelas. */
-export function ColecionaveisPainel({ tokenFresco }: { tokenFresco: Token }) {
+export function ColecionaveisPainel({ tokenFresco, categoriaInicial = 'reliquias' }: { tokenFresco: Token; categoriaInicial?: CategoriaDeColecionavel }) {
   const { colors } = NOCTHERA_THEME;
   const [estado, setEstado] = useState<EstadoDosColecionaveis | null>(null);
   const [erroAoCarregar, setErroAoCarregar] = useState(false);
-  const [categoria, setCategoria] = useState<CategoriaDeColecionavel>('reliquias');
+  const [categoria, setCategoria] = useState<CategoriaDeColecionavel>(categoriaInicial);
   const [aberto, setAberto] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
