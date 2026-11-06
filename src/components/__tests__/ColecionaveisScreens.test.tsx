@@ -46,13 +46,22 @@ describe('Telas do Buscar e da Coleção', () => {
     expect(new Set(memorias.map((c) => arteDoColecionavel(c.id))).size).toBe(30);
   });
 
+  it('artes dos Ecos e Entidades: as 30 têm arte própria e cada uma é diferente', () => {
+    const ecos = COLECIONAVEIS.filter((c) => c.categoria === 'ecos');
+    expect(ecos).toHaveLength(30);
+    for (const c of ecos) expect(arteDoColecionavel(c.id), c.id).toBeTruthy();
+    expect(new Set(ecos.map((c) => arteDoColecionavel(c.id))).size).toBe(30);
+  });
+
+  it('todos os 120 colecionáveis têm arte', () => {
+    for (const c of COLECIONAVEIS) expect(arteDoColecionavel(c.id), c.id).toBeTruthy();
+  });
+
   it('artes das Sonatas: uma por raridade, igual para todas da mesma raridade', () => {
     const sonatas = COLECIONAVEIS.filter((c) => c.categoria === 'sonatas');
     expect(sonatas).toHaveLength(30);
     for (const c of sonatas) expect(arteDoColecionavel(c.id), c.id).toBeTruthy();
     expect(arteDoColecionavel('SO-C01')).toBe(arteDoColecionavel('SO-C15'));
     expect(new Set(['SO-C01', 'SO-MR01', 'SO-L01', 'SO-M01'].map(arteDoColecionavel)).size).toBe(4);
-    // as outras categorias continuam sem arte até o Yuri mandar
-    expect(arteDoColecionavel('EE-L01')).toBeUndefined();
   });
 });
