@@ -1,0 +1,17 @@
+# Publicação automática no Cloud Run (gatilho do Cloud Build: a cada push na branch main).
+# Faz o mesmo que "gcloud run deploy --source .": o Google compila o código (buildpacks do Node) e publica
+# a revisão nova do serviço. As variáveis de ambiente e as demais configurações do serviço são mantidas.
+steps:
+  - id: publicar
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - realms-of-nocthera
+      - --source=.
+      - --region=us-central1
+      - --quiet
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 1800s
