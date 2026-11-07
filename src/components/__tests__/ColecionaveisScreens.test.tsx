@@ -3,7 +3,8 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { BuscaScreen } from '@/components/colecionaveis/BuscaScreen';
 import { ColecaoScreen, contagemDoQuadro } from '@/components/colecao/ColecaoScreen';
-import { arteDaCarta } from '@/assets/cartasDaAlma';
+import { arteDaCarta, personagemDaCarta } from '@/assets/cartasDaAlma';
+import { ArteDaCarta, VisualizadorDaCarta } from '@/components/alma/ArteDaCarta';
 import { arteDoColecionavel } from '@/assets/colecionaveis';
 import { TIPOS_DE_CARTA } from '@/rules/almas';
 import { COLECIONAVEIS } from '@/rules/colecionaveis';
@@ -67,11 +68,41 @@ describe('Telas do Buscar e da Coleção', () => {
     expect(new Set(['SO-C01', 'SO-MR01', 'SO-L01', 'SO-M01'].map(arteDoColecionavel)).size).toBe(4);
   });
 
-  it('artes das cartas da Alma: as 45 não míticas têm arte, todas diferentes; as míticas ainda não', () => {
-    const comuns = TIPOS_DE_CARTA.filter((t) => t.raridade !== 'mitico');
-    expect(comuns).toHaveLength(45);
-    for (const t of comuns) expect(arteDaCarta(t.id), t.id).toBeTruthy();
-    expect(new Set(comuns.map((t) => arteDaCarta(t.id))).size).toBe(45);
-    for (const t of TIPOS_DE_CARTA.filter((x) => x.raridade === 'mitico')) expect(arteDaCarta(t.id), t.id).toBeUndefined();
+  it('artes das cartas da Alma: as 54 têm arte; as 45 não míticas são diferentes e as 9 míticas têm fundo e personagem', () => {
+    expect(TIPOS_DE_CARTA).toHaveLength(54);
+    for (const t of TIPOS_DE_CARTA) expect(arteDaCarta(t.id), t.id).toBeTruthy();
+    const normais = TIPOS_DE_CARTA.filter((t) => t.raridade !== 'mitico');
+    expect(new Set(normais.map((t) => arteDaCarta(t.id))).size).toBe(45);
+    for (const t of normais) expect(personagemDaCarta(t.id), t.id).toBeUndefined();
+    const miticas = TIPOS_DE_CARTA.filter((t) => t.raridade === 'mitico');
+    expect(miticas).toHaveLength(9);
+    for (const t of miticas) expect(personagemDaCarta(t.id), t.id).toBeTruthy();
+    expect(new Set(miticas.map((t) => arteDaCarta(t.id))).size).toBe(9);
+    expect(new Set(miticas.map((t) => personagemDaCarta(t.id))).size).toBe(9);
+  });
+
+  it('carta mítica: o personagem fica na frente do fundo e só anima quando pedido; a comum é uma imagem só', () => {
+    const parada = renderToStaticMarkup(<ArteDaCarta tipoId="alma-mitico-1" className="w-10" />);
+    expect(parada).toContain('carta-mitica__fundo');
+    expect(parada).toContain('carta-mitica__personagem');
+    expect(parada.indexOf('carta-mitica__fundo')).toBeLessThan(parada.indexOf('carta-mitica__personagem'));
+    expect(parada).not.toContain('carta-mitica--animada');
+    expect(parada).not.toContain('carta-mitica__particula');
+    const animada = renderToStaticMarkup(<ArteDaCarta tipoId="alma-mitico-1" animada explosao={2} />);
+    expect(animada).toContain('carta-mitica--animada');
+    expect(animada).toContain('carta-mitica__particula');
+    expect(animada).toContain('carta-mitica__onda');
+    expect(renderToStaticMarkup(<ArteDaCarta tipoId="alma-comum-1" />)).not.toContain('carta-mitica');
+    expect(renderToStaticMarkup(<ArteDaCarta tipoId="nao-existe" />)).toBe('');
+  });
+
+  it('visualizador: mostra o nome, a raridade e o efeito; a mítica abre animada', () => {
+    const mitica = renderToStaticMarkup(<VisualizadorDaCarta tipoId="mente-mitico-1" aoFechar={() => {}} />);
+    expect(mitica).toContain('Domínio do Instante');
+    expect(mitica).toContain('Mítico');
+    expect(mitica).toContain('carta-mitica--animada');
+    const comum = renderToStaticMarkup(<VisualizadorDaCarta tipoId="corpo-comum-1" aoFechar={() => {}} />);
+    expect(comum).toContain('Pulso Vital');
+    expect(comum).not.toContain('carta-mitica');
   });
 });

@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { arteDaCarta } from '@/assets/cartasDaAlma';
+import React, { useState } from 'react';
+import { MiniaturaDaCarta, VisualizadorDaCarta } from './ArteDaCarta';
 import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
 import { NOME_DA_CATEGORIA, TIPO_DE_CARTA_MAP, textoDoEfeito, valorFixoDaCarta, type CartaItem } from '@/rules/almas';
 
@@ -11,13 +11,10 @@ const ROMANOS = ['', 'I', 'II', 'III'];
 export function CartaDaAlma({ carta, children, destaque = false }: { carta: CartaItem; children?: React.ReactNode; destaque?: boolean }) {
   const tipo = TIPO_DE_CARTA_MAP[carta.tipo];
   const raridade = EMBLEMA_RARIDADE_MAP[tipo.raridade];
-  const arte = arteDaCarta(carta.tipo);
+  const [aberta, setAberta] = useState(false);
   return (
     <div className="rounded-sm border-2 px-2 py-1.5 flex gap-2" style={{ borderColor: raridade.cor, backgroundColor: destaque ? '#2A2214' : 'rgba(13,13,13,0.7)' }}>
-      {arte && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={arte} alt="" aria-hidden="true" className="w-11 h-[61px] shrink-0 object-contain self-start" style={{ imageRendering: 'pixelated' }} />
-      )}
+      <MiniaturaDaCarta tipoId={carta.tipo} nome={tipo.nome} className="w-11 h-[61px] object-contain" aoAbrir={() => setAberta(true)} />
       <div className="min-w-0 flex-1 flex flex-col gap-0.5">
         <span className="flex items-center justify-between gap-2">
           <span className="font-cinzel font-bold text-[13px] leading-tight" style={{ color: raridade.cor }}>{tipo.nome}</span>
@@ -31,6 +28,7 @@ export function CartaDaAlma({ carta, children, destaque = false }: { carta: Cart
         ))}
         {children}
       </div>
+      {aberta && <VisualizadorDaCarta tipoId={carta.tipo} carta={carta} aoFechar={() => setAberta(false)} />}
     </div>
   );
 }
