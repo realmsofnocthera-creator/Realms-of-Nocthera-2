@@ -10,6 +10,7 @@ import { formatarCompacto } from '@/rules/numerosCompactos';
 import type { CategoriaArma } from '@/rules/armas';
 import { COR_RARIDADE_ARMA, type DetalheMinhaArmaTela, type EstadoNoForja, type LinhaReceitaTela } from '@/lib/forjaTela';
 import { IconeCategoria } from './IconeDeCategoria';
+import { IconeDoMaterial } from './IconeDoMaterial';
 import { AZUL_CLARO, BotaoDoKit, BotaoRedondo, DivisorDaForja, PainelDaForja, PlacaDeRaridade, SlotDeArma, TEXTO_PIXEL } from './KitDaForja';
 
 const VERDE = '#7BE08C';
@@ -70,12 +71,12 @@ const iconeDoAtributo = (src: string) => (
   <img src={src} alt="" aria-hidden="true" className="w-6 h-6 object-contain" style={{ imageRendering: 'pixelated' }} />
 );
 
-/** O material da receita: o slot com a inicial (a arte dos materiais entra depois), o nome e `tem/precisa`. */
+/** O material da receita: o slot com a inicial (os materiais de monstro entram depois), o nome e `tem/precisa`. */
 function LinhaDeMaterial({ m }: { m: LinhaReceitaTela }) {
   return (
     <div className="flex items-center gap-2 px-1.5 py-1 bg-[#080C16]/85 border border-[#243B55]">
       <span className="relative w-7 h-7 shrink-0 flex items-center justify-center border border-[#3A5B7A] bg-[#0B0F1A]" aria-hidden="true">
-        <span className="font-cinzel font-extrabold text-[13px] leading-none" style={{ color: m.cor }}>{m.nome.replace(/^Diverso\s+/, '').charAt(0).toUpperCase()}</span>
+        <IconeDoMaterial id={m.id} nome={m.nome} cor={m.cor} className="w-5 h-5" tamanhoDaInicial="13px" />
       </span>
       <span className="font-cinzel font-bold text-[12px] leading-tight min-w-0 flex-1" style={{ color: m.cor }}>{m.nome}</span>
       <span className={`${TEXTO_PIXEL} text-[12px] font-bold tabular-nums shrink-0`} style={{ color: m.ok ? VERDE : VERMELHO }}>{m.tem}/{m.precisa}</span>
