@@ -8,7 +8,7 @@ import { IconesDeElementos } from '@/components/IconeDeElemento';
 import type { OpcaoCustomizacao } from '@/rules/armas';
 import { formatarCompacto } from '@/rules/numerosCompactos';
 import type { CategoriaArma } from '@/rules/armas';
-import { COR_RARIDADE_ARMA, type DetalheArmaTela, type DetalheMinhaArmaTela, type EstadoNoForja, type LinhaReceitaTela } from '@/lib/forjaTela';
+import { COR_RARIDADE_ARMA, type DetalheMinhaArmaTela, type EstadoNoForja, type LinhaReceitaTela } from '@/lib/forjaTela';
 import { IconeCategoria } from './IconeDeCategoria';
 import { AZUL_CLARO, BotaoDoKit, BotaoRedondo, DivisorDaForja, PainelDaForja, PlacaDeRaridade, SlotDeArma, TEXTO_PIXEL } from './KitDaForja';
 
@@ -31,7 +31,7 @@ export const nomeDaOpcao = (o: OpcaoCustomizacao) => NOME_OPCAO[o];
 function JanelaDaForja({ rotulo, aoFechar, children }: { rotulo: string; aoFechar: () => void; children: React.ReactNode }) {
   return (
     <div role="dialog" aria-modal="true" aria-label={rotulo} onClick={aoFechar} className="fixed inset-0 z-40 flex items-center justify-center bg-black/75 px-2.5 py-3">
-      <PainelDaForja onClick={(e) => e.stopPropagation()} className="relative w-full max-w-[380px] max-h-[93dvh] overflow-y-auto">
+      <PainelDaForja borda="16px" onClick={(e) => e.stopPropagation()} className="relative w-full max-w-[380px] max-h-[93dvh] overflow-y-auto">
         <div className="relative flex flex-col gap-2 px-0.5 pt-0.5 pb-1">
           <BotaoRedondo tipo="x" rotulo="Fechar" onClick={aoFechar} className="absolute -top-3 -right-3 z-10 w-9 h-9" />
           {children}
@@ -55,7 +55,7 @@ export function CaixaDeArteDaArma({ categoria, cor }: { categoria: CategoriaArma
 }
 
 /** Uma linha de informação: ícone, rótulo curto e valor. */
-function LinhaDoKit({ icone, rotulo, children, cor }: { icone?: React.ReactNode; rotulo: string; children: React.ReactNode; cor?: string }) {
+export function LinhaDoKit({ icone, rotulo, children, cor }: { icone?: React.ReactNode; rotulo: string; children: React.ReactNode; cor?: string }) {
   return (
     <div className="flex items-center gap-2 px-2 py-1 bg-[#080C16]/85 border border-[#243B55]">
       {icone && <span className="w-6 h-6 shrink-0 flex items-center justify-center">{icone}</span>}
@@ -106,7 +106,7 @@ const Chip = ({ children }: { children: React.ReactNode }) => (
 );
 
 /** O que a arma faz: dano, elementos e status (as linhas comuns aos dois pop-ups). */
-function LinhasDaArma({ tipoDano, subtipo, dano, danoBase, elementos, status }: { tipoDano: 'Dano físico' | 'Dano mágico'; subtipo?: string | null; dano: number; danoBase?: number; elementos: string[]; status: string[] }) {
+export function LinhasDaArma({ tipoDano, subtipo, dano, danoBase, elementos, status }: { tipoDano: 'Dano físico' | 'Dano mágico'; subtipo?: string | null; dano: number; danoBase?: number; elementos: string[]; status: string[] }) {
   return (
     <>
       <LinhaDoKit icone={iconeDoAtributo(tipoDano === 'Dano físico' ? ATTRIBUTE_ICONS.forca : ATTRIBUTE_ICONS.inteligencia)} rotulo={tipoDano + (subtipo ? ` (${subtipo})` : '')}>
@@ -124,60 +124,6 @@ function LinhasDaArma({ tipoDano, subtipo, dano, danoBase, elementos, status }: 
         </LinhaDoKit>
       )}
     </>
-  );
-}
-
-/** O pop-up de uma arma da árvore: a arte, o que ela faz, a receita em linhas com `tem/precisa` e o botão Forjar. */
-export function FolhaDetalhe({ detalhe: d, categoria, ocupado, erro, onFechar, onForjar }: { detalhe: DetalheArmaTela; categoria: CategoriaArma; ocupado: boolean; erro: string | null; onFechar: () => void; onForjar: () => void }) {
-  const podeForjar = d.estado === 'disponivel';
-  const receita = [...d.materiais, ...(d.diversos ? [d.diversos] : [])];
-  return (
-    <JanelaDaForja rotulo={`Detalhes de ${d.nome}`} aoFechar={onFechar}>
-      <PlacaDeRaridade raridade={d.raridade}>
-        <h2 className="font-cinzel font-extrabold text-[15px] leading-tight text-[#F5F3E0] [text-shadow:1px_1px_0_#05070D]">{d.nome}</h2>
-      </PlacaDeRaridade>
-      <p className={`${TEXTO_PIXEL} text-[11px] text-center text-[#8FB3D1] -mt-1`}>
-        <span style={{ color: d.cor }}>{d.raridadeNome}</span> · {d.categoriaNome} · <span className="text-[#E7C46A]">{estrelas(d.estrela)}</span> {d.monstroNome}{d.ramoNome ? ` › ${d.ramoNome}` : ''}
-      </p>
-      <CaixaDeArteDaArma categoria={categoria} cor={d.cor} />
-      <p className={`${TEXTO_PIXEL} text-[12px] font-bold text-center`} style={{ color: d.estado === 'disponivel' ? VERDE : AZUL_CLARO }}>{ROTULO_ESTADO[d.estado]}</p>
-
-      <div className="flex flex-col gap-1">
-        <LinhasDaArma tipoDano={d.tipoDano} subtipo={d.subtipo} dano={d.danoFixo} elementos={d.elementos} status={d.status} />
-        <LinhaDoKit rotulo="Atributo" icone={<span className="flex">{iconeDoAtributo(ATTRIBUTE_ICONS.sorte)}</span>}>
-          <span className="text-[10px] font-normal text-[#BFE3FF] text-right leading-tight">{d.atributoSorteado}</span>
-        </LinhaDoKit>
-        {d.minha && <LinhaDoKit rotulo="Sua arma" cor={VERDE}>{d.minha.atributo} +{d.minha.pontos}</LinhaDoKit>}
-        <div className="grid grid-cols-2 gap-1">
-          <span className={`px-2 py-1 bg-[#0C2A18]/90 border border-[#2E7D4A] ${TEXTO_PIXEL} text-[10px] leading-tight text-[#9BF0B2]`}>{d.bonus}</span>
-          <span className={`px-2 py-1 bg-[#34121A]/90 border border-[#8A2F3C] ${TEXTO_PIXEL} text-[10px] leading-tight text-[#FFB4B4]`}>{d.penalidade}</span>
-        </div>
-      </div>
-
-      {d.estado !== 'tenho' && d.estado !== 'superada' && (
-        <>
-          <DivisorDaForja />
-          <div className="flex flex-col gap-1" aria-label="Receita">
-            {d.consome && (
-              <div className="flex items-center gap-2 px-2 py-1 bg-[#080C16]/85 border border-[#243B55]">
-                <span className={`${TEXTO_PIXEL} text-[11px] text-[#8FB3D1]`}>Consome</span>
-                <span className="font-cinzel font-bold text-[12px] ml-auto text-right" style={{ color: d.consome.tenho ? VERDE : VERMELHO }}>{d.consome.nome} {d.consome.tenho ? '✓' : '✗'}</span>
-              </div>
-            )}
-            {receita.map((m) => <LinhaDeMaterial key={m.id} m={m} />)}
-            <LinhaDeOuro tem={d.ouro.tem} precisa={d.ouro.precisa} ok={d.ouro.ok} />
-          </div>
-        </>
-      )}
-
-      <Erro texto={erro} />
-
-      {d.estado !== 'tenho' && d.estado !== 'superada' && (
-        <BotaoDoKit disabled={!podeForjar || ocupado} onClick={onForjar} className="w-full py-1">
-          {ocupado ? 'Forjando...' : d.estado === 'bloqueada' ? 'Falta a arma anterior' : d.estado === 'faltaMaterial' ? 'Falta material ou ouro' : d.acao}
-        </BotaoDoKit>
-      )}
-    </JanelaDaForja>
   );
 }
 
@@ -253,7 +199,7 @@ export function FolhaMinhaArma({ detalhe: d, ocupado, erro, onFechar, onReforjar
 }
 
 /** O slot de uma arma com o ícone da categoria (usado na árvore, na lista e em Minhas armas). */
-export function SlotComIcone({ categoria, raridade, destaque, apagado, tamanho, selo }: { categoria: CategoriaArma; raridade: keyof typeof COR_RARIDADE_ARMA; destaque?: boolean; apagado?: boolean; tamanho?: number; selo?: 'tenho' | 'bloqueada' | 'faltaMaterial' | null }) {
+export function SlotComIcone({ categoria, raridade, destaque, apagado, tamanho, selo }: { categoria: CategoriaArma; raridade: keyof typeof COR_RARIDADE_ARMA; destaque?: boolean; apagado?: boolean; tamanho?: number | string; selo?: 'tenho' | 'bloqueada' | 'faltaMaterial' | null }) {
   return (
     <SlotDeArma raridade={raridade} destaque={destaque} apagado={apagado} tamanho={tamanho} selo={selo}>
       <IconeCategoria categoria={categoria} className="w-full h-full" style={{ color: COR_RARIDADE_ARMA[raridade] }} />

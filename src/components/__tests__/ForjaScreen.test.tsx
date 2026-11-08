@@ -6,7 +6,7 @@ import { FerreiroScreen } from '@/components/forja/FerreiroScreen';
 import { FALAS_SOLTAS_DO_FERREIRO, falaComNome, SAUDACOES_DO_FERREIRO } from '@/rules/falasDoFerreiro';
 import { ForjaScreen } from '@/components/forja/ForjaScreen';
 import { AnimacaoDeForja } from '@/components/forja/AnimacaoDeForja';
-import { FolhaDetalhe } from '@/components/forja/PopupsDaForja';
+import { PainelDaArma } from '@/components/forja/PainelDaArma';
 import { detalheDaArma } from '@/lib/forjaTela';
 import type { CharacterDocument } from '@/server/characterService';
 
@@ -58,16 +58,16 @@ describe('Ferreiro e Forja', () => {
     expect(html).not.toContain('Árvore de Rato da Floresta');
   });
 
-  it('a categoria aberta mostra as abas, o ouro na barra de título e a árvore das Espadas grandes na 1★', () => {
+  it('a categoria aberta mostra as 3 abas, o ouro, a lista de árvores à esquerda e a arma com materiais e informações à direita', () => {
     const html = renderToStaticMarkup(<ForjaScreen character={personagem} onCharacterChange={() => {}} tokenFresco={async () => 't'} categoriaInicial="espadaGrande" />);
+    expect(html).toContain('Lista');
     expect(html).toContain('Árvore');
-    expect(html).toContain('Lista (0)');
     expect(html).toContain('Minhas (0)');
     expect(html).toContain('Ouro: 1.500');
     expect(html).toContain('Árvore de Rato da Floresta');
     expect(html).toContain('Rato das Cinzas');
     expect(html).toContain('Ferro de Caçada, Comum. Falta material ou ouro');
-    expect(html).not.toContain('Árvore de Grizzharn');
+    expect(html).toContain('Árvore de Grizzharn'); // a Lista mostra todos os monstros, como na referência
     expect(html).not.toContain('role="dialog"');
   });
 });
@@ -139,23 +139,32 @@ describe('Minhas armas: reforjar e customizar', () => {
     expect(html).toContain('Materiais insuficientes.');
   });
 
-  it('o pop-up de uma arma da árvore mostra a receita com tem/precisa, o custo em ouro e o botão Fabricar travado sem material', () => {
-    const d = detalheDaArma('ferro-de-cacada', 'espadaGrande', personagem)!;
-    const html = renderToStaticMarkup(<FolhaDetalhe detalhe={d} categoria="espadaGrande" ocupado={false} erro={null} onFechar={nada} onForjar={nada} />);
-    expect(html).toContain('role="dialog"');
-    expect(html).toContain('Ferro de Caçada');
+  it('a árvore escolhida mostra, à direita, a arma com materiais (tem e quanto precisa), custo e as informações; sem pop-up', () => {
+    const html = renderToStaticMarkup(<ForjaScreen character={personagem} onCharacterChange={() => {}} tokenFresco={async () => 't'} categoriaInicial="espadaGrande" />);
+    expect(html).toContain('Arma: Ferro de Caçada');
+    expect(html).toContain('Materiais necessários');
     expect(html).toContain('Pelo de Rato');
-    expect(html).toContain('0/6');
-    expect(html).toContain('Falta material ou ouro');
-    expect(html).toMatch(/<button[^>]*disabled/);
+    expect(html).toContain('Custo necessário');
+    expect(html).toContain('Informações da arma');
     expect(html).toContain('aria-label="Receita"');
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>[^<]*Falta material/);
+    expect(html).not.toContain('role="dialog"');
   });
 
-  it('o pop-up mostra o erro do servidor', () => {
-    const d = detalheDaArma('ferro-de-cacada', 'espadaGrande', personagem)!;
-    const html = renderToStaticMarkup(<FolhaDetalhe detalhe={d} categoria="espadaGrande" ocupado={false} erro="Materiais insuficientes." onFechar={nada} onForjar={nada} />);
-    expect(html).toContain('role="alert"');
-    expect(html).toContain('Materiais insuficientes.');
+  it('o painel da arma: com material suficiente o botão libera e os números ficam verdes; mostra elemento e status quando a arma tem', async () => {
+    const { ARMAS_BASE } = await import('@/rules/armasCatalogo');
+    const base = ARMAS_BASE.find((b) => b.id === 'ferro-de-cacada')!;
+    const inv: Record<string, number> = { [base.receita.materiaisMonstro[0].id]: 99 };
+    for (const m of base.receita.materiaisMundo) inv[m.id] = 99;
+    const rico = { ...personagem, ouro: 999999, inventario: inv } as unknown as CharacterDocument;
+    const d = detalheDaArma('ferro-de-cacada', 'espadaGrande', rico)!;
+    expect(d.estado).toBe('disponivel');
+    const html = renderToStaticMarkup(<PainelDaArma d={d} categoria="espadaGrande" />);
+    expect(html).toContain('99');
+    expect(html).not.toContain('Falta material');
+    const comElemento = ARMAS_BASE.find((b) => b.elementos.length > 0)!;
+    const d2 = detalheDaArma(comElemento.id, 'espadaGrande', personagem)!;
+    expect(renderToStaticMarkup(<PainelDaArma d={d2} categoria="espadaGrande" />)).toContain('Elemento');
   });
 
   it('animação de forjar: martelando mostra o ferreiro e as faíscas; revelada mostra o resultado, com raios só nas lendárias e míticas', () => {
