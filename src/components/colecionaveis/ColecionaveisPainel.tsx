@@ -23,7 +23,9 @@ import {
   type CategoriaDeColecionavel,
   type Colecionavel,
 } from '@/rules/colecionaveis';
+import { MOLDURAS_DOS_COLECIONAVEIS } from '@/assets/colecaoUi';
 import { arteDoColecionavel } from '@/assets/colecionaveis';
+import { IconeDeMoeda, IconeDeRaridade } from '@/components/colecao/ArtesDaColecao';
 import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { chamarColecionaveis, type EstadoDosColecionaveis, type Token } from './api';
@@ -94,7 +96,7 @@ export function ColecionaveisPainel({ tokenFresco, categoriaInicial = 'reliquias
       {aviso && <p role={aviso.erro ? 'alert' : 'status'} className="text-sm font-semibold" style={{ color: aviso.erro ? VERMELHO : VERDE }}>{aviso.texto}</p>}
       <section aria-label="Resumo dos colecionáveis" className="rounded-sm border-2 p-2.5 flex flex-col gap-1 text-sm" style={{ borderColor: OURO, backgroundColor: colors.background.secondary }}>
         <p>Ativados: <strong>{ativos}</strong> de {COLECIONAVEIS.length}</p>
-        <p className="text-xs" style={{ color: colors.text.secondary }}>Fragmentos de Memória: {estado.fragmentosDeMemoria} · Pedras da Recordação: {estado.pedrasDaRecordacao}</p>
+        <p className="text-xs" style={{ color: colors.text.secondary }}><IconeDeMoeda moeda="fragmento" className="w-5 h-5" /> Fragmentos de Memória: {estado.fragmentosDeMemoria} · <IconeDeMoeda moeda="pedra" className="w-5 h-5" /> Pedras da Recordação: {estado.pedrasDaRecordacao}</p>
         <p className="text-xs">
           Bônus nos atributos:{' '}
           {comBonus.length ? comBonus.map((a) => `${ATTRIBUTE_DISPLAY_NAMES[a]} +${totais[a]}`).join(' · ') : 'nenhum ainda'}
@@ -123,7 +125,7 @@ export function ColecionaveisPainel({ tokenFresco, categoriaInicial = 'reliquias
         const lista = COLECIONAVEIS.filter((c) => c.categoria === categoria && c.raridade === raridade);
         return (
           <section key={raridade} aria-label={`${NOME_DA_RARIDADE_DE_COLECIONAVEL[raridade]} de ${NOME_DA_CATEGORIA_DE_COLECIONAVEL[categoria]}`} className="flex flex-col gap-1">
-            <h2 className="font-cinzel font-bold text-sm" style={{ color: def.cor }}>{NOME_DA_RARIDADE_DE_COLECIONAVEL[raridade]}</h2>
+            <h2 className="font-cinzel font-bold text-sm flex items-center gap-1.5" style={{ color: def.cor }}><IconeDeRaridade raridade={raridade} className="w-5 h-5" />{NOME_DA_RARIDADE_DE_COLECIONAVEL[raridade]}</h2>
             <ul className="flex flex-col gap-1">
               {lista.map((c) => {
                 const e = estado.colecionaveis[c.id] ?? { fragmentos: 0 };
@@ -137,14 +139,17 @@ export function ColecionaveisPainel({ tokenFresco, categoriaInicial = 'reliquias
                   <li key={c.id} className="rounded-sm border text-xs" style={{ borderColor: ativo ? def.cor : '#4A3F2A', backgroundColor: colors.background.secondary }}>
                     <button type="button" onClick={() => setAberto(expandido ? null : c.id)} aria-expanded={expandido} className="w-full px-2 py-1.5 flex items-center justify-between gap-2 text-left">
                       {arteDoColecionavel(c.id) && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={arteDoColecionavel(c.id)}
-                          alt=""
-                          aria-hidden="true"
-                          className="w-10 h-10 shrink-0 object-contain"
-                          style={{ imageRendering: 'pixelated', ...(ativo ? {} : { filter: 'grayscale(1) brightness(0.4)', opacity: 0.85 }) }}
-                        />
+                        <span className="relative block w-11 h-11 shrink-0" aria-hidden="true">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={arteDoColecionavel(c.id)}
+                            alt=""
+                            className="absolute inset-[9%] w-[82%] h-[82%] object-contain"
+                            style={{ imageRendering: 'pixelated', ...(ativo ? {} : { filter: 'grayscale(1) brightness(0.4)', opacity: 0.85 }) }}
+                          />
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={MOLDURAS_DOS_COLECIONAVEIS[c.raridade]} alt="" className="absolute inset-0 w-full h-full" style={{ imageRendering: 'pixelated', ...(ativo ? {} : { opacity: 0.55 }) }} />
+                        </span>
                       )}
                       <span className="min-w-0 flex-1">
                         <span className="font-semibold" style={{ color: ativo ? def.cor : colors.text.primary }}>{c.nome}</span>

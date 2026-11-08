@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { IconeDeRaridade } from '@/components/colecao/ArtesDaColecao';
 import { MiniaturaDaCarta, VisualizadorDaCarta } from './ArteDaCarta';
 import { conjuntosCompletos } from '@/game/almas';
 import { BONUS_DO_CONJUNTO_PERCENTUAL, NOME_DA_CATEGORIA, RARIDADES_DE_CARTA, textoDoEfeito, tiposDaRaridadeDeCarta, TIPOS_DE_CARTA, valorFixoDaRaridade } from '@/rules/almas';
@@ -29,7 +30,7 @@ export function ColecaoDaAlma({ personagem }: { personagem: CharacterDocument })
         return (
           <section key={raridade} aria-label={`Conjunto ${def.nome}`} className="rounded-sm border-2 p-2.5 flex flex-col gap-1.5" style={{ borderColor: completo ? '#7BC47F' : OURO, backgroundColor: colors.background.secondary }}>
             <h2 className="font-cinzel font-bold text-base flex justify-between gap-2">
-              <span style={{ color: def.cor }}>{def.nome}</span>
+              <span className="flex items-center gap-1.5" style={{ color: def.cor }}><IconeDeRaridade raridade={raridade} className="w-6 h-6" />{def.nome}</span>
               <span className="text-xs font-normal" style={{ color: completo ? '#7BC47F' : colors.text.secondary }}>{tenho}/{tipos.length} · +{BONUS_DO_CONJUNTO_PERCENTUAL[raridade]}%{completo ? ' (ativo)' : ''}</span>
             </h2>
             <ul className="grid grid-cols-1 gap-1">

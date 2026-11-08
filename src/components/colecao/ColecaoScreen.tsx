@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { ColecaoDaAlma } from '@/components/alma/ColecaoDaAlma';
+import { BannerDaLista } from './ArtesDaColecao';
 import { ColecionaveisPainel } from '@/components/colecionaveis/ColecionaveisPainel';
 import type { Token } from '@/components/colecionaveis/api';
 import { ANCORA_DO_ROTULO, AREAS_DO_HUB_DA_COLECAO, FUNDO_DO_HUB_DA_COLECAO, QUADROS_DA_COLECAO, type QuadroDaColecao } from '@/assets/colecao';
@@ -103,10 +104,9 @@ export function ColecaoScreen({ personagem, tokenFresco }: { personagem: Charact
       <div className="w-full max-w-[520px] flex flex-col gap-3">
         <header className="flex items-center gap-2">
           <button type="button" onClick={voltarAoHub} aria-label="Voltar à Coleção" className="p-1 cursor-pointer"><ArrowLeft className="w-5 h-5" /></button>
-          <h1 className="text-2xl font-cinzel font-extrabold italic tracking-widest uppercase" style={{ color: '#F5E3B3' }}>{NOME_DO_QUADRO[vista]}</h1>
           <Link href="/buscar" className="ml-auto text-xs underline" style={{ color: colors.text.secondary }}>Buscar</Link>
         </header>
-        <div className="h-px w-full" style={{ backgroundColor: OURO }} />
+        <BannerDaLista titulo={NOME_DO_QUADRO[vista]} />
         {vista === 'alma' ? <ColecaoDaAlma personagem={personagem} /> : <ColecionaveisPainel tokenFresco={tokenFresco} categoriaInicial={vista} />}
       </div>
     </main>

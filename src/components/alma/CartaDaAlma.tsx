@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { IconeDeRaridade } from '@/components/colecao/ArtesDaColecao';
 import { MiniaturaDaCarta, VisualizadorDaCarta } from './ArteDaCarta';
 import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
 import { NOME_DA_CATEGORIA, TIPO_DE_CARTA_MAP, textoDoEfeito, valorFixoDaCarta, type CartaItem } from '@/rules/almas';
@@ -18,7 +19,8 @@ export function CartaDaAlma({ carta, children, destaque = false }: { carta: Cart
       <div className="min-w-0 flex-1 flex flex-col gap-0.5">
         <span className="flex items-center justify-between gap-2">
           <span className="font-cinzel font-bold text-[13px] leading-tight" style={{ color: raridade.cor }}>{tipo.nome}</span>
-          <span className="text-[10px] uppercase tracking-wide shrink-0" style={{ color: '#D5C7A4' }}>
+          <span className="text-[10px] uppercase tracking-wide shrink-0 flex items-center gap-1" style={{ color: '#D5C7A4' }}>
+            <IconeDeRaridade raridade={tipo.raridade} className="w-3.5 h-3.5" />
             {raridade.nome}{carta.despertar > 0 ? ` · Despertar ${ROMANOS[carta.despertar]}` : ''}
           </span>
         </span>

@@ -23,6 +23,7 @@ import {
 } from '@/rules/almas';
 import type { CharacterDocument } from '@/server/characterService';
 import { NOCTHERA_THEME } from '@/theme/theme';
+import { IconeDeMoeda } from '@/components/colecao/ArtesDaColecao';
 import { CartaDaAlma } from './CartaDaAlma';
 
 type Token = () => Promise<string | null>;
@@ -99,8 +100,8 @@ export function AlmaScreen({ personagem, tokenFresco }: { personagem: CharacterD
         ) : (
           <>
             <p className="text-xs flex gap-4" style={{ color: colors.text.secondary }}>
-              <span>Poeira de alma: <strong style={{ color: '#F5E3B3' }}>{poeira}</strong></span>
-              <span>Cacos de alma: <strong style={{ color: '#F5E3B3' }}>{cacos}</strong></span>
+              <span className="flex items-center gap-1"><IconeDeMoeda moeda="poeira" className="w-5 h-5" />Poeira de alma: <strong style={{ color: '#F5E3B3' }}>{poeira}</strong></span>
+              <span className="flex items-center gap-1"><IconeDeMoeda moeda="cacos" className="w-5 h-5" />Cacos de alma: <strong style={{ color: '#F5E3B3' }}>{cacos}</strong></span>
             </p>
 
             {CATEGORIAS_DE_CARTA.map((categoria) => {
