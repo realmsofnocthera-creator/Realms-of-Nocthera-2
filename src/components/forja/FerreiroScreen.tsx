@@ -131,7 +131,7 @@ export function FerreiroScreen({ character }: { character: CharacterDocument }) 
         {FAISCAS.map((f, i) => (
           <span key={i} aria-hidden="true" className="forja-faisca" style={{ left: `${f.left}%`, top: `${f.top}%`, ['--dx' as string]: f.dx, ['--atraso' as string]: f.atraso, ['--dur' as string]: f.dur }} />
         ))}
-        <button type="button" onClick={conversar} aria-label={`Conversar com o ${NOME_DO_FERREIRO}`} className="absolute cursor-pointer focus:outline-none" style={{ left: '27%', width: '46%', bottom: '31%' }}>
+        <button type="button" onClick={conversar} aria-label={`Conversar com o ${NOME_DO_FERREIRO}`} className="absolute cursor-pointer focus:outline-none" style={{ left: '24%', width: '60%', bottom: '27%' }}>
           <span aria-hidden="true" className="ferreiro-sprite" style={{ backgroundImage: `url(${SPRITES_DO_FERREIRO})` }} />
         </button>
       </div>

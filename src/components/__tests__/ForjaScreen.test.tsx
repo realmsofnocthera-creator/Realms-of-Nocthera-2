@@ -36,11 +36,12 @@ describe('Ferreiro e Forja', () => {
     expect(SAUDACOES_DO_FERREIRO.flat().some((l) => l.includes('{nome}'))).toBe(true);
   });
 
-  it('artes do Ferreiro: o fundo e a folha de 20 quadros (5 colunas por 4 linhas)', () => {
+  it('artes do Ferreiro: o fundo e a folha de 7 quadros em linha', () => {
     expect(FUNDO_DA_FERRARIA).toBeTruthy();
     expect(SPRITES_DO_FERREIRO).toBeTruthy();
     expect(QUADROS_DO_FERREIRO.colunas * QUADROS_DO_FERREIRO.linhas).toBe(QUADROS_DO_FERREIRO.total);
-    expect(QUADROS_DO_FERREIRO.total).toBe(20);
+    expect(QUADROS_DO_FERREIRO.total).toBe(7);
+    expect(QUADROS_DO_FERREIRO.linhas).toBe(1);
   });
 
   it('a Forja abre na árvore das Espadas grandes, na 1★, com as abas e as 6 categorias', () => {
