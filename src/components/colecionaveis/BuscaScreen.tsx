@@ -2,39 +2,45 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, HelpCircle } from 'lucide-react';
+import { ANEL_DA_ROLETA, BRILHO_DA_RARIDADE, FUNDO_DO_BUSCAR, GEMA_DA_ROLETA, ICONES_DOS_SELOS } from '@/assets/buscarUi';
 import type { ResultadoDaBusca } from '@/game/colecionaveis';
-import { ATTRIBUTE_DISPLAY_NAMES } from '@/rules/attributeInfo';
-import {
-  BUSCAS_PARA_GARANTIA,
-  CHANCES_DO_SELO,
-  COLECIONAVEL_MAP,
-  NOME_DA_RARIDADE_DE_COLECIONAVEL,
-  NOME_DO_SELO,
-  RARIDADE_DO_SELO,
-  SELOS_DE_BUSCA,
-  SELOS_POR_BUSCA,
-  type SeloDeBusca,
-} from '@/rules/colecionaveis';
-import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
-import { NOCTHERA_THEME } from '@/theme/theme';
+import { formatarCompacto, formatarTotal } from '@/rules/numerosCompactos';
+import { BUSCAS_PARA_GARANTIA, NOME_DO_SELO, RARIDADE_DO_SELO, SELOS_DE_BUSCA, SELOS_POR_BUSCA, type SeloDeBusca } from '@/rules/colecionaveis';
 import { chamarColecionaveis, type EstadoDosColecionaveis, type Token } from './api';
+import { InfoDaBusca } from './InfoDaBusca';
+import { RevelacaoDaBusca } from './RevelacaoDaBusca';
 
-const OURO = '#C8A656';
 const VERMELHO = '#E5484D';
-const VERDE = '#7BC47F';
-const cor = (r: keyof typeof NOME_DA_RARIDADE_DE_COLECIONAVEL) => EMBLEMA_RARIDADE_MAP[r].cor;
-const porcento = (n: number) => `${n.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+const SOMBRA = '[text-shadow:1px_1px_0_#1A120B]';
+const FAISCAS = [
+  { left: '8%', atraso: '0s', dur: '4.2s' },
+  { left: '19%', atraso: '1.3s', dur: '5s' },
+  { left: '31%', atraso: '0.6s', dur: '3.8s' },
+  { left: '43%', atraso: '2.1s', dur: '4.6s' },
+  { left: '55%', atraso: '0.2s', dur: '4s' },
+  { left: '67%', atraso: '1.7s', dur: '5.2s' },
+  { left: '79%', atraso: '0.9s', dur: '4.4s' },
+  { left: '91%', atraso: '2.5s', dur: '3.9s' },
+];
+/** A volta da roleta dura pelo menos isto, para a expectativa crescer (e acaba quando a resposta chegar). */
+const GIRO_MINIMO_MS = 1600;
+const esperar = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const semMovimento = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-/** Buscar: a roleta de colecionáveis. Cada busca gasta 10 selos; a 10ª busca com o mesmo selo dá um inteiro da raridade do selo. */
+/**
+ * Buscar em tela cheia, no estilo gacha: a roleta gira e brilha na cor da raridade do selo escolhido, a carta vira e
+ * a revelação explode em luz. Cada busca gasta 10 selos; as chances e a garantia ficam no "?".
+ */
 export function BuscaScreen({ tokenFresco }: { tokenFresco: Token }) {
-  const { colors } = NOCTHERA_THEME;
   const [estado, setEstado] = useState<EstadoDosColecionaveis | null>(null);
   const [erroAoCarregar, setErroAoCarregar] = useState(false);
   const [selo, setSelo] = useState<SeloDeBusca>('desgastado');
-  const [ocupado, setOcupado] = useState(false);
+  const [girando, setGirando] = useState(false);
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
   const [resultados, setResultados] = useState<ResultadoDaBusca[]>([]);
+  const [infoAberta, setInfoAberta] = useState(false);
+  const [totalAberto, setTotalAberto] = useState<SeloDeBusca | null>(null);
 
   const carregar = useCallback(async () => {
     const r = await chamarColecionaveis(tokenFresco);
@@ -46,109 +52,138 @@ export function BuscaScreen({ tokenFresco }: { tokenFresco: Token }) {
     void carregar();
   }, [carregar]);
 
+  useEffect(() => {
+    if (!totalAberto) return;
+    const t = setTimeout(() => setTotalAberto(null), 3000);
+    return () => clearTimeout(t);
+  }, [totalAberto]);
+
   async function buscar(vezes: number) {
-    setOcupado(true);
+    setGirando(true);
     setAviso(null);
-    const r = await chamarColecionaveis(tokenFresco, { acao: 'buscar', selo, vezes });
-    setOcupado(false);
+    const [r] = await Promise.all([chamarColecionaveis(tokenFresco, { acao: 'buscar', selo, vezes }), esperar(semMovimento() ? 0 : GIRO_MINIMO_MS)]);
+    setGirando(false);
     if (!r.ok) {
       setAviso({ texto: String(r.dados.error ?? 'Não foi possível buscar agora.'), erro: true });
       return;
     }
-    setAviso({ texto: String(r.dados.mensagem ?? 'Feito.'), erro: false });
-    setResultados((r.dados.resultados as ResultadoDaBusca[]) ?? []);
     setEstado(r.dados.estado as EstadoDosColecionaveis);
+    setResultados((r.dados.resultados as ResultadoDaBusca[]) ?? []);
   }
 
+  const cor = BRILHO_DA_RARIDADE[RARIDADE_DO_SELO[selo]];
   const tenho = estado?.selos[selo] ?? 0;
   const feitas = estado?.garantia[selo] ?? 0;
-  const raridadeGarantida = RARIDADE_DO_SELO[selo];
+  const pode = (vezes: number) => !girando && !!estado && tenho >= SELOS_POR_BUSCA * vezes;
 
   return (
-    <main className="min-h-dvh w-full flex flex-col items-center px-2.5 sm:px-5 py-3 sm:py-6" style={{ backgroundColor: colors.background.primary, color: colors.text.primary }}>
-      <div className="w-full max-w-[480px] flex flex-col gap-3">
-        <header className="flex items-center gap-2">
-          <Link href="/menu" aria-label="Voltar ao Menu" className="p-1"><ArrowLeft className="w-5 h-5" /></Link>
-          <h1 className="text-2xl font-cinzel font-extrabold italic tracking-widest uppercase" style={{ color: '#F5E3B3' }}>Buscar</h1>
-          <Link href="/colecao" className="ml-auto text-xs underline" style={{ color: colors.text.secondary }}>Colecionáveis</Link>
-        </header>
-        <p className="text-xs" style={{ color: colors.text.secondary }}>
-          Cada busca gasta {SELOS_POR_BUSCA} selos e dá um colecionável inteiro ou fragmentos dele. Quanto melhor o selo, mais raro o resultado. A cada {BUSCAS_PARA_GARANTIA} buscas com o mesmo selo, a {BUSCAS_PARA_GARANTIA}ª dá um colecionável inteiro da raridade do selo. Os selos vêm das expedições e dos eventos.
-        </p>
-        {aviso && <p role={aviso.erro ? 'alert' : 'status'} className="text-sm font-semibold" style={{ color: aviso.erro ? VERMELHO : VERDE }}>{aviso.texto}</p>}
-        {erroAoCarregar ? (
-          <p role="alert" className="text-sm" style={{ color: VERMELHO }}>Não foi possível carregar agora. Tente de novo em instantes.</p>
-        ) : !estado ? (
-          <p className="text-sm" style={{ color: colors.text.secondary }}>Carregando...</p>
-        ) : (
-          <>
-            <div role="radiogroup" aria-label="Selo da busca" className="grid grid-cols-2 gap-2">
-              {SELOS_DE_BUSCA.map((s) => {
-                const r = RARIDADE_DO_SELO[s];
-                const ativo = s === selo;
+    <main className="fixed inset-0 overflow-hidden select-none bg-[#0D0D0D] flex flex-col" style={{ ['--cor' as string]: cor }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={FUNDO_DO_BUSCAR} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover pointer-events-none" style={{ imageRendering: 'pixelated' }} />
+      {FAISCAS.map((f, i) => (
+        <span key={i} aria-hidden="true" className="busca-faisca" style={{ left: f.left, bottom: '6%', ['--atraso' as string]: f.atraso, ['--dur' as string]: f.dur }} />
+      ))}
+
+      <header className="relative z-10 flex items-center gap-2 px-2.5 pt-3 sm:px-5">
+        <Link href="/menu" aria-label="Voltar ao Menu" className="caixa-pixel relative inline-flex items-center gap-1.5 pl-2 pr-3 py-1.5">
+          <ArrowLeft className="w-4 h-4 text-[#F5E3B3]" aria-hidden="true" />
+          <span className={`font-[family-name:var(--font-pixel)] text-[8px] leading-none uppercase text-[#F5E3B3] ${SOMBRA}`}>Menu</span>
+        </Link>
+        <Link href="/colecao" className="caixa-pixel relative ml-auto inline-flex items-center px-3 py-1.5">
+          <span className={`font-[family-name:var(--font-pixel)] text-[8px] leading-none uppercase text-[#F5E3B3] ${SOMBRA}`}>Coleção</span>
+        </Link>
+        <button type="button" onClick={() => setInfoAberta(true)} aria-label="Chances e garantia da busca" className="caixa-pixel relative inline-flex items-center justify-center w-8 h-8 cursor-pointer">
+          <HelpCircle className="w-4 h-4 text-[#F5E3B3]" aria-hidden="true" />
+        </button>
+      </header>
+
+      {erroAoCarregar ? (
+        <p role="alert" className="relative z-10 m-4 caixa-pixel p-3 text-center text-sm font-semibold" style={{ color: VERMELHO }}>Não foi possível carregar agora. Tente de novo em instantes.</p>
+      ) : !estado ? (
+        <p role="status" className={`relative z-10 mt-6 text-center font-[family-name:var(--font-silk)] text-sm text-[#E2D6B6] ${SOMBRA}`}>Carregando...</p>
+      ) : (
+        <>
+          {/* Os 4 selos: a HUD e, ao mesmo tempo, a escolha de qual usar */}
+          <div role="radiogroup" aria-label="Selo da busca" className="relative z-10 grid grid-cols-4 gap-1.5 px-2.5 pt-3 sm:px-5">
+            {SELOS_DE_BUSCA.map((s, i) => {
+              const ativo = s === selo;
+              const corDoSelo = BRILHO_DA_RARIDADE[RARIDADE_DO_SELO[s]];
+              const n = estado.selos[s] ?? 0;
+              const g = estado.garantia[s] ?? 0;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  role="radio"
+                  aria-checked={ativo}
+                  aria-label={`${NOME_DO_SELO[s]}: ${formatarTotal(n)}, garantia ${g} de ${BUSCAS_PARA_GARANTIA}`}
+                  disabled={girando}
+                  onClick={() => (ativo ? setTotalAberto((a) => (a === s ? null : s)) : setSelo(s))}
+                  className={`pilula-pixel relative flex flex-col items-center gap-0.5 px-1 pt-1 pb-1.5 cursor-pointer transition-transform ${ativo ? '-translate-y-0.5 brightness-125' : 'opacity-70'}`}
+                  style={{ ['--cor' as string]: corDoSelo, ...(ativo ? { boxShadow: `0 0 0 2px #1A120B, inset 0 0 0 2px ${corDoSelo}, 0 0 14px ${corDoSelo}` } : {}) }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={ICONES_DOS_SELOS[s]} alt="" aria-hidden="true" className={`w-full aspect-square object-contain ${ativo ? 'busca-selo busca-selo--escolhido' : ''}`} style={{ imageRendering: 'pixelated', ['--atraso' as string]: `${i * 0.4}s` }} />
+                  <span className={`font-[family-name:var(--font-silk)] text-[12px] font-bold tabular-nums text-[#F5F3E0] ${SOMBRA}`}>{formatarCompacto(n)}</span>
+                  <span className="barra-pixel block h-1.5 w-[84%] overflow-hidden" aria-hidden="true">
+                    <span className="block h-full" style={{ width: `${(g / BUSCAS_PARA_GARANTIA) * 100}%`, backgroundColor: corDoSelo }} />
+                  </span>
+                  {totalAberto === s && (
+                    <span role="status" className="caixa-pixel absolute left-1/2 -translate-x-1/2 top-full z-40 mt-2 whitespace-nowrap px-2 py-1 text-[11px] text-[#F5F3E0]">
+                      {NOME_DO_SELO[s]} {formatarTotal(n)}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* A roleta: o anel gira, a gema pulsa; ao buscar, tudo acelera e brilha na cor da raridade */}
+          <div className="relative z-10 flex-1 min-h-0 flex items-center justify-center">
+            <div className={`relative ${girando ? 'busca-tremer' : ''}`} style={{ width: 'min(78vw, 36dvh, 340px)', aspectRatio: '1' }}>
+              <span aria-hidden="true" className={`absolute inset-[8%] rounded-full ${girando ? 'busca-aura--girando' : 'busca-aura'}`} style={{ background: `radial-gradient(circle, ${cor} 0%, color-mix(in srgb, ${cor} 40%, transparent) 45%, transparent 70%)` }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={ANEL_DA_ROLETA} alt="" aria-hidden="true" className={`absolute inset-0 w-full h-full ${girando ? 'busca-anel--girando' : 'busca-anel'}`} style={{ imageRendering: 'pixelated' }} />
+              <span className="absolute inset-0 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={GEMA_DA_ROLETA} alt="" aria-hidden="true" className={`w-[34%] ${girando ? 'busca-gema--girando' : 'busca-gema'}`} style={{ imageRendering: 'pixelated' }} />
+              </span>
+            </div>
+          </div>
+
+          <div className="relative z-10 px-3 pb-4 sm:px-6 flex flex-col items-center gap-2.5">
+            <p aria-label={`Garantia: ${feitas} de ${BUSCAS_PARA_GARANTIA} buscas com este selo`} className="caixa-pixel relative px-3 py-1 font-[family-name:var(--font-pixel)] text-[7px] leading-none text-[#F5E3B3]">
+              GARANTIA <span className="text-[#ED8A0C] tabular-nums">{feitas}/{BUSCAS_PARA_GARANTIA}</span>
+            </p>
+            {aviso && <p role={aviso.erro ? 'alert' : 'status'} className="caixa-pixel relative px-3 py-1.5 text-center font-[family-name:var(--font-silk)] text-[12px] font-bold" style={{ color: aviso.erro ? '#FF8A8A' : '#7BC47F' }}>{aviso.texto}</p>}
+            <div className="w-full max-w-[420px] grid grid-cols-2 gap-2">
+              {[1, 10].map((vezes) => {
+                const custo = SELOS_POR_BUSCA * vezes;
+                const ok = pode(vezes);
                 return (
                   <button
-                    key={s}
+                    key={vezes}
                     type="button"
-                    role="radio"
-                    aria-checked={ativo}
-                    onClick={() => setSelo(s)}
-                    className="rounded-sm border-2 px-2 py-1.5 flex flex-col items-start text-left"
-                    style={{ borderColor: ativo ? cor(r) : '#4A3F2A', backgroundColor: ativo ? '#2E2616' : colors.background.secondary }}
+                    disabled={!ok}
+                    onClick={() => void buscar(vezes)}
+                    className={`botao-kit botao-kit-dourado px-1.5 py-1 font-cinzel font-extrabold uppercase text-[#2B1D0E] flex flex-col items-center leading-tight ${ok ? 'busca-botao-pronto' : ''}`}
                   >
-                    <span className="text-sm font-bold" style={{ color: cor(r) }}>{NOME_DO_SELO[s]}</span>
-                    <span className="text-[11px]" style={{ color: colors.text.secondary }}>Você tem {estado.selos[s] ?? 0} · garantia {estado.garantia[s] ?? 0}/{BUSCAS_PARA_GARANTIA}</span>
+                    <span className="text-[13px]">Buscar {vezes}x</span>
+                    <span className="flex items-center gap-1 font-[family-name:var(--font-silk)] text-[12px] normal-case" style={{ color: tenho >= custo ? '#2B1D0E' : '#7A1F1F' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={ICONES_DOS_SELOS[selo]} alt="" aria-hidden="true" className="w-5 h-5 object-contain" style={{ imageRendering: 'pixelated' }} />
+                      {custo}
+                    </span>
                   </button>
                 );
               })}
             </div>
+          </div>
+        </>
+      )}
 
-            <section aria-label="Chances" className="rounded-sm border-2 p-2.5 flex flex-col gap-1" style={{ borderColor: OURO, backgroundColor: colors.background.secondary }}>
-              <h2 className="font-cinzel font-bold text-sm">Chances com o {NOME_DO_SELO[selo]}</h2>
-              <ul className="text-xs flex flex-col gap-0.5">
-                {CHANCES_DO_SELO[selo].map((l) => (
-                  <li key={`${l.raridade}-${l.inteiro}`} className="flex justify-between gap-2">
-                    <span style={{ color: cor(l.raridade) }}>{NOME_DA_RARIDADE_DE_COLECIONAVEL[l.raridade]} · {l.inteiro ? 'inteiro' : 'fragmentos'}</span>
-                    <span>{porcento(l.chance)}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="text-[11px]" style={{ color: colors.text.secondary }}>
-                Garantia: faltam {BUSCAS_PARA_GARANTIA - feitas} buscas para um {NOME_DA_RARIDADE_DE_COLECIONAVEL[raridadeGarantida]} inteiro.
-              </p>
-            </section>
-
-            <div className="flex gap-2">
-              <button type="button" disabled={ocupado || tenho < SELOS_POR_BUSCA} onClick={() => void buscar(1)} className="flex-1 rounded-sm border-2 px-2 py-2 text-sm font-bold disabled:opacity-50" style={{ borderColor: OURO, backgroundColor: '#3A2F18', color: '#F5E3B3' }}>
-                Buscar 1x ({SELOS_POR_BUSCA} selos)
-              </button>
-              <button type="button" disabled={ocupado || tenho < SELOS_POR_BUSCA * 10} onClick={() => void buscar(10)} className="flex-1 rounded-sm border-2 px-2 py-2 text-sm font-bold disabled:opacity-50" style={{ borderColor: OURO, backgroundColor: '#3A2F18', color: '#F5E3B3' }}>
-                Buscar 10x ({SELOS_POR_BUSCA * 10} selos)
-              </button>
-            </div>
-
-            {resultados.length > 0 && (
-              <section aria-label="Resultado da busca" className="rounded-sm border-2 p-2.5 flex flex-col gap-1" style={{ borderColor: OURO, backgroundColor: colors.background.secondary }}>
-                <h2 className="font-cinzel font-bold text-sm">Resultado</h2>
-                <ul className="flex flex-col gap-1">
-                  {resultados.map((r, i) => (
-                    <li key={i} className="rounded-sm border px-2 py-1 text-xs flex justify-between gap-2" style={{ borderColor: cor(r.raridade) }}>
-                      <span>
-                        <span className="font-semibold" style={{ color: cor(r.raridade) }}>{r.nome}</span>
-                        <span style={{ color: colors.text.secondary }}> · {ATTRIBUTE_DISPLAY_NAMES[COLECIONAVEL_MAP[r.id].atributo]}</span>
-                      </span>
-                      <span className="shrink-0" style={{ color: r.ativou ? VERDE : colors.text.secondary }}>
-                        {r.ativou ? 'Novo! Ativado' : r.inteiro ? `repetido: +${r.fragmentos} frag.` : `+${r.fragmentos} frag.`}
-                        {r.garantido ? ' · garantia' : ''}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-          </>
-        )}
-      </div>
+      {infoAberta && <InfoDaBusca seloInicial={selo} aoFechar={() => setInfoAberta(false)} />}
+      {resultados.length > 0 && <RevelacaoDaBusca resultados={resultados} aoFechar={() => setResultados([])} />}
     </main>
   );
 }

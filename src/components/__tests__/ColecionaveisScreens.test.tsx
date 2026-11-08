@@ -6,6 +6,11 @@ import { ColecaoScreen, contagemDoQuadro } from '@/components/colecao/ColecaoScr
 import { arteDaCarta, personagemDaCarta } from '@/assets/cartasDaAlma';
 import { BANNER_DA_COLECAO, ICONES_DAS_MOEDAS, ICONES_DE_RARIDADE, MOLDURAS_DOS_COLECIONAVEIS } from '@/assets/colecaoUi';
 import { BannerDaLista, IconeDeMoeda, IconeDeRaridade } from '@/components/colecao/ArtesDaColecao';
+import { ANEL_DA_ROLETA, BRILHO_DA_RARIDADE, FUNDO_DO_BUSCAR, GEMA_DA_ROLETA, ICONES_DOS_SELOS, VERSO_DO_COLECIONAVEL } from '@/assets/buscarUi';
+import { InfoDaBusca } from '@/components/colecionaveis/InfoDaBusca';
+import { etiquetaDoResultado, melhorRaridade, RevelacaoDaBusca } from '@/components/colecionaveis/RevelacaoDaBusca';
+import type { ResultadoDaBusca } from '@/game/colecionaveis';
+import { SELOS_DE_BUSCA } from '@/rules/colecionaveis';
 import { COLECIONAVEL_MAP, RARIDADES_DE_COLECIONAVEL } from '@/rules/colecionaveis';
 import { HudDaColecao } from '@/components/colecao/HudDaColecao';
 import { PopupDoColecionavel } from '@/components/colecionaveis/PopupDoColecionavel';
@@ -18,12 +23,13 @@ import { COLECIONAVEIS } from '@/rules/colecionaveis';
 import type { CharacterDocument } from '@/server/characterService';
 
 describe('Telas do Buscar e da Coleção', () => {
-  it('Buscar abre com a explicação da roleta e o aviso de carregamento', () => {
+  it('Buscar abre em tela cheia, com o carregamento e os links para o Menu e a Coleção (sem texto corrido)', () => {
     const html = renderToStaticMarkup(<BuscaScreen tokenFresco={async () => 't'} />);
-    expect(html).toContain('Buscar');
-    expect(html).toContain('gasta 10 selos');
     expect(html).toContain('Carregando...');
     expect(html).toContain('href="/menu"');
+    expect(html).toContain('href="/colecao"');
+    expect(html).toContain('aria-label="Chances e garantia da busca"');
+    expect(html).not.toContain('gasta 10 selos');
   });
 
   it('Coleção abre no hub, com um quadro para cada parte e quantos o jogador tem', () => {
@@ -174,5 +180,40 @@ describe('Telas do Buscar e da Coleção', () => {
     expect(ativo).toContain('Reforçar +1');
     expect(ativo).not.toContain('>Ativar');
     expect(pop('RI-C01', { fragmentos: 5, nivel: 4, estrelas: 1 })).toMatch(/<button[^>]*disabled[^>]*>\s*Reforçar/);
+  });
+
+  it('artes do Buscar: fundo, anel, gema, verso, 4 selos diferentes e uma cor de brilho por raridade', () => {
+    for (const a of [FUNDO_DO_BUSCAR, ANEL_DA_ROLETA, GEMA_DA_ROLETA, VERSO_DO_COLECIONAVEL]) expect(a).toBeTruthy();
+    expect(new Set(SELOS_DE_BUSCA.map((s) => ICONES_DOS_SELOS[s])).size).toBe(4);
+    expect(new Set(Object.values(BRILHO_DA_RARIDADE)).size).toBe(4);
+  });
+
+  const res = (id: string, raridade: ResultadoDaBusca['raridade'], extra: Partial<ResultadoDaBusca> = {}): ResultadoDaBusca =>
+    ({ id, nome: COLECIONAVEL_MAP[id].nome, raridade, inteiro: false, fragmentos: 4, ativou: false, garantido: false, ...extra });
+
+  it('revelação: etiqueta Novo ou fragmentos, e a melhor raridade do lote', () => {
+    expect(etiquetaDoResultado(res('RI-C01', 'comum', { ativou: true }))).toBe('NOVO!');
+    expect(etiquetaDoResultado(res('RI-C01', 'comum', { fragmentos: 6 }))).toBe('+6 FRAG.');
+    expect(melhorRaridade([res('RI-C01', 'comum'), res('RI-L01', 'lendario'), res('RI-MR01', 'muitoRaro')])).toBe('lendario');
+    expect(melhorRaridade([res('RI-C01', 'comum')])).toBe('comum');
+  });
+
+  it('revelação: as cartas chegam viradas para baixo (verso) e o botão Pular está lá; o nome fica escondido até virar', () => {
+    const html = renderToStaticMarkup(<RevelacaoDaBusca resultados={[res('RI-L01', 'lendario', { inteiro: true, ativou: true })]} aoFechar={() => {}} />);
+    expect(html).toContain('role="dialog"');
+    expect(html).toContain('revela-carta--aguarda');
+    expect(html).toContain('Pular');
+    expect(html).toMatch(/opacity-0[^>]*>Coroa do Primeiro Soberano/);
+    const dez = renderToStaticMarkup(<RevelacaoDaBusca resultados={Array.from({ length: 10 }, () => res('RI-C01', 'comum'))} aoFechar={() => {}} />);
+    expect(dez.match(/revela-carta__giro/g)!.length).toBeGreaterThanOrEqual(10);
+    expect(dez).toContain('grid-cols-5');
+  });
+
+  it('chances: mostra a tabela do selo, a garantia e troca de selo pelas abas', () => {
+    const html = renderToStaticMarkup(<InfoDaBusca seloInicial="eternidade" aoFechar={() => {}} />);
+    expect(html).toContain('Selo da Eternidade');
+    expect(html).toContain('74%');
+    expect(html).toContain('Garantia: Lendário inteiro');
+    expect(html.match(/role="tab"/g)).toHaveLength(4);
   });
 });

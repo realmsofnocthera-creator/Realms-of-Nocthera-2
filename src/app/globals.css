@@ -365,3 +365,55 @@
     display: none;
   }
 }
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Buscar (roleta de colecionáveis): animações no estilo gacha. A cor do brilho vem de --cor (a da raridade).
+   --------------------------------------------------------------------------------------------------------------- */
+.busca-anel { animation: busca-girar 38s linear infinite; }
+.busca-anel--girando { animation: busca-girar 0.9s linear infinite; filter: drop-shadow(0 0 14px var(--cor)) brightness(1.25); }
+.busca-gema { animation: busca-flutuar 3.2s ease-in-out infinite, busca-pulsar 2.4s ease-in-out infinite; }
+.busca-gema--girando { animation: busca-pulsar-forte 0.5s ease-in-out infinite; }
+.busca-aura { animation: busca-respirar 3.6s ease-in-out infinite; }
+.busca-aura--girando { animation: busca-respirar 0.6s ease-in-out infinite; }
+.busca-tremer { animation: busca-tremer 0.18s linear infinite; }
+.busca-faisca { position: absolute; width: 4px; height: 4px; background: var(--cor, #c9a6ff); box-shadow: 0 0 6px 1px var(--cor, #c9a6ff); opacity: 0; animation: busca-subir var(--dur, 4s) ease-in var(--atraso, 0s) infinite; pointer-events: none; }
+.busca-selo { animation: busca-flutuar 3s ease-in-out var(--atraso, 0s) infinite; }
+.busca-selo--escolhido { filter: drop-shadow(0 0 8px var(--cor)); }
+.busca-botao-pronto { animation: busca-pulsar-botao 1.6s ease-in-out infinite; }
+
+/* Revelação */
+.revela-flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 45%, #fff 0%, var(--cor) 38%, transparent 72%); mix-blend-mode: screen; pointer-events: none; animation: busca-flash 0.9s ease-out both; }
+.revela-raios { position: absolute; left: 50%; top: 50%; width: 150vmax; height: 150vmax; margin: -75vmax 0 0 -75vmax; background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--cor) 55%, transparent) 0deg 6deg, transparent 6deg 18deg); -webkit-mask-image: radial-gradient(circle, #000 0%, transparent 38%); mask-image: radial-gradient(circle, #000 0%, transparent 38%); opacity: 0.55; pointer-events: none; animation: busca-girar 22s linear infinite; }
+.revela-carta { perspective: 800px; }
+.revela-carta__giro { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.75s cubic-bezier(0.2, 1.3, 0.4, 1); }
+.revela-carta__giro--virada { transform: rotateY(180deg); }
+.revela-carta__face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.revela-carta__face--frente { transform: rotateY(180deg); }
+.revela-carta--aguarda .revela-carta__giro { animation: busca-balancar 0.7s ease-in-out infinite; }
+.revela-carta--aguarda { filter: drop-shadow(0 0 10px var(--cor)); }
+.revela-carta--pop { animation: busca-pop 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+.revela-brilha { animation: busca-brilhar 1.8s ease-in-out infinite; }
+.revela-etiqueta { animation: busca-etiqueta 1.1s ease-in-out infinite; }
+.revela-entrada { animation: busca-entrada 0.45s ease-out both; }
+
+@keyframes busca-girar { to { transform: rotate(360deg); } }
+@keyframes busca-flutuar { 0%, 100% { transform: translateY(2px); } 50% { transform: translateY(-5px); } }
+@keyframes busca-pulsar { 0%, 100% { filter: drop-shadow(0 0 5px #a35cff) brightness(1); } 50% { filter: drop-shadow(0 0 16px #c98bff) brightness(1.25); } }
+@keyframes busca-pulsar-forte { 0%, 100% { transform: scale(1) rotate(-6deg); filter: drop-shadow(0 0 14px var(--cor)) brightness(1.3); } 50% { transform: scale(1.3) rotate(6deg); filter: drop-shadow(0 0 30px var(--cor)) brightness(2); } }
+@keyframes busca-respirar { 0%, 100% { opacity: 0.35; transform: scale(0.92); } 50% { opacity: 0.8; transform: scale(1.05); } }
+@keyframes busca-tremer { 0% { transform: translate(0, 0); } 25% { transform: translate(-2px, 1px); } 50% { transform: translate(2px, -1px); } 75% { transform: translate(-1px, -2px); } 100% { transform: translate(0, 0); } }
+@keyframes busca-subir { 0% { transform: translateY(0) scale(1); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-48vh) scale(0.3); opacity: 0; } }
+@keyframes busca-pulsar-botao { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.28) drop-shadow(0 0 7px #f2c94c); } }
+@keyframes busca-flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes busca-balancar { 0%, 100% { transform: rotate(-4deg) scale(1); } 50% { transform: rotate(4deg) scale(1.05); } }
+@keyframes busca-pop { 0% { transform: scale(0.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes busca-brilhar { 0%, 100% { filter: drop-shadow(0 0 6px var(--cor)); } 50% { filter: drop-shadow(0 0 22px var(--cor)) brightness(1.18); } }
+@keyframes busca-etiqueta { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.14); } }
+@keyframes busca-entrada { 0% { transform: translateY(14px) scale(0.9); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .busca-anel, .busca-anel--girando, .busca-gema, .busca-gema--girando, .busca-aura, .busca-aura--girando, .busca-tremer, .busca-selo, .busca-botao-pronto,
+  .revela-raios, .revela-carta--aguarda .revela-carta__giro, .revela-carta--pop, .revela-brilha, .revela-etiqueta, .revela-entrada { animation: none !important; }
+  .busca-faisca, .revela-flash { display: none; }
+  .revela-carta__giro { transition: none; }
+}
