@@ -5,6 +5,9 @@ import { FUNDO_DA_FERRARIA, QUADROS_DO_FERREIRO, SPRITES_DO_FERREIRO } from '@/a
 import { FerreiroScreen } from '@/components/forja/FerreiroScreen';
 import { FALAS_SOLTAS_DO_FERREIRO, falaComNome, SAUDACOES_DO_FERREIRO } from '@/rules/falasDoFerreiro';
 import { ForjaScreen } from '@/components/forja/ForjaScreen';
+import { AnimacaoDeForja } from '@/components/forja/AnimacaoDeForja';
+import { FolhaDetalhe } from '@/components/forja/PopupsDaForja';
+import { detalheDaArma } from '@/lib/forjaTela';
 import type { CharacterDocument } from '@/server/characterService';
 
 vi.mock('next/link', () => ({ default: ({ href, children, ...p }: { href: string; children: React.ReactNode }) => <a href={href} {...p}>{children}</a> }));
@@ -44,12 +47,23 @@ describe('Ferreiro e Forja', () => {
     expect(QUADROS_DO_FERREIRO.linhas).toBe(1);
   });
 
-  it('a Forja abre na árvore das Espadas grandes, na 1★, com as abas e as 6 categorias', () => {
-    const html = renderToStaticMarkup(<ForjaScreen character={personagem} onCharacterChange={() => {}} tokenFresco={async () => 't'} />);
+  it('a Forja abre na grade com as 6 categorias de arma, sem pop-up, e mostra quantas armas há em cada', () => {
+    const c = { ...personagem, armas: [{ id: 'a1', baseId: 'ferro-de-cacada', categoria: 'katana', atributo: 'forca', pontos: 4, reforjas: 0, criadaEm: '' }] } as unknown as CharacterDocument;
+    const html = renderToStaticMarkup(<ForjaScreen character={c} onCharacterChange={() => {}} tokenFresco={async () => 't'} />);
+    for (const n of ['Espada grande', 'Katana', 'Lança', 'Espada e escudo', 'Grimório', 'Cajado']) expect(html).toContain(n);
+    expect(html).toContain('Categorias de arma');
+    expect(html).toContain('Katana, você tem 1');
+    expect(html).toContain('href="/ferreiro"');
+    expect(html).not.toContain('role="dialog"');
+    expect(html).not.toContain('Árvore de Rato da Floresta');
+  });
+
+  it('a categoria aberta mostra as abas, o ouro na barra de título e a árvore das Espadas grandes na 1★', () => {
+    const html = renderToStaticMarkup(<ForjaScreen character={personagem} onCharacterChange={() => {}} tokenFresco={async () => 't'} categoriaInicial="espadaGrande" />);
     expect(html).toContain('Árvore');
     expect(html).toContain('Lista (0)');
-    expect(html).toContain('Minhas armas (0)');
-    for (const c of ['Espada grande', 'Katana', 'Lança', 'Espada e escudo', 'Grimório', 'Cajado']) expect(html).toContain(c);
+    expect(html).toContain('Minhas (0)');
+    expect(html).toContain('Ouro: 1.500');
     expect(html).toContain('Árvore de Rato da Floresta');
     expect(html).toContain('Rato das Cinzas');
     expect(html).toContain('Ferro de Caçada, Comum. Falta material ou ouro');
@@ -77,8 +91,8 @@ describe('Minhas armas: reforjar e customizar', () => {
 
   it('a Forja mostra a quantidade de armas na aba Minhas armas', () => {
     const c = { ...personagem, armas: [armaComum] } as unknown as CharacterDocument;
-    const html = renderToStaticMarkup(<ForjaScreen character={c} onCharacterChange={nada} tokenFresco={async () => 't'} />);
-    expect(html).toContain('Minhas armas (1)');
+    const html = renderToStaticMarkup(<ForjaScreen character={c} onCharacterChange={nada} tokenFresco={async () => 't'} categoriaInicial="espadaGrande" />);
+    expect(html).toContain('Minhas (1)');
   });
 
   it('a folha de uma arma comum tem Reforjar com o custo e não oferece Customização', async () => {
@@ -123,5 +137,39 @@ describe('Minhas armas: reforjar e customizar', () => {
     const html = renderToStaticMarkup(<FolhaMinhaArma detalhe={detalheDaMinhaArma('a1', c)!} ocupado={false} erro="Materiais insuficientes." onFechar={nada} onReforjar={nada} onCustomizar={nada} />);
     expect(html).toContain('role="alert"');
     expect(html).toContain('Materiais insuficientes.');
+  });
+
+  it('o pop-up de uma arma da árvore mostra a receita com tem/precisa, o custo em ouro e o botão Fabricar travado sem material', () => {
+    const d = detalheDaArma('ferro-de-cacada', 'espadaGrande', personagem)!;
+    const html = renderToStaticMarkup(<FolhaDetalhe detalhe={d} categoria="espadaGrande" ocupado={false} erro={null} onFechar={nada} onForjar={nada} />);
+    expect(html).toContain('role="dialog"');
+    expect(html).toContain('Ferro de Caçada');
+    expect(html).toContain('Pelo de Rato');
+    expect(html).toContain('0/6');
+    expect(html).toContain('Falta material ou ouro');
+    expect(html).toMatch(/<button[^>]*disabled/);
+    expect(html).toContain('aria-label="Receita"');
+  });
+
+  it('o pop-up mostra o erro do servidor', () => {
+    const d = detalheDaArma('ferro-de-cacada', 'espadaGrande', personagem)!;
+    const html = renderToStaticMarkup(<FolhaDetalhe detalhe={d} categoria="espadaGrande" ocupado={false} erro="Materiais insuficientes." onFechar={nada} onForjar={nada} />);
+    expect(html).toContain('role="alert"');
+    expect(html).toContain('Materiais insuficientes.');
+  });
+
+  it('animação de forjar: martelando mostra o ferreiro e as faíscas; revelada mostra o resultado, com raios só nas lendárias e míticas', () => {
+    const base = { titulo: 'ARMA FORJADA!', nome: 'Ferro de Caçada', categoria: 'espadaGrande' as const, linhas: [{ rotulo: 'Força', antes: '+4', depois: '+9', subiu: true }], aoFechar: nada };
+    const martelando = renderToStaticMarkup(<AnimacaoDeForja {...base} fase="martelando" raridade="comum" />);
+    expect(martelando).toContain('ferreiro-sprite');
+    expect(martelando).toContain('fx-faisca');
+    expect(martelando).not.toContain('Ótimo!');
+    const comum = renderToStaticMarkup(<AnimacaoDeForja {...base} fase="revelada" raridade="comum" />);
+    expect(comum).toContain('Ótimo!');
+    expect(comum).toContain('Força');
+    expect(comum).toContain('▲');
+    expect(comum).not.toContain('revela-raios');
+    expect(renderToStaticMarkup(<AnimacaoDeForja {...base} fase="revelada" raridade="lendario" />)).toContain('revela-raios');
+    expect(renderToStaticMarkup(<AnimacaoDeForja {...base} fase="revelada" raridade="mitico" linhas={[{ rotulo: 'Força', antes: '+9', depois: '+4', subiu: false }]} />)).toContain('▼');
   });
 });

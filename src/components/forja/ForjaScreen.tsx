@@ -1,36 +1,35 @@
 'use client';
 
-import { IconesDeElementos } from '@/components/IconeDeElemento';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, Check, Coins, Lock, Shield, Slice, Sword, WandSparkles, X } from 'lucide-react';
+import { KIT_DA_FORJA } from '@/assets/forjaUi';
 import type { CharacterDocument } from '@/server/characterService';
 import type { ArmaPersonagem } from '@/game/forja';
-import type { CategoriaArma } from '@/rules/armas';
+import { CATEGORIAS_ARMA_MAP, type CategoriaArma, type OpcaoCustomizacao } from '@/rules/armas';
 import {
-  ArvoreForja,
-  CATEGORIAS_TELA,
-  COR_RARIDADE_ARMA,
-  DetalheArmaTela,
-  DetalheMinhaArmaTela,
-  EstadoNoForja,
-  NoForja,
+  type ArvoreForja,
+  type DetalheArmaTela,
+  type DetalheMinhaArmaTela,
+  type NoForja,
   arvoresDaForja,
   detalheDaArma,
   detalheDaMinhaArma,
   listaDeForja,
   minhasArmasTela,
 } from '@/lib/forjaTela';
-import type { OpcaoCustomizacao } from '@/rules/armas';
-import { NOCTHERA_THEME } from '@/theme/theme';
+import { AnimacaoDeForja, TEMPO_DA_MARTELADA_MS, semMovimento, type AnimacaoDeForjaProps, type LinhaDoResultado } from './AnimacaoDeForja';
+import { Abas, BarraDeTitulo, BotaoRedondo, FundoDaForja, PainelDaForja, TEXTO_PIXEL } from './KitDaForja';
+import { FolhaDetalhe, FolhaMinhaArma, SlotComIcone, estrelas, nomeDaOpcao } from './PopupsDaForja';
+import { SelecaoDeArma } from './SelecaoDeArma';
 
-const OURO = '#C8A656';
-const DESTAQUE = '#F3C769';
+export { FolhaMinhaArma };
 
 interface ForjaScreenProps {
   character: CharacterDocument;
   onCharacterChange: (c: CharacterDocument) => void;
   tokenFresco: () => Promise<string | null>;
+  /** Abre direto na árvore desta categoria (sem passar pela grade). */
+  categoriaInicial?: CategoriaArma;
 }
 
 interface RespostaForjaTela {
@@ -39,30 +38,14 @@ interface RespostaForjaTela {
 }
 
 type Aba = 'arvore' | 'lista' | 'minhas';
+type Animacao = Omit<AnimacaoDeForjaProps, 'aoFechar'>;
 
-function Lanca({ className, style }: { className?: string; style?: React.CSSProperties }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style} aria-hidden="true">
-      <path d="M4 20 17 7" />
-      <path d="M14 4h6v6l-3-1-2-2z" />
-    </svg>
-  );
-}
+const esperar = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-/** Ícone da categoria (a arte das armas entra depois). */
-function IconeCategoria({ categoria, className, style }: { categoria: CategoriaArma; className?: string; style?: React.CSSProperties }) {
-  const props = { className, style, 'aria-hidden': true as const };
-  switch (categoria) {
-    case 'espadaGrande': return <Sword {...props} />;
-    case 'katana': return <Slice {...props} />;
-    case 'lanca': return <Lanca className={className} style={style} />;
-    case 'espadaEscudo': return <Shield {...props} />;
-    case 'grimorio': return <BookOpen {...props} />;
-    case 'cajado': return <WandSparkles {...props} />;
-  }
-}
+const NOME_ATRIBUTO: Readonly<Record<string, string>> = { vigor: 'Vigor', sorte: 'Sorte', forca: 'Força', vitalidade: 'Vitalidade', arcano: 'Arcano', inteligencia: 'Inteligência', agilidade: 'Agilidade' };
 
-const ROTULO_ESTADO: Readonly<Record<EstadoNoForja, string>> = {
+const ROTULO_DO_NO = (no: NoForja, texto: string) => `${no.nome}, ${no.raridadeNome}. ${texto}`;
+const TEXTO_DO_ESTADO: Readonly<Record<NoForja['estado'], string>> = {
   tenho: 'Você tem esta arma',
   superada: 'Você já evoluiu além desta arma',
   disponivel: 'Pronta para forjar',
@@ -70,185 +53,258 @@ const ROTULO_ESTADO: Readonly<Record<EstadoNoForja, string>> = {
   bloqueada: 'Falta a arma anterior da árvore',
 };
 
-const estrelas = (n: number) => '★'.repeat(n);
-
 /**
- * Forja (estilo Smithy do Monster Hunter, na vertical): uma árvore de armas por monstro, com as armas ligadas em
- * linha e o ramo de cada subespécie logo abaixo. Toda regra (receita, ouro, sorteio) é conferida no servidor.
+ * A Forja de armas em pixel (kit azul e dourado): primeiro a grade com as categorias; depois a árvore da categoria
+ * (abas Árvore, Lista e Minhas armas), com um pop-up para cada arma e a animação do ferreiro ao forjar. Toda regra
+ * (receita, ouro, sorteio) é conferida no servidor.
  */
-export function ForjaScreen({ character, onCharacterChange, tokenFresco }: ForjaScreenProps) {
-  const { colors } = NOCTHERA_THEME;
+export function ForjaScreen({ character, onCharacterChange, tokenFresco, categoriaInicial }: ForjaScreenProps) {
+  const [categoria, setCategoria] = useState<CategoriaArma | null>(categoriaInicial ?? null);
   const [aba, setAba] = useState<Aba>('arvore');
-  const [categoria, setCategoria] = useState<CategoriaArma>('espadaGrande');
   const [estrela, setEstrela] = useState(1);
   const [selecionada, setSelecionada] = useState<string | null>(null);
+  const [minhaAberta, setMinhaAberta] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [animacao, setAnimacao] = useState<Animacao | null>(null);
 
-  const arvores = useMemo(() => arvoresDaForja(categoria, character), [categoria, character]);
-  const lista = useMemo(() => listaDeForja(categoria, character), [categoria, character]);
-  const detalhe = selecionada ? detalheDaArma(selecionada, categoria, character) : null;
+  const cat = categoria ?? 'espadaGrande';
+  const arvores = useMemo(() => (categoria ? arvoresDaForja(cat, character) : []), [categoria, cat, character]);
+  const lista = useMemo(() => (categoria ? listaDeForja(cat, character) : []), [categoria, cat, character]);
   const minhas = useMemo(() => minhasArmasTela(character), [character]);
-  const [minhaAberta, setMinhaAberta] = useState<string | null>(null);
+  const detalhe = categoria && selecionada ? detalheDaArma(selecionada, cat, character) : null;
   const detalheMinha = minhaAberta ? detalheDaMinhaArma(minhaAberta, character) : null;
   const estrelasComArvore = [...new Set(arvores.map((a) => a.estrela))];
+  const estrelaAtual = estrelasComArvore.includes(estrela) ? estrela : (estrelasComArvore[0] ?? 1);
+
+  // Escolher a categoria entra no histórico: o voltar do celular volta para a grade
+  useEffect(() => {
+    const aoVoltar = () => {
+      setCategoria((window.history.state?.forjaCategoria as CategoriaArma | undefined) ?? null);
+      setSelecionada(null);
+      setMinhaAberta(null);
+    };
+    window.addEventListener('popstate', aoVoltar);
+    return () => window.removeEventListener('popstate', aoVoltar);
+  }, []);
+  const escolher = (c: CategoriaArma) => {
+    window.history.pushState({ forjaCategoria: c }, '');
+    setCategoria(c);
+    setAba('arvore');
+    setEstrela(1);
+    setAviso(null);
+  };
+  const voltarParaAGrade = () => {
+    if (window.history.state?.forjaCategoria) window.history.back();
+    else setCategoria(null);
+  };
+  const mudarAba = useCallback((a: Aba) => {
+    setAba(a);
+    setErro(null);
+    setAviso(null);
+  }, []);
 
   const abrir = (baseId: string) => {
     setErro(null);
     setSelecionada(baseId);
   };
 
+  const chamar = async <T,>(rota: string, corpo: unknown, minimo: number): Promise<T> => {
+    const token = await tokenFresco();
+    if (!token) throw new Error('Sessão expirada. Faça login de novo.');
+    const [res] = await Promise.all([
+      fetch(rota, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(corpo) }),
+      esperar(semMovimento() ? 0 : minimo),
+    ]);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Não foi possível concluir na Forja.');
+    return data as T;
+  };
+
   const forjar = async (d: DetalheArmaTela) => {
     if (ocupado) return;
     setOcupado(true);
     setErro(null);
+    setAnimacao({ fase: 'martelando', titulo: d.acao === 'Evoluir' ? 'EVOLUINDO' : 'FORJANDO', nome: d.nome, raridade: d.raridade, categoria: cat, linhas: [] });
     try {
-      const token = await tokenFresco();
-      if (!token) throw new Error('Sessão expirada. Faça login de novo.');
-      const res = await fetch('/api/forja/fabricar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ baseId: d.baseId, categoria, armaAnteriorId: d.armaAnteriorId ?? undefined }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Não foi possível forjar a arma.');
-      const r = data as RespostaForjaTela;
+      const r = await chamar<RespostaForjaTela>('/api/forja/fabricar', { baseId: d.baseId, categoria: cat, armaAnteriorId: d.armaAnteriorId ?? undefined }, TEMPO_DA_MARTELADA_MS);
       onCharacterChange(r.character);
-      setAviso(`${d.nome} forjada! ${rotuloAtributo(r.arma)}`);
       setSelecionada(null);
+      const linhas: LinhaDoResultado[] = [
+        { rotulo: NOME_ATRIBUTO[r.arma.atributo] ?? r.arma.atributo, depois: `+${r.arma.pontos}` },
+        { rotulo: d.tipoDano, depois: `${d.danoFixo}` },
+      ];
+      setAnimacao({ fase: 'revelada', titulo: d.acao === 'Evoluir' ? 'ARMA EVOLUÍDA!' : 'ARMA FORJADA!', nome: d.nome, raridade: d.raridade, categoria: cat, linhas });
     } catch (e) {
+      setAnimacao(null);
       setErro(e instanceof Error ? e.message : 'Erro ao forjar a arma.');
     } finally {
       setOcupado(false);
     }
   };
 
-  const executarNaArma = async (rota: string, corpo: unknown, mensagem: (a: ArmaPersonagem, nome: string) => string, nome: string) => {
+  const reforjarArma = async (d: DetalheMinhaArmaTela) => {
+    if (ocupado) return;
+    setOcupado(true);
+    setErro(null);
+    setAnimacao({ fase: 'martelando', titulo: 'REFORJANDO', nome: d.nome, raridade: d.raridade, categoria: d.categoria, linhas: [] });
+    try {
+      const r = await chamar<RespostaForjaTela>('/api/forja/reforjar', { armaId: d.id }, TEMPO_DA_MARTELADA_MS);
+      onCharacterChange(r.character);
+      setMinhaAberta(null);
+      setAnimacao({
+        fase: 'revelada',
+        titulo: 'ARMA REFORJADA!',
+        nome: d.nome,
+        raridade: d.raridade,
+        categoria: d.categoria,
+        linhas: [{ rotulo: NOME_ATRIBUTO[r.arma.atributo] ?? r.arma.atributo, antes: `+${d.pontos}`, depois: `+${r.arma.pontos}`, subiu: r.arma.pontos === d.pontos ? null : r.arma.pontos > d.pontos }],
+      });
+    } catch (e) {
+      setAnimacao(null);
+      setErro(e instanceof Error ? e.message : 'Erro na Forja.');
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  const customizarArma = async (d: DetalheMinhaArmaTela, opcao: OpcaoCustomizacao) => {
     if (ocupado) return;
     setOcupado(true);
     setErro(null);
     try {
-      const token = await tokenFresco();
-      if (!token) throw new Error('Sessão expirada. Faça login de novo.');
-      const res = await fetch(rota, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(corpo),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Não foi possível concluir na Forja.');
-      const r = data as RespostaForjaTela;
+      const r = await chamar<RespostaForjaTela>('/api/forja/customizar', { armaId: d.id, opcao }, 0);
       onCharacterChange(r.character);
-      setAviso(mensagem(r.arma, nome));
+      setAviso(`${d.nome}: +1 ponto em ${nomeDaOpcao(opcao)}`);
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Erro na Forja.');
     } finally {
       setOcupado(false);
     }
   };
-  const reforjarArma = (d: DetalheMinhaArmaTela) =>
-    executarNaArma('/api/forja/reforjar', { armaId: d.id }, (a, nome) => `${nome} reforjada! ${rotuloAtributo(a)}`, d.nome);
-  const customizarArma = (d: DetalheMinhaArmaTela, opcao: OpcaoCustomizacao) =>
-    executarNaArma('/api/forja/customizar', { armaId: d.id, opcao }, (_a, nome) => `${nome} customizada: +1 ponto em ${NOME_OPCAO[opcao]}.`, d.nome);
+
+  const status =
+    aviso ??
+    (aba === 'arvore' ? 'Toque numa arma' : aba === 'lista' ? `Prontas para forjar: ${lista.length}` : `Suas armas: ${minhas.length}`);
 
   return (
-    <main className="min-h-dvh w-full flex flex-col items-center px-2.5 py-3 select-none" style={{ backgroundColor: colors.background.primary, backgroundImage: 'radial-gradient(ellipse at top, rgba(48,28,14,0.92) 0%, rgba(13,13,13,1) 75%)', color: colors.text.primary }}>
-      <div className="w-full max-w-[480px] flex flex-col gap-2.5 pb-4">
-        <header className="flex items-center justify-between">
-          <Link href="/ferreiro" className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-cinzel font-bold uppercase" style={{ backgroundColor: colors.background.secondary, borderColor: OURO, color: '#E6C775' }}>
-            <ArrowLeft className="w-4 h-4" /> Ferreiro
-          </Link>
-          <span className="inline-flex items-center gap-1 text-xs font-cinzel font-bold" style={{ color: '#E6C775' }} aria-label={`Ouro: ${character.ouro}`}>
-            <Coins className="w-3.5 h-3.5" /> {character.ouro.toLocaleString('pt-BR')}
-          </span>
-        </header>
+    <main className="fixed inset-0 overflow-hidden select-none bg-[#05070D] flex flex-col">
+      <FundoDaForja />
 
-        <div className="flex flex-col items-center">
-          <span className="text-[10px] font-cinzel tracking-widest uppercase" style={{ color: colors.text.secondary }}>Ferreiro › Fabricar equipamentos</span>
-          <h1 className="text-2xl font-cinzel font-extrabold tracking-widest uppercase" style={{ color: '#F5E3B3' }}>Forja</h1>
-        </div>
-
-        <nav aria-label="Abas da Forja" className="grid grid-cols-3 rounded-sm border-2 overflow-hidden" style={{ borderColor: OURO }}>
-          {([['arvore', 'Árvore'], ['lista', `Lista (${lista.length})`], ['minhas', `Minhas armas (${minhas.length})`]] as const).map(([id, nome]) => (
-            <button key={id} type="button" aria-pressed={aba === id} onClick={() => { setAba(id); setErro(null); }} className="py-1.5 text-xs font-cinzel font-bold uppercase cursor-pointer" style={{ backgroundColor: aba === id ? OURO : colors.background.secondary, color: aba === id ? colors.background.primary : '#E6C775' }}>
-              {nome}
-            </button>
-          ))}
-        </nav>
-
-        {aba !== 'minhas' && <div role="group" aria-label="Categoria da arma" className="flex gap-1.5 overflow-x-auto pb-1 -mx-0.5 px-0.5">
-          {CATEGORIAS_TELA.map((c) => (
-            <button key={c.id} type="button" aria-pressed={categoria === c.id} onClick={() => { setCategoria(c.id); setSelecionada(null); }} className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-sm border text-[11px] font-semibold cursor-pointer" style={{ backgroundColor: categoria === c.id ? `${OURO}33` : colors.background.secondary, borderColor: categoria === c.id ? DESTAQUE : `${colors.border.default}99`, color: categoria === c.id ? '#F5E3B3' : colors.text.secondary }}>
-              <IconeCategoria categoria={c.id} className="w-3.5 h-3.5" />
-              {c.nome}
-            </button>
-          ))}
-        </div>}
-
-        {aviso && (
-          <div role="status" className="flex items-start justify-between gap-2 rounded px-2 py-1.5 text-xs font-semibold" style={{ backgroundColor: '#1E3A24', color: '#BFEFC6' }}>
-            <span>{aviso}</span>
-            <button type="button" aria-label="Fechar aviso" onClick={() => setAviso(null)} className="cursor-pointer"><X className="w-3.5 h-3.5" /></button>
-          </div>
-        )}
-
-        {aba === 'minhas' ? (
-          <section aria-label="Minhas armas" className="flex flex-col gap-1.5">
-            {minhas.length === 0 ? (
-              <div className="rounded-sm border-2 p-5 text-center text-sm" style={{ backgroundColor: colors.background.secondary, borderColor: `${colors.border.default}99`, color: colors.text.secondary }}>
-                Você ainda não tem armas. Forje a primeira na aba Árvore ou Lista.
-              </div>
-            ) : (
-              minhas.map((m) => (
-                <button key={m.id} type="button" onClick={() => { setErro(null); setMinhaAberta(m.id); }} className="flex items-center gap-2.5 rounded-sm border-2 px-2.5 py-2 text-left cursor-pointer" style={{ backgroundColor: colors.background.secondary, borderColor: `${m.cor}99` }}>
-                  <IconeCategoria categoria={m.categoria} className="w-6 h-6 shrink-0" style={{ color: m.cor }} />
-                  <span className="flex-1 flex flex-col min-w-0">
-                    <span className="text-[13px] font-semibold truncate" style={{ color: m.cor }}>{m.nome}</span>
-                    <span className="text-[10px]" style={{ color: colors.text.secondary }}>{m.raridadeNome} · {m.categoriaNome} · {m.atributo} +{m.pontos}</span>
-                  </span>
-                  <span className="text-right text-[10px]" style={{ color: colors.text.secondary }}>
-                    {m.reforjas} reforja(s){m.mitica ? ` · ${m.pontosCustomizacao}/20 pts` : ''}
-                  </span>
-                </button>
-              ))
-            )}
-          </section>
-        ) : aba === 'arvore' ? (
-          <>
-            <div role="group" aria-label="Estrela do monstro" className="flex gap-1 overflow-x-auto pb-1">
-              {estrelasComArvore.map((e) => (
-                <button key={e} type="button" aria-pressed={estrela === e} onClick={() => setEstrela(e)} className="shrink-0 px-2 py-1 rounded-sm border text-[11px] font-cinzel font-bold cursor-pointer" style={{ backgroundColor: estrela === e ? `${OURO}33` : colors.background.secondary, borderColor: estrela === e ? DESTAQUE : `${colors.border.default}99`, color: estrela === e ? '#F5E3B3' : colors.text.secondary }}>
-                  {e}★
-                </button>
-              ))}
-            </div>
-            <section aria-label="Árvores de armas" className="flex flex-col gap-2">
-              {arvores.filter((a) => a.estrela === estrela).map((a) => (
-                <ArvoreMonstro key={a.monstroId} arvore={a} categoria={categoria} selecionada={selecionada} onAbrir={abrir} />
-              ))}
-            </section>
-          </>
+      <header className="relative z-10 flex items-center gap-1 px-2.5 pt-2.5 sm:px-5">
+        {categoria ? (
+          <BotaoRedondo tipo="voltar" rotulo="Voltar para a escolha da arma" onClick={voltarParaAGrade} className="w-10 h-10 shrink-0" />
         ) : (
-          <section aria-label="Lista de forja" className="flex flex-col gap-1.5">
-            {lista.length === 0 ? (
-              <div className="rounded-sm border-2 p-5 text-center text-sm" style={{ backgroundColor: colors.background.secondary, borderColor: `${colors.border.default}99`, color: colors.text.secondary }}>
-                Nenhuma arma pronta para forjar agora. Cace monstros para juntar materiais.
-              </div>
-            ) : (
-              lista.map((i) => (
-                <button key={i.baseId} type="button" onClick={() => abrir(i.baseId)} className="flex items-center gap-2.5 rounded-sm border-2 px-2.5 py-2 text-left cursor-pointer" style={{ backgroundColor: colors.background.secondary, borderColor: `${COR_RARIDADE_ARMA[i.raridade]}99` }}>
-                  <IconeCategoria categoria={categoria} className="w-6 h-6 shrink-0" style={{ color: COR_RARIDADE_ARMA[i.raridade] }} />
-                  <span className="flex flex-col">
-                    <span className="text-[13px] font-semibold" style={{ color: COR_RARIDADE_ARMA[i.raridade] }}>{i.nome}</span>
-                    <span className="text-[10px]" style={{ color: colors.text.secondary }}>{i.raridadeNome} · {estrelas(i.estrela)} {i.monstroNome}</span>
-                  </span>
-                </button>
-              ))
-            )}
-          </section>
+          <Link href="/ferreiro" aria-label="Voltar ao Ferreiro" className="w-10 h-10 shrink-0 cursor-pointer active:translate-y-px">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={KIT_DA_FORJA.voltar} alt="" aria-hidden="true" className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} />
+          </Link>
         )}
-      </div>
+        <BarraDeTitulo titulo={categoria ? CATEGORIAS_ARMA_MAP[categoria].nome : 'Forjar arma'} ouro={character.ouro} className="flex-1" />
+      </header>
+
+      {!categoria ? (
+        <div className="relative z-10 flex-1 min-h-0 px-2.5 pt-1 pb-3 sm:px-5 flex flex-col">
+          <PainelDaForja as="section" aria-label="Escolha a arma" className="flex-1 min-h-0 overflow-y-auto">
+            <div className="px-1 py-1">
+              <SelecaoDeArma armas={character.armas} aoEscolher={escolher} />
+            </div>
+          </PainelDaForja>
+        </div>
+      ) : (
+        <>
+          <div className="relative z-10 px-2.5 pt-1 sm:px-5">
+            <Abas<Aba>
+              rotulo="Abas da Forja"
+              ativa={aba}
+              aoMudar={mudarAba}
+              abas={[
+                { id: 'arvore', nome: 'Árvore' },
+                { id: 'lista', nome: `Lista (${lista.length})` },
+                { id: 'minhas', nome: `Minhas (${minhas.length})`, rotuloAcessivel: `Minhas armas (${minhas.length})` },
+              ]}
+            />
+          </div>
+
+          <div className="relative z-10 flex-1 min-h-0 px-2.5 pt-1 pb-1 sm:px-5 flex flex-col">
+            <PainelDaForja as="section" aria-label={aba === 'arvore' ? 'Árvores de armas' : aba === 'lista' ? 'Lista de forja' : 'Minhas armas'} className="flex-1 min-h-0 overflow-y-auto forja-rolagem">
+              {aba === 'arvore' && (
+                <>
+                  <div role="group" aria-label="Estrela do monstro" className="flex gap-1 overflow-x-auto pb-2">
+                    {estrelasComArvore.map((e) => (
+                      <button
+                        key={e}
+                        type="button"
+                        aria-pressed={estrelaAtual === e}
+                        onClick={() => setEstrela(e)}
+                        className={`shrink-0 px-2.5 py-1 border ${TEXTO_PIXEL} text-[11px] font-bold cursor-pointer ${estrelaAtual === e ? 'bg-[#2EC6D4] border-[#9CF3FA] text-[#06222A]' : 'bg-[#0B0F1A] border-[#3A5B7A] text-[#9CC4E0]'}`}
+                      >
+                        {e}★
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-col gap-2.5">
+                    {arvores.filter((a) => a.estrela === estrelaAtual).map((a) => (
+                      <ArvoreMonstro key={a.monstroId} arvore={a} categoria={cat} selecionada={selecionada} onAbrir={abrir} />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {aba === 'lista' &&
+                (lista.length === 0 ? (
+                  <p role="status" className={`${TEXTO_PIXEL} text-[12px] text-center text-[#8FB3D1] py-6`}>Nenhuma arma pronta agora. Cace monstros para juntar materiais.</p>
+                ) : (
+                  <ul className="grid grid-cols-4 gap-x-2 gap-y-3">
+                    {lista.map((i) => (
+                      <li key={i.baseId} className="flex flex-col items-center gap-1">
+                        <button type="button" aria-label={`${i.nome}, ${i.raridadeNome}. ${estrelas(i.estrela)} ${i.monstroNome}`} onClick={() => abrir(i.baseId)} className="cursor-pointer active:translate-y-px">
+                          <SlotComIcone categoria={cat} raridade={i.raridade} destaque tamanho={56} />
+                        </button>
+                        <span className={`${TEXTO_PIXEL} text-[9px] leading-tight text-center text-[#E7C46A]`}>{estrelas(i.estrela)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ))}
+
+              {aba === 'minhas' &&
+                (minhas.length === 0 ? (
+                  <p role="status" className={`${TEXTO_PIXEL} text-[12px] text-center text-[#8FB3D1] py-6`}>Você ainda não tem armas. Forje a primeira na Árvore.</p>
+                ) : (
+                  <ul className="grid grid-cols-4 gap-x-2 gap-y-3">
+                    {minhas.map((m) => (
+                      <li key={m.id} className="flex flex-col items-center gap-1">
+                        <button
+                          type="button"
+                          aria-label={`${m.nome}, ${m.raridadeNome}, ${m.categoriaNome}, ${m.atributo} +${m.pontos}`}
+                          onClick={() => {
+                            setErro(null);
+                            setMinhaAberta(m.id);
+                          }}
+                          className="cursor-pointer active:translate-y-px"
+                        >
+                          <SlotComIcone categoria={m.categoria} raridade={m.raridade} tamanho={56} />
+                        </button>
+                        <span className={`${TEXTO_PIXEL} text-[10px] font-bold text-[#7BE08C] tabular-nums leading-none`}>+{m.pontos}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ))}
+            </PainelDaForja>
+          </div>
+        </>
+      )}
+
+      {categoria && (
+        <div className="relative z-10 px-2.5 pb-3 pt-1 sm:px-5">
+          <div className="relative w-full" style={{ aspectRatio: '415 / 64', maxHeight: 54 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={KIT_DA_FORJA.barraStatus} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full" style={{ imageRendering: 'pixelated', objectFit: 'fill' }} />
+            <p role="status" className="absolute inset-0 flex items-center justify-center px-12 font-cinzel font-bold text-[13px] text-[#DFF3FF] [text-shadow:1px_1px_0_#05070D] truncate">{status}</p>
+          </div>
+        </div>
+      )}
 
       {detalheMinha && (
         <FolhaMinhaArma
@@ -256,36 +312,30 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco }: Forja
           ocupado={ocupado}
           erro={erro}
           onFechar={() => setMinhaAberta(null)}
-          onReforjar={() => reforjarArma(detalheMinha)}
-          onCustomizar={(opcao) => customizarArma(detalheMinha, opcao)}
+          onReforjar={() => void reforjarArma(detalheMinha)}
+          onCustomizar={(opcao) => void customizarArma(detalheMinha, opcao)}
         />
       )}
-      {detalhe && <FolhaDetalhe detalhe={detalhe} categoria={categoria} ocupado={ocupado} erro={erro} onFechar={() => setSelecionada(null)} onForjar={() => forjar(detalhe)} />}
+      {detalhe && <FolhaDetalhe detalhe={detalhe} categoria={cat} ocupado={ocupado} erro={erro} onFechar={() => setSelecionada(null)} onForjar={() => void forjar(detalhe)} />}
+      {animacao && <AnimacaoDeForja {...animacao} aoFechar={() => setAnimacao(null)} />}
     </main>
   );
 }
 
-const NOME_OPCAO: Readonly<Record<OpcaoCustomizacao, string>> = { dano: 'Dano', atributo: 'Atributo secundário', status: 'Mais status' };
-
-function rotuloAtributo(arma: ArmaPersonagem): string {
-  const nomes: Record<string, string> = { vigor: 'Vigor', sorte: 'Sorte', forca: 'Força', vitalidade: 'Vitalidade', arcano: 'Arcano', inteligencia: 'Inteligência', agilidade: 'Agilidade' };
-  return `${nomes[arma.atributo] ?? arma.atributo} +${arma.pontos}.`;
-}
-
+/** A árvore de um monstro: a linha principal de armas ligadas e o ramo de cada subespécie logo abaixo. */
 function ArvoreMonstro({ arvore, categoria, selecionada, onAbrir }: { arvore: ArvoreForja; categoria: CategoriaArma; selecionada: string | null; onAbrir: (id: string) => void }) {
-  const { colors } = NOCTHERA_THEME;
   return (
-    <article aria-label={`Árvore de ${arvore.nome}`} className="rounded-sm border-2 px-2.5 py-2 flex flex-col gap-1.5" style={{ backgroundColor: colors.background.secondary, borderColor: `${OURO}88` }}>
-      <h2 className="text-[13px] font-cinzel font-bold" style={{ color: '#F5E3B3' }}>
-        <span style={{ color: OURO }}>{estrelas(arvore.estrela)}</span> {arvore.nome}
+    <article aria-label={`Árvore de ${arvore.nome}`} className="bg-[#080C16]/70 border border-[#243B55] px-2 py-1.5 flex flex-col gap-1.5">
+      <h2 className="font-cinzel font-extrabold text-[12px] leading-none text-[#9CD8FF] [text-shadow:1px_1px_0_#05070D]">
+        <span className="text-[#E7C46A]">{estrelas(arvore.estrela)}</span> {arvore.nome}
       </h2>
       {arvore.ramos.map((ramo, i) => (
-        <div key={ramo.id} className={i === 0 ? '' : 'ml-3 pl-2 border-l-2'} style={i === 0 ? undefined : { borderColor: `${OURO}66` }}>
-          {ramo.nome && <span className="block text-[10px] mb-1" style={{ color: colors.text.secondary }}>{ramo.nome}</span>}
-          <div className="flex items-center">
+        <div key={ramo.id} className={i === 0 ? '' : 'ml-4 pl-2 border-l-2 border-[#3A8FB0]/70'}>
+          {ramo.nome && <span className={`block ${TEXTO_PIXEL} text-[10px] mb-1 text-[#8FB3D1]`}>{ramo.nome}</span>}
+          <div className="flex items-center overflow-x-auto pb-0.5">
             {ramo.nos.map((no, j) => (
               <React.Fragment key={no.baseId}>
-                {j > 0 && <span aria-hidden="true" className="w-3 h-0.5" style={{ backgroundColor: `${OURO}88` }} />}
+                {j > 0 && <span aria-hidden="true" className="w-3 h-[3px] shrink-0 bg-[#4FB4D4] shadow-[0_0_0_1px_#05070D]" />}
                 <No no={no} categoria={categoria} aberto={selecionada === no.baseId} onAbrir={onAbrir} />
               </React.Fragment>
             ))}
@@ -297,164 +347,11 @@ function ArvoreMonstro({ arvore, categoria, selecionada, onAbrir }: { arvore: Ar
 }
 
 function No({ no, categoria, aberto, onAbrir }: { no: NoForja; categoria: CategoriaArma; aberto: boolean; onAbrir: (id: string) => void }) {
-  const { colors } = NOCTHERA_THEME;
-  const cor = COR_RARIDADE_ARMA[no.raridade];
   const apagado = no.estado === 'bloqueada' || no.estado === 'superada';
+  const selo = no.estado === 'tenho' || no.estado === 'superada' ? 'tenho' : no.estado === 'bloqueada' ? 'bloqueada' : no.estado === 'faltaMaterial' ? 'faltaMaterial' : null;
   return (
-    <button
-      type="button"
-      aria-label={`${no.nome}, ${no.raridadeNome}. ${ROTULO_ESTADO[no.estado]}`}
-      onClick={() => onAbrir(no.baseId)}
-      className="relative w-[52px] h-[52px] shrink-0 rounded-sm border-2 flex items-center justify-center cursor-pointer"
-      style={{
-        backgroundColor: colors.background.primary,
-        borderColor: aberto || no.estado === 'disponivel' ? DESTAQUE : `${cor}99`,
-        boxShadow: no.estado === 'disponivel' || aberto ? `0 0 0 2px ${DESTAQUE}55, 0 0 10px ${DESTAQUE}66` : undefined,
-        opacity: apagado ? 0.55 : 1,
-      }}
-    >
-      <IconeCategoria categoria={categoria} className="w-7 h-7" style={{ color: cor }} />
-      {no.estado === 'bloqueada' && <Lock className="absolute -top-1.5 -right-1.5 w-4 h-4 p-0.5 rounded-full" style={{ backgroundColor: OURO, color: colors.background.primary }} />}
-      {(no.estado === 'tenho' || no.estado === 'superada') && <Check className="absolute -top-1.5 -right-1.5 w-4 h-4 p-0.5 rounded-full" style={{ backgroundColor: no.estado === 'tenho' ? '#5FCB6A' : '#7A7A7A', color: colors.background.primary }} />}
-      {no.estado === 'faltaMaterial' && <span aria-hidden="true" className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#C25B4F' }} />}
+    <button type="button" aria-label={ROTULO_DO_NO(no, TEXTO_DO_ESTADO[no.estado])} onClick={() => onAbrir(no.baseId)} className="shrink-0 cursor-pointer active:translate-y-px">
+      <SlotComIcone categoria={categoria} raridade={no.raridade} destaque={aberto || no.estado === 'disponivel'} apagado={apagado} tamanho={46} selo={selo} />
     </button>
-  );
-}
-
-function Linha({ rotulo, valor, cor }: { rotulo: string; valor: React.ReactNode; cor?: string }) {
-  return (
-    <div className="flex justify-between gap-3 text-[12px]">
-      <span style={{ color: NOCTHERA_THEME.colors.text.secondary }}>{rotulo}</span>
-      <span className="text-right font-semibold" style={{ color: cor }}>{valor}</span>
-    </div>
-  );
-}
-
-function FolhaDetalhe({ detalhe: d, categoria, ocupado, erro, onFechar, onForjar }: { detalhe: DetalheArmaTela; categoria: CategoriaArma; ocupado: boolean; erro: string | null; onFechar: () => void; onForjar: () => void }) {
-  const { colors } = NOCTHERA_THEME;
-  const podeForjar = d.estado === 'disponivel';
-  const receita = [...d.materiais, ...(d.diversos ? [d.diversos] : [])];
-  return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={`Detalhes de ${d.nome}`}>
-      <button type="button" aria-label="Fechar detalhes" onClick={onFechar} className="absolute inset-0 cursor-default" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} />
-      <div className="relative w-full max-w-[480px] max-h-[85dvh] overflow-y-auto rounded-t-md border-2 border-b-0 px-3.5 pt-3 pb-4 flex flex-col gap-2.5" style={{ backgroundColor: colors.background.secondary, borderColor: d.cor }}>
-        <div className="flex items-start gap-3">
-          <span className="w-14 h-14 shrink-0 rounded-sm border-2 flex items-center justify-center" style={{ borderColor: d.cor, backgroundColor: colors.background.primary }}>
-            <IconeCategoria categoria={categoria} className="w-8 h-8" style={{ color: d.cor }} />
-          </span>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-[16px] font-cinzel font-extrabold leading-tight" style={{ color: d.cor }}>{d.nome}</h2>
-            <p className="text-[11px]" style={{ color: colors.text.secondary }}>
-              {d.raridadeNome} · {d.categoriaNome} · {estrelas(d.estrela)} {d.monstroNome}{d.ramoNome ? ` › ${d.ramoNome}` : ''}
-            </p>
-            <p className="text-[11px] font-semibold" style={{ color: d.estado === 'disponivel' ? '#BFEFC6' : colors.text.secondary }}>{ROTULO_ESTADO[d.estado]}</p>
-          </div>
-          <button type="button" aria-label="Fechar" onClick={onFechar} className="cursor-pointer"><X className="w-5 h-5" style={{ color: colors.text.secondary }} /></button>
-        </div>
-
-        <div className="rounded-sm border p-2 flex flex-col gap-1" style={{ borderColor: `${colors.border.default}99` }}>
-          <Linha rotulo={d.tipoDano + (d.subtipo ? ` (${d.subtipo})` : '')} valor={d.danoFixo} cor="#F5E3B3" />
-          <Linha rotulo="Atributo sorteado" valor={d.atributoSorteado} />
-          {d.minha && <Linha rotulo="Sua arma" valor={`${d.minha.atributo} +${d.minha.pontos} · ${d.minha.reforjas} reforja(s)`} cor="#BFEFC6" />}
-          {d.elementos.length > 0 && <Linha rotulo="Elemento" valor={<span className="inline-flex items-center gap-1"><IconesDeElementos elementos={d.elementos} tamanho={16} />{d.elementos.join(' + ')}</span>} />}
-          {d.status.length > 0 && <Linha rotulo="Status" valor={d.status.join(', ')} />}
-          <Linha rotulo="Bônus da categoria" valor={d.bonus} cor="#5FCB6A" />
-          <Linha rotulo="Penalidade" valor={d.penalidade} cor="#E5736B" />
-        </div>
-
-        {d.estado !== 'tenho' && d.estado !== 'superada' && (
-          <div className="flex flex-col gap-1">
-            <h3 className="text-[11px] font-cinzel font-bold uppercase tracking-wider" style={{ color: OURO }}>Receita</h3>
-            {d.consome && <Linha rotulo="Consome a arma" valor={`${d.consome.nome} ${d.consome.tenho ? '✓' : '✗'}`} cor={d.consome.tenho ? '#BFEFC6' : '#E5736B'} />}
-            {receita.map((m) => (
-              <Linha key={m.id} rotulo={m.nome} cor={m.ok ? '#BFEFC6' : '#E5736B'} valor={`${m.tem}/${m.precisa}`} />
-            ))}
-            <Linha rotulo="Ouro" cor={d.ouro.ok ? '#BFEFC6' : '#E5736B'} valor={`${d.ouro.tem.toLocaleString('pt-BR')}/${d.ouro.precisa.toLocaleString('pt-BR')}`} />
-          </div>
-        )}
-
-        {erro && <div role="alert" className="rounded px-2 py-1.5 text-xs font-semibold" style={{ backgroundColor: colors.status.danger, color: colors.text.primary }}>{erro}</div>}
-
-        {d.estado !== 'tenho' && d.estado !== 'superada' && (
-          <button type="button" disabled={!podeForjar || ocupado} onClick={onForjar} className="w-full py-2.5 rounded-sm border-2 font-cinzel font-extrabold uppercase tracking-wider text-sm enabled:cursor-pointer disabled:cursor-not-allowed" style={{ backgroundColor: podeForjar ? OURO : colors.background.primary, borderColor: podeForjar ? DESTAQUE : `${colors.border.default}99`, color: podeForjar ? colors.background.primary : colors.text.secondary }}>
-            {ocupado ? 'Forjando...' : d.estado === 'bloqueada' ? 'Falta a arma anterior' : d.estado === 'faltaMaterial' ? 'Falta material ou ouro' : d.acao}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/** Sheet de uma arma que o personagem tem: reforjar (sorteia os pontos de novo) e, nas Míticas, customizar. */
-export function FolhaMinhaArma({ detalhe: d, ocupado, erro, onFechar, onReforjar, onCustomizar }: {
-  detalhe: DetalheMinhaArmaTela;
-  ocupado: boolean;
-  erro: string | null;
-  onFechar: () => void;
-  onReforjar: () => void;
-  onCustomizar: (opcao: OpcaoCustomizacao) => void;
-}) {
-  const { colors } = NOCTHERA_THEME;
-  const receita = [...d.reforja.materiais, ...(d.reforja.diversos ? [d.reforja.diversos] : [])];
-  const cust = d.customizacao;
-  return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={`Sua arma: ${d.nome}`}>
-      <button type="button" aria-label="Fechar detalhes" onClick={onFechar} className="absolute inset-0 cursor-default" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} />
-      <div className="relative w-full max-w-[480px] max-h-[88dvh] overflow-y-auto rounded-t-md border-2 border-b-0 px-3.5 pt-3 pb-4 flex flex-col gap-2.5" style={{ backgroundColor: colors.background.secondary, borderColor: d.cor }}>
-        <div className="flex items-start gap-3">
-          <span className="w-14 h-14 shrink-0 rounded-sm border-2 flex items-center justify-center" style={{ borderColor: d.cor, backgroundColor: colors.background.primary }}>
-            <IconeCategoria categoria={d.categoria} className="w-8 h-8" style={{ color: d.cor }} />
-          </span>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-[16px] font-cinzel font-extrabold leading-tight" style={{ color: d.cor }}>{d.nome}</h2>
-            <p className="text-[11px]" style={{ color: colors.text.secondary }}>{d.raridadeNome} · {d.categoriaNome} · {estrelas(d.estrela)} {d.monstroNome}</p>
-          </div>
-          <button type="button" aria-label="Fechar" onClick={onFechar} className="cursor-pointer"><X className="w-5 h-5" style={{ color: colors.text.secondary }} /></button>
-        </div>
-
-        <div className="rounded-sm border p-2 flex flex-col gap-1" style={{ borderColor: `${colors.border.default}99` }}>
-          <Linha rotulo={d.tipoDano} valor={d.danoFixo === d.danoFixoBase ? d.danoFixo : `${d.danoFixo} (base ${d.danoFixoBase})`} cor="#F5E3B3" />
-          <Linha rotulo="Atributo sorteado" valor={`${d.atributo} +${d.pontos}`} cor="#BFEFC6" />
-          <Linha rotulo="Reforjas feitas" valor={d.reforjas} />
-          {d.elementos.length > 0 && <Linha rotulo="Elemento" valor={<span className="inline-flex items-center gap-1"><IconesDeElementos elementos={d.elementos} tamanho={16} />{d.elementos.join(' + ')}</span>} />}
-          {d.status.length > 0 && <Linha rotulo="Status" valor={d.status.join(', ')} />}
-        </div>
-
-        <div className="rounded-sm border p-2 flex flex-col gap-1.5" style={{ borderColor: `${DESTAQUE}88` }}>
-          <h3 className="text-[11px] font-cinzel font-bold uppercase tracking-wider" style={{ color: OURO }}>Reforjar ({d.reforja.percentual}% da receita)</h3>
-          <p className="text-[11px]" style={{ color: colors.text.secondary }}>Sorteia de novo os pontos do atributo, que podem sair maiores ou menores. O tipo do atributo e a Customização ficam.</p>
-          {receita.map((m) => <Linha key={m.id} rotulo={m.nome} cor={m.ok ? '#BFEFC6' : '#E5736B'} valor={`${m.tem}/${m.precisa}`} />)}
-          <Linha rotulo="Ouro" cor={d.reforja.ouro.ok ? '#BFEFC6' : '#E5736B'} valor={`${d.reforja.ouro.tem.toLocaleString('pt-BR')}/${d.reforja.ouro.precisa.toLocaleString('pt-BR')}`} />
-          <button type="button" disabled={!d.reforja.pode || ocupado} onClick={onReforjar} className="w-full py-2 rounded-sm border-2 font-cinzel font-extrabold uppercase tracking-wider text-sm enabled:cursor-pointer disabled:cursor-not-allowed" style={{ backgroundColor: d.reforja.pode ? OURO : colors.background.primary, borderColor: OURO, color: d.reforja.pode ? colors.background.primary : colors.text.secondary, opacity: d.reforja.pode ? 1 : 0.7 }}>
-            {ocupado ? 'Forjando...' : d.reforja.pode ? 'Reforjar' : 'Falta material ou ouro'}
-          </button>
-        </div>
-
-        {cust ? (
-          <div className="rounded-sm border p-2 flex flex-col gap-1.5" style={{ borderColor: `${d.cor}99` }}>
-            <h3 className="text-[11px] font-cinzel font-bold uppercase tracking-wider" style={{ color: OURO }}>Customização ({d.pontosCustomizacao}/{cust.maximo} pontos)</h3>
-            <p className="text-[11px]" style={{ color: colors.text.secondary }}>Cada ponto custa ouro e 1 Bilhete de melhoria (cai em 1% das vitórias contra monstros 9★).</p>
-            <Linha rotulo="Ouro por ponto" cor={cust.ouroPorPonto.ok ? '#BFEFC6' : '#E5736B'} valor={`${cust.ouroPorPonto.tem.toLocaleString('pt-BR')}/${cust.ouroPorPonto.precisa.toLocaleString('pt-BR')}`} />
-            <Linha rotulo={cust.bilhete.nome} cor={cust.bilhete.ok ? '#BFEFC6' : '#E5736B'} valor={`${cust.bilhete.tem}/${cust.bilhete.precisa}`} />
-            {cust.opcoes.map((o) => (
-              <div key={o.id} className="flex items-center justify-between gap-2 text-[12px]">
-                <span className="flex flex-col">
-                  <span className="font-semibold" style={{ color: '#F5E3B3' }}>{o.nome} <span style={{ color: colors.text.secondary }}>({o.pontos} pt · {o.atual})</span></span>
-                  <span className="text-[10px]" style={{ color: colors.text.secondary }}>{o.disponivel ? `Cada ponto: ${o.porPonto}` : 'Esta arma não tem status'}</span>
-                </span>
-                <button type="button" aria-label={`Adicionar ponto em ${o.nome}`} disabled={!cust.pode || !o.disponivel || ocupado} onClick={() => onCustomizar(o.id)} className="shrink-0 px-2.5 py-1 rounded-sm border-2 font-cinzel font-bold uppercase text-[11px] enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-40" style={{ borderColor: OURO, color: '#E6C775', backgroundColor: colors.background.primary }}>
-                  + 1
-                </button>
-              </div>
-            ))}
-            {cust.noMaximo && <span className="text-[11px] font-semibold" style={{ color: '#BFEFC6' }}>Customização no máximo.</span>}
-          </div>
-        ) : (
-          <p className="text-[11px]" style={{ color: colors.text.secondary }}>Só as armas Míticas podem ser customizadas.</p>
-        )}
-
-        {erro && <div role="alert" className="rounded px-2 py-1.5 text-xs font-semibold" style={{ backgroundColor: colors.status.danger, color: colors.text.primary }}>{erro}</div>}
-      </div>
-    </div>
   );
 }

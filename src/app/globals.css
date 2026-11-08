@@ -480,3 +480,27 @@
   .ferreiro-sprite, .forja-brilho, .forja-placa, .forja-indicador { animation: none !important; }
   .forja-faisca { display: none; }
 }
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Forja de armas (kit azul e dourado): brilho dos slots prontos, botão pronto, faíscas e a animação de forjar.
+   --------------------------------------------------------------------------------------------------------------- */
+.forja-pronto { animation: forja-pulsa-slot 1.5s ease-in-out infinite; }
+.forja-botao-pronto { animation: forja-pulsa-botao 1.6s ease-in-out infinite; }
+@keyframes forja-pulsa-slot { 0%, 100% { filter: drop-shadow(0 0 3px #4fe6f0); } 50% { filter: drop-shadow(0 0 10px #8ff4ff) brightness(1.2); } }
+@keyframes forja-pulsa-botao { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.22) drop-shadow(0 0 8px #53e3ee); } }
+.fx-faisca { position: absolute; width: 6px; height: 6px; background: #FFF3B8; box-shadow: 0 0 0 1px #FFB53A, 0 0 9px 3px #FF7A12; opacity: 0; pointer-events: none; animation: fx-voa var(--dur, 0.9s) ease-out var(--atraso, 0s) infinite; }
+@keyframes fx-voa { 0% { transform: translate(0, 0) scale(1); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(var(--dx, 0px), var(--dy, -90px)) scale(0.3); opacity: 0; } }
+.fx-batida { animation: fx-treme 0.55s ease-in-out infinite; }
+@keyframes fx-treme { 0%, 100% { transform: translate(0, 0); } 45% { transform: translate(0, 0); } 50% { transform: translate(0, 3px); } 60% { transform: translate(-2px, -1px); } 70% { transform: translate(2px, 0); } }
+.fx-subida { animation: fx-sobe-arma 0.9s cubic-bezier(0.2, 1.5, 0.4, 1) both; }
+@keyframes fx-sobe-arma { 0% { transform: translateY(40px) scale(0.3); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.fx-aparece { animation: fx-aparece 0.5s ease-out both; }
+@keyframes fx-aparece { 0% { transform: translateY(12px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .forja-pronto, .forja-botao-pronto, .fx-batida, .fx-subida, .fx-aparece { animation: none !important; }
+  .fx-faisca { display: none; }
+}
+.forja-rolagem { scrollbar-width: thin; scrollbar-color: #3A8FB0 #0B0F1A; }
+.forja-rolagem::-webkit-scrollbar { width: 6px; }
+.forja-rolagem::-webkit-scrollbar-track { background: #0B0F1A; }
+.forja-rolagem::-webkit-scrollbar-thumb { background: #3A8FB0; }
