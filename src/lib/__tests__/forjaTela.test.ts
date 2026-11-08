@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { CATEGORIAS_TELA, arvoresDaForja, detalheDaArma, detalheDaMinhaArma, estadoDoNo, listaDeForja, minhasArmasTela } from '@/lib/forjaTela';
+import { CATEGORIAS_TELA, arvoresDaForja, arvoresVisiveis, detalheDaArma, detalheDaMinhaArma, estadoDoNo, listaDeForja, minhasArmasTela } from '@/lib/forjaTela';
 import { ARMAS_BASE } from '@/rules/armasCatalogo';
+import { DADOS_CACADA_MAP } from '@/rules/cacada';
 import { custoDaReceita, ArmaPersonagem } from '@/game/forja';
 
 /** Tela da Forja: árvore por monstro, estados, lista de forja e detalhe da arma. */
@@ -148,5 +149,84 @@ describe('Minhas armas: reforjar e customizar', () => {
       const d = detalheDaMinhaArma('s1', { armas: [arma(semStatus.id, 'espadaGrande', { id: 's1', atributo: 'forca' })], inventario: {}, ouro: 0 })!;
       expect(d.customizacao!.opcoes.find((o) => o.id === 'status')!.disponivel).toBe(false);
     }
+  });
+});
+
+
+describe('O que a Forja mostra (regra do Yuri: ★ liberada e monstro descoberto)', () => {
+  const base = { inventario: {} as Record<string, number>, ouro: 0, armas: [] as ArmaPersonagem[], nivel: 12, cacadaChavesVencidas: [] as number[], monstrosDerrotados: [] as string[] };
+  const ver = (c: object, cat: 'espadaGrande' | 'katana' = 'espadaGrande') => arvoresVisiveis(cat, { ...base, ...c });
+
+  it('sem nenhuma ★ liberada (nível 1) não aparece árvore nenhuma', () => {
+    expect(ver({ nivel: 1 })).toEqual([]);
+  });
+
+  it('com a 1★ liberada, só as árvores da 1★ aparecem, todas como ??? (sem nome, sem armas, só os espaços da linha principal)', () => {
+    const v = ver({});
+    expect(v.length).toBeGreaterThan(0);
+    expect(v.every((a) => a.estrela === 1)).toBe(true);
+    for (const a of v) {
+      expect(a.descoberta).toBe(false);
+      expect(a.nome).toBe('???');
+      expect(a.ramos).toHaveLength(1);
+      expect(a.ramos[0]).toMatchObject({ id: 'principal', nos: [], descoberto: false });
+      expect(a.ramos[0].quantidade).toBeGreaterThan(0);
+    }
+    expect(JSON.stringify(v)).not.toContain('Rato da Floresta');
+    expect(JSON.stringify(v)).not.toContain('Ferro de Caçada');
+  });
+
+  it('o monstro derrotado revela a árvore dele; as subespécies seguem ??? até serem descobertas', () => {
+    const rato = ver({ monstrosDerrotados: ['rato-da-floresta'] }).find((a) => a.monstroId === 'rato-da-floresta')!;
+    expect(rato.descoberta).toBe(true);
+    expect(rato.nome).toBe('Rato da Floresta');
+    expect(rato.ramos.map((r) => [r.id, r.descoberto, r.nos.length, r.nome])).toEqual([
+      ['principal', true, 2, ''],
+      ['rato-das-cinzas', false, 0, '???'],
+      ['rato-pestilento', false, 0, '???'],
+    ]);
+    expect(rato.ramos[1].quantidade).toBe(2);
+    // as outras árvores continuam ???
+    expect(ver({ monstrosDerrotados: ['rato-da-floresta'] }).filter((a) => a.descoberta)).toHaveLength(1);
+  });
+
+  it('ter material do monstro (qualquer drop) também revela, e o da subespécie revela o ramo dela', () => {
+    const v = ver({ inventario: { 'pelo-de-rato': 1 } }).find((a) => a.monstroId === 'rato-da-floresta')!;
+    expect(v.descoberta).toBe(true);
+    expect(v.ramos.find((r) => r.id === 'rato-das-cinzas')!.descoberto).toBe(false);
+    // o Pelo de Rato é compartilhado pelos três ratos (não revela subespécie); a Cauda Chamuscada é só do Rato das Cinzas
+    expect(DADOS_CACADA_MAP['rato-das-cinzas'].drops).toContain('pelo-de-rato');
+    const drop = 'cauda-chamuscada';
+    const w = ver({ monstrosDerrotados: ['rato-da-floresta'], inventario: { [drop]: 3 } }).find((a) => a.monstroId === 'rato-da-floresta')!;
+    expect(w.ramos.find((r) => r.id === 'rato-das-cinzas')).toMatchObject({ descoberto: true, nome: 'Rato das Cinzas' });
+    expect(w.ramos.find((r) => r.id === 'rato-das-cinzas')!.nos).toHaveLength(2);
+    expect(w.ramos.find((r) => r.id === 'rato-pestilento')!.descoberto).toBe(false);
+  });
+
+  it('material com quantidade zero não conta', () => {
+    expect(ver({ inventario: { 'pelo-de-rato': 0 } }).some((a) => a.descoberta)).toBe(false);
+  });
+
+  it('quem já forjou uma arma da árvore sempre a vê, mesmo sem material nem vitória registrada', () => {
+    const v = ver({ armas: [arma('montante-de-pelo')] }).find((a) => a.monstroId === 'rato-da-floresta')!;
+    expect(v.descoberta).toBe(true);
+    expect(v.ramos[0].nos).toHaveLength(2);
+    const dasCinzas = ver({ armas: [arma('lamina-das-cinzas')] }).find((a) => a.monstroId === 'rato-da-floresta')!;
+    expect(dasCinzas.ramos.find((r) => r.id === 'rato-das-cinzas')!.descoberto).toBe(true);
+  });
+
+  it('uma ★ nova que o jogador libera passa a aparecer como ???, e a que ainda está bloqueada não aparece', () => {
+    const so1 = ver({ nivel: 12 });
+    expect(Math.max(...so1.map((a) => a.estrela))).toBe(1);
+    const com2 = ver({ nivel: 12, cacadaChavesVencidas: [1] });
+    const duas = com2.filter((a) => a.estrela === 2);
+    expect(duas.length).toBeGreaterThan(0);
+    expect(duas.every((a) => !a.descoberta && a.nome === '???')).toBe(true);
+    expect(com2.some((a) => a.estrela === 3)).toBe(false);
+  });
+
+  it('a regra vale igual para todas as categorias de arma', () => {
+    const a = ver({ monstrosDerrotados: ['rato-da-floresta'] }, 'katana').find((x) => x.monstroId === 'rato-da-floresta')!;
+    expect(a.ramos[0].nos[0].nome).toBe('Tachi do Ninho');
   });
 });

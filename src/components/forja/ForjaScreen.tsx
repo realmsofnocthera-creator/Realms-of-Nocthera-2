@@ -11,13 +11,13 @@ import {
   type DetalheArmaTela,
   type DetalheMinhaArmaTela,
   type NoForja,
-  arvoresDaForja,
+  arvoresVisiveis,
   detalheDaArma,
   detalheDaMinhaArma,
   minhasArmasTela,
 } from '@/lib/forjaTela';
 import { AnimacaoDeForja, TEMPO_DA_MARTELADA_MS, semMovimento, type AnimacaoDeForjaProps, type LinhaDoResultado } from './AnimacaoDeForja';
-import { Abas, BarraDeTitulo, BotaoDoKit, BotaoRedondo, FundoDaForja, OuroDaForja, PainelDaForja, PalcoDaForja, TEXTO_PIXEL } from './KitDaForja';
+import { Abas, BarraDeTitulo, BotaoDoKit, BotaoRedondo, FundoDaForja, OuroDaForja, PainelDaForja, PalcoDaForja, SlotDeArma, TEXTO_PIXEL } from './KitDaForja';
 import { PainelDaArma, PainelDaMinhaArma } from './PainelDaArma';
 import { FolhaMinhaArma, ROTULO_ESTADO, SlotComIcone, estrelas, nomeDaOpcao } from './PopupsDaForja';
 import { SelecaoDeArma } from './SelecaoDeArma';
@@ -67,7 +67,7 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco, categor
   const [animacao, setAnimacao] = useState<Animacao | null>(null);
 
   const cat = categoria ?? 'espadaGrande';
-  const arvores = useMemo(() => (categoria ? arvoresDaForja(cat, character) : []), [categoria, cat, character]);
+  const arvores = useMemo(() => (categoria ? arvoresVisiveis(cat, character) : []), [categoria, cat, character]);
   const minhas = useMemo(() => minhasArmasTela(character), [character]);
   const baseSel = selecionada ?? armaInicial(arvores);
   const detalhe = categoria && baseSel ? detalheDaArma(baseSel, cat, character) : null;
@@ -186,7 +186,7 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco, categor
     }
   };
 
-  const status = erro ?? aviso ?? (aba === 'minhas' ? (detalheMinha ? 'Toque em Reforjar para mexer na arma' : 'Você ainda não tem armas') : detalhe ? ROTULO_ESTADO[detalhe.estado] : 'Toque numa arma');
+  const status = erro ?? aviso ?? (aba === 'minhas' ? (detalheMinha ? 'Toque em Reforjar para mexer na arma' : 'Você ainda não tem armas') : detalhe ? ROTULO_ESTADO[detalhe.estado] : arvores.length > 0 ? 'Enfrente os monstros para descobrir as armas' : 'Libere uma ★ na Caçada');
   const podeForjar = detalhe?.estado === 'disponivel';
   const textoDoBotao = ocupado ? 'Forjando...' : !detalhe ? 'Forjar' : detalhe.estado === 'tenho' || detalhe.estado === 'superada' ? 'Você tem' : detalhe.estado === 'bloqueada' ? 'Bloqueada' : detalhe.estado === 'faltaMaterial' ? 'Falta material' : detalhe.acao;
 
@@ -231,6 +231,9 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco, categor
             <div className="flex-1 min-h-0 px-[2.4cqw] pt-[1.2cqw] grid gap-[1.6cqw]" style={{ gridTemplateColumns: '57fr 43fr' }}>
               {/* ESQUERDA: a lista de árvores (ou o zoom de uma árvore, ou as minhas armas) */}
               <PainelDaForja as="section" aria-label={aba === 'lista' ? 'Lista de árvores' : aba === 'arvore' ? 'Árvore da arma' : 'Minhas armas'} className="min-h-0 overflow-y-auto forja-rolagem">
+                {aba !== 'minhas' && arvores.length === 0 && (
+                  <p role="status" className={`${TEXTO_PIXEL} text-[2.8cqw] text-center text-[#8FB3D1] py-[6cqw] px-[2cqw] leading-snug`}>Nenhuma árvore ainda. Libere a 1★ na Caçada e enfrente os monstros para descobrir as armas.</p>
+                )}
                 {aba === 'lista' && (
                   <div className="flex flex-col gap-[1cqw]">
                     {arvores.map((a) => (
@@ -322,7 +325,7 @@ function LinhaDaArvore({ arvore, categoria, selecionada, onEscolher, grande = fa
   return (
     <article aria-label={`Árvore de ${arvore.nome}`} className="grid items-start gap-[1.2cqw] px-[1cqw] py-[1.2cqw] bg-[#080C16]/75 border border-[#1F3550]" style={{ gridTemplateColumns: semNome ? '1fr' : '16.5cqw 1fr' }}>
       {!semNome && (
-        <h2 className="font-cinzel font-extrabold text-[2.2cqw] leading-tight text-[#7FC8FF] [text-shadow:1px_1px_0_#05070D] [overflow-wrap:anywhere] hyphens-auto" lang="pt-BR">
+        <h2 className={`font-cinzel font-extrabold text-[2.2cqw] leading-tight [text-shadow:1px_1px_0_#05070D] [overflow-wrap:anywhere] hyphens-auto ${arvore.descoberta ? 'text-[#7FC8FF]' : 'text-[#5E7390]'}`} lang="pt-BR">
           {arvore.nome}
           <span className="block text-[#E7C46A] text-[2.2cqw]">{estrelas(arvore.estrela)}</span>
         </h2>
@@ -330,14 +333,21 @@ function LinhaDaArvore({ arvore, categoria, selecionada, onEscolher, grande = fa
       <div className="flex flex-col gap-[1.4cqw] min-w-0">
         {arvore.ramos.map((ramo, i) => (
           <div key={ramo.id} className={i === 0 ? '' : 'ml-[3cqw] pl-[1.4cqw] border-l-2 border-[#3A8FB0]/70'}>
-            {ramo.nome && <span className={`block ${TEXTO_PIXEL} text-[2.1cqw] mb-[0.6cqw] text-[#8FB3D1]`}>{ramo.nome}</span>}
+            {ramo.nome && <span className={`block ${TEXTO_PIXEL} text-[2.1cqw] mb-[0.6cqw] ${ramo.descoberto ? 'text-[#8FB3D1]' : 'text-[#5E7390]'}`}>{ramo.nome}</span>}
             <div className="flex items-center flex-wrap gap-y-[1cqw]">
-              {ramo.nos.map((no, j) => (
-                <React.Fragment key={no.baseId}>
-                  {j > 0 && <span aria-hidden="true" className="w-[1.8cqw] h-[0.7cqw] shrink-0 bg-[#4FB4D4] shadow-[0_0_0_1px_#05070D]" />}
-                  <No no={no} categoria={categoria} aberto={selecionada === no.baseId} onEscolher={onEscolher} tamanho={tamanho} />
-                </React.Fragment>
-              ))}
+              {ramo.descoberto
+                ? ramo.nos.map((no, j) => (
+                    <React.Fragment key={no.baseId}>
+                      {j > 0 && <span aria-hidden="true" className="w-[1.8cqw] h-[0.7cqw] shrink-0 bg-[#4FB4D4] shadow-[0_0_0_1px_#05070D]" />}
+                      <No no={no} categoria={categoria} aberto={selecionada === no.baseId} onEscolher={onEscolher} tamanho={tamanho} />
+                    </React.Fragment>
+                  ))
+                : Array.from({ length: ramo.quantidade }, (_, j) => (
+                    <React.Fragment key={j}>
+                      {j > 0 && <span aria-hidden="true" className="w-[1.8cqw] h-[0.7cqw] shrink-0 bg-[#2A3B52] shadow-[0_0_0_1px_#05070D]" />}
+                      <SlotMisterioso tamanho={tamanho} />
+                    </React.Fragment>
+                  ))}
             </div>
           </div>
         ))}
@@ -353,5 +363,16 @@ function No({ no, categoria, aberto, onEscolher, tamanho }: { no: NoForja; categ
     <button type="button" aria-label={`${no.nome}, ${no.raridadeNome}. ${ROTULO_ESTADO[no.estado]}`} aria-pressed={aberto} onClick={() => onEscolher(no.baseId)} className="shrink-0 cursor-pointer active:translate-y-px">
       <SlotComIcone categoria={categoria} raridade={no.raridade} destaque={aberto || no.estado === 'disponivel'} apagado={apagado} tamanho={tamanho} selo={selo} />
     </button>
+  );
+}
+
+/** Um espaço ainda não descoberto: a moldura apagada com "?" (não é tocável e não diz qual arma é). */
+function SlotMisterioso({ tamanho }: { tamanho: string }) {
+  return (
+    <span role="img" aria-label="Arma ainda não descoberta" className="shrink-0 inline-flex">
+      <SlotDeArma raridade="comum" apagado tamanho={tamanho}>
+        <span className={`${TEXTO_PIXEL} font-bold text-[#5E7390] leading-none`} style={{ fontSize: `calc(${tamanho} * 0.45)` }}>?</span>
+      </SlotDeArma>
+    </span>
   );
 }

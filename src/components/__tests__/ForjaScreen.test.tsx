@@ -13,6 +13,8 @@ import type { CharacterDocument } from '@/server/characterService';
 vi.mock('next/link', () => ({ default: ({ href, children, ...p }: { href: string; children: React.ReactNode }) => <a href={href} {...p}>{children}</a> }));
 
 const personagem = { uid: 'u', nome: 'Yuri', nivel: 12, ouro: 1500, inventario: {}, armas: [] } as unknown as CharacterDocument;
+// quem já descobriu o Rato da Floresta (derrotou o monstro): a árvore dele aparece de verdade
+const descobriuORato = { ...personagem, monstrosDerrotados: ['rato-da-floresta'] } as unknown as CharacterDocument;
 
 describe('Ferreiro e Forja', () => {
   it('o Ferreiro abre na ferraria em tela cheia: o ferreiro animado, o link do Menu e o menu só depois da saudação', () => {
@@ -58,16 +60,25 @@ describe('Ferreiro e Forja', () => {
     expect(html).not.toContain('Árvore de Rato da Floresta');
   });
 
-  it('a categoria aberta mostra as 3 abas, o ouro, a lista de árvores à esquerda e a arma com materiais e informações à direita', () => {
+  it('sem ter descoberto nenhum monstro, as árvores da ★ liberada vêm como ??? (sem nome nem armas) e as das ★ bloqueadas nem aparecem', () => {
     const html = renderToStaticMarkup(<ForjaScreen character={personagem} onCharacterChange={() => {}} tokenFresco={async () => 't'} categoriaInicial="espadaGrande" />);
+    expect(html).toContain('Árvore de ???');
+    expect(html).toContain('Arma ainda não descoberta');
+    expect(html).not.toContain('Árvore de Rato da Floresta');
+    expect(html).not.toContain('Ferro de Caçada');
+    expect(html).not.toContain('Árvore de Grizzharn');
+  });
+
+  it('a categoria aberta mostra as 3 abas, o ouro, a lista de árvores à esquerda e a arma com materiais e informações à direita', () => {
+    const html = renderToStaticMarkup(<ForjaScreen character={descobriuORato} onCharacterChange={() => {}} tokenFresco={async () => 't'} categoriaInicial="espadaGrande" />);
     expect(html).toContain('Lista');
     expect(html).toContain('Árvore');
     expect(html).toContain('Minhas (0)');
     expect(html).toContain('Ouro: 1.500');
     expect(html).toContain('Árvore de Rato da Floresta');
-    expect(html).toContain('Rato das Cinzas');
+    expect(html).not.toContain('Rato das Cinzas'); // a subespécie ainda não foi descoberta: o ramo vem como ???
+    expect(html).toContain('???');
     expect(html).toContain('Ferro de Caçada, Comum. Falta material ou ouro');
-    expect(html).toContain('Árvore de Grizzharn'); // a Lista mostra todos os monstros, como na referência
     expect(html).not.toContain('role="dialog"');
   });
 });
@@ -140,7 +151,7 @@ describe('Minhas armas: reforjar e customizar', () => {
   });
 
   it('a árvore escolhida mostra, à direita, a arma com materiais (tem e quanto precisa), custo e as informações; sem pop-up', () => {
-    const html = renderToStaticMarkup(<ForjaScreen character={personagem} onCharacterChange={() => {}} tokenFresco={async () => 't'} categoriaInicial="espadaGrande" />);
+    const html = renderToStaticMarkup(<ForjaScreen character={descobriuORato} onCharacterChange={() => {}} tokenFresco={async () => 't'} categoriaInicial="espadaGrande" />);
     expect(html).toContain('Arma: Ferro de Caçada');
     expect(html).toContain('Materiais necessários');
     expect(html).toContain('Pelo de Rato');

@@ -16,6 +16,7 @@ import {
   podeCustomizar,
 } from '@/rules/armas';
 import { ARMAS_BASE, ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
+import { estadoDaEstrela } from '@/game/cacada';
 import { ATTRIBUTE_DISPLAY_NAMES } from '@/rules/attributeInfo';
 import { MATERIAIS_MAP } from '@/rules/materiais';
 import { MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
@@ -52,9 +53,13 @@ export interface NoForja {
 export interface RamoForja {
   /** `principal` ou o id da subespécie. */
   id: string;
-  /** Nome do ramo (a subespécie); vazio na árvore principal. */
+  /** Nome do ramo (a subespécie); vazio na árvore principal; "???" enquanto não descoberto. */
   nome: string;
   nos: NoForja[];
+  /** O jogador já descobriu este ramo (senão, `nos` vem vazio e só a `quantidade` aparece, como "???"). */
+  descoberto: boolean;
+  /** Quantas armas o ramo tem (para desenhar os espaços "???"). */
+  quantidade: number;
 }
 
 export interface ArvoreForja {
@@ -62,6 +67,8 @@ export interface ArvoreForja {
   nome: string;
   estrela: number;
   ramos: RamoForja[];
+  /** O jogador já descobriu esta árvore (senão, vem como "???" e só com os espaços da linha principal). */
+  descoberta: boolean;
 }
 
 const armasDoPersonagem = (c: Personagem): readonly ArmaPersonagem[] => c.armas ?? [];
@@ -101,12 +108,12 @@ export function arvoresDaForja(categoria: CategoriaArma, c: Personagem): ArvoreF
   for (const arma of ARMAS_BASE) {
     let arvore = arvores.find((a) => a.monstroId === arma.monstroId);
     if (!arvore) {
-      arvore = { monstroId: arma.monstroId, nome: DADOS_CACADA_MAP[arma.monstroId].nome, estrela: arma.estrela, ramos: [] };
+      arvore = { monstroId: arma.monstroId, nome: DADOS_CACADA_MAP[arma.monstroId].nome, estrela: arma.estrela, ramos: [], descoberta: true };
       arvores.push(arvore);
     }
     let ramo = arvore.ramos.find((r) => r.id === arma.parte);
     if (!ramo) {
-      ramo = { id: arma.parte, nome: arma.parte === 'principal' ? '' : DADOS_CACADA_MAP[arma.parte].nome, nos: [] };
+      ramo = { id: arma.parte, nome: arma.parte === 'principal' ? '' : DADOS_CACADA_MAP[arma.parte].nome, nos: [], descoberto: true, quantidade: 0 };
       arvore.ramos.push(ramo);
     }
     ramo.nos.push({
@@ -118,8 +125,48 @@ export function arvoresDaForja(categoria: CategoriaArma, c: Personagem): ArvoreF
       estado: estadoDoNo(arma.id, categoria, c),
     });
   }
-  for (const a of arvores) for (const r of a.ramos) r.nos.sort((x, y) => x.posicao - y.posicao);
+  for (const a of arvores) for (const r of a.ramos) {
+    r.nos.sort((x, y) => x.posicao - y.posicao);
+    r.quantidade = r.nos.length;
+  }
   return arvores;
+}
+
+type PersonagemDaVisao = Personagem & Pick<CharacterDocument, 'nivel' | 'cacadaChavesVencidas' | 'monstrosDerrotados'>;
+
+/**
+ * O que o jogador vê na Forja (regra do Yuri, 8/11/2026): só as árvores das ★ que ele já liberou na Caçada. Dentro de
+ * uma ★ liberada, cada árvore aparece como "???" até ele descobrir o monstro: tê-lo derrotado alguma vez, ter material
+ * dele ou já ter forjado uma arma da árvore. O ramo de cada subespécie segue a mesma regra, pela subespécie (com o
+ * material exclusivo dela, porque os de base são compartilhados). As árvores
+ * ainda "???" não mostram nome nem armas (só quantos espaços a linha principal tem).
+ */
+export function arvoresVisiveis(categoria: CategoriaArma, c: PersonagemDaVisao): ArvoreForja[] {
+  const derrotados = new Set(c.monstrosDerrotados ?? []);
+  const inv = c.inventario ?? {};
+  // As subespécies dividem materiais com o monstro base (o Pelo de Rato cai nos três ratos): no ramo de uma subespécie
+  // só conta o material exclusivo dela, senão um único material revelaria todos os ramos de uma vez.
+  const temMaterial = (monstroId: string, baseId?: string) => {
+    const daBase = new Set(baseId ? (DADOS_CACADA_MAP[baseId]?.drops ?? []) : []);
+    return (DADOS_CACADA_MAP[monstroId]?.drops ?? []).some((d) => !daBase.has(d) && (inv[d] ?? 0) > 0);
+  };
+  const descobriu = (monstroId: string, baseId?: string) => derrotados.has(monstroId) || temMaterial(monstroId, baseId);
+  const forjadas = armasDoPersonagem(c).map((a) => ARMAS_BASE_MAP[a.baseId]).filter((b): b is NonNullable<typeof b> => !!b);
+  return arvoresDaForja(categoria, c)
+    .filter((a) => estadoDaEstrela(a.estrela, c.nivel, c.cacadaChavesVencidas).liberada)
+    .map((a): ArvoreForja => {
+      const temArma = forjadas.some((b) => b.monstroId === a.monstroId);
+      const ramoDescoberto = (r: RamoForja) => (r.id === 'principal' ? descobriu(a.monstroId) : descobriu(r.id, a.monstroId)) || forjadas.some((b) => b.monstroId === a.monstroId && b.parte === r.id);
+      const descoberta = temArma || a.ramos.some(ramoDescoberto);
+      if (!descoberta) {
+        const principal = a.ramos.find((r) => r.id === 'principal');
+        return { monstroId: a.monstroId, nome: '???', estrela: a.estrela, descoberta: false, ramos: [{ id: 'principal', nome: '', nos: [], descoberto: false, quantidade: principal?.quantidade ?? 0 }] };
+      }
+      return {
+        ...a,
+        ramos: a.ramos.map((r) => (r.id === 'principal' || ramoDescoberto(r) ? r : { ...r, nome: '???', nos: [], descoberto: false })),
+      };
+    });
 }
 
 export interface ItemListaForja extends NoForja {
