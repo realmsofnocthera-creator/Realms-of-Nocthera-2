@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { ColecaoDaAlma } from '@/components/alma/ColecaoDaAlma';
 import { BannerDaLista } from './ArtesDaColecao';
+import { HudDaColecao } from './HudDaColecao';
 import { ColecionaveisPainel } from '@/components/colecionaveis/ColecionaveisPainel';
-import type { Token } from '@/components/colecionaveis/api';
+import type { EstadoDosColecionaveis, Token } from '@/components/colecionaveis/api';
 import { ANCORA_DO_ROTULO, AREAS_DO_HUB_DA_COLECAO, FUNDO_DO_HUB_DA_COLECAO, QUADROS_DA_COLECAO, type QuadroDaColecao } from '@/assets/colecao';
 import { TIPOS_DE_CARTA } from '@/rules/almas';
 import { COLECIONAVEIS, estaAtivo, NOME_DA_CATEGORIA_DE_COLECIONAVEL, type CategoriaDeColecionavel } from '@/rules/colecionaveis';
 import type { CharacterDocument } from '@/server/characterService';
 import { NOCTHERA_THEME } from '@/theme/theme';
 
-const OURO = '#C8A656';
 const SOMBRA_DO_TEXTO = '[text-shadow:1px_1px_0_#1A120B]';
 /** O que a tela mostra: o hub ou uma parte da coleção. */
 type Vista = 'hub' | QuadroDaColecao;
@@ -37,6 +37,13 @@ export function contagemDoQuadro(personagem: Pick<CharacterDocument, 'colecionav
 export function ColecaoScreen({ personagem, tokenFresco }: { personagem: CharacterDocument; tokenFresco: Token }) {
   const { colors } = NOCTHERA_THEME;
   const [vista, setVista] = useState<Vista>('hub');
+  // Os saldos e os colecionáveis ficam vivos aqui: o que o pop-up faz (ativar, reforçar) chega na HUD e no Hub sem leitura nova
+  const [vivo, setVivo] = useState(personagem);
+  const atualizar = useCallback(
+    (estado: EstadoDosColecionaveis) => setVivo((p) => ({ ...p, colecionaveis: estado.colecionaveis, fragmentosDeMemoria: estado.fragmentosDeMemoria, pedrasDaRecordacao: estado.pedrasDaRecordacao })),
+    [],
+  );
+  const saldos = { fragmentos: vivo.fragmentosDeMemoria ?? 0, pedras: vivo.pedrasDaRecordacao ?? 0, poeira: vivo.poeiraDeAlma ?? 0, cacos: vivo.cacosDeAlma ?? 0 };
 
   // A tela da Alma abre direto nas cartas (/colecao?aba=alma)
   useEffect(() => {
@@ -65,7 +72,7 @@ export function ColecaoScreen({ personagem, tokenFresco }: { personagem: Charact
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={FUNDO_DO_HUB_DA_COLECAO} alt="Salão com cinco quadros: Relíquias, Sonatas, Ecos e Entidades, Memórias e Cartas da Alma" className="absolute inset-0 w-full h-full pointer-events-none" style={{ imageRendering: 'pixelated' }} />
           {QUADROS_DA_COLECAO.map((quadro) => {
-            const { tenho, total } = contagemDoQuadro(personagem, quadro);
+            const { tenho, total } = contagemDoQuadro(vivo, quadro);
             return (
               <button
                 key={quadro}
@@ -86,14 +93,17 @@ export function ColecaoScreen({ personagem, tokenFresco }: { personagem: Charact
             );
           })}
         </div>
-        <header className="absolute top-0 inset-x-0 z-10 flex items-center gap-2 px-2.5 pt-3 sm:px-5">
-          <Link href="/menu" aria-label="Voltar ao Menu" className="caixa-pixel relative inline-flex items-center gap-1.5 pl-2 pr-3 py-1.5">
-            <ArrowLeft className="w-4 h-4 text-[#F5E3B3]" aria-hidden="true" />
-            <span className={`font-[family-name:var(--font-pixel)] text-[8px] leading-none uppercase text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>Menu</span>
-          </Link>
-          <Link href="/buscar" className="caixa-pixel relative ml-auto inline-flex items-center px-3 py-1.5">
-            <span className={`font-[family-name:var(--font-pixel)] text-[8px] leading-none uppercase text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>Buscar</span>
-          </Link>
+        <header className="absolute top-0 inset-x-0 z-10 flex flex-col gap-2.5 px-2.5 pt-3 sm:px-5">
+          <div className="flex items-center gap-2">
+            <Link href="/menu" aria-label="Voltar ao Menu" className="caixa-pixel relative inline-flex items-center gap-1.5 pl-2 pr-3 py-1.5">
+              <ArrowLeft className="w-4 h-4 text-[#F5E3B3]" aria-hidden="true" />
+              <span className={`font-[family-name:var(--font-pixel)] text-[8px] leading-none uppercase text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>Menu</span>
+            </Link>
+            <Link href="/buscar" className="caixa-pixel relative ml-auto inline-flex items-center px-3 py-1.5">
+              <span className={`font-[family-name:var(--font-pixel)] text-[8px] leading-none uppercase text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>Buscar</span>
+            </Link>
+          </div>
+          <HudDaColecao saldos={saldos} />
         </header>
       </main>
     );
@@ -103,11 +113,17 @@ export function ColecaoScreen({ personagem, tokenFresco }: { personagem: Charact
     <main className="min-h-dvh w-full flex flex-col items-center px-2.5 sm:px-5 py-3 sm:py-6" style={{ backgroundColor: colors.background.primary, color: colors.text.primary }}>
       <div className="w-full max-w-[520px] flex flex-col gap-3">
         <header className="flex items-center gap-2">
-          <button type="button" onClick={voltarAoHub} aria-label="Voltar à Coleção" className="p-1 cursor-pointer"><ArrowLeft className="w-5 h-5" /></button>
-          <Link href="/buscar" className="ml-auto text-xs underline" style={{ color: colors.text.secondary }}>Buscar</Link>
+          <button type="button" onClick={voltarAoHub} aria-label="Voltar à Coleção" className="caixa-pixel relative inline-flex items-center gap-1.5 pl-2 pr-3 py-1.5 cursor-pointer">
+            <ArrowLeft className="w-4 h-4 text-[#F5E3B3]" aria-hidden="true" />
+            <span className={`font-[family-name:var(--font-pixel)] text-[8px] leading-none uppercase text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>Coleção</span>
+          </button>
+          <Link href="/buscar" className="caixa-pixel relative ml-auto inline-flex items-center px-3 py-1.5">
+            <span className={`font-[family-name:var(--font-pixel)] text-[8px] leading-none uppercase text-[#F5E3B3] ${SOMBRA_DO_TEXTO}`}>Buscar</span>
+          </Link>
         </header>
+        <HudDaColecao saldos={saldos} />
         <BannerDaLista titulo={NOME_DO_QUADRO[vista]} />
-        {vista === 'alma' ? <ColecaoDaAlma personagem={personagem} /> : <ColecionaveisPainel tokenFresco={tokenFresco} categoriaInicial={vista} />}
+        {vista === 'alma' ? <ColecaoDaAlma personagem={vivo} /> : <ColecionaveisPainel tokenFresco={tokenFresco} categoriaInicial={vista} aoAtualizar={atualizar} />}
       </div>
     </main>
   );

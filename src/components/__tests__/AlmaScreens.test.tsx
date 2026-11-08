@@ -44,7 +44,7 @@ describe('Telas da Alma (7.8)', () => {
 
   it('Coleção: 54 cartas, as descobertas aparecem com o nome e as outras como ???', () => {
     const html = renderToStaticMarkup(<ColecaoDaAlma personagem={{ ...base, cartasDescobertas: [tipo.id] } as CharacterDocument} />);
-    expect(html).toContain('de 54 cartas');
+    expect(html).toContain('1/54');
     expect(html).toContain(tipo.nome);
     expect(html).toContain('???');
     expect(html).toContain('Conjunto Comum');

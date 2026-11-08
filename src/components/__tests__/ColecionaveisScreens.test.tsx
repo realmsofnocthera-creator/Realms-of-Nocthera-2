@@ -6,7 +6,10 @@ import { ColecaoScreen, contagemDoQuadro } from '@/components/colecao/ColecaoScr
 import { arteDaCarta, personagemDaCarta } from '@/assets/cartasDaAlma';
 import { BANNER_DA_COLECAO, ICONES_DAS_MOEDAS, ICONES_DE_RARIDADE, MOLDURAS_DOS_COLECIONAVEIS } from '@/assets/colecaoUi';
 import { BannerDaLista, IconeDeMoeda, IconeDeRaridade } from '@/components/colecao/ArtesDaColecao';
-import { RARIDADES_DE_COLECIONAVEL } from '@/rules/colecionaveis';
+import { COLECIONAVEL_MAP, RARIDADES_DE_COLECIONAVEL } from '@/rules/colecionaveis';
+import { HudDaColecao } from '@/components/colecao/HudDaColecao';
+import { PopupDoColecionavel } from '@/components/colecionaveis/PopupDoColecionavel';
+import { LORE_DOS_COLECIONAVEIS } from '@/rules/loreColecionaveis';
 import { RARIDADES_DE_CARTA } from '@/rules/almas';
 import { ArteDaCarta, VisualizadorDaCarta } from '@/components/alma/ArteDaCarta';
 import { arteDoColecionavel } from '@/assets/colecionaveis';
@@ -127,5 +130,49 @@ describe('Telas do Buscar e da Coleção', () => {
     expect(html).toContain('aria-hidden="true"');
     expect(renderToStaticMarkup(<IconeDeMoeda moeda="poeira" />)).toContain('aria-hidden="true"');
     expect(renderToStaticMarkup(<IconeDeRaridade raridade="mitico" />)).toContain('<img');
+  });
+
+  it('lore: os 120 colecionáveis têm um mini texto curto, cada um diferente, e nenhum id sobrando', () => {
+    const ids = COLECIONAVEIS.map((c) => c.id).sort();
+    expect(Object.keys(LORE_DOS_COLECIONAVEIS).sort()).toEqual(ids);
+    for (const t of Object.values(LORE_DOS_COLECIONAVEIS)) {
+      expect(t.length).toBeGreaterThan(30);
+      expect(t.length).toBeLessThanOrEqual(160);
+    }
+    expect(new Set(Object.values(LORE_DOS_COLECIONAVEIS)).size).toBe(120);
+  });
+
+  it('HUD da Coleção: as 4 moedas, cada uma com o total no rótulo', () => {
+    const html = renderToStaticMarkup(<HudDaColecao saldos={{ fragmentos: 1400, pedras: 3, poeira: 25, cacos: 2_500_000 }} />);
+    expect(html).toContain('Fragmentos de Memória: 1.400');
+    expect(html).toContain('Pedras da Recordação: 3');
+    expect(html).toContain('Poeira de Alma: 25');
+    expect(html).toContain('Cacos de Alma: 2.500.000');
+    expect(html.match(/<button/g)).toHaveLength(4);
+  });
+
+  const pop = (id: string, e: object | undefined, saldos: { memoria?: number; pedras?: number } = {}) =>
+    renderToStaticMarkup(
+      <PopupDoColecionavel c={COLECIONAVEL_MAP[id]} e={e as never} memoria={saldos.memoria ?? 0} pedras={saldos.pedras ?? 0} ocupado={false} aviso={null} aoAgir={() => {}} aoFechar={() => {}} />,
+    );
+
+  it('pop-up: sem ativar mostra o lore, o bônus com o ícone do atributo e o botão Ativar (travado sem fragmentos)', () => {
+    const html = pop('RI-C01', { fragmentos: 3 });
+    expect(html).toContain('Medalhão do Viajante');
+    expect(html).toContain(LORE_DOS_COLECIONAVEIS['RI-C01'].replace(/'/g, '&#x27;'));
+    expect(html).toContain('ao ativar');
+    expect(html).toContain('3/20 frag.');
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>\s*Ativar/);
+    expect(html).not.toContain('Reforçar');
+  });
+
+  it('pop-up: com fragmentos suficientes o Ativar libera; ativado mostra nível, estrelas e os botões de reforço e estrela', () => {
+    expect(pop('RI-C01', { fragmentos: 20 })).not.toMatch(/<button[^>]*disabled[^>]*>\s*Ativar/);
+    const ativo = pop('RI-C01', { fragmentos: 5, nivel: 4, estrelas: 1 }, { memoria: 500, pedras: 5 });
+    expect(ativo).toContain('NV 4/');
+    expect(ativo).toContain('bônus atual');
+    expect(ativo).toContain('Reforçar +1');
+    expect(ativo).not.toContain('>Ativar');
+    expect(pop('RI-C01', { fragmentos: 5, nivel: 4, estrelas: 1 })).toMatch(/<button[^>]*disabled[^>]*>\s*Reforçar/);
   });
 });

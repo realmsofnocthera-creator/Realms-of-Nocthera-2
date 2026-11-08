@@ -126,9 +126,9 @@ export function VisualizadorDaCarta({ tipoId, carta, aoFechar }: { tipoId: strin
 
   return (
     <div role="dialog" aria-modal="true" aria-label={`Carta ${tipo.nome}`} onClick={aoFechar} className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4">
-      <div onClick={(e) => e.stopPropagation()} className="relative flex flex-col items-center gap-3 max-w-[340px] w-full">
-        <button type="button" onClick={aoFechar} aria-label="Fechar" className="absolute -top-2 -right-1 z-10 w-8 h-8 flex items-center justify-center rounded-sm border cursor-pointer" style={{ borderColor: '#C8A656', backgroundColor: '#2A2214', color: '#F5E3B3' }}>
-          <X className="w-4 h-4" aria-hidden="true" />
+      <div onClick={(e) => e.stopPropagation()} className="caixa-pixel relative flex flex-col items-center gap-3 max-w-[340px] w-full p-4">
+        <button type="button" onClick={aoFechar} aria-label="Fechar" className="pilula-pixel absolute top-2.5 right-2.5 z-10 w-8 h-8 flex items-center justify-center cursor-pointer">
+          <X className="w-4 h-4 text-[#F5E3B3]" aria-hidden="true" />
         </button>
         <button
           type="button"

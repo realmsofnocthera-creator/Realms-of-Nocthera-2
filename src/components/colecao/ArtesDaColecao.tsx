@@ -29,3 +29,14 @@ export function BannerDaLista({ titulo }: { titulo: string }) {
     </div>
   );
 }
+
+/** Estrela em CSS (clip-path), a mesma das Conquistas: cheia ou vazia. */
+export function EstrelaPixel({ cheia, className = 'w-3.5 h-3.5' }: { cheia: boolean; className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`inline-block ${className}`}
+      style={{ background: cheia ? '#F2C94C' : '#3A2F22', clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' }}
+    />
+  );
+}

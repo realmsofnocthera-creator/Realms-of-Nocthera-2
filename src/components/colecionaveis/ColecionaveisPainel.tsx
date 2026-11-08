@@ -2,14 +2,13 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { atributosDosColecionaveis } from '@/game/colecionaveis';
+import { ATTRIBUTE_ICONS } from '@/assets/icons';
+import { IconeDeRaridade } from '@/components/colecao/ArtesDaColecao';
 import { ATTRIBUTES } from '@/rules/attributes';
 import { ATTRIBUTE_DISPLAY_NAMES } from '@/rules/attributeInfo';
 import {
   CATEGORIAS_DE_COLECIONAVEL,
   COLECIONAVEIS,
-  custoDaEstrela,
-  custoDoReforco,
-  DESCRICAO_DA_CATEGORIA_DE_COLECIONAVEL,
   ESTRELAS_MAXIMAS,
   estaAtivo,
   FRAGMENTOS_PARA_ATIVAR,
@@ -17,43 +16,29 @@ import {
   NOME_DA_RARIDADE_DE_COLECIONAVEL,
   nivelMaximoDoReforco,
   RARIDADES_DE_COLECIONAVEL,
-  proximaEstrelaQueSobe,
-  proximoNivelQueSobe,
-  valorDoColecionavel,
   type CategoriaDeColecionavel,
-  type Colecionavel,
 } from '@/rules/colecionaveis';
-import { MOLDURAS_DOS_COLECIONAVEIS } from '@/assets/colecaoUi';
-import { arteDoColecionavel } from '@/assets/colecionaveis';
-import { IconeDeMoeda, IconeDeRaridade } from '@/components/colecao/ArtesDaColecao';
 import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
-import { NOCTHERA_THEME } from '@/theme/theme';
 import { chamarColecionaveis, type EstadoDosColecionaveis, type Token } from './api';
+import { MolduraDoColecionavel } from './MolduraDoColecionavel';
+import { PopupDoColecionavel } from './PopupDoColecionavel';
 
-const OURO = '#C8A656';
 const VERMELHO = '#E5484D';
-const VERDE = '#7BC47F';
 
-function Botao({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
-  return (
-    <button type="button" onClick={onClick} disabled={disabled} className="rounded-sm border px-2 py-1 text-xs font-bold disabled:opacity-50" style={{ borderColor: OURO, backgroundColor: '#3A2F18', color: '#F5E3B3' }}>
-      {children}
-    </button>
-  );
-}
-
-const estrelasEmTexto = (n: number) => '★'.repeat(n) + '☆'.repeat(ESTRELAS_MAXIMAS - n);
-
-/** Custo de reforçar `niveis` níveis a partir do nível atual. */
-function custoDeVariosNiveis(c: Colecionavel, nivel: number, niveis: number) {
-  let total = 0;
-  for (let n = nivel; n < nivel + niveis; n++) total += custoDoReforco(c.raridade, n);
-  return total;
-}
-
-/** A aba Colecionáveis: os 120 colecionáveis, os ativados, os fragmentos e o reforço e as estrelas. */
-export function ColecionaveisPainel({ tokenFresco, categoriaInicial = 'reliquias' }: { tokenFresco: Token; categoriaInicial?: CategoriaDeColecionavel }) {
-  const { colors } = NOCTHERA_THEME;
+/**
+ * A aba Colecionáveis em pixel: o resumo, as categorias e, em cada raridade, uma grade de quadrinhos com a moldura.
+ * Tocar num quadrinho abre o pop-up, onde se ativa pela primeira vez, reforça e sobe estrelas. `aoAtualizar` leva os
+ * saldos e os colecionáveis para a HUD e para o Hub, sem leitura nova.
+ */
+export function ColecionaveisPainel({
+  tokenFresco,
+  categoriaInicial = 'reliquias',
+  aoAtualizar,
+}: {
+  tokenFresco: Token;
+  categoriaInicial?: CategoriaDeColecionavel;
+  aoAtualizar?: (estado: EstadoDosColecionaveis) => void;
+}) {
   const [estado, setEstado] = useState<EstadoDosColecionaveis | null>(null);
   const [erroAoCarregar, setErroAoCarregar] = useState(false);
   const [categoria, setCategoria] = useState<CategoriaDeColecionavel>(categoriaInicial);
@@ -63,13 +48,18 @@ export function ColecionaveisPainel({ tokenFresco, categoriaInicial = 'reliquias
 
   const carregar = useCallback(async () => {
     const r = await chamarColecionaveis(tokenFresco);
-    if (r.ok) setEstado(r.dados as unknown as EstadoDosColecionaveis);
-    else setErroAoCarregar(true);
-  }, [tokenFresco]);
+    if (r.ok) {
+      const novo = r.dados as unknown as EstadoDosColecionaveis;
+      setEstado(novo);
+      aoAtualizar?.(novo);
+    } else setErroAoCarregar(true);
+  }, [tokenFresco, aoAtualizar]);
 
   useEffect(() => {
     void carregar();
-  }, [carregar]);
+    // só ao abrir: o callback muda de identidade a cada desenho da tela e não deve disparar leitura nova
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tokenFresco]);
 
   async function agir(acao: string, extra: Record<string, unknown>) {
     setOcupado(true);
@@ -81,29 +71,43 @@ export function ColecionaveisPainel({ tokenFresco, categoriaInicial = 'reliquias
       return;
     }
     setAviso({ texto: String(r.dados.mensagem ?? 'Feito.'), erro: false });
-    setEstado(r.dados.estado as EstadoDosColecionaveis);
+    const novo = r.dados.estado as EstadoDosColecionaveis;
+    setEstado(novo);
+    aoAtualizar?.(novo);
   }
 
   if (erroAoCarregar) return <p role="alert" className="text-sm" style={{ color: VERMELHO }}>Não foi possível carregar agora. Tente de novo em instantes.</p>;
-  if (!estado) return <p className="text-sm" style={{ color: colors.text.secondary }}>Carregando...</p>;
+  if (!estado) return <p role="status" className="text-center font-[family-name:var(--font-silk)] text-sm text-[#E2D6B6]">Carregando...</p>;
 
   const ativos = COLECIONAVEIS.filter((c) => estaAtivo(estado.colecionaveis[c.id])).length;
   const totais = atributosDosColecionaveis(estado.colecionaveis);
   const comBonus = ATTRIBUTES.filter((a) => totais[a] > 0);
+  const aberta = aberto ? COLECIONAVEIS.find((c) => c.id === aberto) : undefined;
 
   return (
     <div className="flex flex-col gap-3">
-      {aviso && <p role={aviso.erro ? 'alert' : 'status'} className="text-sm font-semibold" style={{ color: aviso.erro ? VERMELHO : VERDE }}>{aviso.texto}</p>}
-      <section aria-label="Resumo dos colecionáveis" className="rounded-sm border-2 p-2.5 flex flex-col gap-1 text-sm" style={{ borderColor: OURO, backgroundColor: colors.background.secondary }}>
-        <p>Ativados: <strong>{ativos}</strong> de {COLECIONAVEIS.length}</p>
-        <p className="text-xs" style={{ color: colors.text.secondary }}><IconeDeMoeda moeda="fragmento" className="w-5 h-5" /> Fragmentos de Memória: {estado.fragmentosDeMemoria} · <IconeDeMoeda moeda="pedra" className="w-5 h-5" /> Pedras da Recordação: {estado.pedrasDaRecordacao}</p>
-        <p className="text-xs">
-          Bônus nos atributos:{' '}
-          {comBonus.length ? comBonus.map((a) => `${ATTRIBUTE_DISPLAY_NAMES[a]} +${totais[a]}`).join(' · ') : 'nenhum ainda'}
+      {/* Resumo: quantos ativos e o bônus de cada atributo, em ícones */}
+      <section aria-label="Resumo dos colecionáveis" className="caixa-pixel relative flex items-center justify-between gap-2 px-3 py-2.5">
+        <p className="font-[family-name:var(--font-pixel)] text-[8px] leading-tight text-[#F5E3B3] [text-shadow:1px_1px_0_#1A120B]">
+          ATIVOS
+          <span className="block mt-1.5 text-[12px] text-[#ED8A0C] tabular-nums">{ativos}/{COLECIONAVEIS.length}</span>
         </p>
+        <ul aria-label="Bônus nos atributos" className="flex flex-wrap items-center justify-end gap-x-2.5 gap-y-1">
+          {comBonus.length ? (
+            comBonus.map((a) => (
+              <li key={a} title={ATTRIBUTE_DISPLAY_NAMES[a]} aria-label={`${ATTRIBUTE_DISPLAY_NAMES[a]} +${totais[a]}`} className="flex items-center gap-0.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={ATTRIBUTE_ICONS[a]} alt="" aria-hidden="true" className="w-6 h-6 object-contain" style={{ imageRendering: 'pixelated' }} />
+                <span className="font-[family-name:var(--font-silk)] text-[12px] font-bold text-[#7BC47F] tabular-nums">+{totais[a]}</span>
+              </li>
+            ))
+          ) : (
+            <li className="font-[family-name:var(--font-silk)] text-[11px] text-[#B2A66C]">sem bônus</li>
+          )}
+        </ul>
       </section>
 
-      <div role="tablist" aria-label="Categorias" className="grid grid-cols-2 gap-1.5">
+      <div role="tablist" aria-label="Categorias" className="grid grid-cols-2 gap-x-1 gap-y-0.5">
         {CATEGORIAS_DE_COLECIONAVEL.map((c) => (
           <button
             key={c}
@@ -111,96 +115,55 @@ export function ColecionaveisPainel({ tokenFresco, categoriaInicial = 'reliquias
             role="tab"
             aria-selected={c === categoria}
             onClick={() => setCategoria(c)}
-            className="rounded-sm border px-1.5 py-1 text-xs font-bold"
-            style={{ borderColor: OURO, backgroundColor: c === categoria ? '#5A4824' : '#3A2F18', color: '#F5E3B3' }}
+            className={`botao-kit ${c === categoria ? 'botao-kit-dourado text-[#2B1D0E]' : 'botao-kit-cinza text-[#2B2118]'} px-1 font-cinzel font-bold uppercase text-[10px] leading-tight`}
           >
             {NOME_DA_CATEGORIA_DE_COLECIONAVEL[c]}
           </button>
         ))}
       </div>
-      <p className="text-xs" style={{ color: colors.text.secondary }}>{DESCRICAO_DA_CATEGORIA_DE_COLECIONAVEL[categoria]}</p>
 
       {RARIDADES_DE_COLECIONAVEL.map((raridade) => {
         const def = EMBLEMA_RARIDADE_MAP[raridade];
         const lista = COLECIONAVEIS.filter((c) => c.categoria === categoria && c.raridade === raridade);
+        const tenho = lista.filter((c) => estaAtivo(estado.colecionaveis[c.id])).length;
         return (
-          <section key={raridade} aria-label={`${NOME_DA_RARIDADE_DE_COLECIONAVEL[raridade]} de ${NOME_DA_CATEGORIA_DE_COLECIONAVEL[categoria]}`} className="flex flex-col gap-1">
-            <h2 className="font-cinzel font-bold text-sm flex items-center gap-1.5" style={{ color: def.cor }}><IconeDeRaridade raridade={raridade} className="w-5 h-5" />{NOME_DA_RARIDADE_DE_COLECIONAVEL[raridade]}</h2>
-            <ul className="flex flex-col gap-1">
+          <section key={raridade} aria-label={`${NOME_DA_RARIDADE_DE_COLECIONAVEL[raridade]} de ${NOME_DA_CATEGORIA_DE_COLECIONAVEL[categoria]}`} className="flex flex-col gap-2">
+            <h2 className="pilula-pixel self-start flex items-center gap-1.5 pl-1 pr-2.5 py-0.5">
+              <IconeDeRaridade raridade={raridade} className="w-6 h-6" />
+              <span className="font-[family-name:var(--font-pixel)] text-[8px] leading-none uppercase [text-shadow:1px_1px_0_#1A120B]" style={{ color: def.cor }}>{NOME_DA_RARIDADE_DE_COLECIONAVEL[raridade]}</span>
+              <span className="font-[family-name:var(--font-silk)] text-[11px] text-[#E2D6B6] tabular-nums">{tenho}/{lista.length}</span>
+            </h2>
+            <ul className="grid grid-cols-4 gap-2">
               {lista.map((c) => {
-                const e = estado.colecionaveis[c.id] ?? { fragmentos: 0 };
+                const e = estado.colecionaveis[c.id];
                 const ativo = estaAtivo(e);
-                const nivel = e.nivel ?? 0;
-                const estrelas = e.estrelas ?? 0;
-                const maximo = nivelMaximoDoReforco(estrelas);
-                const custoAtivar = FRAGMENTOS_PARA_ATIVAR[c.raridade];
-                const expandido = aberto === c.id;
+                const nivel = e?.nivel ?? 0;
+                const estrelas = e?.estrelas ?? 0;
+                const custo = FRAGMENTOS_PARA_ATIVAR[c.raridade];
+                const fragmentos = e?.fragmentos ?? 0;
                 return (
-                  <li key={c.id} className="rounded-sm border text-xs" style={{ borderColor: ativo ? def.cor : '#4A3F2A', backgroundColor: colors.background.secondary }}>
-                    <button type="button" onClick={() => setAberto(expandido ? null : c.id)} aria-expanded={expandido} className="w-full px-2 py-1.5 flex items-center justify-between gap-2 text-left">
-                      {arteDoColecionavel(c.id) && (
-                        <span className="relative block w-11 h-11 shrink-0" aria-hidden="true">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={arteDoColecionavel(c.id)}
-                            alt=""
-                            className="absolute inset-[9%] w-[82%] h-[82%] object-contain"
-                            style={{ imageRendering: 'pixelated', ...(ativo ? {} : { filter: 'grayscale(1) brightness(0.4)', opacity: 0.85 }) }}
-                          />
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={MOLDURAS_DOS_COLECIONAVEIS[c.raridade]} alt="" className="absolute inset-0 w-full h-full" style={{ imageRendering: 'pixelated', ...(ativo ? {} : { opacity: 0.55 }) }} />
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAviso(null);
+                        setAberto(c.id);
+                      }}
+                      aria-label={ativo ? `${c.nome}: nível ${nivel} de ${nivelMaximoDoReforco(estrelas)}, ${estrelas} de ${ESTRELAS_MAXIMAS} estrelas` : `${c.nome}: ${fragmentos} de ${custo} fragmentos`}
+                      className="w-full flex flex-col items-center gap-1 cursor-pointer active:translate-y-px"
+                    >
+                      <MolduraDoColecionavel c={c} ativo={ativo} className="w-full aspect-square" />
+                      {ativo ? (
+                        <span className="font-[family-name:var(--font-silk)] text-[10px] font-bold text-[#7BC47F] tabular-nums leading-none">
+                          NV {nivel}
+                          {estrelas > 0 && <span className="text-[#F2C94C]"> ★{estrelas}</span>}
+                        </span>
+                      ) : (
+                        <span className="barra-pixel block h-1.5 w-[80%] overflow-hidden" aria-hidden="true">
+                          <span className="block h-full" style={{ width: `${Math.min(100, (fragmentos / custo) * 100)}%`, backgroundColor: def.cor }} />
                         </span>
                       )}
-                      <span className="min-w-0 flex-1">
-                        <span className="font-semibold" style={{ color: ativo ? def.cor : colors.text.primary }}>{c.nome}</span>
-                        <span style={{ color: colors.text.secondary }}> · {ATTRIBUTE_DISPLAY_NAMES[c.atributo]}</span>
-                      </span>
-                      <span className="shrink-0" style={{ color: ativo ? VERDE : colors.text.secondary }}>
-                        {ativo ? `Nv ${nivel}/${maximo} · ${estrelasEmTexto(estrelas)}` : `${e.fragmentos}/${custoAtivar} frag.`}
-                      </span>
                     </button>
-                    {expandido && (
-                      <div className="px-2 pb-2 flex flex-col gap-1.5">
-                        <p style={{ color: colors.text.secondary }}>
-                          {c.id} · {ativo ? `Dá +${valorDoColecionavel(c.raridade, nivel, estrelas)} de ${ATTRIBUTE_DISPLAY_NAMES[c.atributo]}.` : `Ativado, dá +${valorDoColecionavel(c.raridade, 1, 0)} de ${ATTRIBUTE_DISPLAY_NAMES[c.atributo]}.`}
-                          {ativo && proximoNivelQueSobe(c.raridade, nivel) ? ` Sobe +1 no nível ${proximoNivelQueSobe(c.raridade, nivel)}.` : ''}
-                          {ativo && proximaEstrelaQueSobe(c.raridade, estrelas) ? ` Sobe +1 com ${proximaEstrelaQueSobe(c.raridade, estrelas)}★.` : ''}
-                          {ativo ? ` Fragmentos guardados: ${e.fragmentos}.` : ''}
-                        </p>
-                        {!ativo ? (
-                          <div>
-                            <Botao disabled={ocupado || e.fragmentos < custoAtivar} onClick={() => void agir('ativar', { id: c.id })}>
-                              Ativar ({custoAtivar} fragmentos)
-                            </Botao>
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap gap-1.5">
-                            {nivel < maximo ? (
-                              <>
-                                <Botao disabled={ocupado || estado.fragmentosDeMemoria < custoDoReforco(c.raridade, nivel)} onClick={() => void agir('reforcar', { id: c.id, niveis: 1 })}>
-                                  Reforçar +1 ({custoDoReforco(c.raridade, nivel)} Memória)
-                                </Botao>
-                                {maximo - nivel >= 5 && (
-                                  <Botao disabled={ocupado || estado.fragmentosDeMemoria < custoDeVariosNiveis(c, nivel, 5)} onClick={() => void agir('reforcar', { id: c.id, niveis: 5 })}>
-                                    +5 ({custoDeVariosNiveis(c, nivel, 5)} Memória)
-                                  </Botao>
-                                )}
-                              </>
-                            ) : (
-                              <span style={{ color: colors.text.secondary }}>{estrelas < ESTRELAS_MAXIMAS ? 'Reforço no limite: suba uma estrela.' : 'Reforço máximo.'}</span>
-                            )}
-                            {estrelas < ESTRELAS_MAXIMAS && (() => {
-                              const custo = custoDaEstrela(c.raridade, estrelas + 1);
-                              return (
-                                <Botao disabled={ocupado || e.fragmentos < custo.fragmentos || estado.pedrasDaRecordacao < custo.pedras} onClick={() => void agir('estrela', { id: c.id })}>
-                                  Subir para {estrelas + 1}★ ({custo.fragmentos} frag. e {custo.pedras} Pedras)
-                                </Botao>
-                              );
-                            })()}
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </li>
                 );
               })}
@@ -208,6 +171,19 @@ export function ColecionaveisPainel({ tokenFresco, categoriaInicial = 'reliquias
           </section>
         );
       })}
+
+      {aberta && (
+        <PopupDoColecionavel
+          c={aberta}
+          e={estado.colecionaveis[aberta.id]}
+          memoria={estado.fragmentosDeMemoria}
+          pedras={estado.pedrasDaRecordacao}
+          ocupado={ocupado}
+          aviso={aviso}
+          aoAgir={(acao, extra) => void agir(acao, extra)}
+          aoFechar={() => setAberto(null)}
+        />
+      )}
     </div>
   );
 }
