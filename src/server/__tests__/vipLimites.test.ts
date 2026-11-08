@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { criarCarta, CARTAS_MAXIMAS, TIPOS_DE_CARTA } from '@/rules/almas';
 import { guardarCartas } from '@/game/almas';
 import { conferirEntradaBatalha, diaDeBrasilia, tentativasRestantes } from '@/game/batalhaSangrenta';
@@ -94,8 +94,13 @@ describe('VIP (8.5): mochila e tentativas extras', () => {
   });
 });
 
+// O Correio usa o relógio de verdade e, no dia do Campeonato (7/11/2026 e a cada 14 dias), recebe avisos automáticos
+// depois das 20h de Brasília: a data fica fixa num dia sem Campeonato para o teste não depender de quando roda.
+const DIA_SEM_CAMPEONATO = new Date('2026-11-04T15:00:00.000Z');
+
 describe('VIP (8.5): mochila no servidor', () => {
   beforeEach(async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: DIA_SEM_CAMPEONATO });
     (process.env as Record<string, string | undefined>).NODE_ENV = 'test';
     resetCharacterStore();
     limparCacheRevogacao();
@@ -103,6 +108,9 @@ describe('VIP (8.5): mochila no servidor', () => {
     limparCacheDeSistemas();
     limparCacheDoCorreio();
     await createCharacter('u1', { nome: 'Aldric', racaId: 'elfo', classeId: 'cavaleiro', pontos: PONTOS });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   const armas = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `a${i}`, baseId: 'ferro-de-cacada', categoria: CATEGORIAS_ARMA[0].id }) as unknown as ArmaPersonagem);

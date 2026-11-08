@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET as correioGet, POST as correioPost } from '@/app/api/correio/route';
 import { GET as chefeGet, POST as chefePost } from '@/app/api/chefe-mundial/route';
@@ -24,8 +24,14 @@ const dono: SessaoMestre = { uid: 'dono1', email: 'dono1@test.com', papel: 'dono
 const HOJE = new Date('2026-10-22T18:00:00.000Z');
 const AMANHA = new Date('2026-10-23T12:00:00.000Z');
 
+// No dia do Campeonato (7/11/2026 e a cada 14 dias), depois das 20h de Brasília, o Correio recebe um aviso automático
+// quando a edição não fecha. As rotas usam o relógio de verdade, então a data fica fixa num dia sem Campeonato para
+// o teste não depender de quando ele roda.
+const DIA_SEM_CAMPEONATO = new Date('2026-11-04T15:00:00.000Z');
+
 describe('Correio e Chefe Mundial: servidor', () => {
   beforeEach(async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: DIA_SEM_CAMPEONATO });
     (process.env as Record<string, string | undefined>).NODE_ENV = 'test';
     (DONOS_DO_PROJETO as string[]).length = 0;
     process.env.MESTRE_DONO_UIDS = 'dono1';
@@ -40,6 +46,7 @@ describe('Correio e Chefe Mundial: servidor', () => {
     }
   });
   afterEach(() => {
+    vi.useRealTimers();
     delete process.env.MESTRE_DONO_UIDS;
   });
 
