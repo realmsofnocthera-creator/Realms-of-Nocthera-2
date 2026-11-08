@@ -9,6 +9,7 @@ import { formatarCompacto } from '@/rules/numerosCompactos';
 import type { CategoriaArma } from '@/rules/armas';
 import type { DetalheArmaTela, DetalheMinhaArmaTela, LinhaReceitaTela } from '@/lib/forjaTela';
 import { IconeCategoria } from './IconeDeCategoria';
+import { IconeDoMaterial } from './IconeDoMaterial';
 import { AZUL_CLARO, PainelDaForja, PlacaDeRaridade, TEXTO_PIXEL } from './KitDaForja';
 import { ROTULO_ESTADO, estrelas } from './PopupsDaForja';
 
@@ -57,7 +58,7 @@ function Material({ m }: { m: LinhaReceitaTela }) {
   return (
     <div className="flex items-center gap-[1.4cqw] py-[0.9cqw] border-b border-[#1C2D44]">
       <span className="w-[6.4cqw] h-[6.4cqw] shrink-0 flex items-center justify-center border border-[#3A5B7A] bg-[#0B0F1A]" aria-hidden="true">
-        <span className="font-cinzel font-extrabold text-[3cqw] leading-none" style={{ color: m.cor }}>{m.nome.replace(/^Diverso\s+/, '').charAt(0).toUpperCase()}</span>
+        <IconeDoMaterial id={m.id} nome={m.nome} cor={m.cor} className="w-[4.6cqw] h-[4.6cqw]" tamanhoDaInicial="3cqw" />
       </span>
       <span className="font-cinzel font-bold text-[2.5cqw] leading-tight min-w-0 flex-1 [text-shadow:1px_1px_0_#05070D]" style={{ color: m.cor }}>
         {m.nome}

@@ -1,27 +1,15 @@
 import React from 'react';
-import { BookOpen, Shield, Slice, Sword, WandSparkles } from 'lucide-react';
 import type { CategoriaArma } from '@/rules/armas';
+import { ICONE_DA_CATEGORIA } from '@/assets/forjaItens';
 
-function Lanca({ className, style }: { className?: string; style?: React.CSSProperties }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style} aria-hidden="true">
-      <path d="M4 20 17 7" />
-      <path d="M14 4h6v6l-3-1-2-2z" />
-    </svg>
-  );
-}
-
-/** Ícone da categoria (provisório: a arte das armas entra depois). */
+/** A arte da categoria da arma; `style.color` vira o brilho quando o chamador pede `filter`. */
 export function IconeCategoria({ categoria, className, style }: { categoria: CategoriaArma; className?: string; style?: React.CSSProperties }) {
-  const props = { className, style, 'aria-hidden': true as const };
-  switch (categoria) {
-    case 'espadaGrande': return <Sword {...props} />;
-    case 'katana': return <Slice {...props} />;
-    case 'lanca': return <Lanca className={className} style={style} />;
-    case 'espadaEscudo': return <Shield {...props} />;
-    case 'grimorio': return <BookOpen {...props} />;
-    case 'cajado': return <WandSparkles {...props} />;
-  }
+  const { color: _cor, ...resto } = style ?? {};
+  void _cor;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={ICONE_DA_CATEGORIA[categoria]} alt="" aria-hidden="true" draggable={false} className={`${className ?? ''} object-contain`} style={{ ...resto, imageRendering: 'auto' }} />
+  );
 }
 
 /** A cor do brilho de cada raridade de arma (slots, raios e clarões). */
