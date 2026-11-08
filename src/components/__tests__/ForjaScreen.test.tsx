@@ -1,7 +1,9 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { FUNDO_DA_FERRARIA, QUADROS_DO_FERREIRO, SPRITES_DO_FERREIRO } from '@/assets/ferreiro';
 import { FerreiroScreen } from '@/components/forja/FerreiroScreen';
+import { FALAS_SOLTAS_DO_FERREIRO, falaComNome, SAUDACOES_DO_FERREIRO } from '@/rules/falasDoFerreiro';
 import { ForjaScreen } from '@/components/forja/ForjaScreen';
 import type { CharacterDocument } from '@/server/characterService';
 
@@ -10,15 +12,35 @@ vi.mock('next/link', () => ({ default: ({ href, children, ...p }: { href: string
 const personagem = { uid: 'u', nome: 'Yuri', nivel: 12, ouro: 1500, inventario: {}, armas: [] } as unknown as CharacterDocument;
 
 describe('Ferreiro e Forja', () => {
-  it('o Ferreiro tem 3 opções: Forja e Armaduras abertas, cosméticos em breve', () => {
+  it('o Ferreiro abre na ferraria em tela cheia: o ferreiro animado, o link do Menu e o menu só depois da saudação', () => {
     const html = renderToStaticMarkup(<FerreiroScreen character={personagem} />);
-    expect(html).toContain('Fabricar equipamentos');
-    expect(html).toContain('reforje e customize');
-    expect(html).toContain('Melhorar armadura');
-    expect(html).toContain('Fabricar cosméticos');
-    expect(html).toContain('href="/forja"');
-    expect(html.match(/aria-disabled="true"/g)).toHaveLength(1);
-    expect(html).toContain('href="/armaduras"');
+    expect(html).toContain('ferreiro-sprite');
+    expect(html).toContain('Conversar com o Ferreiro');
+    expect(html).toContain('href="/menu"');
+    expect(html.match(/forja-faisca/g)).toHaveLength(10);
+    // a saudação é sorteada depois de abrir: no primeiro desenho ainda não há caixa de diálogo nem menu
+    expect(html).not.toContain('Menu do Ferreiro');
+    expect(html).not.toContain('role="dialog"');
+  });
+
+  it('falas do Ferreiro: 3 saudações de até 3 linhas curtas, o nome entra no lugar de {nome}, e há falas soltas', () => {
+    expect(SAUDACOES_DO_FERREIRO).toHaveLength(3);
+    for (const set of SAUDACOES_DO_FERREIRO) {
+      expect(set.length).toBeGreaterThanOrEqual(2);
+      expect(set.length).toBeLessThanOrEqual(3);
+      for (const l of set) expect(l.length).toBeLessThanOrEqual(100);
+    }
+    expect(falaComNome('Ah, {nome}! {nome}.', 'Yuri')).toBe('Ah, Yuri! Yuri.');
+    expect(FALAS_SOLTAS_DO_FERREIRO.length).toBeGreaterThanOrEqual(4);
+    for (const l of FALAS_SOLTAS_DO_FERREIRO) expect(l.length).toBeLessThanOrEqual(60);
+    expect(SAUDACOES_DO_FERREIRO.flat().some((l) => l.includes('{nome}'))).toBe(true);
+  });
+
+  it('artes do Ferreiro: o fundo e a folha de 20 quadros (5 colunas por 4 linhas)', () => {
+    expect(FUNDO_DA_FERRARIA).toBeTruthy();
+    expect(SPRITES_DO_FERREIRO).toBeTruthy();
+    expect(QUADROS_DO_FERREIRO.colunas * QUADROS_DO_FERREIRO.linhas).toBe(QUADROS_DO_FERREIRO.total);
+    expect(QUADROS_DO_FERREIRO.total).toBe(20);
   });
 
   it('a Forja abre na árvore das Espadas grandes, na 1★, com as abas e as 6 categorias', () => {
