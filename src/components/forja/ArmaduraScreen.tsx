@@ -20,6 +20,7 @@ import {
   xpDosOrbes,
 } from '@/lib/armaduraTela';
 import { COR_RARIDADE_ARMA } from '@/lib/forjaTela';
+import { IconeDoOrbe } from './IconeDoMaterial';
 import { NOCTHERA_THEME } from '@/theme/theme';
 
 const OURO = '#C8A656';
@@ -348,7 +349,7 @@ function MinhaPecaPainel(props: {
         <div className="flex flex-col gap-1 pt-1">
           {orbes.map((o) => (
             <div key={o.id} className="flex items-center justify-between gap-2 text-[12px]">
-              <span style={{ color: o.cor }}>{o.nome} <span style={{ color: colors.text.secondary }}>(+{o.xp} · tem {o.tenho})</span></span>
+              <span className="inline-flex items-center gap-1.5" style={{ color: o.cor }}><IconeDoOrbe cor={o.cor} className="w-6 h-6 shrink-0" />{o.nome} <span style={{ color: colors.text.secondary }}>(+{o.xp} · tem {o.tenho})</span></span>
               <span className="inline-flex items-center gap-1">
                 <button type="button" aria-label={`Menos ${o.nome}`} disabled={!escolha[o.id]} onClick={() => mudar(o.id, -1, o.tenho)} className="w-6 h-6 rounded border flex items-center justify-center enabled:cursor-pointer disabled:opacity-40" style={{ borderColor: `${OURO}88` }}><Minus className="w-3 h-3" /></button>
                 <span className="w-6 text-center font-bold">{escolha[o.id] ?? 0}</span>

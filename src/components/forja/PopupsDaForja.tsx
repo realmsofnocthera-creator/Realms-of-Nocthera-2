@@ -10,7 +10,8 @@ import { formatarCompacto } from '@/rules/numerosCompactos';
 import type { CategoriaArma } from '@/rules/armas';
 import { COR_RARIDADE_ARMA, type DetalheMinhaArmaTela, type EstadoNoForja, type LinhaReceitaTela } from '@/lib/forjaTela';
 import { IconeCategoria } from './IconeDeCategoria';
-import { IconeDoMaterial } from './IconeDoMaterial';
+import { IconeDoMaterial, EtiquetaDeStatus } from './IconeDoMaterial';
+import { ICONE_BILHETE, ICONE_DANO_FISICO, ICONE_DANO_MAGICO } from '@/assets/forjaItens';
 import { AZUL_CLARO, BotaoDoKit, BotaoRedondo, DivisorDaForja, PainelDaForja, PlacaDeRaridade, SlotDeArma, TEXTO_PIXEL } from './KitDaForja';
 
 const VERDE = '#7BE08C';
@@ -110,7 +111,7 @@ const Chip = ({ children }: { children: React.ReactNode }) => (
 export function LinhasDaArma({ tipoDano, subtipo, dano, danoBase, elementos, status }: { tipoDano: 'Dano físico' | 'Dano mágico'; subtipo?: string | null; dano: number; danoBase?: number; elementos: string[]; status: string[] }) {
   return (
     <>
-      <LinhaDoKit icone={iconeDoAtributo(tipoDano === 'Dano físico' ? ATTRIBUTE_ICONS.forca : ATTRIBUTE_ICONS.inteligencia)} rotulo={tipoDano + (subtipo ? ` (${subtipo})` : '')}>
+      <LinhaDoKit icone={iconeDoAtributo(tipoDano === 'Dano físico' ? ICONE_DANO_FISICO : ICONE_DANO_MAGICO)} rotulo={tipoDano + (subtipo ? ` (${subtipo})` : '')}>
         {dano}
         {danoBase !== undefined && danoBase !== dano && <span className="text-[10px] text-[#8FB3D1]">(base {danoBase})</span>}
       </LinhaDoKit>
@@ -121,7 +122,7 @@ export function LinhasDaArma({ tipoDano, subtipo, dano, danoBase, elementos, sta
       )}
       {status.length > 0 && (
         <LinhaDoKit rotulo="Status">
-          {status.map((s) => <Chip key={s}>{s}</Chip>)}
+          {status.map((s) => <Chip key={s}><EtiquetaDeStatus nome={s} tamanho="14px" /></Chip>)}
         </LinhaDoKit>
       )}
     </>
@@ -174,6 +175,8 @@ export function FolhaMinhaArma({ detalhe: d, ocupado, erro, onFechar, onReforjar
           </div>
           <LinhaDeOuro tem={cust.ouroPorPonto.tem} precisa={cust.ouroPorPonto.precisa} ok={cust.ouroPorPonto.ok} rotulo="Por ponto" />
           <div className="flex items-center gap-2 px-2 py-1 bg-[#080C16]/85 border border-[#243B55]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={ICONE_BILHETE} alt="" aria-hidden="true" draggable={false} className="w-6 h-6 object-contain" style={{ imageRendering: 'pixelated' }} />
             <span className="font-cinzel font-bold text-[12px]" style={{ color: '#D6B0FF' }}>{cust.bilhete.nome}</span>
             <span className={`${TEXTO_PIXEL} text-[12px] font-bold ml-auto tabular-nums`} style={{ color: cust.bilhete.ok ? VERDE : VERMELHO }}>{cust.bilhete.tem}/{cust.bilhete.precisa}</span>
           </div>
