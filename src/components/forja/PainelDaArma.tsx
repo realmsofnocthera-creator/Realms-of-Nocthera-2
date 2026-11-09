@@ -9,7 +9,8 @@ import { formatarCompacto } from '@/rules/numerosCompactos';
 import type { CategoriaArma } from '@/rules/armas';
 import type { DetalheArmaTela, DetalheMinhaArmaTela, LinhaReceitaTela } from '@/lib/forjaTela';
 import { IconeCategoria } from './IconeDeCategoria';
-import { IconeDoMaterial } from './IconeDoMaterial';
+import { IconeDoMaterial, EtiquetaDeStatus } from './IconeDoMaterial';
+import { ICONE_DANO_FISICO, ICONE_DANO_MAGICO } from '@/assets/forjaItens';
 import { AZUL_CLARO, PainelDaForja, PlacaDeRaridade, TEXTO_PIXEL } from './KitDaForja';
 import { ROTULO_ESTADO, estrelas } from './PopupsDaForja';
 
@@ -21,8 +22,8 @@ const pixel: React.CSSProperties = { imageRendering: 'pixelated' };
 export function iconeDoModificador(texto: string): string {
   const t = texto.toLowerCase();
   if (t.includes('crítico')) return ATTRIBUTE_ICONS.sorte;
-  if (t.includes('dano físico')) return ATTRIBUTE_ICONS.forca;
-  if (t.includes('dano mágico')) return ATTRIBUTE_ICONS.inteligencia;
+  if (t.includes('dano físico')) return ICONE_DANO_FISICO;
+  if (t.includes('dano mágico')) return ICONE_DANO_MAGICO;
   if (t.includes('agilidade')) return ATTRIBUTE_ICONS.agilidade;
   if (t.includes('defesa')) return ATTRIBUTE_ICONS.vitalidade;
   return ATTRIBUTE_ICONS.arcano;
@@ -140,7 +141,7 @@ export function PainelDaArma({ d, categoria }: { d: DetalheArmaTela; categoria: 
         )}
         {d.status.length > 0 && (
           <Info rotulo="Status">
-            {d.status.map((s) => <span key={s} className="px-[1cqw] py-[0.4cqw] bg-[#0B0F1A] border border-[#3A5B7A] text-[2.2cqw] leading-none text-[#BFE3FF]">{s}</span>)}
+            {d.status.map((s) => <EtiquetaDeStatus key={s} nome={s} tamanho="3.4cqw" className="px-[1cqw] py-[0.4cqw] bg-[#0B0F1A] border border-[#3A5B7A] text-[2.2cqw] leading-none text-[#BFE3FF]" />)}
           </Info>
         )}
         <Info icone={ATTRIBUTE_ICONS.sorte} rotulo="Atributo" empilhar>
@@ -176,7 +177,7 @@ export function PainelDaMinhaArma({ d }: { d: DetalheMinhaArmaTela }) {
         {d.elementos.length > 0 && <Info rotulo="Elemento"><IconesDeElementos elementos={d.elementos} tamanho={18} /></Info>}
         {d.status.length > 0 && (
           <Info rotulo="Status">
-            {d.status.map((s) => <span key={s} className="px-[1cqw] py-[0.4cqw] bg-[#0B0F1A] border border-[#3A5B7A] text-[2.2cqw] leading-none text-[#BFE3FF]">{s}</span>)}
+            {d.status.map((s) => <EtiquetaDeStatus key={s} nome={s} tamanho="3.4cqw" className="px-[1cqw] py-[0.4cqw] bg-[#0B0F1A] border border-[#3A5B7A] text-[2.2cqw] leading-none text-[#BFE3FF]" />)}
           </Info>
         )}
         <Info icone={ATTRIBUTE_ICONS.sorte} rotulo="Atributo" cor={VERDE} empilhar>{d.atributo} +{d.pontos}</Info>
