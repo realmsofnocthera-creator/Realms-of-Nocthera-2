@@ -21,6 +21,8 @@ export interface AnimacaoDeForjaProps {
   nome: string;
   raridade: RaridadeArma;
   categoria: CategoriaArma;
+  /** A arma base (escolhe a arte da criatura; sem ela, o ícone da categoria). */
+  baseId?: string;
   linhas: readonly LinhaDoResultado[];
   aoFechar: () => void;
 }
@@ -45,7 +47,7 @@ const FAISCAS = [
  * A animação de forjar: o ferreiro martela a bigorna (faíscas voando e a tela tremendo) e, quando o servidor
  * responde, a arma sobe com um clarão na cor da raridade (raios nas lendárias e míticas) e as linhas do resultado.
  */
-export function AnimacaoDeForja({ fase, titulo, nome, raridade, categoria, linhas, aoFechar }: AnimacaoDeForjaProps) {
+export function AnimacaoDeForja({ fase, titulo, nome, raridade, categoria, baseId, linhas, aoFechar }: AnimacaoDeForjaProps) {
   const cor = BRILHO_DA_ARMA[raridade];
   const grande = raridade === 'lendario' || raridade === 'mitico';
   return (
@@ -68,7 +70,7 @@ export function AnimacaoDeForja({ fase, titulo, nome, raridade, categoria, linha
         <div className="relative z-10 flex flex-col items-center gap-3 w-full max-w-[360px]">
           <p className="font-[family-name:var(--font-pixel)] text-[11px] leading-none text-[#F5E3B3] [text-shadow:2px_2px_0_#05070D] fx-aparece">{titulo}</p>
           <div className="fx-subida" style={{ filter: `drop-shadow(0 0 ${grande ? 22 : 12}px ${cor})` }}>
-            <SlotComIcone categoria={categoria} raridade={raridade} destaque tamanho={132} />
+            <SlotComIcone categoria={categoria} baseId={baseId} raridade={raridade} destaque tamanho={132} />
           </div>
           <div className="w-full fx-aparece" style={{ animationDelay: '0.25s' }}>
             <PlacaDeRaridade raridade={raridade}>

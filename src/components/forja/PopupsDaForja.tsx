@@ -44,13 +44,13 @@ function JanelaDaForja({ rotulo, aoFechar, children }: { rotulo: string; aoFecha
 }
 
 /** A caixa de arte do kit com o ícone grande da arma (a arte de cada arma entra depois). */
-export function CaixaDeArteDaArma({ categoria, cor }: { categoria: CategoriaArma; cor: string }) {
+export function CaixaDeArteDaArma({ categoria, baseId, cor }: { categoria: CategoriaArma; baseId?: string; cor: string }) {
   return (
     <span className="relative block w-[62%] mx-auto" style={{ aspectRatio: '228 / 143' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={KIT_DA_FORJA.caixaArte} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full" style={{ imageRendering: 'pixelated' }} />
       <span className="absolute inset-0 flex items-center justify-center">
-        <IconeCategoria categoria={categoria} className="w-14 h-14" style={{ color: cor, filter: `drop-shadow(0 0 7px ${cor})` }} />
+        <IconeCategoria categoria={categoria} baseId={baseId} className="w-14 h-14" style={{ color: cor, filter: `drop-shadow(0 0 7px ${cor})` }} />
       </span>
     </span>
   );
@@ -148,7 +148,7 @@ export function FolhaMinhaArma({ detalhe: d, ocupado, erro, onFechar, onReforjar
       <p className={`${TEXTO_PIXEL} text-[11px] text-center text-[#8FB3D1] -mt-1`}>
         <span style={{ color: d.cor }}>{d.raridadeNome}</span> · {d.categoriaNome} · <span className="text-[#E7C46A]">{estrelas(d.estrela)}</span> {d.monstroNome}
       </p>
-      <CaixaDeArteDaArma categoria={d.categoria} cor={d.cor} />
+      <CaixaDeArteDaArma categoria={d.categoria} baseId={d.baseId} cor={d.cor} />
 
       <div className="flex flex-col gap-1">
         <LinhasDaArma tipoDano={d.tipoDano} dano={d.danoFixo} danoBase={d.danoFixoBase} elementos={d.elementos} status={d.status} />
@@ -203,10 +203,10 @@ export function FolhaMinhaArma({ detalhe: d, ocupado, erro, onFechar, onReforjar
 }
 
 /** O slot de uma arma com o ícone da categoria (usado na árvore, na lista e em Minhas armas). */
-export function SlotComIcone({ categoria, raridade, destaque, apagado, tamanho, selo }: { categoria: CategoriaArma; raridade: keyof typeof COR_RARIDADE_ARMA; destaque?: boolean; apagado?: boolean; tamanho?: number | string; selo?: 'tenho' | 'bloqueada' | 'faltaMaterial' | null }) {
+export function SlotComIcone({ categoria, baseId, raridade, destaque, apagado, tamanho, selo }: { categoria: CategoriaArma; baseId?: string; raridade: keyof typeof COR_RARIDADE_ARMA; destaque?: boolean; apagado?: boolean; tamanho?: number | string; selo?: 'tenho' | 'bloqueada' | 'faltaMaterial' | null }) {
   return (
     <SlotDeArma raridade={raridade} destaque={destaque} apagado={apagado} tamanho={tamanho} selo={selo}>
-      <IconeCategoria categoria={categoria} className="w-full h-full" style={{ color: COR_RARIDADE_ARMA[raridade] }} />
+      <IconeCategoria categoria={categoria} baseId={baseId} className="w-full h-full" style={{ color: COR_RARIDADE_ARMA[raridade] }} />
     </SlotDeArma>
   );
 }

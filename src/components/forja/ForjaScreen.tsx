@@ -129,7 +129,7 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco, categor
     setOcupado(true);
     setErro(null);
     setAviso(null);
-    setAnimacao({ fase: 'martelando', titulo: d.acao === 'Evoluir' ? 'EVOLUINDO' : 'FORJANDO', nome: d.nome, raridade: d.raridade, categoria: cat, linhas: [] });
+    setAnimacao({ fase: 'martelando', titulo: d.acao === 'Evoluir' ? 'EVOLUINDO' : 'FORJANDO', nome: d.nome, raridade: d.raridade, categoria: cat, baseId: d.baseId, linhas: [] });
     try {
       const r = await chamar<RespostaForjaTela>('/api/forja/fabricar', { baseId: d.baseId, categoria: cat, armaAnteriorId: d.armaAnteriorId ?? undefined }, TEMPO_DA_MARTELADA_MS);
       onCharacterChange(r.character);
@@ -137,7 +137,7 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco, categor
         { rotulo: NOME_ATRIBUTO[r.arma.atributo] ?? r.arma.atributo, depois: `+${r.arma.pontos}` },
         { rotulo: d.tipoDano, depois: `${d.danoFixo}` },
       ];
-      setAnimacao({ fase: 'revelada', titulo: d.acao === 'Evoluir' ? 'ARMA EVOLUÍDA!' : 'ARMA FORJADA!', nome: d.nome, raridade: d.raridade, categoria: cat, linhas });
+      setAnimacao({ fase: 'revelada', titulo: d.acao === 'Evoluir' ? 'ARMA EVOLUÍDA!' : 'ARMA FORJADA!', nome: d.nome, raridade: d.raridade, categoria: cat, baseId: d.baseId, linhas });
     } catch (e) {
       setAnimacao(null);
       setErro(e instanceof Error ? e.message : 'Erro ao forjar a arma.');
@@ -150,7 +150,7 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco, categor
     if (ocupado) return;
     setOcupado(true);
     setErro(null);
-    setAnimacao({ fase: 'martelando', titulo: 'REFORJANDO', nome: d.nome, raridade: d.raridade, categoria: d.categoria, linhas: [] });
+    setAnimacao({ fase: 'martelando', titulo: 'REFORJANDO', nome: d.nome, raridade: d.raridade, categoria: d.categoria, baseId: d.baseId, linhas: [] });
     try {
       const r = await chamar<RespostaForjaTela>('/api/forja/reforjar', { armaId: d.id }, TEMPO_DA_MARTELADA_MS);
       onCharacterChange(r.character);
@@ -161,6 +161,7 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco, categor
         nome: d.nome,
         raridade: d.raridade,
         categoria: d.categoria,
+        baseId: d.baseId,
         linhas: [{ rotulo: NOME_ATRIBUTO[r.arma.atributo] ?? r.arma.atributo, antes: `+${d.pontos}`, depois: `+${r.arma.pontos}`, subiu: r.arma.pontos === d.pontos ? null : r.arma.pontos > d.pontos }],
       });
     } catch (e) {
@@ -269,7 +270,7 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco, categor
                       {minhas.map((m) => (
                         <li key={m.id} className="flex flex-col items-center gap-[0.6cqw]">
                           <button type="button" aria-label={`${m.nome}, ${m.raridadeNome}, ${m.categoriaNome}, ${m.atributo} +${m.pontos}`} onClick={() => { setErro(null); setMinhaSel(m.id); }} className="cursor-pointer active:translate-y-px">
-                            <SlotComIcone categoria={m.categoria} raridade={m.raridade} destaque={m.id === minhaId} tamanho="10.4cqw" />
+                            <SlotComIcone categoria={m.categoria} baseId={m.baseId} raridade={m.raridade} destaque={m.id === minhaId} tamanho="10.4cqw" />
                           </button>
                           <span className={`${TEXTO_PIXEL} text-[2.4cqw] font-bold text-[#7BE08C] tabular-nums leading-none`}>+{m.pontos}</span>
                         </li>
@@ -361,7 +362,7 @@ function No({ no, categoria, aberto, onEscolher, tamanho }: { no: NoForja; categ
   const selo = no.estado === 'tenho' || no.estado === 'superada' ? 'tenho' : no.estado === 'bloqueada' ? 'bloqueada' : no.estado === 'faltaMaterial' ? 'faltaMaterial' : null;
   return (
     <button type="button" aria-label={`${no.nome}, ${no.raridadeNome}. ${ROTULO_ESTADO[no.estado]}`} aria-pressed={aberto} onClick={() => onEscolher(no.baseId)} className="shrink-0 cursor-pointer active:translate-y-px">
-      <SlotComIcone categoria={categoria} raridade={no.raridade} destaque={aberto || no.estado === 'disponivel'} apagado={apagado} tamanho={tamanho} selo={selo} />
+      <SlotComIcone categoria={categoria} baseId={no.baseId} raridade={no.raridade} destaque={aberto || no.estado === 'disponivel'} apagado={apagado} tamanho={tamanho} selo={selo} />
     </button>
   );
 }
