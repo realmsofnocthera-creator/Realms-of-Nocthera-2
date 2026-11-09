@@ -15,14 +15,14 @@ describe('ícones da Forja', () => {
   });
 });
 
-describe('arte das armas de criatura (de 1★ a 4★)', () => {
-  it('toda arma de de 1★ a 4★ tem arte nas 6 categorias', async () => {
+describe('arte das armas de criatura (de 1★ a 6★)', () => {
+  it('toda arma de de 1★ a 6★ tem arte nas 6 categorias', async () => {
     const { arteDaArma } = await import('@/assets/armasCriatura');
     const { ARMAS_BASE } = await import('@/rules/armasCatalogo');
     const cats = ['espadaGrande', 'katana', 'lanca', 'espadaEscudo', 'grimorio', 'cajado'] as const;
-    const sem = ARMAS_BASE.filter((a) => a.estrela <= 4).flatMap((a) => cats.filter((c) => !arteDaArma(a.id, c)).map((c) => `${a.id}:${c}`));
+    const sem = ARMAS_BASE.filter((a) => a.estrela <= 6).flatMap((a) => cats.filter((c) => !arteDaArma(a.id, c)).map((c) => `${a.id}:${c}`));
     expect(sem).toEqual([]);
-    const outra = ARMAS_BASE.find((a) => a.estrela === 5);
+    const outra = ARMAS_BASE.find((a) => a.estrela === 7);
     expect(outra && arteDaArma(outra.id, 'katana')).toBeNull();
   });
 });
