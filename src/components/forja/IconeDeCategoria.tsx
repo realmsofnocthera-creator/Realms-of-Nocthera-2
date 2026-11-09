@@ -1,14 +1,15 @@
 import React from 'react';
 import type { CategoriaArma } from '@/rules/armas';
 import { ICONE_DA_CATEGORIA } from '@/assets/forjaItens';
+import { arteDaArma } from '@/assets/armasCriatura';
 
 /** A arte da categoria da arma; `style.color` vira o brilho quando o chamador pede `filter`. */
-export function IconeCategoria({ categoria, className, style }: { categoria: CategoriaArma; className?: string; style?: React.CSSProperties }) {
+export function IconeCategoria({ categoria, baseId, className, style }: { categoria: CategoriaArma; baseId?: string; className?: string; style?: React.CSSProperties }) {
   const { color: _cor, ...resto } = style ?? {};
   void _cor;
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={ICONE_DA_CATEGORIA[categoria]} alt="" aria-hidden="true" draggable={false} className={`${className ?? ''} object-contain`} style={{ ...resto, imageRendering: 'auto' }} />
+    <img src={arteDaArma(baseId, categoria) ?? ICONE_DA_CATEGORIA[categoria]} alt="" aria-hidden="true" draggable={false} className={`${className ?? ''} object-contain`} style={{ ...resto, imageRendering: 'auto' }} />
   );
 }
 

@@ -86,13 +86,13 @@ function Custo({ tem, precisa, ok, rotulo = 'Custo' }: { tem: number; precisa: n
 }
 
 /** A arte da arma na caixa do kit (o ícone da categoria por enquanto). */
-function ArteDaArma({ categoria, cor }: { categoria: CategoriaArma; cor: string }) {
+function ArteDaArma({ categoria, baseId, cor }: { categoria: CategoriaArma; baseId?: string; cor: string }) {
   return (
     <span className="relative block w-full" style={{ aspectRatio: '228 / 143' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={KIT_DA_FORJA.caixaArte} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full" style={pixel} />
       <span className="absolute inset-0 flex items-center justify-center">
-        <IconeCategoria categoria={categoria} className="w-[15cqw] h-[15cqw]" style={{ color: cor, filter: `drop-shadow(0 0 7px ${cor})` }} />
+        <IconeCategoria categoria={categoria} baseId={baseId} className="w-[15cqw] h-[15cqw]" style={{ color: cor, filter: `drop-shadow(0 0 7px ${cor})` }} />
       </span>
     </span>
   );
@@ -111,7 +111,7 @@ export function PainelDaArma({ d, categoria }: { d: DetalheArmaTela; categoria: 
         <PlacaDeRaridade raridade={d.raridade}>
           <h2 className="font-cinzel font-extrabold text-[3cqw] leading-tight text-[#F5F3E0] [text-shadow:1px_1px_0_#05070D]">{d.nome}</h2>
         </PlacaDeRaridade>
-        <ArteDaArma categoria={categoria} cor={d.cor} />
+        <ArteDaArma categoria={categoria} baseId={d.baseId} cor={d.cor} />
         <p className={`${TEXTO_PIXEL} text-[2.3cqw] text-center text-[#9CC4E0] leading-tight`}>
           <span style={{ color: d.cor }}>{d.raridadeNome}</span> · <span className="text-[#E7C46A]">{estrelas(d.estrela)}</span> {d.monstroNome}{d.ramoNome ? ` › ${d.ramoNome}` : ''}
         </p>
@@ -163,7 +163,7 @@ export function PainelDaMinhaArma({ d }: { d: DetalheMinhaArmaTela }) {
         <PlacaDeRaridade raridade={d.raridade}>
           <h2 className="font-cinzel font-extrabold text-[3cqw] leading-tight text-[#F5F3E0] [text-shadow:1px_1px_0_#05070D]">{d.nome}</h2>
         </PlacaDeRaridade>
-        <ArteDaArma categoria={d.categoria} cor={d.cor} />
+        <ArteDaArma categoria={d.categoria} baseId={d.baseId} cor={d.cor} />
         <p className={`${TEXTO_PIXEL} text-[2.3cqw] text-center text-[#9CC4E0] leading-tight`}>
           <span style={{ color: d.cor }}>{d.raridadeNome}</span> · <span className="text-[#E7C46A]">{estrelas(d.estrela)}</span> {d.monstroNome}
         </p>
