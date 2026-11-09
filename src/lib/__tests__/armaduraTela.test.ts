@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { conjuntosDaTela, detalheDaPeca, efeitoDoNivel, minhasPecasTela, orbesDaTela, xpDosOrbes } from '@/lib/armaduraTela';
+import { conjuntosDaTela, conjuntosVisiveis, detalheDaPeca, efeitoDoNivel, minhasPecasTela, orbesDaTela, xpDosOrbes } from '@/lib/armaduraTela';
 import { PECAS_ARMADURA_MAP } from '@/rules/armadurasCatalogo';
 import { custoDaReceita } from '@/game/forja';
 import type { ArmaduraPersonagem } from '@/game/armaduraForja';
@@ -61,5 +61,29 @@ describe('Orbes', () => {
     expect(o.map((x) => [x.xp, x.tenho])).toEqual([[10, 4], [50, 0], [200, 0], [500, 0], [1000, 0]]);
     expect(xpDosOrbes({ 'orbe-de-armadura': 3 }, 0)).toEqual({ total: 30, aproveitado: 30, nivelDepois: 1 });
     expect(xpDosOrbes({ 'orbe-de-armadura-regio': 1 }, 9500)).toEqual({ total: 1000, aproveitado: 500, nivelDepois: 30 });
+  });
+});
+
+describe('Conjuntos visíveis (regra de descoberta)', () => {
+  const base = { ...vazio, nivel: 12, cacadaChavesVencidas: [] as number[], monstrosDerrotados: [] as string[] };
+
+  it('sem ter enfrentado ninguém, os conjuntos das ★ liberadas aparecem como ??? e as outras ★ nem aparecem', () => {
+    const v = conjuntosVisiveis(base);
+    expect(v.length).toBeGreaterThan(0);
+    expect(v.length).toBeLessThan(82);
+    expect(v.every((c) => !c.descoberto && c.nome === '???' && c.pecas.every((p) => p.nome === '???'))).toBe(true);
+  });
+
+  it('derrotar o monstro revela o conjunto dele, mas não o das subespécies', () => {
+    const v = conjuntosVisiveis({ ...base, monstrosDerrotados: ['rato-da-floresta'] });
+    const rato = v.find((c) => c.nome === 'Rato da Floresta');
+    expect(rato?.descoberto).toBe(true);
+    expect(rato?.pecas.map((p) => p.espacoNome)).toEqual(['Elmo', 'Peitoral', 'Luvas', 'Perneiras', 'Botas']);
+    expect(v.filter((c) => c.descoberto)).toHaveLength(1);
+  });
+
+  it('já ter uma peça do conjunto também revela', () => {
+    const v = conjuntosVisiveis({ ...base, armaduras: [peca()] });
+    expect(v.find((c) => c.nome === 'Rato da Floresta')?.descoberto).toBe(true);
   });
 });

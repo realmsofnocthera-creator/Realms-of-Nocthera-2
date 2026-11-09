@@ -35,14 +35,14 @@ const Ico = ({ src }: { src: string }) => (
 );
 
 /** A faixa azul de título de uma seção, como "Required Materials" da referência. */
-function CabecalhoDaSecao({ children }: { children: React.ReactNode }) {
+export function CabecalhoDaSecao({ children }: { children: React.ReactNode }) {
   return (
     <h3 className="font-cinzel font-extrabold uppercase text-[2.7cqw] leading-none text-center text-[#7FD3F2] py-[1.2cqw] border-y border-[#2B5C80] bg-[#0A1B2E]/80 [text-shadow:1px_1px_0_#05070D]">{children}</h3>
   );
 }
 
 /** Uma linha de informação com ícone à esquerda e valor à direita, como "Attack ... 180"; `empilhar` põe o valor numa segunda linha (textos longos). */
-function Info({ icone, rotulo, children, cor, empilhar = false }: { icone?: string; rotulo: string; children: React.ReactNode; cor?: string; empilhar?: boolean }) {
+export function Info({ icone, rotulo, children, cor, empilhar = false }: { icone?: string; rotulo: string; children: React.ReactNode; cor?: string; empilhar?: boolean }) {
   return (
     <div className={`flex ${empilhar ? 'flex-col items-stretch gap-[0.4cqw]' : 'items-center gap-[1.2cqw]'} py-[0.9cqw] border-b border-[#1C2D44]`}>
       <span className="flex items-center gap-[1.2cqw] min-w-0">
@@ -55,7 +55,7 @@ function Info({ icone, rotulo, children, cor, empilhar = false }: { icone?: stri
 }
 
 /** O material da receita: o ícone (a inicial por enquanto), "Nome x3" e, à direita, quantos você tem. */
-function Material({ m }: { m: LinhaReceitaTela }) {
+export function Material({ m }: { m: LinhaReceitaTela }) {
   return (
     <div className="flex items-center gap-[1.4cqw] py-[0.9cqw] border-b border-[#1C2D44]">
       <span className="w-[6.4cqw] h-[6.4cqw] shrink-0 flex items-center justify-center border border-[#3A5B7A] bg-[#0B0F1A]" aria-hidden="true">
@@ -72,7 +72,7 @@ function Material({ m }: { m: LinhaReceitaTela }) {
   );
 }
 
-function Custo({ tem, precisa, ok, rotulo = 'Custo' }: { tem: number; precisa: number; ok: boolean; rotulo?: string }) {
+export function Custo({ tem, precisa, ok, rotulo = 'Custo' }: { tem: number; precisa: number; ok: boolean; rotulo?: string }) {
   return (
     <div className="flex items-center gap-[1.4cqw] py-[1.2cqw]">
       <span className="font-cinzel font-extrabold uppercase text-[2.6cqw] text-[#7FD3F2]">{rotulo}</span>

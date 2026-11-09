@@ -1,30 +1,24 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, Coins, Minus, Plus, X } from 'lucide-react';
-import { IconeEspaco } from '@/components/equipamento/IconeEspaco';
+import { KIT_DA_FORJA } from '@/assets/forjaUi';
 import type { CharacterDocument } from '@/server/characterService';
 import type { ArmaduraPersonagem } from '@/game/armaduraForja';
-import type { EspacoArmadura } from '@/rules/armaduras';
 import { percentualCustoReforja } from '@/rules/armas';
+import { PECAS_ARMADURA_MAP } from '@/rules/armadurasCatalogo';
 import {
-  ConjuntoTela,
-  DetalhePecaTela,
-  ESTRELAS_ARMADURA,
-  MinhaPecaTela,
-  conjuntosDaTela,
+  type ConjuntoTela,
+  type DetalhePecaTela,
+  type MinhaPecaTela,
+  conjuntosVisiveis,
   detalheDaPeca,
   minhasPecasTela,
-  orbesDaTela,
-  xpDosOrbes,
 } from '@/lib/armaduraTela';
 import { COR_RARIDADE_ARMA } from '@/lib/forjaTela';
-import { IconeDoOrbe } from './IconeDoMaterial';
-import { NOCTHERA_THEME } from '@/theme/theme';
-
-const OURO = '#C8A656';
-const DESTAQUE = '#F3C769';
+import { Abas, BarraDeTitulo, BotaoDoKit, FundoDaForja, OuroDaForja, PainelDaForja, PalcoDaForja, SlotDeArma, TEXTO_PIXEL } from './KitDaForja';
+import { IconeDePeca } from './IconeDoMaterial';
+import { PainelDaMinhaPeca, PainelDaPeca } from './PainelDaPeca';
 
 interface ArmaduraScreenProps {
   character: CharacterDocument;
@@ -32,7 +26,8 @@ interface ArmaduraScreenProps {
   tokenFresco: () => Promise<string | null>;
 }
 
-type Aba = 'conjuntos' | 'minhas';
+/** Grau inferior (liberado), Grau superior (bloqueado até uma atualização futura) e as peças do personagem. */
+type Aba = 'inferior' | 'superior' | 'minhas';
 
 const estrelas = (n: number) => '★'.repeat(n);
 
@@ -50,37 +45,54 @@ async function chamar<T>(rota: string, corpo: unknown, tokenFresco: () => Promis
   return data as T;
 }
 
+/** A primeira peça que dá para fabricar agora, ou a primeira peça descoberta (a que o painel da direita mostra de início). */
+function pecaInicial(conjuntos: readonly ConjuntoTela[]): string | null {
+  const pecas = conjuntos.filter((c) => c.descoberto).flatMap((c) => c.pecas);
+  return (pecas.find((p) => p.estado === 'disponivel') ?? pecas[0])?.pecaId ?? null;
+}
+
 /**
- * Melhorar armadura: a lista dos conjuntos (sem árvore), fabricar peças, e nas peças que o personagem tem,
- * usar orbes de armadura (nível 0 a 30) e reforjar. Toda regra é conferida no servidor.
+ * Forjar armadura em pixel (kit azul e dourado), na disposição da referência: a lista de conjuntos com as 5 peças de
+ * cada um à esquerda e, à direita, a peça escolhida com os materiais, o custo e as informações; as abas Grau inferior,
+ * Grau superior (bloqueado) e Minhas no topo e a barra de estado embaixo. Nas peças que o personagem tem, usar orbes de
+ * armadura (nível 0 a 30) e reforjar. Toda regra é conferida no servidor.
  */
 export function ArmaduraScreen({ character, onCharacterChange, tokenFresco }: ArmaduraScreenProps) {
-  const { colors } = NOCTHERA_THEME;
-  const [aba, setAba] = useState<Aba>('conjuntos');
-  const [estrela, setEstrela] = useState(1);
-  const [selecionada, setSelecionada] = useState<{ pecaId: string; armaduraId?: string } | null>(null);
+  const [aba, setAba] = useState<Aba>('inferior');
+  const [selecionada, setSelecionada] = useState<string | null>(null);
+  const [minhaSel, setMinhaSel] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
-  const conjuntos = useMemo(() => conjuntosDaTela(character), [character]);
+  const conjuntos = useMemo(() => conjuntosVisiveis(character), [character]);
   const minhas = useMemo(() => minhasPecasTela(character), [character]);
-  const detalhe = selecionada ? detalheDaPeca(selecionada.pecaId, character) : null;
+  const pecaSel = selecionada ?? pecaInicial(conjuntos);
+  const detalhe = pecaSel && PECAS_ARMADURA_MAP[pecaSel] ? detalheDaPeca(pecaSel, character) : null;
+  const minha = minhas.find((m) => m.id === minhaSel) ?? minhas[0] ?? null;
+  const pecaDaMinha = minha ? PECAS_ARMADURA_MAP[minha.pecaId] : null;
 
-  const abrir = (pecaId: string, armaduraId?: string) => {
+  const mudarAba = useCallback((a: Aba) => {
+    setAba(a);
     setErro(null);
-    setSelecionada({ pecaId, armaduraId });
+    setAviso(null);
+  }, []);
+  const escolherPeca = (pecaId: string) => {
+    setErro(null);
+    setAviso(null);
+    setSelecionada(pecaId);
   };
 
   const executar = async (acao: () => Promise<{ character: CharacterDocument; armadura: ArmaduraPersonagem }>, mensagem: (a: ArmaduraPersonagem) => string) => {
     if (ocupado) return;
     setOcupado(true);
     setErro(null);
+    setAviso(null);
     try {
       const r = await acao();
       onCharacterChange(r.character);
       setAviso(mensagem(r.armadura));
-      setSelecionada((s) => (s ? { pecaId: s.pecaId, armaduraId: r.armadura.id } : s));
+      setMinhaSel(r.armadura.id);
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Erro no Ferreiro.');
     } finally {
@@ -98,278 +110,159 @@ export function ArmaduraScreen({ character, onCharacterChange, tokenFresco }: Ar
   const usarOrbes = (m: MinhaPecaTela, orbes: Record<string, number>) =>
     executar(() => chamar('/api/armadura/orbes', { armaduraId: m.id, orbes }, tokenFresco), () => `${m.nome} recebeu os orbes.`);
 
+  const status =
+    erro ??
+    aviso ??
+    (aba === 'superior'
+      ? 'Grau superior: chega em uma atualização futura'
+      : aba === 'minhas'
+        ? minha
+          ? 'Use orbes para subir o nível ou reforje a peça'
+          : 'Você ainda não tem peças de armadura'
+        : detalhe
+          ? detalhe.podeFabricar
+            ? detalhe.minhas.length > 0
+              ? `Você tem ${detalhe.minhas.length}. Pode fabricar outra.`
+              : 'Pode ser forjada.'
+            : 'Falta material ou ouro'
+          : conjuntos.length > 0
+            ? 'Enfrente os monstros para descobrir as armaduras'
+            : 'Libere uma ★ na Caçada');
+  const podeFabricar = aba === 'inferior' && !!detalhe?.podeFabricar;
+  const textoDoBotao = ocupado ? 'Forjando...' : !detalhe ? 'Forjar' : detalhe.podeFabricar ? (detalhe.minhas.length > 0 ? 'Fabricar outra' : 'Fabricar') : 'Falta material';
+
   return (
-    <main className="min-h-dvh w-full flex flex-col items-center px-2.5 py-3 select-none" style={{ backgroundColor: colors.background.primary, backgroundImage: 'radial-gradient(ellipse at top, rgba(48,28,14,0.92) 0%, rgba(13,13,13,1) 75%)', color: colors.text.primary }}>
-      <div className="w-full max-w-[480px] flex flex-col gap-2.5 pb-4">
-        <header className="flex items-center justify-between">
-          <Link href="/ferreiro" className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-cinzel font-bold uppercase" style={{ backgroundColor: colors.background.secondary, borderColor: OURO, color: '#E6C775' }}>
-            <ArrowLeft className="w-4 h-4" /> Ferreiro
+    <main className="fixed inset-0 overflow-hidden select-none bg-[#05070D]">
+      <FundoDaForja />
+      <PalcoDaForja>
+        <header className="flex items-center gap-[1.4cqw] px-[2.4cqw] pt-[2.4cqw]">
+          <Link href="/ferreiro" aria-label="Voltar ao Ferreiro" className="w-[9cqw] h-[9cqw] shrink-0 cursor-pointer active:translate-y-px">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={KIT_DA_FORJA.voltar} alt="" aria-hidden="true" className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} />
           </Link>
-          <span className="inline-flex items-center gap-1 text-xs font-cinzel font-bold" style={{ color: '#E6C775' }} aria-label={`Ouro: ${character.ouro}`}>
-            <Coins className="w-3.5 h-3.5" /> {character.ouro.toLocaleString('pt-BR')}
-          </span>
+          <BarraDeTitulo titulo="Armaduras" className="w-[58cqw]" />
+          <span className="ml-auto"><OuroDaForja ouro={character.ouro} /></span>
         </header>
 
-        <div className="flex flex-col items-center">
-          <span className="text-[10px] font-cinzel tracking-widest uppercase" style={{ color: colors.text.secondary }}>Ferreiro › Melhorar armadura</span>
-          <h1 className="text-2xl font-cinzel font-extrabold tracking-widest uppercase" style={{ color: '#F5E3B3' }}>Armaduras</h1>
+        <div className="px-[2.4cqw] pt-[1cqw]">
+          <Abas<Aba>
+            rotulo="Abas das armaduras"
+            ativa={aba}
+            aoMudar={mudarAba}
+            abas={[
+              { id: 'inferior', nome: 'Grau inferior' },
+              { id: 'superior', nome: 'G. superior', bloqueada: true, rotuloAcessivel: 'Grau superior (bloqueado)' },
+              { id: 'minhas', nome: `Minhas (${minhas.length})`, rotuloAcessivel: `Minhas peças (${minhas.length})` },
+            ]}
+          />
         </div>
 
-        <nav aria-label="Abas das armaduras" className="grid grid-cols-2 rounded-sm border-2 overflow-hidden" style={{ borderColor: OURO }}>
-          {([['conjuntos', 'Conjuntos'], ['minhas', `Minhas peças (${minhas.length})`]] as const).map(([id, nome]) => (
-            <button key={id} type="button" aria-pressed={aba === id} onClick={() => setAba(id)} className="py-1.5 text-xs font-cinzel font-bold uppercase cursor-pointer" style={{ backgroundColor: aba === id ? OURO : colors.background.secondary, color: aba === id ? colors.background.primary : '#E6C775' }}>
-              {nome}
-            </button>
-          ))}
-        </nav>
+        {aba === 'superior' ? (
+          <div className="flex-1 min-h-0 px-[2.4cqw] pt-[1.2cqw]">
+            <PainelDaForja as="section" aria-label="Grau superior" className="h-full flex flex-col items-center justify-center gap-[3cqw] px-[4cqw] text-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={KIT_DA_FORJA.proibido} alt="" aria-hidden="true" className="w-[16cqw] h-[16cqw] object-contain" style={{ imageRendering: 'pixelated' }} />
+              <p className="font-cinzel font-extrabold uppercase text-[3.6cqw] leading-tight text-[#9CD8FF] [text-shadow:1px_1px_0_#05070D]">Grau superior bloqueado</p>
+              <p className={`${TEXTO_PIXEL} text-[2.8cqw] text-[#8FB3D1] leading-snug`}>As armaduras do grau superior chegam em uma atualização futura.</p>
+            </PainelDaForja>
+          </div>
+        ) : (
+          <div className="flex-1 min-h-0 px-[2.4cqw] pt-[1.2cqw] grid gap-[1.6cqw]" style={{ gridTemplateColumns: '57fr 43fr' }}>
+            {/* ESQUERDA: os conjuntos com as 5 peças de cada um (ou as peças do personagem) */}
+            <PainelDaForja as="section" aria-label={aba === 'inferior' ? 'Conjuntos de armadura' : 'Minhas peças'} className="min-h-0 overflow-y-auto forja-rolagem">
+              {aba === 'inferior' && conjuntos.length === 0 && (
+                <p role="status" className={`${TEXTO_PIXEL} text-[2.8cqw] text-center text-[#8FB3D1] py-[6cqw] px-[2cqw] leading-snug`}>Nenhum conjunto ainda. Libere a 1★ na Caçada e enfrente os monstros para descobrir as armaduras.</p>
+              )}
+              {aba === 'inferior' && (
+                <div className="flex flex-col gap-[1cqw]">
+                  {conjuntos.map((c) => (
+                    <LinhaDoConjunto key={c.conjuntoId} conjunto={c} selecionada={pecaSel} onEscolher={escolherPeca} />
+                  ))}
+                </div>
+              )}
+              {aba === 'minhas' &&
+                (minhas.length === 0 ? (
+                  <p role="status" className={`${TEXTO_PIXEL} text-[2.8cqw] text-center text-[#8FB3D1] py-[6cqw] px-[2cqw] leading-snug`}>Você ainda não tem peças. Fabrique a primeira no Grau inferior.</p>
+                ) : (
+                  <ul className="grid grid-cols-4 gap-x-[1.6cqw] gap-y-[2.4cqw]">
+                    {minhas.map((m) => {
+                      const peca = PECAS_ARMADURA_MAP[m.pecaId];
+                      return (
+                        <li key={m.id} className="flex flex-col items-center gap-[0.6cqw]">
+                          <button type="button" aria-label={`${m.nome}, ${m.espacoNome}, nível ${m.nivel}`} onClick={() => { setErro(null); setAviso(null); setMinhaSel(m.id); }} className="cursor-pointer active:translate-y-px">
+                            <SlotDeArma raridade={m.raridade} destaque={m.id === minha?.id} tamanho="10.4cqw">
+                              <IconeDePeca espaco={peca.espaco} cor={m.cor} className="w-full h-full" />
+                            </SlotDeArma>
+                          </button>
+                          <span className={`${TEXTO_PIXEL} text-[2.4cqw] font-bold text-[#7BE08C] tabular-nums leading-none`}>Nv. {m.nivel}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ))}
+            </PainelDaForja>
 
-        {aviso && (
-          <div role="status" className="flex items-start justify-between gap-2 rounded px-2 py-1.5 text-xs font-semibold" style={{ backgroundColor: '#1E3A24', color: '#BFEFC6' }}>
-            <span>{aviso}</span>
-            <button type="button" aria-label="Fechar aviso" onClick={() => setAviso(null)} className="cursor-pointer"><X className="w-3.5 h-3.5" /></button>
+            {/* DIREITA: a peça escolhida, os materiais, o custo e as informações */}
+            <div className="min-h-0 overflow-y-auto forja-rolagem">
+              {aba === 'inferior' && detalhe && <PainelDaPeca d={detalhe} />}
+              {aba === 'minhas' && minha && pecaDaMinha && (
+                <PainelDaMinhaPeca key={minha.id} m={minha} espaco={pecaDaMinha.espaco} estrela={pecaDaMinha.estrela} character={character} ocupado={ocupado} onUsarOrbes={(orbes) => void usarOrbes(minha, orbes)} />
+              )}
+            </div>
           </div>
         )}
 
-        {aba === 'conjuntos' ? (
-          <>
-            <div role="group" aria-label="Estrela do conjunto" className="flex gap-1 overflow-x-auto pb-1">
-              {ESTRELAS_ARMADURA.map((e) => (
-                <button key={e} type="button" aria-pressed={estrela === e} onClick={() => setEstrela(e)} className="shrink-0 px-2 py-1 rounded-sm border text-[11px] font-cinzel font-bold cursor-pointer" style={{ backgroundColor: estrela === e ? `${OURO}33` : colors.background.secondary, borderColor: estrela === e ? DESTAQUE : `${colors.border.default}99`, color: estrela === e ? '#F5E3B3' : colors.text.secondary }}>
-                  {e}★
-                </button>
-              ))}
-            </div>
-            <section aria-label="Conjuntos de armadura" className="flex flex-col gap-2">
-              {conjuntos.filter((c) => c.estrela === estrela).map((c) => (
-                <CartaoConjunto key={c.conjuntoId} conjunto={c} aberta={selecionada?.pecaId ?? null} onAbrir={abrir} />
-              ))}
-            </section>
-          </>
-        ) : (
-          <section aria-label="Minhas peças" className="flex flex-col gap-1.5">
-            {minhas.length === 0 ? (
-              <div className="rounded-sm border-2 p-5 text-center text-sm" style={{ backgroundColor: colors.background.secondary, borderColor: `${colors.border.default}99`, color: colors.text.secondary }}>
-                Você ainda não tem peças de armadura. Fabrique na aba Conjuntos.
-              </div>
-            ) : (
-              minhas.map((m) => (
-                <button key={m.id} type="button" onClick={() => abrir(m.pecaId, m.id)} className="flex items-center gap-2.5 rounded-sm border-2 px-2.5 py-2 text-left cursor-pointer" style={{ backgroundColor: colors.background.secondary, borderColor: `${m.cor}99` }}>
-                  <span className="flex-1 flex flex-col min-w-0">
-                    <span className="text-[13px] font-semibold truncate" style={{ color: m.cor }}>{m.nome}</span>
-                    <span className="text-[10px]" style={{ color: colors.text.secondary }}>{m.espacoNome} · {m.fixo} · {m.atributo} +{m.pontos}</span>
-                    <BarraXp m={m} />
-                  </span>
-                  <span className="text-[13px] font-cinzel font-black" style={{ color: '#F5E3B3' }}>Nv. {m.nivel}</span>
-                </button>
-              ))
-            )}
-          </section>
-        )}
-      </div>
-
-      {detalhe && (
-        <FolhaPeca
-          detalhe={detalhe}
-          armaduraId={selecionada?.armaduraId}
-          character={character}
-          ocupado={ocupado}
-          erro={erro}
-          onFechar={() => setSelecionada(null)}
-          onFabricar={() => fabricar(detalhe)}
-          onReforjar={reforjar}
-          onUsarOrbes={usarOrbes}
-          onTrocar={(id) => setSelecionada({ pecaId: detalhe.pecaId, armaduraId: id })}
-        />
-      )}
+        {/* EMBAIXO: a barra de estado e o botão da ação */}
+        <div className="grid gap-[1.6cqw] px-[2.4cqw] pt-[1.4cqw] pb-[2.4cqw] items-center" style={{ gridTemplateColumns: '57fr 43fr' }}>
+          <div className="relative w-full" style={{ aspectRatio: '415 / 64' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={KIT_DA_FORJA.barraStatus} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full" style={{ imageRendering: 'pixelated', objectFit: 'fill' }} />
+            <p role={erro ? 'alert' : 'status'} className={`absolute inset-0 flex items-center justify-center px-[9%] text-center font-cinzel font-bold text-[2.7cqw] leading-tight [text-shadow:1px_1px_0_#05070D] ${erro ? 'text-[#FFB4B4]' : 'text-[#DFF3FF]'}`}>{status}</p>
+          </div>
+          {aba === 'minhas' ? (
+            <BotaoDoKit disabled={!minha || ocupado} onClick={() => minha && void reforjar(minha)} className="w-full py-[1cqw]">{minha ? `Reforjar (${percentualCustoReforja(minha.reforjas)}%)` : 'Reforjar'}</BotaoDoKit>
+          ) : (
+            <BotaoDoKit disabled={aba === 'superior' || !podeFabricar || ocupado} onClick={() => detalhe && void fabricar(detalhe)} className="w-full py-[1cqw]">{aba === 'superior' ? 'Bloqueado' : textoDoBotao}</BotaoDoKit>
+          )}
+        </div>
+      </PalcoDaForja>
     </main>
   );
 }
 
-function BarraXp({ m }: { m: MinhaPecaTela }) {
-  const pct = m.xpDoNivel === 0 ? 100 : Math.round((m.xpNoNivel / m.xpDoNivel) * 100);
-  return (
-    <span className="mt-1 block h-1.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: '#2A2A2A' }} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`XP do nível ${m.nivel}`}>
-      <span className="block h-full" style={{ width: `${pct}%`, backgroundColor: DESTAQUE }} />
-    </span>
-  );
-}
-
-function CartaoConjunto({ conjunto: c, aberta, onAbrir }: { conjunto: ConjuntoTela; aberta: string | null; onAbrir: (pecaId: string) => void }) {
-  const { colors } = NOCTHERA_THEME;
+/** Um conjunto como na referência: o nome à esquerda e as 5 peças em linha à direita (as que ainda são "???" ficam apagadas). */
+function LinhaDoConjunto({ conjunto: c, selecionada, onEscolher }: { conjunto: ConjuntoTela; selecionada: string | null; onEscolher: (pecaId: string) => void }) {
   const cor = COR_RARIDADE_ARMA[c.raridade];
   return (
-    <article aria-label={`Conjunto ${c.nome}`} className="rounded-sm border-2 px-2.5 py-2 flex flex-col gap-1.5" style={{ backgroundColor: colors.background.secondary, borderColor: `${cor}88` }}>
-      <h2 className="text-[13px] font-cinzel font-bold flex items-baseline justify-between gap-2" style={{ color: '#F5E3B3' }}>
-        <span><span style={{ color: OURO }}>{estrelas(c.estrela)}</span> {c.nome}</span>
-        <span className="text-[10px] font-sans font-semibold" style={{ color: cor }}>{c.raridadeNome} · {c.estilo}</span>
+    <article aria-label={`Conjunto ${c.nome}`} className="grid items-center gap-[1cqw] px-[1cqw] py-[1.2cqw] bg-[#080C16]/75 border border-[#1F3550]" style={{ gridTemplateColumns: '14.5cqw 1fr' }}>
+      <h2 className={`font-cinzel font-extrabold text-[2.1cqw] leading-tight [text-shadow:1px_1px_0_#05070D] [overflow-wrap:anywhere] hyphens-auto ${c.descoberto ? 'text-[#7FC8FF]' : 'text-[#5E7390]'}`} lang="pt-BR">
+        {c.nome}
+        <span className="block text-[1.9cqw] text-[#E7C46A]">{estrelas(c.estrela)}</span>
       </h2>
-      <div className="grid grid-cols-5 gap-1.5">
-        {c.pecas.map((p) => (
-          <button
-            key={p.pecaId}
-            type="button"
-            aria-label={`${p.nome} (${p.espacoNome}). ${p.estado === 'tenho' ? `Você tem ${p.quantas}` : p.estado === 'disponivel' ? 'Pronta para fabricar' : 'Falta material ou ouro'}`}
-            onClick={() => onAbrir(p.pecaId)}
-            className="relative aspect-square rounded-sm border-2 flex flex-col items-center justify-center gap-0.5 cursor-pointer"
-            style={{
-              backgroundColor: colors.background.primary,
-              borderColor: aberta === p.pecaId || p.estado === 'disponivel' ? DESTAQUE : `${cor}99`,
-              boxShadow: p.estado === 'disponivel' ? `0 0 0 2px ${DESTAQUE}55, 0 0 10px ${DESTAQUE}66` : undefined,
-            }}
-          >
-            <IconeEspaco espaco={p.espaco} className="w-6 h-6" style={{ color: cor }} />
-            <span className="text-[8px] leading-none" style={{ color: colors.text.secondary }}>{p.espacoNome}</span>
-            {p.estado === 'tenho' && <Check className="absolute -top-1.5 -right-1.5 w-4 h-4 p-0.5 rounded-full" style={{ backgroundColor: '#5FCB6A', color: colors.background.primary }} />}
-            {p.estado === 'faltaMaterial' && <span aria-hidden="true" className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#C25B4F' }} />}
-          </button>
-        ))}
+      <div className="grid grid-cols-5 gap-[0.6cqw]">
+        {c.pecas.map((p) =>
+          c.descoberto ? (
+            <button
+              key={p.pecaId}
+              type="button"
+              aria-label={`${p.nome} (${p.espacoNome}). ${p.estado === 'tenho' ? `Você tem ${p.quantas}` : p.estado === 'disponivel' ? 'Pronta para fabricar' : 'Falta material ou ouro'}`}
+              aria-pressed={selecionada === p.pecaId}
+              onClick={() => onEscolher(p.pecaId)}
+              className="cursor-pointer active:translate-y-px"
+            >
+              <SlotDeArma raridade={p.raridade} destaque={selecionada === p.pecaId || p.estado === 'disponivel'} tamanho="6.4cqw" selo={p.estado === 'tenho' ? 'tenho' : p.estado === 'faltaMaterial' ? 'faltaMaterial' : null}>
+                <IconeDePeca espaco={p.espaco} cor={cor} className="w-full h-full" />
+              </SlotDeArma>
+            </button>
+          ) : (
+            <span key={p.pecaId} role="img" aria-label="Peça ainda não descoberta" className="inline-flex">
+              <SlotDeArma raridade="comum" apagado tamanho="6.4cqw">
+                <span className={`${TEXTO_PIXEL} font-bold text-[#5E7390] leading-none`} style={{ fontSize: '2.8cqw' }}>?</span>
+              </SlotDeArma>
+            </span>
+          )
+        )}
       </div>
     </article>
-  );
-}
-
-function Linha({ rotulo, valor, cor }: { rotulo: React.ReactNode; valor: React.ReactNode; cor?: string }) {
-  return (
-    <div className="flex justify-between gap-3 text-[12px]">
-      <span style={{ color: NOCTHERA_THEME.colors.text.secondary }}>{rotulo}</span>
-      <span className="text-right font-semibold" style={{ color: cor }}>{valor}</span>
-    </div>
-  );
-}
-
-function FolhaPeca(props: {
-  detalhe: DetalhePecaTela;
-  armaduraId?: string;
-  character: CharacterDocument;
-  ocupado: boolean;
-  erro: string | null;
-  onFechar: () => void;
-  onFabricar: () => void;
-  onReforjar: (m: MinhaPecaTela) => void;
-  onUsarOrbes: (m: MinhaPecaTela, orbes: Record<string, number>) => void;
-  onTrocar: (armaduraId: string) => void;
-}) {
-  const { detalhe: d, character, ocupado, erro } = props;
-  const { colors } = NOCTHERA_THEME;
-  const minha = d.minhas.find((m) => m.id === props.armaduraId) ?? d.minhas[0];
-  const receita = [...d.materiais, ...(d.diversos ? [d.diversos] : [])];
-  return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={`Detalhes de ${d.nome}`}>
-      <button type="button" aria-label="Fechar detalhes" onClick={props.onFechar} className="absolute inset-0 cursor-default" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} />
-      <div className="relative w-full max-w-[480px] max-h-[88dvh] overflow-y-auto rounded-t-md border-2 border-b-0 px-3.5 pt-3 pb-4 flex flex-col gap-2.5" style={{ backgroundColor: colors.background.secondary, borderColor: d.cor }}>
-        <div className="flex items-start gap-3">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-[16px] font-cinzel font-extrabold leading-tight" style={{ color: d.cor }}>{d.nome}</h2>
-            <p className="text-[11px]" style={{ color: colors.text.secondary }}>{d.raridadeNome} · {d.espacoNome} · {d.estilo} · {estrelas(d.estrela)} {d.conjunto}</p>
-          </div>
-          <button type="button" aria-label="Fechar" onClick={props.onFechar} className="cursor-pointer"><X className="w-5 h-5" style={{ color: colors.text.secondary }} /></button>
-        </div>
-
-        <div className="rounded-sm border p-2 flex flex-col gap-1" style={{ borderColor: `${colors.border.default}99` }}>
-          <Linha rotulo={d.fixo} valor={`${d.fixoNivel0} (Nv. 30: ${d.fixoNivel30})`} cor="#F5E3B3" />
-          <Linha rotulo="Atributo sorteado" valor={d.sorteio} />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <h3 className="text-[11px] font-cinzel font-bold uppercase tracking-wider" style={{ color: OURO }}>Habilidades</h3>
-          {d.habilidades.map((h) => (
-            <div key={h.id} className="text-[12px]">
-              <span className="font-semibold" style={{ color: '#F5E3B3' }}>{h.nome} Nv. {h.nivel}</span>
-              <span style={{ color: colors.text.secondary }}> — {h.efeito}</span>
-            </div>
-          ))}
-        </div>
-
-        {minha && (
-          <MinhaPecaPainel
-            key={minha.id}
-            m={minha}
-            outras={d.minhas}
-            character={character}
-            ocupado={ocupado}
-            percentualReforja={percentualCustoReforja(minha.reforjas)}
-            onTrocar={props.onTrocar}
-            onReforjar={() => props.onReforjar(minha)}
-            onUsarOrbes={(orbes) => props.onUsarOrbes(minha, orbes)}
-          />
-        )}
-
-        <div className="flex flex-col gap-1">
-          <h3 className="text-[11px] font-cinzel font-bold uppercase tracking-wider" style={{ color: OURO }}>Receita</h3>
-          {receita.map((m) => <Linha key={m.id} rotulo={m.nome} cor={m.ok ? '#BFEFC6' : '#E5736B'} valor={`${m.tem}/${m.precisa}`} />)}
-          <Linha rotulo="Ouro" cor={d.ouro.ok ? '#BFEFC6' : '#E5736B'} valor={`${d.ouro.tem.toLocaleString('pt-BR')}/${d.ouro.precisa.toLocaleString('pt-BR')}`} />
-        </div>
-
-        {erro && <div role="alert" className="rounded px-2 py-1.5 text-xs font-semibold" style={{ backgroundColor: colors.status.danger, color: colors.text.primary }}>{erro}</div>}
-
-        <button type="button" disabled={!d.podeFabricar || ocupado} onClick={props.onFabricar} className="w-full py-2.5 rounded-sm border-2 font-cinzel font-extrabold uppercase tracking-wider text-sm enabled:cursor-pointer disabled:cursor-not-allowed" style={{ backgroundColor: d.podeFabricar ? OURO : colors.background.primary, borderColor: d.podeFabricar ? DESTAQUE : `${colors.border.default}99`, color: d.podeFabricar ? colors.background.primary : colors.text.secondary }}>
-          {ocupado ? 'Forjando...' : d.podeFabricar ? (d.minhas.length > 0 ? 'Fabricar outra' : 'Fabricar') : 'Falta material ou ouro'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function MinhaPecaPainel(props: {
-  m: MinhaPecaTela;
-  outras: MinhaPecaTela[];
-  character: CharacterDocument;
-  ocupado: boolean;
-  percentualReforja: number;
-  onTrocar: (id: string) => void;
-  onReforjar: () => void;
-  onUsarOrbes: (orbes: Record<string, number>) => void;
-}) {
-  const { m, character, ocupado } = props;
-  const { colors } = NOCTHERA_THEME;
-  const [escolha, setEscolha] = useState<Record<string, number>>({});
-  const orbes = orbesDaTela(character);
-  const previa = xpDosOrbes(escolha, m.xp);
-  const noMaximo = m.nivel >= 30;
-  const mudar = (id: string, delta: number, tenho: number) =>
-    setEscolha((e) => ({ ...e, [id]: Math.max(0, Math.min(tenho, (e[id] ?? 0) + delta)) }));
-  const usar = Object.fromEntries(Object.entries(escolha).filter(([, q]) => q > 0));
-
-  return (
-    <div className="rounded-sm border p-2 flex flex-col gap-1.5" style={{ borderColor: `${DESTAQUE}88` }}>
-      <div className="flex items-center justify-between">
-        <h3 className="text-[11px] font-cinzel font-bold uppercase tracking-wider" style={{ color: OURO }}>Sua peça</h3>
-        {props.outras.length > 1 && (
-          <select aria-label="Escolher a sua peça" value={m.id} onChange={(e) => props.onTrocar(e.target.value)} className="text-[11px] rounded px-1 py-0.5" style={{ backgroundColor: colors.background.primary, color: colors.text.primary }}>
-            {props.outras.map((o, i) => <option key={o.id} value={o.id}>#{i + 1} · Nv. {o.nivel} · {o.atributo} +{o.pontos}</option>)}
-          </select>
-        )}
-      </div>
-      <Linha rotulo={`Nível ${m.nivel}/30`} valor={noMaximo ? 'Máximo' : `${m.xpNoNivel}/${m.xpDoNivel} XP`} cor="#F5E3B3" />
-      <BarraXp m={m} />
-      <Linha rotulo="Atributo sorteado" valor={`${m.atributo} +${m.pontos} · ${m.reforjas} reforja(s)`} cor="#BFEFC6" />
-      <Linha rotulo="Atributo fixo agora" valor={m.fixo} />
-
-      {!noMaximo && (
-        <div className="flex flex-col gap-1 pt-1">
-          {orbes.map((o) => (
-            <div key={o.id} className="flex items-center justify-between gap-2 text-[12px]">
-              <span className="inline-flex items-center gap-1.5" style={{ color: o.cor }}><IconeDoOrbe cor={o.cor} className="w-6 h-6 shrink-0" />{o.nome} <span style={{ color: colors.text.secondary }}>(+{o.xp} · tem {o.tenho})</span></span>
-              <span className="inline-flex items-center gap-1">
-                <button type="button" aria-label={`Menos ${o.nome}`} disabled={!escolha[o.id]} onClick={() => mudar(o.id, -1, o.tenho)} className="w-6 h-6 rounded border flex items-center justify-center enabled:cursor-pointer disabled:opacity-40" style={{ borderColor: `${OURO}88` }}><Minus className="w-3 h-3" /></button>
-                <span className="w-6 text-center font-bold">{escolha[o.id] ?? 0}</span>
-                <button type="button" aria-label={`Mais ${o.nome}`} disabled={(escolha[o.id] ?? 0) >= o.tenho} onClick={() => mudar(o.id, 1, o.tenho)} className="w-6 h-6 rounded border flex items-center justify-center enabled:cursor-pointer disabled:opacity-40" style={{ borderColor: `${OURO}88` }}><Plus className="w-3 h-3" /></button>
-              </span>
-            </div>
-          ))}
-          {previa.total > 0 && (
-            <span className="text-[11px]" style={{ color: colors.text.secondary }}>
-              +{previa.aproveitado} XP → nível {previa.nivelDepois}{previa.aproveitado < previa.total ? ` (${previa.total - previa.aproveitado} de XP se perdem no nível 30)` : ''}
-            </span>
-          )}
-          <button type="button" disabled={previa.total === 0 || ocupado} onClick={() => { props.onUsarOrbes(usar); setEscolha({}); }} className="w-full py-1.5 rounded-sm border-2 font-cinzel font-bold uppercase text-xs enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-50" style={{ borderColor: DESTAQUE, color: '#F5E3B3' }}>
-            Usar orbes
-          </button>
-        </div>
-      )}
-      <button type="button" disabled={ocupado} onClick={props.onReforjar} className="w-full py-1.5 rounded-sm border font-cinzel font-bold uppercase text-xs enabled:cursor-pointer disabled:cursor-not-allowed" style={{ borderColor: `${OURO}88`, color: '#E6C775' }}>
-        Reforjar ({props.percentualReforja}% da receita)
-      </button>
-    </div>
   );
 }

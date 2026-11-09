@@ -1,5 +1,7 @@
 import React from 'react';
 import { glifoDoMaterial, iconeDeStatus, GLIFO_DO_ORBE } from '@/assets/forjaItens';
+import { PECA_CONTORNO, PECA_PREENCHIMENTO } from '@/assets/pecasArmadura';
+import type { EspacoArmadura } from '@/rules/armaduras';
 
 /**
  * O ícone de um material: o glifo branco pintado com a cor da raridade (máscara). Sem glifo ainda, mostra a inicial.
@@ -54,5 +56,20 @@ export function IconeDoOrbe({ cor, className }: { cor: string; className?: strin
       aria-hidden="true"
       style={{ backgroundColor: cor, WebkitMaskImage: `url(${GLIFO_DO_ORBE})`, maskImage: `url(${GLIFO_DO_ORBE})`, WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat', WebkitMaskPosition: 'center', maskPosition: 'center', WebkitMaskSize: 'contain', maskSize: 'contain', imageRendering: 'pixelated', filter: `drop-shadow(0 0 3px ${cor}88)` }}
     />
+  );
+}
+
+/** A peça de armadura (elmo, peitoral, luvas, perneiras ou botas): o preenchimento na cor da raridade e o contorno por cima. */
+export function IconeDePeca({ espaco, cor, className }: { espaco: EspacoArmadura; cor: string; className?: string }) {
+  const m = PECA_PREENCHIMENTO[espaco];
+  return (
+    <span className={`relative inline-block ${className ?? ''}`} aria-hidden="true">
+      <span
+        className="absolute inset-0"
+        style={{ backgroundColor: cor, WebkitMaskImage: `url(${m})`, maskImage: `url(${m})`, WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat', WebkitMaskPosition: 'center', maskPosition: 'center', WebkitMaskSize: 'contain', maskSize: 'contain', imageRendering: 'pixelated' }}
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={PECA_CONTORNO[espaco]} alt="" draggable={false} className="absolute inset-0 w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} />
+    </span>
   );
 }
