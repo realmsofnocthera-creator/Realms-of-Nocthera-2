@@ -1,6 +1,66 @@
 import { srcDaImagem } from '@/assets/srcDaImagem';
 import { ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
 import type { CategoriaArma } from '@/rules/armas';
+import img_zyrak_principal_espadaGrande from './images/forja/armas-criatura/zyrak-principal-espadaGrande.webp';
+import img_zyrak_principal_katana from './images/forja/armas-criatura/zyrak-principal-katana.webp';
+import img_zyrak_principal_lanca from './images/forja/armas-criatura/zyrak-principal-lanca.webp';
+import img_zyrak_principal_espadaEscudo from './images/forja/armas-criatura/zyrak-principal-espadaEscudo.webp';
+import img_zyrak_principal_grimorio from './images/forja/armas-criatura/zyrak-principal-grimorio.webp';
+import img_zyrak_principal_cajado from './images/forja/armas-criatura/zyrak-principal-cajado.webp';
+import img_zyrak_carmesim_espadaGrande from './images/forja/armas-criatura/zyrak-carmesim-espadaGrande.webp';
+import img_zyrak_carmesim_katana from './images/forja/armas-criatura/zyrak-carmesim-katana.webp';
+import img_zyrak_carmesim_lanca from './images/forja/armas-criatura/zyrak-carmesim-lanca.webp';
+import img_zyrak_carmesim_espadaEscudo from './images/forja/armas-criatura/zyrak-carmesim-espadaEscudo.webp';
+import img_zyrak_carmesim_grimorio from './images/forja/armas-criatura/zyrak-carmesim-grimorio.webp';
+import img_zyrak_carmesim_cajado from './images/forja/armas-criatura/zyrak-carmesim-cajado.webp';
+import img_dromvark_principal_espadaGrande from './images/forja/armas-criatura/dromvark-principal-espadaGrande.webp';
+import img_dromvark_principal_katana from './images/forja/armas-criatura/dromvark-principal-katana.webp';
+import img_dromvark_principal_lanca from './images/forja/armas-criatura/dromvark-principal-lanca.webp';
+import img_dromvark_principal_espadaEscudo from './images/forja/armas-criatura/dromvark-principal-espadaEscudo.webp';
+import img_dromvark_principal_grimorio from './images/forja/armas-criatura/dromvark-principal-grimorio.webp';
+import img_dromvark_principal_cajado from './images/forja/armas-criatura/dromvark-principal-cajado.webp';
+import img_dromvark_devastador_espadaGrande from './images/forja/armas-criatura/dromvark-devastador-espadaGrande.webp';
+import img_dromvark_devastador_katana from './images/forja/armas-criatura/dromvark-devastador-katana.webp';
+import img_dromvark_devastador_lanca from './images/forja/armas-criatura/dromvark-devastador-lanca.webp';
+import img_dromvark_devastador_espadaEscudo from './images/forja/armas-criatura/dromvark-devastador-espadaEscudo.webp';
+import img_dromvark_devastador_grimorio from './images/forja/armas-criatura/dromvark-devastador-grimorio.webp';
+import img_dromvark_devastador_cajado from './images/forja/armas-criatura/dromvark-devastador-cajado.webp';
+import img_rathmorn_principal_espadaGrande from './images/forja/armas-criatura/rathmorn-principal-espadaGrande.webp';
+import img_rathmorn_principal_katana from './images/forja/armas-criatura/rathmorn-principal-katana.webp';
+import img_rathmorn_principal_lanca from './images/forja/armas-criatura/rathmorn-principal-lanca.webp';
+import img_rathmorn_principal_espadaEscudo from './images/forja/armas-criatura/rathmorn-principal-espadaEscudo.webp';
+import img_rathmorn_principal_grimorio from './images/forja/armas-criatura/rathmorn-principal-grimorio.webp';
+import img_rathmorn_principal_cajado from './images/forja/armas-criatura/rathmorn-principal-cajado.webp';
+import img_rathmorn_abissal_espadaGrande from './images/forja/armas-criatura/rathmorn-abissal-espadaGrande.webp';
+import img_rathmorn_abissal_katana from './images/forja/armas-criatura/rathmorn-abissal-katana.webp';
+import img_rathmorn_abissal_lanca from './images/forja/armas-criatura/rathmorn-abissal-lanca.webp';
+import img_rathmorn_abissal_espadaEscudo from './images/forja/armas-criatura/rathmorn-abissal-espadaEscudo.webp';
+import img_rathmorn_abissal_grimorio from './images/forja/armas-criatura/rathmorn-abissal-grimorio.webp';
+import img_rathmorn_abissal_cajado from './images/forja/armas-criatura/rathmorn-abissal-cajado.webp';
+import img_ghorvazul_principal_espadaGrande from './images/forja/armas-criatura/ghorvazul-principal-espadaGrande.webp';
+import img_ghorvazul_principal_katana from './images/forja/armas-criatura/ghorvazul-principal-katana.webp';
+import img_ghorvazul_principal_lanca from './images/forja/armas-criatura/ghorvazul-principal-lanca.webp';
+import img_ghorvazul_principal_espadaEscudo from './images/forja/armas-criatura/ghorvazul-principal-espadaEscudo.webp';
+import img_ghorvazul_principal_grimorio from './images/forja/armas-criatura/ghorvazul-principal-grimorio.webp';
+import img_ghorvazul_principal_cajado from './images/forja/armas-criatura/ghorvazul-principal-cajado.webp';
+import img_tharvok_principal_espadaGrande from './images/forja/armas-criatura/tharvok-principal-espadaGrande.webp';
+import img_tharvok_principal_katana from './images/forja/armas-criatura/tharvok-principal-katana.webp';
+import img_tharvok_principal_lanca from './images/forja/armas-criatura/tharvok-principal-lanca.webp';
+import img_tharvok_principal_espadaEscudo from './images/forja/armas-criatura/tharvok-principal-espadaEscudo.webp';
+import img_tharvok_principal_grimorio from './images/forja/armas-criatura/tharvok-principal-grimorio.webp';
+import img_tharvok_principal_cajado from './images/forja/armas-criatura/tharvok-principal-cajado.webp';
+import img_vaelgrun_principal_espadaGrande from './images/forja/armas-criatura/vaelgrun-principal-espadaGrande.webp';
+import img_vaelgrun_principal_katana from './images/forja/armas-criatura/vaelgrun-principal-katana.webp';
+import img_vaelgrun_principal_lanca from './images/forja/armas-criatura/vaelgrun-principal-lanca.webp';
+import img_vaelgrun_principal_espadaEscudo from './images/forja/armas-criatura/vaelgrun-principal-espadaEscudo.webp';
+import img_vaelgrun_principal_grimorio from './images/forja/armas-criatura/vaelgrun-principal-grimorio.webp';
+import img_vaelgrun_principal_cajado from './images/forja/armas-criatura/vaelgrun-principal-cajado.webp';
+import img_nershaga_principal_espadaGrande from './images/forja/armas-criatura/nershaga-principal-espadaGrande.webp';
+import img_nershaga_principal_katana from './images/forja/armas-criatura/nershaga-principal-katana.webp';
+import img_nershaga_principal_lanca from './images/forja/armas-criatura/nershaga-principal-lanca.webp';
+import img_nershaga_principal_espadaEscudo from './images/forja/armas-criatura/nershaga-principal-espadaEscudo.webp';
+import img_nershaga_principal_grimorio from './images/forja/armas-criatura/nershaga-principal-grimorio.webp';
+import img_nershaga_principal_cajado from './images/forja/armas-criatura/nershaga-principal-cajado.webp';
 import img_abysskar_principal_espadaGrande from './images/forja/armas-criatura/abysskar-principal-espadaGrande.webp';
 import img_abysskar_principal_katana from './images/forja/armas-criatura/abysskar-principal-katana.webp';
 import img_abysskar_principal_lanca from './images/forja/armas-criatura/abysskar-principal-lanca.webp';
@@ -376,7 +436,7 @@ import img_grizzharn_ancestral_cajado from './images/forja/armas-criatura/grizzh
 
 /**
  * A arte de cada arma, por criatura e parte (o principal ou a subespécie) e por categoria. As duas armas da mesma parte
- * usam a mesma arte por enquanto (decisão provisória, a confirmar). Prontas: de 1★ a 6★; as demais armas usam
+ * usam a mesma arte por enquanto (decisão provisória, a confirmar). Prontas: de 1★ a 6★ e, no 7★ e no 8★, Zyrak, Dromvark, Rathmorn, Ghorvazul, Tharvok, Vaelgrun e Nershaga (falta o Kharvok); as demais armas usam
  * o ícone da categoria.
  */
 const ARTE: Readonly<Record<string, Readonly<Record<CategoriaArma, string>>>> = {
@@ -442,6 +502,16 @@ const ARTE: Readonly<Record<string, Readonly<Record<CategoriaArma, string>>>> = 
   'gravorn:gravorn-magmatico': { espadaGrande: srcDaImagem(img_gravorn_magmatico_espadaGrande), katana: srcDaImagem(img_gravorn_magmatico_katana), lanca: srcDaImagem(img_gravorn_magmatico_lanca), espadaEscudo: srcDaImagem(img_gravorn_magmatico_espadaEscudo), grimorio: srcDaImagem(img_gravorn_magmatico_grimorio), cajado: srcDaImagem(img_gravorn_magmatico_cajado) },
   'raizark:principal': { espadaGrande: srcDaImagem(img_raizark_principal_espadaGrande), katana: srcDaImagem(img_raizark_principal_katana), lanca: srcDaImagem(img_raizark_principal_lanca), espadaEscudo: srcDaImagem(img_raizark_principal_espadaEscudo), grimorio: srcDaImagem(img_raizark_principal_grimorio), cajado: srcDaImagem(img_raizark_principal_cajado) },
   'raizark:raizark-fulminante': { espadaGrande: srcDaImagem(img_raizark_fulminante_espadaGrande), katana: srcDaImagem(img_raizark_fulminante_katana), lanca: srcDaImagem(img_raizark_fulminante_lanca), espadaEscudo: srcDaImagem(img_raizark_fulminante_espadaEscudo), grimorio: srcDaImagem(img_raizark_fulminante_grimorio), cajado: srcDaImagem(img_raizark_fulminante_cajado) },
+  'zyrak:principal': { espadaGrande: srcDaImagem(img_zyrak_principal_espadaGrande), katana: srcDaImagem(img_zyrak_principal_katana), lanca: srcDaImagem(img_zyrak_principal_lanca), espadaEscudo: srcDaImagem(img_zyrak_principal_espadaEscudo), grimorio: srcDaImagem(img_zyrak_principal_grimorio), cajado: srcDaImagem(img_zyrak_principal_cajado) },
+  'zyrak:zyrak-carmesim': { espadaGrande: srcDaImagem(img_zyrak_carmesim_espadaGrande), katana: srcDaImagem(img_zyrak_carmesim_katana), lanca: srcDaImagem(img_zyrak_carmesim_lanca), espadaEscudo: srcDaImagem(img_zyrak_carmesim_espadaEscudo), grimorio: srcDaImagem(img_zyrak_carmesim_grimorio), cajado: srcDaImagem(img_zyrak_carmesim_cajado) },
+  'dromvark:principal': { espadaGrande: srcDaImagem(img_dromvark_principal_espadaGrande), katana: srcDaImagem(img_dromvark_principal_katana), lanca: srcDaImagem(img_dromvark_principal_lanca), espadaEscudo: srcDaImagem(img_dromvark_principal_espadaEscudo), grimorio: srcDaImagem(img_dromvark_principal_grimorio), cajado: srcDaImagem(img_dromvark_principal_cajado) },
+  'dromvark:dromvark-devastador': { espadaGrande: srcDaImagem(img_dromvark_devastador_espadaGrande), katana: srcDaImagem(img_dromvark_devastador_katana), lanca: srcDaImagem(img_dromvark_devastador_lanca), espadaEscudo: srcDaImagem(img_dromvark_devastador_espadaEscudo), grimorio: srcDaImagem(img_dromvark_devastador_grimorio), cajado: srcDaImagem(img_dromvark_devastador_cajado) },
+  'rathmorn:principal': { espadaGrande: srcDaImagem(img_rathmorn_principal_espadaGrande), katana: srcDaImagem(img_rathmorn_principal_katana), lanca: srcDaImagem(img_rathmorn_principal_lanca), espadaEscudo: srcDaImagem(img_rathmorn_principal_espadaEscudo), grimorio: srcDaImagem(img_rathmorn_principal_grimorio), cajado: srcDaImagem(img_rathmorn_principal_cajado) },
+  'rathmorn:rathmorn-abissal': { espadaGrande: srcDaImagem(img_rathmorn_abissal_espadaGrande), katana: srcDaImagem(img_rathmorn_abissal_katana), lanca: srcDaImagem(img_rathmorn_abissal_lanca), espadaEscudo: srcDaImagem(img_rathmorn_abissal_espadaEscudo), grimorio: srcDaImagem(img_rathmorn_abissal_grimorio), cajado: srcDaImagem(img_rathmorn_abissal_cajado) },
+  'ghorvazul:principal': { espadaGrande: srcDaImagem(img_ghorvazul_principal_espadaGrande), katana: srcDaImagem(img_ghorvazul_principal_katana), lanca: srcDaImagem(img_ghorvazul_principal_lanca), espadaEscudo: srcDaImagem(img_ghorvazul_principal_espadaEscudo), grimorio: srcDaImagem(img_ghorvazul_principal_grimorio), cajado: srcDaImagem(img_ghorvazul_principal_cajado) },
+  'tharvok:principal': { espadaGrande: srcDaImagem(img_tharvok_principal_espadaGrande), katana: srcDaImagem(img_tharvok_principal_katana), lanca: srcDaImagem(img_tharvok_principal_lanca), espadaEscudo: srcDaImagem(img_tharvok_principal_espadaEscudo), grimorio: srcDaImagem(img_tharvok_principal_grimorio), cajado: srcDaImagem(img_tharvok_principal_cajado) },
+  'vaelgrun:principal': { espadaGrande: srcDaImagem(img_vaelgrun_principal_espadaGrande), katana: srcDaImagem(img_vaelgrun_principal_katana), lanca: srcDaImagem(img_vaelgrun_principal_lanca), espadaEscudo: srcDaImagem(img_vaelgrun_principal_espadaEscudo), grimorio: srcDaImagem(img_vaelgrun_principal_grimorio), cajado: srcDaImagem(img_vaelgrun_principal_cajado) },
+  'nershaga:principal': { espadaGrande: srcDaImagem(img_nershaga_principal_espadaGrande), katana: srcDaImagem(img_nershaga_principal_katana), lanca: srcDaImagem(img_nershaga_principal_lanca), espadaEscudo: srcDaImagem(img_nershaga_principal_espadaEscudo), grimorio: srcDaImagem(img_nershaga_principal_grimorio), cajado: srcDaImagem(img_nershaga_principal_cajado) },
 };
 
 export function arteDaArma(baseId: string | undefined, categoria: CategoriaArma): string | null {
