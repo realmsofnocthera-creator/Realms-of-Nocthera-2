@@ -73,10 +73,101 @@ import img_rato_pestilento_lanca from './images/forja/armas-criatura/rato-pestil
 import img_rato_pestilento_espadaEscudo from './images/forja/armas-criatura/rato-pestilento-espadaEscudo.webp';
 import img_rato_pestilento_grimorio from './images/forja/armas-criatura/rato-pestilento-grimorio.webp';
 import img_rato_pestilento_cajado from './images/forja/armas-criatura/rato-pestilento-cajado.webp';
+import img_vargheist_principal_espadaGrande from './images/forja/armas-criatura/vargheist-principal-espadaGrande.webp';
+import img_vargheist_principal_katana from './images/forja/armas-criatura/vargheist-principal-katana.webp';
+import img_vargheist_principal_lanca from './images/forja/armas-criatura/vargheist-principal-lanca.webp';
+import img_vargheist_principal_espadaEscudo from './images/forja/armas-criatura/vargheist-principal-espadaEscudo.webp';
+import img_vargheist_principal_grimorio from './images/forja/armas-criatura/vargheist-principal-grimorio.webp';
+import img_vargheist_principal_cajado from './images/forja/armas-criatura/vargheist-principal-cajado.webp';
+import img_vargheist_vulcanico_espadaGrande from './images/forja/armas-criatura/vargheist-vulcanico-espadaGrande.webp';
+import img_vargheist_vulcanico_katana from './images/forja/armas-criatura/vargheist-vulcanico-katana.webp';
+import img_vargheist_vulcanico_lanca from './images/forja/armas-criatura/vargheist-vulcanico-lanca.webp';
+import img_vargheist_vulcanico_espadaEscudo from './images/forja/armas-criatura/vargheist-vulcanico-espadaEscudo.webp';
+import img_vargheist_vulcanico_grimorio from './images/forja/armas-criatura/vargheist-vulcanico-grimorio.webp';
+import img_vargheist_vulcanico_cajado from './images/forja/armas-criatura/vargheist-vulcanico-cajado.webp';
+import img_vargheist_albino_espadaGrande from './images/forja/armas-criatura/vargheist-albino-espadaGrande.webp';
+import img_vargheist_albino_katana from './images/forja/armas-criatura/vargheist-albino-katana.webp';
+import img_vargheist_albino_lanca from './images/forja/armas-criatura/vargheist-albino-lanca.webp';
+import img_vargheist_albino_espadaEscudo from './images/forja/armas-criatura/vargheist-albino-espadaEscudo.webp';
+import img_vargheist_albino_grimorio from './images/forja/armas-criatura/vargheist-albino-grimorio.webp';
+import img_vargheist_albino_cajado from './images/forja/armas-criatura/vargheist-albino-cajado.webp';
+import img_noctyrr_principal_espadaGrande from './images/forja/armas-criatura/noctyrr-principal-espadaGrande.webp';
+import img_noctyrr_principal_katana from './images/forja/armas-criatura/noctyrr-principal-katana.webp';
+import img_noctyrr_principal_lanca from './images/forja/armas-criatura/noctyrr-principal-lanca.webp';
+import img_noctyrr_principal_espadaEscudo from './images/forja/armas-criatura/noctyrr-principal-espadaEscudo.webp';
+import img_noctyrr_principal_grimorio from './images/forja/armas-criatura/noctyrr-principal-grimorio.webp';
+import img_noctyrr_principal_cajado from './images/forja/armas-criatura/noctyrr-principal-cajado.webp';
+import img_noctyrr_tempestuoso_espadaGrande from './images/forja/armas-criatura/noctyrr-tempestuoso-espadaGrande.webp';
+import img_noctyrr_tempestuoso_katana from './images/forja/armas-criatura/noctyrr-tempestuoso-katana.webp';
+import img_noctyrr_tempestuoso_lanca from './images/forja/armas-criatura/noctyrr-tempestuoso-lanca.webp';
+import img_noctyrr_tempestuoso_espadaEscudo from './images/forja/armas-criatura/noctyrr-tempestuoso-espadaEscudo.webp';
+import img_noctyrr_tempestuoso_grimorio from './images/forja/armas-criatura/noctyrr-tempestuoso-grimorio.webp';
+import img_noctyrr_tempestuoso_cajado from './images/forja/armas-criatura/noctyrr-tempestuoso-cajado.webp';
+import img_noctyrr_abissal_espadaGrande from './images/forja/armas-criatura/noctyrr-abissal-espadaGrande.webp';
+import img_noctyrr_abissal_katana from './images/forja/armas-criatura/noctyrr-abissal-katana.webp';
+import img_noctyrr_abissal_lanca from './images/forja/armas-criatura/noctyrr-abissal-lanca.webp';
+import img_noctyrr_abissal_espadaEscudo from './images/forja/armas-criatura/noctyrr-abissal-espadaEscudo.webp';
+import img_noctyrr_abissal_grimorio from './images/forja/armas-criatura/noctyrr-abissal-grimorio.webp';
+import img_noctyrr_abissal_cajado from './images/forja/armas-criatura/noctyrr-abissal-cajado.webp';
+import img_murdrax_principal_espadaGrande from './images/forja/armas-criatura/murdrax-principal-espadaGrande.webp';
+import img_murdrax_principal_katana from './images/forja/armas-criatura/murdrax-principal-katana.webp';
+import img_murdrax_principal_lanca from './images/forja/armas-criatura/murdrax-principal-lanca.webp';
+import img_murdrax_principal_espadaEscudo from './images/forja/armas-criatura/murdrax-principal-espadaEscudo.webp';
+import img_murdrax_principal_grimorio from './images/forja/armas-criatura/murdrax-principal-grimorio.webp';
+import img_murdrax_principal_cajado from './images/forja/armas-criatura/murdrax-principal-cajado.webp';
+import img_murdrax_corrosivo_espadaGrande from './images/forja/armas-criatura/murdrax-corrosivo-espadaGrande.webp';
+import img_murdrax_corrosivo_katana from './images/forja/armas-criatura/murdrax-corrosivo-katana.webp';
+import img_murdrax_corrosivo_lanca from './images/forja/armas-criatura/murdrax-corrosivo-lanca.webp';
+import img_murdrax_corrosivo_espadaEscudo from './images/forja/armas-criatura/murdrax-corrosivo-espadaEscudo.webp';
+import img_murdrax_corrosivo_grimorio from './images/forja/armas-criatura/murdrax-corrosivo-grimorio.webp';
+import img_murdrax_corrosivo_cajado from './images/forja/armas-criatura/murdrax-corrosivo-cajado.webp';
+import img_murdrax_basalto_espadaGrande from './images/forja/armas-criatura/murdrax-basalto-espadaGrande.webp';
+import img_murdrax_basalto_katana from './images/forja/armas-criatura/murdrax-basalto-katana.webp';
+import img_murdrax_basalto_lanca from './images/forja/armas-criatura/murdrax-basalto-lanca.webp';
+import img_murdrax_basalto_espadaEscudo from './images/forja/armas-criatura/murdrax-basalto-espadaEscudo.webp';
+import img_murdrax_basalto_grimorio from './images/forja/armas-criatura/murdrax-basalto-grimorio.webp';
+import img_murdrax_basalto_cajado from './images/forja/armas-criatura/murdrax-basalto-cajado.webp';
+import img_alfa_principal_espadaGrande from './images/forja/armas-criatura/alfa-principal-espadaGrande.webp';
+import img_alfa_principal_katana from './images/forja/armas-criatura/alfa-principal-katana.webp';
+import img_alfa_principal_lanca from './images/forja/armas-criatura/alfa-principal-lanca.webp';
+import img_alfa_principal_espadaEscudo from './images/forja/armas-criatura/alfa-principal-espadaEscudo.webp';
+import img_alfa_principal_grimorio from './images/forja/armas-criatura/alfa-principal-grimorio.webp';
+import img_alfa_principal_cajado from './images/forja/armas-criatura/alfa-principal-cajado.webp';
+import img_alfa_carmesim_espadaGrande from './images/forja/armas-criatura/alfa-carmesim-espadaGrande.webp';
+import img_alfa_carmesim_katana from './images/forja/armas-criatura/alfa-carmesim-katana.webp';
+import img_alfa_carmesim_lanca from './images/forja/armas-criatura/alfa-carmesim-lanca.webp';
+import img_alfa_carmesim_espadaEscudo from './images/forja/armas-criatura/alfa-carmesim-espadaEscudo.webp';
+import img_alfa_carmesim_grimorio from './images/forja/armas-criatura/alfa-carmesim-grimorio.webp';
+import img_alfa_carmesim_cajado from './images/forja/armas-criatura/alfa-carmesim-cajado.webp';
+import img_alfa_vulcanico_espadaGrande from './images/forja/armas-criatura/alfa-vulcanico-espadaGrande.webp';
+import img_alfa_vulcanico_katana from './images/forja/armas-criatura/alfa-vulcanico-katana.webp';
+import img_alfa_vulcanico_lanca from './images/forja/armas-criatura/alfa-vulcanico-lanca.webp';
+import img_alfa_vulcanico_espadaEscudo from './images/forja/armas-criatura/alfa-vulcanico-espadaEscudo.webp';
+import img_alfa_vulcanico_grimorio from './images/forja/armas-criatura/alfa-vulcanico-grimorio.webp';
+import img_alfa_vulcanico_cajado from './images/forja/armas-criatura/alfa-vulcanico-cajado.webp';
+import img_grizzharn_principal_espadaGrande from './images/forja/armas-criatura/grizzharn-principal-espadaGrande.webp';
+import img_grizzharn_principal_katana from './images/forja/armas-criatura/grizzharn-principal-katana.webp';
+import img_grizzharn_principal_lanca from './images/forja/armas-criatura/grizzharn-principal-lanca.webp';
+import img_grizzharn_principal_espadaEscudo from './images/forja/armas-criatura/grizzharn-principal-espadaEscudo.webp';
+import img_grizzharn_principal_grimorio from './images/forja/armas-criatura/grizzharn-principal-grimorio.webp';
+import img_grizzharn_principal_cajado from './images/forja/armas-criatura/grizzharn-principal-cajado.webp';
+import img_grizzharn_glacial_espadaGrande from './images/forja/armas-criatura/grizzharn-glacial-espadaGrande.webp';
+import img_grizzharn_glacial_katana from './images/forja/armas-criatura/grizzharn-glacial-katana.webp';
+import img_grizzharn_glacial_lanca from './images/forja/armas-criatura/grizzharn-glacial-lanca.webp';
+import img_grizzharn_glacial_espadaEscudo from './images/forja/armas-criatura/grizzharn-glacial-espadaEscudo.webp';
+import img_grizzharn_glacial_grimorio from './images/forja/armas-criatura/grizzharn-glacial-grimorio.webp';
+import img_grizzharn_glacial_cajado from './images/forja/armas-criatura/grizzharn-glacial-cajado.webp';
+import img_grizzharn_ancestral_espadaGrande from './images/forja/armas-criatura/grizzharn-ancestral-espadaGrande.webp';
+import img_grizzharn_ancestral_katana from './images/forja/armas-criatura/grizzharn-ancestral-katana.webp';
+import img_grizzharn_ancestral_lanca from './images/forja/armas-criatura/grizzharn-ancestral-lanca.webp';
+import img_grizzharn_ancestral_espadaEscudo from './images/forja/armas-criatura/grizzharn-ancestral-espadaEscudo.webp';
+import img_grizzharn_ancestral_grimorio from './images/forja/armas-criatura/grizzharn-ancestral-grimorio.webp';
+import img_grizzharn_ancestral_cajado from './images/forja/armas-criatura/grizzharn-ancestral-cajado.webp';
 
 /**
  * A arte de cada arma, por criatura e parte (o principal ou a subespécie) e por categoria. As duas armas da mesma parte
- * usam a mesma arte por enquanto (decisão provisória, a confirmar). As armas de 2★ em diante usam o ícone da categoria.
+ * usam a mesma arte por enquanto (decisão provisória, a confirmar). Prontas: 1★, 2★ e o Grizzharn (3★); as demais
+ * armas usam o ícone da categoria.
  */
 const ARTE: Readonly<Record<string, Readonly<Record<CategoriaArma, string>>>> = {
   'urso-gigante:principal': { espadaGrande: srcDaImagem(img_urso_principal_espadaGrande), katana: srcDaImagem(img_urso_principal_katana), lanca: srcDaImagem(img_urso_principal_lanca), espadaEscudo: srcDaImagem(img_urso_principal_espadaEscudo), grimorio: srcDaImagem(img_urso_principal_grimorio), cajado: srcDaImagem(img_urso_principal_cajado) },
@@ -91,6 +182,21 @@ const ARTE: Readonly<Record<string, Readonly<Record<CategoriaArma, string>>>> = 
   'rato-da-floresta:principal': { espadaGrande: srcDaImagem(img_rato_principal_espadaGrande), katana: srcDaImagem(img_rato_principal_katana), lanca: srcDaImagem(img_rato_principal_lanca), espadaEscudo: srcDaImagem(img_rato_principal_espadaEscudo), grimorio: srcDaImagem(img_rato_principal_grimorio), cajado: srcDaImagem(img_rato_principal_cajado) },
   'rato-da-floresta:rato-das-cinzas': { espadaGrande: srcDaImagem(img_rato_cinzas_espadaGrande), katana: srcDaImagem(img_rato_cinzas_katana), lanca: srcDaImagem(img_rato_cinzas_lanca), espadaEscudo: srcDaImagem(img_rato_cinzas_espadaEscudo), grimorio: srcDaImagem(img_rato_cinzas_grimorio), cajado: srcDaImagem(img_rato_cinzas_cajado) },
   'rato-da-floresta:rato-pestilento': { espadaGrande: srcDaImagem(img_rato_pestilento_espadaGrande), katana: srcDaImagem(img_rato_pestilento_katana), lanca: srcDaImagem(img_rato_pestilento_lanca), espadaEscudo: srcDaImagem(img_rato_pestilento_espadaEscudo), grimorio: srcDaImagem(img_rato_pestilento_grimorio), cajado: srcDaImagem(img_rato_pestilento_cajado) },
+  'vargheist:principal': { espadaGrande: srcDaImagem(img_vargheist_principal_espadaGrande), katana: srcDaImagem(img_vargheist_principal_katana), lanca: srcDaImagem(img_vargheist_principal_lanca), espadaEscudo: srcDaImagem(img_vargheist_principal_espadaEscudo), grimorio: srcDaImagem(img_vargheist_principal_grimorio), cajado: srcDaImagem(img_vargheist_principal_cajado) },
+  'vargheist:vargheist-vulcanico': { espadaGrande: srcDaImagem(img_vargheist_vulcanico_espadaGrande), katana: srcDaImagem(img_vargheist_vulcanico_katana), lanca: srcDaImagem(img_vargheist_vulcanico_lanca), espadaEscudo: srcDaImagem(img_vargheist_vulcanico_espadaEscudo), grimorio: srcDaImagem(img_vargheist_vulcanico_grimorio), cajado: srcDaImagem(img_vargheist_vulcanico_cajado) },
+  'vargheist:vargheist-albino': { espadaGrande: srcDaImagem(img_vargheist_albino_espadaGrande), katana: srcDaImagem(img_vargheist_albino_katana), lanca: srcDaImagem(img_vargheist_albino_lanca), espadaEscudo: srcDaImagem(img_vargheist_albino_espadaEscudo), grimorio: srcDaImagem(img_vargheist_albino_grimorio), cajado: srcDaImagem(img_vargheist_albino_cajado) },
+  'noctyrr:principal': { espadaGrande: srcDaImagem(img_noctyrr_principal_espadaGrande), katana: srcDaImagem(img_noctyrr_principal_katana), lanca: srcDaImagem(img_noctyrr_principal_lanca), espadaEscudo: srcDaImagem(img_noctyrr_principal_espadaEscudo), grimorio: srcDaImagem(img_noctyrr_principal_grimorio), cajado: srcDaImagem(img_noctyrr_principal_cajado) },
+  'noctyrr:noctyrr-tempestuoso': { espadaGrande: srcDaImagem(img_noctyrr_tempestuoso_espadaGrande), katana: srcDaImagem(img_noctyrr_tempestuoso_katana), lanca: srcDaImagem(img_noctyrr_tempestuoso_lanca), espadaEscudo: srcDaImagem(img_noctyrr_tempestuoso_espadaEscudo), grimorio: srcDaImagem(img_noctyrr_tempestuoso_grimorio), cajado: srcDaImagem(img_noctyrr_tempestuoso_cajado) },
+  'noctyrr:noctyrr-abissal': { espadaGrande: srcDaImagem(img_noctyrr_abissal_espadaGrande), katana: srcDaImagem(img_noctyrr_abissal_katana), lanca: srcDaImagem(img_noctyrr_abissal_lanca), espadaEscudo: srcDaImagem(img_noctyrr_abissal_espadaEscudo), grimorio: srcDaImagem(img_noctyrr_abissal_grimorio), cajado: srcDaImagem(img_noctyrr_abissal_cajado) },
+  'murdrax:principal': { espadaGrande: srcDaImagem(img_murdrax_principal_espadaGrande), katana: srcDaImagem(img_murdrax_principal_katana), lanca: srcDaImagem(img_murdrax_principal_lanca), espadaEscudo: srcDaImagem(img_murdrax_principal_espadaEscudo), grimorio: srcDaImagem(img_murdrax_principal_grimorio), cajado: srcDaImagem(img_murdrax_principal_cajado) },
+  'murdrax:murdrax-corrosivo': { espadaGrande: srcDaImagem(img_murdrax_corrosivo_espadaGrande), katana: srcDaImagem(img_murdrax_corrosivo_katana), lanca: srcDaImagem(img_murdrax_corrosivo_lanca), espadaEscudo: srcDaImagem(img_murdrax_corrosivo_espadaEscudo), grimorio: srcDaImagem(img_murdrax_corrosivo_grimorio), cajado: srcDaImagem(img_murdrax_corrosivo_cajado) },
+  'murdrax:murdrax-de-basalto': { espadaGrande: srcDaImagem(img_murdrax_basalto_espadaGrande), katana: srcDaImagem(img_murdrax_basalto_katana), lanca: srcDaImagem(img_murdrax_basalto_lanca), espadaEscudo: srcDaImagem(img_murdrax_basalto_espadaEscudo), grimorio: srcDaImagem(img_murdrax_basalto_grimorio), cajado: srcDaImagem(img_murdrax_basalto_cajado) },
+  'vargheist-alfa:principal': { espadaGrande: srcDaImagem(img_alfa_principal_espadaGrande), katana: srcDaImagem(img_alfa_principal_katana), lanca: srcDaImagem(img_alfa_principal_lanca), espadaEscudo: srcDaImagem(img_alfa_principal_espadaEscudo), grimorio: srcDaImagem(img_alfa_principal_grimorio), cajado: srcDaImagem(img_alfa_principal_cajado) },
+  'vargheist-alfa:vargheist-alfa-carmesim': { espadaGrande: srcDaImagem(img_alfa_carmesim_espadaGrande), katana: srcDaImagem(img_alfa_carmesim_katana), lanca: srcDaImagem(img_alfa_carmesim_lanca), espadaEscudo: srcDaImagem(img_alfa_carmesim_espadaEscudo), grimorio: srcDaImagem(img_alfa_carmesim_grimorio), cajado: srcDaImagem(img_alfa_carmesim_cajado) },
+  'vargheist-alfa:vargheist-alfa-vulcanico': { espadaGrande: srcDaImagem(img_alfa_vulcanico_espadaGrande), katana: srcDaImagem(img_alfa_vulcanico_katana), lanca: srcDaImagem(img_alfa_vulcanico_lanca), espadaEscudo: srcDaImagem(img_alfa_vulcanico_espadaEscudo), grimorio: srcDaImagem(img_alfa_vulcanico_grimorio), cajado: srcDaImagem(img_alfa_vulcanico_cajado) },
+  'grizzharn:principal': { espadaGrande: srcDaImagem(img_grizzharn_principal_espadaGrande), katana: srcDaImagem(img_grizzharn_principal_katana), lanca: srcDaImagem(img_grizzharn_principal_lanca), espadaEscudo: srcDaImagem(img_grizzharn_principal_espadaEscudo), grimorio: srcDaImagem(img_grizzharn_principal_grimorio), cajado: srcDaImagem(img_grizzharn_principal_cajado) },
+  'grizzharn:grizzharn-glacial': { espadaGrande: srcDaImagem(img_grizzharn_glacial_espadaGrande), katana: srcDaImagem(img_grizzharn_glacial_katana), lanca: srcDaImagem(img_grizzharn_glacial_lanca), espadaEscudo: srcDaImagem(img_grizzharn_glacial_espadaEscudo), grimorio: srcDaImagem(img_grizzharn_glacial_grimorio), cajado: srcDaImagem(img_grizzharn_glacial_cajado) },
+  'grizzharn:grizzharn-ancestral': { espadaGrande: srcDaImagem(img_grizzharn_ancestral_espadaGrande), katana: srcDaImagem(img_grizzharn_ancestral_katana), lanca: srcDaImagem(img_grizzharn_ancestral_lanca), espadaEscudo: srcDaImagem(img_grizzharn_ancestral_espadaEscudo), grimorio: srcDaImagem(img_grizzharn_ancestral_grimorio), cajado: srcDaImagem(img_grizzharn_ancestral_cajado) },
 };
 
 export function arteDaArma(baseId: string | undefined, categoria: CategoriaArma): string | null {
