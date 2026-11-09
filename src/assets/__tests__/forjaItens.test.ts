@@ -15,14 +15,14 @@ describe('ícones da Forja', () => {
   });
 });
 
-describe('arte das armas de criatura (1★)', () => {
-  it('toda arma de 1★ tem arte nas 6 categorias', async () => {
+describe('arte das armas de criatura (1★, 2★ e Grizzharn)', () => {
+  it('toda arma de 1★, de 2★ e do Grizzharn tem arte nas 6 categorias', async () => {
     const { arteDaArma } = await import('@/assets/armasCriatura');
     const { ARMAS_BASE } = await import('@/rules/armasCatalogo');
     const cats = ['espadaGrande', 'katana', 'lanca', 'espadaEscudo', 'grimorio', 'cajado'] as const;
-    const sem = ARMAS_BASE.filter((a) => a.estrela === 1).flatMap((a) => cats.filter((c) => !arteDaArma(a.id, c)).map((c) => `${a.id}:${c}`));
+    const sem = ARMAS_BASE.filter((a) => a.estrela <= 2 || a.monstroId === 'grizzharn').flatMap((a) => cats.filter((c) => !arteDaArma(a.id, c)).map((c) => `${a.id}:${c}`));
     expect(sem).toEqual([]);
-    const arma2 = ARMAS_BASE.find((a) => a.estrela === 2);
-    expect(arma2 && arteDaArma(arma2.id, 'katana')).toBeNull();
+    const outra = ARMAS_BASE.find((a) => a.estrela === 4);
+    expect(outra && arteDaArma(outra.id, 'katana')).toBeNull();
   });
 });
