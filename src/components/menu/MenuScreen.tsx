@@ -171,8 +171,8 @@ export function MenuScreen({ personagem, onFechar }: MenuScreenProps) {
                   if (item.id === 'conquistas') router.push('/conquistas');
                   if (item.id === 'checkin') router.push('/missoes?aba=checkin');
                   if (item.id === 'ranking') router.push('/ranking');
-                  // O card Resgate abre o Mercado (Troca entre jogadores; a loja normal e o leilão entram depois)
-                  if (item.id === 'resgate') router.push('/mercado');
+                  // O card Resgate abre a loja de ouro (o Mercado ganha um card próprio depois; a rota /mercado continua existindo)
+                  if (item.id === 'resgate') router.push('/resgate');
                 }}
                 style={{ gridArea: item.id }}
                 className={`group relative w-full select-none cursor-pointer transition-transform duration-150 hover:scale-[1.03] active:scale-[0.98] ${
