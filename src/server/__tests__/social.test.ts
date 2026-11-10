@@ -36,6 +36,17 @@ describe('social (7.1)', () => {
     expect(r.estouEscondido).toBe(false);
   });
 
+  it('ranking de Poder Total: o valor é guardado junto de cada gravação e ordena quem tem mais atributos', async () => {
+    const a = await getCharacterByUid('u1');
+    expect(a?.poderTotal).toBeGreaterThan(0);
+    // u2 sobe de nível e ganha pontos livres só depois de gastá-los: aqui o que muda o Poder é o atributo gravado
+    await updateCharacter('u2', { atributos: { ...(await getCharacterByUid('u2'))!.atributos, forca: 99 } });
+    const r = await rankingParaJogador('u1', 'poder');
+    expect(r.entradas[0].nome).toBe('Aramis');
+    expect(r.entradas[0].valor).toBeGreaterThan(r.entradas[1].valor);
+    expect(r.entradas.every((e) => e.valor > 0)).toBe(true);
+  });
+
   it('ranking de torre só tem quem subiu', async () => {
     await updateCharacter('u2', { torreAndar: 4 });
     const r = await rankingParaJogador('u1', 'torre');

@@ -127,6 +127,10 @@ describe('0.5-C — repositório Firestore (caminho de produção)', () => {
     expect(personagemDoFirestore('u1', personagemParaFirestore(PERSONAGEM)).torreAndar).toBeUndefined();
     expect(personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), torreAndar: 'x' }).torreAndar).toBeUndefined();
     expect(personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), torreAndar: -3 }).torreAndar).toBeUndefined();
+    // Poder Total: guardado a cada gravação (para o Ranking ordenar) e lido de volta, para uma gravação sem mescla não apagá-lo
+    expect(personagemDoFirestore('u1', personagemParaFirestore({ ...PERSONAGEM, poderTotal: 321.9 })).poderTotal).toBe(321);
+    expect(personagemParaFirestore(PERSONAGEM)).not.toHaveProperty('poderTotal');
+    expect(personagemDoFirestore('u1', { ...personagemParaFirestore(PERSONAGEM), poderTotal: 'x' }).poderTotal).toBeUndefined();
   });
 
   it('guarda a privacidade e os campos derivados do Social (7.1); documento antigo fica sem eles', () => {

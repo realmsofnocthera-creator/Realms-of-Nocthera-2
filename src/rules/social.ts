@@ -3,10 +3,11 @@
  * tempos: ver quem aparece, quanto custa e como se esconde em server/social.ts. Cada jogador escolhe se aparece no
  * Ranking e na Busca (padrão: aparece).
  */
-export const CRITERIOS_DE_RANKING = ['nivel', 'torre', 'batalha', 'guerreiro'] as const;
+export const CRITERIOS_DE_RANKING = ['poder', 'nivel', 'torre', 'batalha', 'guerreiro'] as const;
 export type CriterioDeRanking = (typeof CRITERIOS_DE_RANKING)[number];
 
 export const NOME_DO_RANKING: Readonly<Record<CriterioDeRanking, string>> = {
+  poder: 'Poder Total',
   nivel: 'Nível',
   torre: 'Torre Celestial',
   batalha: 'Batalha Sangrenta',
@@ -14,6 +15,7 @@ export const NOME_DO_RANKING: Readonly<Record<CriterioDeRanking, string>> = {
 };
 
 export const EXPLICACAO_DO_RANKING: Readonly<Record<CriterioDeRanking, string>> = {
+  poder: 'Os personagens mais fortes: a soma dos atributos (com equipamento, emblemas e Alma) e das habilidades de armadura.',
   nivel: 'Os personagens de nível mais alto.',
   torre: 'O andar mais alto já vencido na Torre Celestial.',
   batalha: 'Quantas dificuldades da Batalha Sangrenta já foram vencidas.',
@@ -22,15 +24,17 @@ export const EXPLICACAO_DO_RANKING: Readonly<Record<CriterioDeRanking, string>> 
 
 /** A unidade do valor, para escrever ao lado do número ("12 andares"). */
 export const UNIDADE_DO_RANKING: Readonly<Record<CriterioDeRanking, readonly [string, string]>> = {
+  poder: ['poder', 'poder'],
   nivel: ['nível', 'nível'],
   torre: ['andar', 'andares'],
   batalha: ['dificuldade', 'dificuldades'],
   guerreiro: ['dificuldade', 'dificuldades'],
 };
 
-/** Cada ranking ordena por um campo do documento do personagem (os dois últimos são contadores guardados junto). */
-export type CampoDoRanking = 'nivel' | 'torreAndar' | 'vitoriasBatalha' | 'vitoriasGuerreiro';
+/** Cada ranking ordena por um campo do documento do personagem (os últimos são contadores e o Poder Total, guardados junto a cada gravação). */
+export type CampoDoRanking = 'nivel' | 'torreAndar' | 'vitoriasBatalha' | 'vitoriasGuerreiro' | 'poderTotal';
 export const CAMPO_DO_RANKING: Readonly<Record<CriterioDeRanking, CampoDoRanking>> = {
+  poder: 'poderTotal',
   nivel: 'nivel',
   torre: 'torreAndar',
   batalha: 'vitoriasBatalha',

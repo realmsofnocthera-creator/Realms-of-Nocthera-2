@@ -1,3 +1,4 @@
+import { poderDasHabilidadesDeArmadura } from '@/rules/poderTotal';
 import type { AceiteLegal } from '@/rules/termos';
 import { bonusDasCartas, bonusVazio, type BonusDeAlma } from '@/game/almas';
 import { atributosDosColecionaveis } from '@/game/colecionaveis';
@@ -347,6 +348,11 @@ export interface CharacterDocument {
   mitigacaoEquipamento?: number;
   /** Quanto o Reforço soma em cada atributo. Derivado, não é gravado. */
   bonusReforco?: Attributes;
+  /**
+   * Poder Total (atributos efetivos mais as habilidades de armadura). Recalculado a cada gravação e guardado junto dela,
+   * só para o Ranking poder ordenar: não custa nenhuma gravação a mais.
+   */
+  poderTotal?: number;
   atributos: Attributes;
   ouro: number;
   diamantes?: number;
@@ -680,6 +686,12 @@ export function atributosEfetivos(
   return aplicarEquipamentoAosAtributos(comReforco, calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras, emblemas, alma));
 }
 
+/** O Poder Total do personagem (o mesmo número que fica guardado para o Ranking e que a ficha mostra). */
+export function poderTotalDe(char: CharacterDocument): number {
+  const ficha = calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras, emblemasEquipadosDe(char), bonusDeAlmaDe(char));
+  return calcularPoderTotal(atributosEfetivos(char)) + poderDasHabilidadesDeArmadura(ficha.habilidades);
+}
+
 /** Derivados calculados com o Reforço e o equipamento (atributos, HP e defesa) e a Ascensão (nível das passivas). */
 function derivadosComReforco(char: CharacterDocument) {
   const ficha = calcularFichaEquipamento(char.equipamento, char.armas, char.armaduras, emblemasEquipadosDe(char), bonusDeAlmaDe(char));
@@ -692,6 +704,7 @@ function derivadosComReforco(char: CharacterDocument) {
     bonusReforco: bonusReforcoEmAtributos(char.atributos, char.reforcoHabilidade),
     bonusEquipamento,
     mitigacaoEquipamento: mitigacaoDoEquipamento(ficha),
+    poderTotal: calcularPoderTotal(efetivos) + poderDasHabilidadesDeArmadura(ficha.habilidades),
     ...derivados,
     // HP: o Vigor e a Vida das peças; o Reforço de Vida (habilidade de armadura) soma % sobre o total
     hpMax: Math.floor(((derivados.hpMax + ficha.hpExtra) * (100 + ficha.hpPercentual)) / 100),
@@ -815,7 +828,7 @@ function toPublicCharacterProfile(char: CharacterDocument): PublicCharacterProfi
     nivel: char.nivel,
     avatarId: char.avatarId,
     atributosFinais,
-    poderTotal: calcularPoderTotal(atributosFinais),
+    poderTotal: poderTotalDe(char),
     sobre: typeof char.sobre === 'string' ? char.sobre : '',
     equipamentosPrincipais: equipamentosDoPerfil(char),
     ...(char.guildaId && char.guildaNome ? { guilda: char.guildaNome } : {}),
@@ -993,6 +1006,7 @@ export async function createCharacter(
     subclasseTiers: {},
     fragmentosSubclasse: {},
     atributos: atributosFinais,
+    poderTotal: calcularPoderTotal(atributosFinais),
     ouro: 0,
     diamantes: 0,
     ...derivados,

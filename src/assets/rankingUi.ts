@@ -11,8 +11,8 @@ import type { CriterioDeRanking } from '@/rules/social';
 /** O pódio do Ranking (três pedestais com estandartes azuis e dourado). */
 export const PODIO = srcDaImagem(imgPodio);
 
-/** A aba "Poder Total" (a principal) ainda não tem dados no servidor; as outras são os rankings que já existem. */
-export type AbaDoRanking = 'poder' | CriterioDeRanking;
+/** As abas são os próprios rankings (o Poder Total é o principal e vem primeiro). */
+export type AbaDoRanking = CriterioDeRanking;
 
 export interface DefinicaoDaAbaDoRanking {
   id: AbaDoRanking;
@@ -20,20 +20,16 @@ export interface DefinicaoDaAbaDoRanking {
   /** O nome curto, para a barra de baixo. */
   curto: string;
   icone: string;
-  /** Em breve: aparece com um cadeado e explica que ainda não abriu. */
-  bloqueada?: boolean;
 }
 
 /** Os 5 emblemas da folha do Yuri, na ordem da barra de baixo (Poder Total primeiro, por ser o principal). */
 export const ABAS_DO_RANKING: readonly DefinicaoDaAbaDoRanking[] = [
-  { id: 'poder', nome: 'Poder Total', curto: 'Poder', icone: srcDaImagem(imgPoder), bloqueada: true },
+  { id: 'poder', nome: 'Poder Total', curto: 'Poder', icone: srcDaImagem(imgPoder) },
   { id: 'nivel', nome: 'Nível', curto: 'Nível', icone: srcDaImagem(imgNivel) },
   { id: 'torre', nome: 'Torre Celestial', curto: 'Torre', icone: srcDaImagem(imgTorre) },
   { id: 'batalha', nome: 'Batalha Sangrenta', curto: 'Batalha', icone: srcDaImagem(imgBatalha) },
   { id: 'guerreiro', nome: 'Guerreiro', curto: 'Guerreiro', icone: srcDaImagem(imgGuerreiro) },
 ];
-
-export const EXPLICACAO_DO_PODER = 'O personagem mais forte do reino: a soma dos atributos, com o equipamento. Esta aba abre em breve.';
 
 /** A medalha de cada lugar do pódio (1º ouro, 2º prata, 3º bronze). */
 export const MEDALHAS_DO_PODIO = [TROFEUS.ouro, TROFEUS.prata, TROFEUS.bronze] as const;

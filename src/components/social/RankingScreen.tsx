@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { resolveAvatarSrc } from '@/assets/avatars';
 import { FUNDO_DA_MOCHILA } from '@/assets/mochilaUi';
 import { KIT_DA_FORJA } from '@/assets/forjaUi';
-import { ABAS_DO_RANKING, EXPLICACAO_DO_PODER, FEIXES_DO_PODIO, MEDALHAS_DO_PODIO, PODIO, type AbaDoRanking } from '@/assets/rankingUi';
+import { ABAS_DO_RANKING, FEIXES_DO_PODIO, MEDALHAS_DO_PODIO, PODIO, type AbaDoRanking } from '@/assets/rankingUi';
 import { EXPLICACAO_DO_RANKING, UNIDADE_DO_RANKING, type CriterioDeRanking, type EntradaDoRanking } from '@/rules/social';
 import { CLASSES_MAP } from '@/rules/classes';
 import { formatarCompacto } from '@/rules/numerosCompactos';
@@ -117,16 +117,15 @@ function Linha({ posicao, avatarId, classeId, nome, subtitulo, valor, unidade, i
 /**
  * Ranking (7.1) em pixel (kit azul e dourado), na disposição da referência: o pódio com os 3 primeiros de corpo inteiro,
  * os títulos de coluna, a lista do 4º em diante, a sua linha fixa e, embaixo, a seta de voltar e as categorias com
- * emblema. O Poder Total é a categoria principal, mas ainda não tem dados no servidor (aba bloqueada, "em breve").
+ * emblema. O Poder Total é a categoria principal e a que abre primeiro.
  * O retrato é renovado a cada 30 minutos no servidor.
  */
 export function RankingScreen({ tokenFresco, character }: { tokenFresco: () => Promise<string | null>; character?: CharacterDocument }) {
-  const [aba, setAba] = useState<AbaDoRanking>('nivel');
+  const [aba, setAba] = useState<AbaDoRanking>('poder');
   const [dados, setDados] = useState<Resposta | null>(null);
   const [erro, setErro] = useState(false);
   const definicao = ABAS_DO_RANKING.find((a) => a.id === aba)!;
-  const bloqueada = !!definicao.bloqueada;
-  const criterio: CriterioDeRanking = aba === 'poder' ? 'nivel' : aba;
+  const criterio: CriterioDeRanking = aba;
 
   const carregar = useCallback(async () => {
     setErro(false);
@@ -143,15 +142,15 @@ export function RankingScreen({ tokenFresco, character }: { tokenFresco: () => P
 
   useEffect(() => {
     setDados(null);
-    if (!bloqueada) void carregar();
-  }, [carregar, bloqueada]);
+    void carregar();
+  }, [carregar]);
 
   const unidade = UNIDADE_DO_RANKING[criterio];
   const [singular, plural] = unidade;
   const resto = dados?.entradas.filter((e) => e.posicao > 3) ?? [];
   const minhaEntrada = dados?.minhaPosicao ? dados.entradas.find((e) => e.posicao === dados.minhaPosicao) : undefined;
   const textoDoValor = (v: number) => formatarCompacto(v);
-  const explicacao = bloqueada ? EXPLICACAO_DO_PODER : EXPLICACAO_DO_RANKING[criterio];
+  const explicacao = EXPLICACAO_DO_RANKING[criterio];
   const aviso = dados?.estouEscondido ? 'Você está escondido deste ranking' : dados && !dados.minhaPosicao ? 'Você ainda não está neste ranking' : null;
 
   return (
@@ -168,15 +167,7 @@ export function RankingScreen({ tokenFresco, character }: { tokenFresco: () => P
         <div className="flex-1 min-h-0 overflow-y-auto forja-rolagem px-[3.4cqw] pt-[1.4cqw] pb-[1cqw] flex flex-col gap-[1.6cqw]">
           <p className={`${TEXTO_PIXEL} text-[2.2cqw] text-center text-[#9CC4E0] leading-snug`}>{explicacao}</p>
 
-          {bloqueada ? (
-            <div role="status" className="flex flex-col items-center gap-[2cqw] py-[10cqw]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={definicao.icone} alt="" aria-hidden="true" draggable={false} className="w-[34cqw] h-[34cqw] object-contain opacity-60 grayscale" style={pixel} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={KIT_DA_FORJA.proibido} alt="" aria-hidden="true" className="w-[10cqw] h-[10cqw] object-contain" style={pixel} />
-              <p className="font-cinzel font-extrabold uppercase text-[3.6cqw] text-[#9CD8FF]">Chega em breve</p>
-            </div>
-          ) : erro ? (
+          {erro ? (
             <p role="alert" className={`${TEXTO_PIXEL} text-[2.8cqw] text-center text-[#FFB4B4] py-[6cqw]`}>Não foi possível carregar o ranking agora. Tente de novo em instantes.</p>
           ) : !dados ? (
             <p role="status" className={`${TEXTO_PIXEL} text-[2.8cqw] text-center text-[#8FB3D1] py-[6cqw]`}>Carregando...</p>
@@ -208,7 +199,7 @@ export function RankingScreen({ tokenFresco, character }: { tokenFresco: () => P
         </div>
 
         {/* A sua linha, fixa acima das categorias */}
-        {dados && !bloqueada && (dados.minhaPosicao || aviso) && (
+        {dados && (dados.minhaPosicao || aviso) && (
           <div className="px-[3.4cqw] pt-[1cqw]">
             {dados.minhaPosicao && (minhaEntrada || character) ? (
               <ol aria-label="Sua posição">
@@ -230,14 +221,10 @@ export function RankingScreen({ tokenFresco, character }: { tokenFresco: () => P
             {ABAS_DO_RANKING.map((a) => {
               const ativa = a.id === aba;
               return (
-                <button key={a.id} type="button" aria-pressed={ativa} aria-label={a.bloqueada ? `${a.nome} (em breve)` : a.nome} onClick={() => setAba(a.id)} className="relative flex flex-col items-center gap-[0.4cqw] pt-[1cqw] pb-[0.8cqw] cursor-pointer active:translate-y-px min-w-0" style={{ background: ativa ? 'linear-gradient(180deg, #0F5A6E 0%, #0A2F45 100%)' : 'linear-gradient(180deg, #12233A 0%, #0A1422 100%)', border: `0.5cqw solid ${ativa ? '#6FE3EE' : '#2B5C80'}`, boxShadow: ativa ? '0 0 2cqw rgba(111,227,238,0.55)' : undefined }}>
+                <button key={a.id} type="button" aria-pressed={ativa} aria-label={a.nome} onClick={() => setAba(a.id)} className="relative flex flex-col items-center gap-[0.4cqw] pt-[1cqw] pb-[0.8cqw] cursor-pointer active:translate-y-px min-w-0" style={{ background: ativa ? 'linear-gradient(180deg, #0F5A6E 0%, #0A2F45 100%)' : 'linear-gradient(180deg, #12233A 0%, #0A1422 100%)', border: `0.5cqw solid ${ativa ? '#6FE3EE' : '#2B5C80'}`, boxShadow: ativa ? '0 0 2cqw rgba(111,227,238,0.55)' : undefined }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={a.icone} alt="" aria-hidden="true" draggable={false} className="w-[10.4cqw] h-[10.4cqw] object-contain" style={{ ...pixel, filter: ativa ? undefined : 'brightness(0.7) saturate(0.8)' }} />
                   <span className="font-cinzel font-extrabold uppercase text-[1.9cqw] leading-none truncate max-w-full" style={{ color: ativa ? '#F5F3E0' : '#9CC4E0' }}>{a.curto}</span>
-                  {a.bloqueada && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={KIT_DA_FORJA.proibido} alt="" aria-hidden="true" className="absolute -top-[1cqw] -right-[1cqw] w-[4.4cqw] h-[4.4cqw]" style={pixel} />
-                  )}
                 </button>
               );
             })}
