@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { FUNDO_DA_MOCHILA, ICONES_DE_ABA, ICONES_DE_SALDO } from '@/assets/mochilaUi';
 import { KIT_DA_FORJA } from '@/assets/forjaUi';
@@ -19,7 +19,7 @@ import {
   type SaldoMochila,
 } from '@/lib/mochilaTela';
 import { formatarCompacto } from '@/rules/numerosCompactos';
-import { Abas, BarraDeTitulo, FundoDaForja, PainelDaForja, PalcoDaForja, PlacaDeRaridade, SlotDeArma, TEXTO_PIXEL } from '@/components/forja/KitDaForja';
+import { Abas, BarraDeTitulo, BotaoRedondo, FundoDaForja, PainelDaForja, PalcoDaForja, PlacaDeRaridade, SlotDeArma, TEXTO_PIXEL } from '@/components/forja/KitDaForja';
 import { IconeDoMaterial, IconeDoOrbe } from '@/components/forja/IconeDoMaterial';
 import { Info } from '@/components/forja/PainelDaArma';
 
@@ -58,19 +58,27 @@ const raridadeDoSlot = (i: ItemMochila) => i.raridade ?? 'epico';
 
 /**
  * Mochila em pixel (kit azul e dourado): os saldos no topo, as abas com ícone, a grade de slots como no baú de itens e,
- * embaixo, o detalhe do item escolhido. Só lê o que o personagem já carrega (nenhuma leitura ou gravação nova).
+ * um pop-up com o detalhe do item tocado. Só lê o que o personagem já carrega (nenhuma leitura ou gravação nova).
  */
-export function MochilaScreen({ character, abaInicial = 'todos' }: { character: CharacterDocument; abaInicial?: AbaMochila }) {
+export function MochilaScreen({ character, abaInicial = 'todos', abertoInicial = null }: { character: CharacterDocument; abaInicial?: AbaMochila; abertoInicial?: string | null }) {
   const abas = useMemo(() => itensDaMochila(character.inventario), [character.inventario]);
   const [aba, setAba] = useState<AbaMochila>(abaInicial);
-  const [aberto, setAberto] = useState<string | null>(null);
+  const [aberto, setAberto] = useState<string | null>(abertoInicial);
   const itens = useMemo(() => itensDaAba(abas, aba), [abas, aba]);
   const contagem = (id: AbaMochila) => (id === 'todos' ? Object.values(abas).reduce((s, l) => s + l.length, 0) : abas[id].length);
   const abaAtual = ABAS_DA_MOCHILA.find((a) => a.id === aba)!;
   const vazia = contagem('todos') === 0;
-  const item = itens.find((i) => i.id === aberto) ?? itens[0] ?? null;
+  const item = itens.find((i) => i.id === aberto) ?? null;
   const detalhe = item ? detalheDoItem(item.id) : null;
   const emblemas = resumoDosEmblemas(character);
+  useEffect(() => {
+    if (!aberto) return;
+    const fechar = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAberto(null);
+    };
+    window.addEventListener('keydown', fechar);
+    return () => window.removeEventListener('keydown', fechar);
+  }, [aberto]);
   const celulas = Math.max(COLUNAS * LINHAS_MINIMAS, Math.ceil(itens.length / COLUNAS) * COLUNAS);
 
   return (
@@ -143,33 +151,6 @@ export function MochilaScreen({ character, abaInicial = 'todos' }: { character: 
           </PainelDaForja>
         </div>
 
-        {item && detalhe && (
-          <div className="px-[3.4cqw] pt-[1.4cqw]">
-            <PainelDaForja as="section" aria-label={`Detalhe: ${item.nome}`} borda="2.6cqw" className="max-h-[50cqw] overflow-y-auto forja-rolagem">
-              <div className="grid items-start gap-[2cqw]" style={{ gridTemplateColumns: '25cqw 1fr' }}>
-                <div className="flex flex-col items-center gap-[1cqw]">
-                  <span className="relative block w-full" style={{ aspectRatio: '228 / 143' }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={KIT_DA_FORJA.caixaArte} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full" style={pixel} />
-                    <span className="absolute inset-0 flex items-center justify-center">
-                      <IconeDoItem item={item} className="w-[13cqw] h-[13cqw]" />
-                    </span>
-                  </span>
-                  <span className={`${TEXTO_PIXEL} text-[3cqw] font-bold text-[#7BE08C] tabular-nums`}>×{item.quantidade.toLocaleString('pt-BR')}</span>
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <PlacaDeRaridade raridade={raridadeDoSlot(item)}>
-                    <h2 className="font-cinzel font-extrabold text-[2.8cqw] leading-tight text-[#F5F3E0] [text-shadow:1px_1px_0_#05070D]">{detalhe.nome}</h2>
-                  </PlacaDeRaridade>
-                  {detalhe.linhas.map((l) => (
-                    <Info key={l.rotulo} rotulo={l.rotulo} empilhar>{l.valor}</Info>
-                  ))}
-                </div>
-              </div>
-            </PainelDaForja>
-          </div>
-        )}
-
         <div className="px-[3.4cqw] pt-[1.4cqw] pb-[3cqw]">
           <section aria-label="Emblemas" className="pilula-pixel flex items-center justify-between gap-[2cqw] px-[2.4cqw] py-[1cqw]">
             <span className="flex flex-col min-w-0 leading-tight">
@@ -182,6 +163,34 @@ export function MochilaScreen({ character, abaInicial = 'todos' }: { character: 
           </section>
         </div>
       </PalcoDaForja>
+
+      {item && detalhe && (
+        <div role="dialog" aria-modal="true" aria-label={item.nome} onClick={() => setAberto(null)} className="forja-palco !fixed inset-0 !z-50 !items-center !justify-center px-[6cqw]" style={{ backgroundColor: 'rgba(3,6,14,0.55)', left: 0, right: 0 }}>
+          <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-[84cqw]">
+            <BotaoRedondo tipo="x" rotulo="Fechar" onClick={() => setAberto(null)} className="absolute -top-[3.4cqw] -right-[2.4cqw] z-10 w-[9cqw] h-[9cqw]" />
+            <PainelDaForja aria-label={`Detalhe: ${item.nome}`} borda="3cqw" className="max-h-[88dvh] overflow-y-auto forja-rolagem">
+              <div className="flex flex-col gap-[2cqw]">
+                <PlacaDeRaridade raridade={raridadeDoSlot(item)}>
+                  <h2 className="font-cinzel font-extrabold text-[3.4cqw] leading-tight text-[#F5F3E0] [text-shadow:1px_1px_0_#05070D]">{detalhe.nome}</h2>
+                </PlacaDeRaridade>
+                <span className="relative block w-[62%] mx-auto" style={{ aspectRatio: '228 / 143' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={KIT_DA_FORJA.caixaArte} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full" style={pixel} />
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <IconeDoItem item={item} className="w-[16cqw] h-[16cqw]" />
+                  </span>
+                </span>
+                <p className={`${TEXTO_PIXEL} text-[3.2cqw] font-bold text-center text-[#7BE08C] tabular-nums`}>Você tem ×{item.quantidade.toLocaleString('pt-BR')}</p>
+                <div className="flex flex-col">
+                  {detalhe.linhas.map((l) => (
+                    <Info key={l.rotulo} rotulo={l.rotulo} empilhar>{l.valor}</Info>
+                  ))}
+                </div>
+              </div>
+            </PainelDaForja>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

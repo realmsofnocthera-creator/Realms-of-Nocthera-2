@@ -10,7 +10,7 @@ vi.mock('next/link', () => ({ default: ({ href, children, ...p }: { href: string
 
 const base = { uid: 'u', nome: 'Yuri', nivel: 12, ouro: 12500, diamantes: 7 } as unknown as CharacterDocument;
 const com = (extra: object) => ({ ...base, ...extra }) as unknown as CharacterDocument;
-const render = (c: CharacterDocument, aba?: 'todos' | 'monstros' | 'mundo' | 'orbes' | 'especiais') => renderToStaticMarkup(<MochilaScreen character={c} abaInicial={aba} />);
+const render = (c: CharacterDocument, aba?: 'todos' | 'monstros' | 'mundo' | 'orbes' | 'especiais', aberto?: string) => renderToStaticMarkup(<MochilaScreen character={c} abaInicial={aba} abertoInicial={aberto} />);
 
 describe('Tela da Mochila', () => {
   it('mostra os saldos, o resumo de emblemas e as 5 abas com a contagem de itens', () => {
@@ -30,11 +30,15 @@ describe('Tela da Mochila', () => {
     for (const r of ['Ouro: 12.500', 'Diamantes: 7', 'Fragmentos de alma: 1.500', 'Essência de habilidade: 3', 'Fragmentos de ascensão: 0', 'Essência de Soberano: 2']) expect(html).toContain(r);
   });
 
-  it('o item escolhido mostra o detalhe embaixo, com a quantidade', () => {
-    const html = render(com({ inventario: { [MATERIAIS[0].id]: 5 } }));
+  it('sem tocar em nenhum item, não há pop-up; ao tocar, o detalhe abre em pop-up com a quantidade', () => {
+    const c = com({ inventario: { [MATERIAIS[0].id]: 5 } });
+    expect(render(c)).not.toContain('role="dialog"');
+    const html = render(c, 'todos', MATERIAIS[0].id);
+    expect(html).toContain('role="dialog"');
     expect(html).toContain(`Detalhe: ${MATERIAIS[0].nome}`);
     expect(html).toContain('Cai de');
-    expect(html).toContain('×5');
+    expect(html).toContain('Você tem ×5');
+    expect(html).toContain('aria-label="Fechar"');
   });
 
   it('o atalho dos emblemas só aparece quando há emblemas e leva à aba da ficha', () => {
