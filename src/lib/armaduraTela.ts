@@ -19,6 +19,7 @@ import { HABILIDADES_ARMADURA_MAP } from '@/rules/habilidadesArmadura';
 import { COR_RARIDADE } from '@/lib/cacadaTela';
 import { COR_RARIDADE_ARMA, LinhaReceitaTela, linhasDaReceita } from '@/lib/forjaTela';
 import type { ArmaduraPersonagem } from '@/game/armaduraForja';
+import { estadoDaEstrela } from '@/game/cacada';
 
 /** Lógica da tela "Melhorar armadura" (lista de conjuntos, detalhe da peça, orbes), sem React. */
 
@@ -54,6 +55,8 @@ export interface ConjuntoTela {
   raridadeNome: string;
   estilo: string;
   pecas: PecaTela[];
+  /** false enquanto o jogador não descobriu o monstro (nome "???" e peças escondidas). */
+  descoberto: boolean;
 }
 
 const minhas = (c: Pick<CharacterDocument, 'armaduras'>) => c.armaduras ?? [];
@@ -79,6 +82,7 @@ export function conjuntosDaTela(c: Personagem): ConjuntoTela[] {
         raridadeNome: RARIDADES_ARMA_MAP[p.raridade].nome,
         estilo: NOME_ESTILO[p.estilo],
         pecas: [],
+        descoberto: true,
       };
       lista.push(conj);
     }
@@ -171,6 +175,7 @@ export interface DetalhePecaTela {
   raridade: RaridadeArma;
   raridadeNome: string;
   cor: string;
+  espaco: EspacoArmadura;
   espacoNome: string;
   estilo: string;
   fixo: string;
@@ -200,6 +205,7 @@ export function detalheDaPeca(pecaId: string, c: Personagem): DetalhePecaTela {
     raridade: p.raridade,
     raridadeNome: RARIDADES_ARMA_MAP[p.raridade].nome,
     cor: COR_RARIDADE_ARMA[p.raridade],
+    espaco: p.espaco,
     espacoNome: def.nome,
     estilo: NOME_ESTILO[p.estilo],
     fixo: NOME_FIXO[def.fixo],
@@ -240,3 +246,25 @@ export function xpDosOrbes(escolha: Readonly<Record<string, number>>, xpAtual: n
 }
 
 export const ESTRELAS_ARMADURA = [...new Set(PECAS_ARMADURA.map((p) => p.estrela))].sort((a, b) => a - b);
+
+type PersonagemDaVisao = Personagem & Pick<CharacterDocument, 'nivel' | 'cacadaChavesVencidas' | 'monstrosDerrotados'>;
+
+/**
+ * O que o jogador vê nas Armaduras (a mesma regra da Forja de armas): só os conjuntos das ★ que ele já liberou na Caçada.
+ * Dentro de uma ★ liberada, o conjunto aparece como "???" até ele descobrir o monstro (tê-lo derrotado, ter material
+ * dele ou já ter uma peça do conjunto). Na subespécie só conta o material exclusivo dela, porque os de base são divididos.
+ */
+export function conjuntosVisiveis(c: PersonagemDaVisao): ConjuntoTela[] {
+  const derrotados = new Set(c.monstrosDerrotados ?? []);
+  const inv = c.inventario ?? {};
+  const minhasPecas = minhas(c).map((a) => PECAS_ARMADURA_MAP[a.pecaId]).filter((p): p is NonNullable<typeof p> => !!p);
+  const descobriu = (monstroId: string): boolean => {
+    const dados = DADOS_CACADA_MAP[monstroId];
+    const daBase = new Set(dados?.varianteDe ? (DADOS_CACADA_MAP[dados.varianteDe]?.drops ?? []) : []);
+    return derrotados.has(monstroId) || (dados?.drops ?? []).some((d) => !daBase.has(d) && (inv[d] ?? 0) > 0) || minhasPecas.some((p) => p.monstroId === monstroId);
+  };
+  const monstroDoConjunto = (conjuntoId: string) => PECAS_ARMADURA.find((p) => p.conjuntoId === conjuntoId)!.monstroId;
+  return conjuntosDaTela(c)
+    .filter((x) => estadoDaEstrela(x.estrela, c.nivel, c.cacadaChavesVencidas).liberada)
+    .map((x) => (descobriu(monstroDoConjunto(x.conjuntoId)) ? x : { ...x, nome: '???', descoberto: false, pecas: x.pecas.map((p) => ({ ...p, nome: '???' })) }));
+}

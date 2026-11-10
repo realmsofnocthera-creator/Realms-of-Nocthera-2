@@ -70,7 +70,7 @@ export function OuroDaForja({ ouro }: { ouro: number }) {
 }
 
 /** A faixa de abas (a ativa em ciano). */
-export function Abas<T extends string>({ abas, ativa, aoMudar, rotulo }: { abas: readonly { id: T; nome: string; rotuloAcessivel?: string }[]; ativa: T; aoMudar: (id: T) => void; rotulo: string }) {
+export function Abas<T extends string>({ abas, ativa, aoMudar, rotulo }: { abas: readonly { id: T; nome: string; rotuloAcessivel?: string; bloqueada?: boolean }[]; ativa: T; aoMudar: (id: T) => void; rotulo: string }) {
   return (
     <nav aria-label={rotulo} className="grid gap-1" style={{ gridTemplateColumns: `repeat(${abas.length}, 1fr)` }}>
       {abas.map((a) => {
@@ -82,9 +82,13 @@ export function Abas<T extends string>({ abas, ativa, aoMudar, rotulo }: { abas:
             aria-pressed={on}
             aria-label={a.rotuloAcessivel}
             onClick={() => aoMudar(a.id)}
-            className={`font-cinzel font-extrabold uppercase text-[2.9cqw] leading-none py-[2.2cqw] cursor-pointer ${on ? 'text-[#0A1A22]' : 'text-[#9CC4E0]'}`}
+            className={`font-cinzel font-extrabold uppercase text-[2.9cqw] leading-none py-[2.2cqw] whitespace-nowrap cursor-pointer ${on ? 'text-[#0A1A22]' : 'text-[#9CC4E0]'}`}
             style={{ borderStyle: 'solid', borderWidth: '2cqw 3cqw', borderImage: `url(${on ? KIT_DA_FORJA.abaAtiva : KIT_DA_FORJA.aba}) 20 24 fill / 2cqw 3cqw stretch`, ...pixel }}
           >
+            {a.bloqueada && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={KIT_DA_FORJA.proibido} alt="" aria-hidden="true" className="inline-block w-[2.8cqw] h-[2.8cqw] mr-[0.6cqw] align-[-0.4cqw]" style={pixel} />
+            )}
             {a.nome}
           </button>
         );

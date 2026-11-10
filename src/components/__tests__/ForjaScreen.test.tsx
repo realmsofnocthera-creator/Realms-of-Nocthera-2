@@ -84,15 +84,25 @@ describe('Ferreiro e Forja', () => {
 });
 
 describe('Armaduras', () => {
-  it('abre nos conjuntos 1★ com as 5 peças de cada um', async () => {
+  it('abre no Grau inferior com as abas, o Grau superior bloqueado e os conjuntos descobertos com as 5 peças', async () => {
     const { ArmaduraScreen } = await import('@/components/forja/ArmaduraScreen');
-    const html = renderToStaticMarkup(<ArmaduraScreen character={personagem} onCharacterChange={() => {}} tokenFresco={async () => 't'} />);
-    expect(html).toContain('Melhorar armadura');
+    const html = renderToStaticMarkup(<ArmaduraScreen character={descobriuORato} onCharacterChange={() => {}} tokenFresco={async () => 't'} />);
+    expect(html).toContain('Armaduras');
+    expect(html).toContain('Grau inferior');
+    expect(html).toContain('Grau superior (bloqueado)');
     expect(html).toContain('Minhas peças (0)');
     expect(html).toContain('Conjunto Rato da Floresta');
     expect(html).toContain('Gibão de Rato da Floresta (Peitoral). Falta material ou ouro');
     expect(html).not.toContain('Conjunto Grizzharn');
     expect(html).not.toContain('role="dialog"');
+  });
+
+  it('antes de descobrir o monstro, o conjunto aparece como ??? sem nome nem peças tocáveis', async () => {
+    const { ArmaduraScreen } = await import('@/components/forja/ArmaduraScreen');
+    const html = renderToStaticMarkup(<ArmaduraScreen character={personagem} onCharacterChange={() => {}} tokenFresco={async () => 't'} />);
+    expect(html).toContain('Conjunto ???');
+    expect(html).toContain('Peça ainda não descoberta');
+    expect(html).not.toContain('Conjunto Rato da Floresta');
   });
 });
 
