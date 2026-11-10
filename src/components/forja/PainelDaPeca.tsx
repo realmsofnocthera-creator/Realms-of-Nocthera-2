@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { KIT_DA_FORJA } from '@/assets/forjaUi';
+import { iconeDaHabilidade } from '@/assets/habilidadesArmadura';
 import type { CharacterDocument } from '@/server/characterService';
 import { type DetalhePecaTela, type MinhaPecaTela, orbesDaTela, xpDosOrbes } from '@/lib/armaduraTela';
 import { BotaoDoKit, PainelDaForja, PlacaDeRaridade, TEXTO_PIXEL } from './KitDaForja';
@@ -64,13 +65,25 @@ export function PainelDaPeca({ d }: { d: DetalhePecaTela }) {
         <CabecalhoDaSecao>Informações da peça</CabecalhoDaSecao>
         <Info rotulo="Peça">{d.espacoNome}</Info>
         <Info rotulo="Estilo">{d.estilo}</Info>
-        <Info rotulo={d.fixo} cor="#F5F3E0">{d.fixoNivel0}<span className="text-[2.1cqw] font-normal text-[#9CC4E0]">(Nv. 30: {d.fixoNivel30})</span></Info>
+        <Info rotulo={d.fixo} cor="#F5F3E0" empilhar>{d.fixoNivel0}<span className="text-[2.1cqw] font-normal text-[#9CC4E0]">(Nv. 30: {d.fixoNivel30})</span></Info>
         <Info rotulo="Atributo" cor={VERDE} empilhar>{d.sorteio}</Info>
         {d.minhas.length > 0 && <Info rotulo="Você tem" cor={VERDE}>{d.minhas.length}</Info>}
         {d.habilidades.length > 0 && <CabecalhoDaSecao>Habilidades</CabecalhoDaSecao>}
-        {d.habilidades.map((h) => (
-          <Info key={h.id} rotulo={`${h.nome} Nv. ${h.nivel}`} cor={AZUL} empilhar>{h.efeito}</Info>
-        ))}
+        {d.habilidades.map((h) => {
+          const icone = iconeDaHabilidade(h.id);
+          return (
+            <div key={h.id} className="flex items-start gap-[1.4cqw] py-[1cqw] border-b border-[#1C2D44]">
+              {icone && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={icone} alt="" aria-hidden="true" draggable={false} className="w-[9cqw] h-[9cqw] shrink-0 object-contain" style={pixel} />
+              )}
+              <span className="min-w-0 flex-1">
+                <span className="block font-cinzel font-bold text-[2.5cqw] leading-tight text-[#F5F3E0] [text-shadow:1px_1px_0_#05070D]">{h.nome} <span className="text-[#E7C46A]">Nv. {h.nivel}</span></span>
+                <span className={`${TEXTO_PIXEL} block text-[2.1cqw] leading-snug`} style={{ color: AZUL }}>{h.efeito}</span>
+              </span>
+            </div>
+          );
+        })}
       </PainelDaForja>
     </div>
   );

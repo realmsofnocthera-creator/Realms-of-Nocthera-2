@@ -1,5 +1,6 @@
 'use client';
 
+import { iconeDaHabilidade } from '@/assets/habilidadesArmadura';
 import { IconesDeElementos } from '@/components/IconeDeElemento';
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
@@ -112,6 +113,10 @@ export function FichaResumoEquipamento({ character, className = '' }: { characte
                   className="rounded px-1.5 py-0.5 text-[9.5px] border"
                   style={{ borderColor: h.aplicada ? `${OURO}aa` : `${OURO}44`, color: h.aplicada ? '#F5F3E0' : '#8d8574', backgroundColor: 'rgba(0,0,0,0.4)' }}
                 >
+                  {iconeDaHabilidade(h.id) && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={iconeDaHabilidade(h.id) as string} alt="" aria-hidden="true" draggable={false} className="inline-block w-4 h-4 mr-1 align-[-3px]" style={{ imageRendering: 'pixelated', opacity: h.aplicada ? 1 : 0.55 }} />
+                  )}
                   {h.nome} {h.nivel}/{h.nivelMaximo}{h.aplicada ? '' : ' •'}
                 </span>
               ))}
