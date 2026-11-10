@@ -7,9 +7,9 @@ import { ProcurarJogadorScreen } from '@/components/social/ProcurarJogadorScreen
 vi.mock('next/link', () => ({ default: ({ href, children, ...p }: { href: string; children: React.ReactNode }) => <a href={href} {...p}>{children}</a> }));
 
 describe('Telas sociais (7.1)', () => {
-  it('Ranking abre com as quatro abas, a explicação e o aviso de carregamento', () => {
+  it('Ranking abre com as cinco categorias (Poder Total em breve), a explicação e o aviso de carregamento', () => {
     const html = renderToStaticMarkup(<RankingScreen tokenFresco={async () => 't'} />);
-    for (const aba of ['Nível', 'Torre Celestial', 'Batalha Sangrenta', 'Guerreiro']) expect(html).toContain(aba);
+    for (const aba of ['Nível', 'Torre Celestial', 'Batalha Sangrenta', 'Guerreiro', 'Poder Total (em breve)']) expect(html).toContain(aba);
     expect(html).toContain('Carregando...');
     expect(html).toContain('href="/menu"');
   });

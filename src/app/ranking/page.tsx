@@ -15,5 +15,5 @@ export default function RankingPage() {
       </main>
     );
   }
-  return <RankingScreen tokenFresco={tokenFresco} />;
+  return <RankingScreen tokenFresco={tokenFresco} character={character} />;
 }
