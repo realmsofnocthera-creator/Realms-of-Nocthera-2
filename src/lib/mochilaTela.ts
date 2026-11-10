@@ -21,6 +21,17 @@ export const CATEGORIAS_MOCHILA: readonly { id: CategoriaMochila; nome: string; 
   { id: 'especiais', nome: 'Especiais', vazio: 'Nenhum item especial ainda.' },
 ];
 
+/** As 5 abas da tela: "Todos" junta as quatro categorias. A ordem segue a folha de ícones (bolsa, espadas, escudo, poção, gema). */
+export type AbaMochila = 'todos' | CategoriaMochila;
+
+export const ABAS_DA_MOCHILA: readonly { id: AbaMochila; nome: string; vazio: string }[] = [
+  { id: 'todos', nome: 'Todos', vazio: 'Sua mochila está vazia.' },
+  { id: 'monstros', nome: 'Monstros', vazio: CATEGORIAS_MOCHILA[0].vazio },
+  { id: 'orbes', nome: 'Orbes', vazio: CATEGORIAS_MOCHILA[2].vazio },
+  { id: 'mundo', nome: 'Mundo', vazio: CATEGORIAS_MOCHILA[1].vazio },
+  { id: 'especiais', nome: 'Especiais', vazio: CATEGORIAS_MOCHILA[3].vazio },
+];
+
 const ORDEM_RARIDADE: readonly RaridadeMaterial[] = ['lendario', 'epico', 'muitoRaro', 'raro', 'comum'];
 const COR_ESPECIAL = '#E6C775';
 
@@ -78,10 +89,21 @@ export function itensDaMochila(inventario: Record<string, number> | undefined): 
   return abas;
 }
 
+const ORDEM_DAS_CATEGORIAS: readonly CategoriaMochila[] = ['monstros', 'orbes', 'mundo', 'especiais'];
+
+/** Os itens da aba escolhida; "Todos" junta as categorias, da mais rara para a mais comum. */
+export function itensDaAba(abas: Record<CategoriaMochila, ItemMochila[]>, aba: AbaMochila): ItemMochila[] {
+  if (aba !== 'todos') return abas[aba];
+  const posicao = (i: ItemMochila) => (i.raridade ? ORDEM_RARIDADE.indexOf(i.raridade) : -1);
+  return ORDEM_DAS_CATEGORIAS.flatMap((c) => abas[c]).sort((a, b) => posicao(a) - posicao(b) || a.nome.localeCompare(b.nome));
+}
+
 export interface SaldoMochila {
   id: 'ouro' | 'diamantes' | 'fragmentosAlma' | 'essenciaHabilidade' | 'fragmentosAscensao' | 'essenciaDeSoberano';
   rotulo: string;
   valor: string;
+  /** O valor como número (a tela mostra abreviado e deixa o total no rótulo). */
+  numero: number;
 }
 
 const formatar = (n: number | undefined) => (n ?? 0).toLocaleString('pt-BR');
@@ -91,12 +113,12 @@ export function saldosDaMochila(
   c: Pick<CharacterDocument, 'ouro' | 'diamantes' | 'fragmentosAlma' | 'essenciaHabilidade' | 'fragmentosAscensao'> & Partial<Pick<CharacterDocument, 'essenciaDeSoberano'>>
 ): SaldoMochila[] {
   return [
-    { id: 'ouro', rotulo: 'Ouro', valor: formatar(c.ouro) },
-    { id: 'diamantes', rotulo: 'Diamantes', valor: formatar(c.diamantes) },
-    { id: 'fragmentosAlma', rotulo: 'Fragmentos de alma', valor: formatar(c.fragmentosAlma) },
-    { id: 'essenciaHabilidade', rotulo: 'Essência de habilidade', valor: formatar(c.essenciaHabilidade) },
-    { id: 'fragmentosAscensao', rotulo: 'Fragmentos de ascensão', valor: formatar(c.fragmentosAscensao) },
-    { id: 'essenciaDeSoberano', rotulo: 'Essência de Soberano', valor: formatar(c.essenciaDeSoberano) },
+    { id: 'ouro', rotulo: 'Ouro', valor: formatar(c.ouro), numero: c.ouro ?? 0 },
+    { id: 'diamantes', rotulo: 'Diamantes', valor: formatar(c.diamantes), numero: c.diamantes ?? 0 },
+    { id: 'fragmentosAlma', rotulo: 'Fragmentos de alma', valor: formatar(c.fragmentosAlma), numero: c.fragmentosAlma ?? 0 },
+    { id: 'essenciaHabilidade', rotulo: 'Essência de habilidade', valor: formatar(c.essenciaHabilidade), numero: c.essenciaHabilidade ?? 0 },
+    { id: 'fragmentosAscensao', rotulo: 'Fragmentos de ascensão', valor: formatar(c.fragmentosAscensao), numero: c.fragmentosAscensao ?? 0 },
+    { id: 'essenciaDeSoberano', rotulo: 'Essência de Soberano', valor: formatar(c.essenciaDeSoberano), numero: c.essenciaDeSoberano ?? 0 },
   ];
 }
 
