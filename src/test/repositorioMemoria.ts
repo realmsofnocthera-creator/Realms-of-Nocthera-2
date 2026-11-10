@@ -113,6 +113,8 @@ function valorDoCampo(c: CharacterDocument, campo: CampoDoRanking): number {
       return c.batalhaSangrentaVencidas?.length ?? 0;
     case 'vitoriasGuerreiro':
       return c.guerreiroVencidas?.length ?? 0;
+    case 'poderTotal':
+      return c.poderTotal ?? 0;
   }
 }
 

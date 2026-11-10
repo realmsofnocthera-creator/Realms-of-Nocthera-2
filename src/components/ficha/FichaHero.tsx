@@ -40,6 +40,7 @@ export function FichaHero({
   const avatarSrc = resolveAvatarSrc(character.avatarId, character.classeId);
   // Poder Total com o bônus do Reforço de Habilidade (2.2.2) e o do equipamento equipado
   const poderTotal =
+    character.poderTotal ??
     calcularPoderTotal(character.atributos) +
     Object.values(character.bonusReforco ?? {}).reduce((soma, v) => soma + Number(v || 0), 0) +
     Object.values(character.bonusEquipamento ?? {}).reduce((soma, v) => soma + Number(v || 0), 0);

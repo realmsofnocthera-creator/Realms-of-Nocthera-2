@@ -404,6 +404,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...emblemasDoDocumento(data),
     ...almaDoDocumento(data),
     ...(typeof data.torreAndar === 'number' && data.torreAndar > 0 ? { torreAndar: Math.floor(data.torreAndar) } : {}),
+    ...(typeof data.poderTotal === 'number' && data.poderTotal > 0 ? { poderTotal: Math.floor(data.poderTotal) } : {}),
     ...campanhaDoDocumento(data.campanha),
     ...(Array.isArray(data.batalhaSangrentaVencidas)
       ? { batalhaSangrentaVencidas: (data.batalhaSangrentaVencidas as unknown[]).filter((v): v is string => typeof v === 'string') }
@@ -515,6 +516,8 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.batalhaSangrenta ? { batalhaSangrenta: char.batalhaSangrenta } : {}),
     ...(char.batalhaSangrentaVencidas ? { batalhaSangrentaVencidas: char.batalhaSangrentaVencidas } : {}),
     ...(char.torreAndar ? { torreAndar: char.torreAndar } : {}),
+    // Poder Total: campo derivado a cada gravação, só para o banco poder ordenar o Ranking
+    ...(char.poderTotal && char.poderTotal > 0 ? { poderTotal: Math.floor(char.poderTotal) } : {}),
     ...(char.campanha ? { campanha: char.campanha } : {}),
     ...(char.guerreiroTentativas ? { guerreiroTentativas: char.guerreiroTentativas } : {}),
     ...(char.guerreiroExtras ? { guerreiroExtras: char.guerreiroExtras } : {}),
