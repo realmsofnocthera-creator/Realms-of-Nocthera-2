@@ -2,14 +2,15 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getAvatarFaceStyle, resolveAvatarSrc } from '@/assets/avatars';
+import { resolveAvatarSrc } from '@/assets/avatars';
 import { FUNDO_DA_MOCHILA } from '@/assets/mochilaUi';
 import { KIT_DA_FORJA } from '@/assets/forjaUi';
-import { ARTE_DO_RANKING, MEDALHAS_DO_PODIO, PODIO } from '@/assets/rankingUi';
-import { CRITERIOS_DE_RANKING, EXPLICACAO_DO_RANKING, NOME_DO_RANKING, UNIDADE_DO_RANKING, type CriterioDeRanking, type EntradaDoRanking } from '@/rules/social';
+import { ABAS_DO_RANKING, EXPLICACAO_DO_PODER, FEIXES_DO_PODIO, MEDALHAS_DO_PODIO, PODIO, type AbaDoRanking } from '@/assets/rankingUi';
+import { EXPLICACAO_DO_RANKING, UNIDADE_DO_RANKING, type CriterioDeRanking, type EntradaDoRanking } from '@/rules/social';
 import { CLASSES_MAP } from '@/rules/classes';
 import { formatarCompacto } from '@/rules/numerosCompactos';
-import { BarraDeTitulo, FundoDaForja, PainelDaForja, PalcoDaForja, TEXTO_PIXEL } from '@/components/forja/KitDaForja';
+import type { CharacterDocument } from '@/server/characterService';
+import { BarraDeTitulo, FundoDaForja, PalcoDaForja, TEXTO_PIXEL } from '@/components/forja/KitDaForja';
 import { PrivacidadeSocial } from './PrivacidadeSocial';
 
 interface Resposta {
@@ -21,94 +22,111 @@ interface Resposta {
 }
 
 const pixel: React.CSSProperties = { imageRendering: 'pixelated' };
+const CONTORNO = '0.25cqw 0 0 #05070D, -0.25cqw 0 0 #05070D, 0 0.25cqw 0 #05070D, 0 -0.25cqw 0 #05070D';
 
 /** Onde cada lugar fica sobre a arte do pódio (em % da imagem): o centro da face de cima e as faixas do estandarte. */
 const LUGARES = [
-  { x: 49.8, topo: 31.5, tamanho: 17, medalha: 44, nome: 55.5, valor: 66, larguraTexto: 12 },
-  { x: 25.7, topo: 51, tamanho: 13.5, medalha: 63, nome: 72, valor: 80, larguraTexto: 15 },
-  { x: 74.5, topo: 58.5, tamanho: 13.5, medalha: 70.5, nome: 79, valor: 86.5, larguraTexto: 15 },
+  { x: 49.8, topo: 31.5, altura: 25, feixe: 24, medalha: 44, nome: 55.5, valor: 66, larguraTexto: 12 },
+  { x: 25.7, topo: 51, altura: 19.5, feixe: 19, medalha: 63, nome: 72, valor: 80, larguraTexto: 15 },
+  { x: 74.5, topo: 58.5, altura: 19.5, feixe: 19, medalha: 70.5, nome: 79, valor: 86.5, larguraTexto: 15 },
 ] as const;
 
-/** O rosto do avatar num círculo, em cqw (cresce com o palco), com a moldura dourada do kit. */
-function AvatarDoRanking({ e, tamanho, destaque = false }: { e: EntradaDoRanking; tamanho: number; destaque?: boolean }) {
+/** O personagem de corpo inteiro (a arte do avatar tem fundo transparente), em pé, com o rosto na parte de cima. */
+function Personagem({ e, altura }: { e: EntradaDoRanking; altura: number }) {
   return (
-    <span className="shrink-0 rounded-full overflow-hidden block bg-[#16120E]" style={{ width: `${tamanho}cqw`, height: `${tamanho}cqw`, border: `${destaque ? 0.7 : 0.5}cqw solid ${destaque ? '#E7C46A' : '#B2A66C'}`, boxShadow: destaque ? '0 0 2.4cqw rgba(231,196,106,0.55)' : undefined }}>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={resolveAvatarSrc(e.avatarId, e.classeId)} alt={`Avatar de ${e.nome}`} draggable={false} className="block object-contain select-none pointer-events-none" style={{ height: `${altura}cqw`, width: `${altura * (2 / 3)}cqw`, filter: 'drop-shadow(0 0.6cqw 0.4cqw rgba(0,0,0,0.6))' }} />
+  );
+}
+
+/** O avatar num quadro quadrado dourado (as linhas da lista e a sua linha fixa); mostra o rosto da arte de corpo inteiro. */
+function QuadroDoAvatar({ avatarId, classeId, nome, tamanho }: { avatarId: string; classeId: string; nome: string; tamanho: number }) {
+  return (
+    <span className="shrink-0 block overflow-hidden bg-[#16120E]" style={{ width: `${tamanho}cqw`, height: `${tamanho}cqw`, border: '0.5cqw solid #B2A66C', boxShadow: '0 0 0 0.3cqw #05070D' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={resolveAvatarSrc(e.avatarId, e.classeId)} alt={`Avatar de ${e.nome}`} style={getAvatarFaceStyle(e.avatarId, e.classeId)} className="w-full h-full select-none pointer-events-none" />
+      <img src={resolveAvatarSrc(avatarId, classeId)} alt={`Avatar de ${nome}`} draggable={false} className="w-full h-full select-none pointer-events-none" style={{ objectFit: 'cover', objectPosition: '50% 10%', transform: 'scale(1.9)', transformOrigin: '50% 12%' }} />
     </span>
   );
 }
 
-/** O pódio: os 3 primeiros sobre os pedestais (1º no centro, 2º à esquerda, 3º à direita). */
+/** O pódio: os 3 primeiros em pé sobre os pedestais (1º no centro, 2º à esquerda, 3º à direita), com o feixe de luz e o número de cada lugar. */
 function Podio({ entradas, unidade }: { entradas: EntradaDoRanking[]; unidade: readonly [string, string] }) {
   return (
-    <div role="list" aria-label="Pódio" className="relative w-full" style={{ aspectRatio: '1536 / 965' }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={PODIO} alt="" aria-hidden="true" draggable={false} className="absolute inset-0 w-full h-full" style={{ ...pixel, mixBlendMode: 'lighten' }} />
-      {LUGARES.map((l, i) => {
-        const e = entradas[i];
-        return (
-          <div key={i} role="listitem" aria-label={e ? `${i + 1}º lugar: ${e.nome}, ${e.valor} ${e.valor === 1 ? unidade[0] : unidade[1]}` : `${i + 1}º lugar vago`}>
-            <div className="absolute flex justify-center" style={{ left: `${l.x}%`, top: `${l.topo}%`, transform: 'translate(-50%, -100%)', paddingBottom: '0.4cqw' }}>
-              {e ? (
-                <AvatarDoRanking e={e} tamanho={l.tamanho} destaque={i === 0} />
-              ) : (
-                <span className="rounded-full flex items-center justify-center border-dashed border-[#3A5B7A] bg-[#080C16]/70" style={{ width: `${l.tamanho}cqw`, height: `${l.tamanho}cqw`, borderWidth: '0.5cqw' }}>
-                  <span className={`${TEXTO_PIXEL} text-[5cqw] font-bold text-[#5E7390]`}>?</span>
-                </span>
+    <div className="relative w-full pt-[8cqw]">
+      <div role="list" aria-label="Pódio" className="relative w-full" style={{ aspectRatio: '1536 / 965' }}>
+        {LUGARES.map((l, i) => (
+          <React.Fragment key={`f${i}`}>
+            <span aria-hidden="true" className="absolute" style={{ left: `${l.x}%`, top: `${l.topo - (l.altura / 58.5) * 100 - 2}%`, bottom: `${100 - l.topo}%`, width: `${l.feixe}cqw`, transform: 'translateX(-50%)', background: `linear-gradient(180deg, ${FEIXES_DO_PODIO[i]}00 0%, ${FEIXES_DO_PODIO[i]}55 55%, ${FEIXES_DO_PODIO[i]}99 100%)`, clipPath: 'polygon(14% 0, 86% 0, 100% 100%, 0 100%)' }} />
+            <span aria-hidden="true" className="absolute font-cinzel font-black leading-none" style={{ left: `${l.x}%`, top: `${l.topo - (l.altura / 58.5) * 100 * 0.55}%`, transform: 'translate(-50%, -50%)', fontSize: `${l.altura * 0.62}cqw`, color: `${FEIXES_DO_PODIO[i]}`, opacity: 0.32 }}>{i + 1}</span>
+          </React.Fragment>
+        ))}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={PODIO} alt="" aria-hidden="true" draggable={false} className="absolute inset-0 w-full h-full" style={{ ...pixel, mixBlendMode: 'lighten', WebkitMaskImage: 'radial-gradient(ellipse 62% 70% at 50% 58%, #000 70%, transparent 100%)', maskImage: 'radial-gradient(ellipse 62% 70% at 50% 58%, #000 70%, transparent 100%)' }} />
+        {LUGARES.map((l, i) => {
+          const e = entradas[i];
+          return (
+            <div key={i} role="listitem" aria-label={e ? `${i + 1}º lugar: ${e.nome}, ${e.valor} ${e.valor === 1 ? unidade[0] : unidade[1]}` : `${i + 1}º lugar vago`}>
+              <div className="absolute flex justify-center" style={{ left: `${l.x}%`, top: `${l.topo}%`, transform: 'translate(-50%, -100%)', marginTop: '0.6cqw' }}>
+                {e ? (
+                  <Personagem e={e} altura={l.altura} />
+                ) : (
+                  <span className={`${TEXTO_PIXEL} font-bold text-[#3A5B7A] leading-none`} style={{ fontSize: `${l.altura * 0.5}cqw` }}>?</span>
+                )}
+              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={MEDALHAS_DO_PODIO[i]} alt="" aria-hidden="true" draggable={false} className="absolute object-contain" style={{ left: `${l.x}%`, top: `${l.medalha}%`, width: '8cqw', height: '8cqw', transform: 'translate(-50%, -50%)', ...pixel }} />
+              <p className="absolute text-center font-cinzel font-extrabold leading-none text-[#F5F3E0]" style={{ left: `${l.x}%`, top: `${l.nome}%`, width: `${l.larguraTexto}cqw`, transform: 'translate(-50%, -50%)', fontSize: '2.3cqw', textShadow: CONTORNO }}>
+                <span className="block truncate">{e ? e.nome : 'Vago'}</span>
+              </p>
+              {e && (
+                <p className="absolute text-center font-[family-name:var(--font-silk)] font-bold leading-none text-[#FFF3C4] tabular-nums" style={{ left: `${l.x}%`, top: `${l.valor}%`, width: `${l.larguraTexto}cqw`, transform: 'translate(-50%, -50%)', fontSize: '2.9cqw', textShadow: CONTORNO }}>
+                  {formatarCompacto(e.valor)}
+                </p>
               )}
             </div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={MEDALHAS_DO_PODIO[i]} alt="" aria-hidden="true" draggable={false} className="absolute object-contain" style={{ left: `${l.x}%`, top: `${l.medalha}%`, width: '8cqw', height: '8cqw', transform: 'translate(-50%, -50%)', ...pixel }} />
-            <p className="absolute text-center font-cinzel font-extrabold leading-none text-[#F5F3E0]" style={{ textShadow: '0.25cqw 0 0 #05070D, -0.25cqw 0 0 #05070D, 0 0.25cqw 0 #05070D, 0 -0.25cqw 0 #05070D', left: `${l.x}%`, top: `${l.nome}%`, width: `${l.larguraTexto}cqw`, transform: 'translate(-50%, -50%)', fontSize: '2.3cqw' }}>
-              <span className="block truncate">{e ? e.nome : 'Vago'}</span>
-            </p>
-            {e && (
-              <p className="absolute text-center font-[family-name:var(--font-silk)] font-bold leading-none text-[#FFF3C4] tabular-nums" style={{ left: `${l.x}%`, top: `${l.valor}%`, width: `${l.larguraTexto}cqw`, transform: 'translate(-50%, -50%)', fontSize: '2.9cqw', textShadow: '0.3cqw 0 0 #05070D, -0.3cqw 0 0 #05070D, 0 0.3cqw 0 #05070D, 0 -0.3cqw 0 #05070D' }}>
-                {formatarCompacto(e.valor)}
-              </p>
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-/** O cartão de seleção de um ranking: a arte grande; o escolhido ganha a moldura ciano e o brilho. */
-function CartaoDoRanking({ c, ativo, aoEscolher }: { c: CriterioDeRanking; ativo: boolean; aoEscolher: () => void }) {
-  const arte = ARTE_DO_RANKING[c];
+/** Uma linha do ranking como na referência: a posição numa aba quadrada, o avatar, o nome e o valor numa pílula com o ícone. */
+function Linha({ posicao, avatarId, classeId, nome, subtitulo, valor, unidade, icone, eu = false }: { posicao: number; avatarId: string; classeId: string; nome: string; subtitulo: string; valor: string; unidade: string; icone: string; eu?: boolean }) {
   return (
-    <button type="button" aria-pressed={ativo} aria-label={NOME_DO_RANKING[c]} onClick={aoEscolher} className="relative block w-full cursor-pointer active:translate-y-px" style={{ aspectRatio: '16 / 9', filter: ativo ? 'drop-shadow(0 0 2cqw rgba(111,227,238,0.6))' : 'brightness(0.6) saturate(0.7)', transition: 'filter 150ms' }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      {arte.icone ? (
-        <>
-          <span aria-hidden="true" className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 35%, #3A2A66 0%, #151038 55%, #080A1C 100%)', border: '0.5cqw solid #B2A66C' }} />
+    <li className="flex items-stretch gap-[1.6cqw] border" style={{ borderColor: eu ? '#3AB8D0' : '#2B5C80', background: eu ? 'linear-gradient(90deg, #0B3A52 0%, #0A2740 60%, #08172B 100%)' : 'linear-gradient(90deg, #12233A 0%, #0B1626 70%, #080F1C 100%)', boxShadow: eu ? 'inset 0 0 0 0.3cqw #6FE3EE55' : 'inset 0 0 0 0.3cqw #B2A66C33' }}>
+      <span className="flex items-center justify-center w-[11cqw] shrink-0 border-r border-[#1F3550] bg-[#05101D]/70">
+        <span className="font-cinzel font-black text-[4.4cqw] leading-none tabular-nums" style={{ color: eu ? '#6FE3EE' : '#E7C46A', textShadow: CONTORNO }}>{posicao}</span>
+      </span>
+      <span className="flex items-center py-[1cqw]"><QuadroDoAvatar avatarId={avatarId} classeId={classeId} nome={nome} tamanho={11} /></span>
+      <span className="flex-1 min-w-0 flex flex-col justify-center leading-tight">
+        <span className="font-cinzel font-extrabold text-[3.1cqw] text-[#F5F3E0] truncate" style={{ textShadow: CONTORNO }}>{nome}</span>
+        <span className={`${TEXTO_PIXEL} text-[1.9cqw] text-[#9CC4E0] truncate`}>{subtitulo}</span>
+      </span>
+      <span className="flex items-center pr-[1.6cqw]">
+        <span className="pilula-pixel flex items-center gap-[1cqw] pl-[0.8cqw] pr-[1.6cqw] py-[0.6cqw]" title={`${valor} ${unidade}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={arte.src} alt="" aria-hidden="true" draggable={false} className="absolute left-1/2 top-[6%] h-[58%] -translate-x-1/2 object-contain" style={{ imageRendering: 'pixelated' }} />
-        </>
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={arte.src} alt="" aria-hidden="true" draggable={false} className="absolute inset-0 w-full h-full" style={{ objectFit: 'cover' }} />
-      )}
-      {!arte.comTitulo && (
-        <span className="absolute inset-x-[6%] bottom-[8%] flex items-center justify-center py-[1cqw] bg-[#05070D]/80 border border-[#B2A66C]">
-          <span className="font-cinzel font-extrabold uppercase text-[3.4cqw] tracking-wider text-[#F5F3E0] [text-shadow:1px_1px_0_#05070D]">{NOME_DO_RANKING[c]}</span>
+          <img src={icone} alt="" aria-hidden="true" draggable={false} className="w-[5.6cqw] h-[5.6cqw] object-contain shrink-0" style={pixel} />
+          <span className={`${TEXTO_PIXEL} text-[2.8cqw] font-bold text-[#F5F3E0] tabular-nums whitespace-nowrap`}>{valor}</span>
         </span>
-      )}
-      {ativo && <span aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ boxShadow: 'inset 0 0 0 0.7cqw #6FE3EE' }} />}
-    </button>
+      </span>
+    </li>
   );
 }
 
 /**
- * Ranking (7.1) em pixel (kit azul e dourado): as 4 seleções em cartões com a arte das provações, o pódio com os 3
- * primeiros, a lista do 4º em diante e, embaixo, a sua posição. O retrato é renovado a cada 30 minutos no servidor.
+ * Ranking (7.1) em pixel (kit azul e dourado), na disposição da referência: o pódio com os 3 primeiros de corpo inteiro,
+ * os títulos de coluna, a lista do 4º em diante, a sua linha fixa e, embaixo, a seta de voltar e as categorias com
+ * emblema. O Poder Total é a categoria principal, mas ainda não tem dados no servidor (aba bloqueada, "em breve").
+ * O retrato é renovado a cada 30 minutos no servidor.
  */
-export function RankingScreen({ tokenFresco }: { tokenFresco: () => Promise<string | null> }) {
-  const [criterio, setCriterio] = useState<CriterioDeRanking>('nivel');
+export function RankingScreen({ tokenFresco, character }: { tokenFresco: () => Promise<string | null>; character?: CharacterDocument }) {
+  const [aba, setAba] = useState<AbaDoRanking>('nivel');
   const [dados, setDados] = useState<Resposta | null>(null);
   const [erro, setErro] = useState(false);
+  const definicao = ABAS_DO_RANKING.find((a) => a.id === aba)!;
+  const bloqueada = !!definicao.bloqueada;
+  const criterio: CriterioDeRanking = aba === 'poder' ? 'nivel' : aba;
 
   const carregar = useCallback(async () => {
     setErro(false);
@@ -125,15 +143,16 @@ export function RankingScreen({ tokenFresco }: { tokenFresco: () => Promise<stri
 
   useEffect(() => {
     setDados(null);
-    void carregar();
-  }, [carregar]);
+    if (!bloqueada) void carregar();
+  }, [carregar, bloqueada]);
 
   const unidade = UNIDADE_DO_RANKING[criterio];
   const [singular, plural] = unidade;
   const resto = dados?.entradas.filter((e) => e.posicao > 3) ?? [];
-  const meu = dados
-    ? dados.estouEscondido ? 'Você está escondido deste ranking' : dados.minhaPosicao ? `Sua posição: ${dados.minhaPosicao}º` : 'Você ainda não está neste ranking'
-    : erro ? 'Não foi possível carregar o ranking agora' : 'Carregando...';
+  const minhaEntrada = dados?.minhaPosicao ? dados.entradas.find((e) => e.posicao === dados.minhaPosicao) : undefined;
+  const textoDoValor = (v: number) => formatarCompacto(v);
+  const explicacao = bloqueada ? EXPLICACAO_DO_PODER : EXPLICACAO_DO_RANKING[criterio];
+  const aviso = dados?.estouEscondido ? 'Você está escondido deste ranking' : dados && !dados.minhaPosicao ? 'Você ainda não está neste ranking' : null;
 
   return (
     <main className="fixed inset-0 overflow-hidden select-none bg-[#05070D]">
@@ -142,23 +161,22 @@ export function RankingScreen({ tokenFresco }: { tokenFresco: () => Promise<stri
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={FUNDO_DA_MOCHILA} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full pointer-events-none" style={{ objectFit: 'fill', zIndex: -1 }} />
 
-        <header className="flex items-center gap-[1.4cqw] px-[3.4cqw] pt-[3.4cqw]">
-          <Link href="/menu" aria-label="Voltar ao Menu" className="w-[9cqw] h-[9cqw] shrink-0 cursor-pointer active:translate-y-px">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={KIT_DA_FORJA.voltar} alt="" aria-hidden="true" className="w-full h-full object-contain" style={pixel} />
-          </Link>
-          <BarraDeTitulo titulo="Ranking" className="w-[58cqw]" />
+        <header className="flex items-center justify-center px-[3.4cqw] pt-[3.4cqw]">
+          <BarraDeTitulo titulo={definicao.nome} className="w-[66cqw]" />
         </header>
 
-        <div className="flex-1 min-h-0 overflow-y-auto forja-rolagem px-[3.4cqw] pt-[2.4cqw] pb-[1cqw] flex flex-col gap-[2cqw]">
-          <nav aria-label="Rankings" className="grid grid-cols-2 gap-[1.6cqw]">
-            {CRITERIOS_DE_RANKING.map((c) => (
-              <CartaoDoRanking key={c} c={c} ativo={c === criterio} aoEscolher={() => setCriterio(c)} />
-            ))}
-          </nav>
-          <p className={`${TEXTO_PIXEL} text-[2.3cqw] text-center text-[#9CC4E0] leading-snug`}>{EXPLICACAO_DO_RANKING[criterio]}</p>
+        <div className="flex-1 min-h-0 overflow-y-auto forja-rolagem px-[3.4cqw] pt-[1.4cqw] pb-[1cqw] flex flex-col gap-[1.6cqw]">
+          <p className={`${TEXTO_PIXEL} text-[2.2cqw] text-center text-[#9CC4E0] leading-snug`}>{explicacao}</p>
 
-          {erro ? (
+          {bloqueada ? (
+            <div role="status" className="flex flex-col items-center gap-[2cqw] py-[10cqw]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={definicao.icone} alt="" aria-hidden="true" draggable={false} className="w-[34cqw] h-[34cqw] object-contain opacity-60 grayscale" style={pixel} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={KIT_DA_FORJA.proibido} alt="" aria-hidden="true" className="w-[10cqw] h-[10cqw] object-contain" style={pixel} />
+              <p className="font-cinzel font-extrabold uppercase text-[3.6cqw] text-[#9CD8FF]">Chega em breve</p>
+            </div>
+          ) : erro ? (
             <p role="alert" className={`${TEXTO_PIXEL} text-[2.8cqw] text-center text-[#FFB4B4] py-[6cqw]`}>Não foi possível carregar o ranking agora. Tente de novo em instantes.</p>
           ) : !dados ? (
             <p role="status" className={`${TEXTO_PIXEL} text-[2.8cqw] text-center text-[#8FB3D1] py-[6cqw]`}>Carregando...</p>
@@ -168,24 +186,18 @@ export function RankingScreen({ tokenFresco }: { tokenFresco: () => Promise<stri
             <>
               <Podio entradas={dados.entradas} unidade={unidade} />
               {resto.length > 0 && (
-                <PainelDaForja as="section" aria-label="Do 4º lugar em diante" borda="2.6cqw">
-                  <ol className="flex flex-col pt-[1.6cqw] pb-[0.6cqw]">
-                    {resto.map((e) => {
-                      const eu = dados.minhaPosicao === e.posicao;
-                      return (
-                        <li key={`${e.posicao}-${e.nome}`} className={`flex items-center gap-[2cqw] py-[1.2cqw] px-[1cqw] border-b border-[#1C2D44] ${eu ? 'bg-[#0F3A4A]/70' : ''}`}>
-                          <span className={`font-cinzel w-[8cqw] text-center text-[3.2cqw] font-extrabold tabular-nums ${eu ? 'text-[#6FE3EE]' : 'text-[#E7C46A]'}`}>{e.posicao}º</span>
-                          <AvatarDoRanking e={e} tamanho={9} />
-                          <span className="flex-1 min-w-0 flex flex-col leading-tight">
-                            <span className="font-cinzel font-bold text-[2.9cqw] text-[#F5F3E0] truncate [text-shadow:1px_1px_0_#05070D]">{e.nome}</span>
-                            <span className={`${TEXTO_PIXEL} text-[2cqw] text-[#9CC4E0] truncate`}>{CLASSES_MAP[e.classeId]?.nome ?? e.classeId} · nível {e.nivel}</span>
-                          </span>
-                          <span className={`${TEXTO_PIXEL} text-[2.5cqw] font-bold text-[#F5F3E0] whitespace-nowrap tabular-nums`}>{formatarCompacto(e.valor)} {e.valor === 1 ? singular : plural}</span>
-                        </li>
-                      );
-                    })}
+                <>
+                  <div aria-hidden="true" className="grid items-center font-cinzel font-bold text-[2.3cqw] text-[#C9B27A] px-[1cqw]" style={{ gridTemplateColumns: '11cqw 1fr auto' }}>
+                    <span>Posição</span>
+                    <span className="pl-[2cqw]">Informações do jogador</span>
+                    <span className="capitalize pr-[2cqw]">{plural}</span>
+                  </div>
+                  <ol aria-label="Do 4º lugar em diante" className="flex flex-col gap-[1.2cqw]">
+                    {resto.map((e) => (
+                      <Linha key={`${e.posicao}-${e.nome}`} posicao={e.posicao} avatarId={e.avatarId} classeId={e.classeId} nome={e.nome} subtitulo={`${CLASSES_MAP[e.classeId]?.nome ?? e.classeId} · nível ${e.nivel}`} valor={textoDoValor(e.valor)} unidade={e.valor === 1 ? singular : plural} icone={definicao.icone} eu={dados.minhaPosicao === e.posicao} />
+                    ))}
                   </ol>
-                </PainelDaForja>
+                </>
               )}
               <p className={`${TEXTO_PIXEL} text-[1.9cqw] text-center text-[#6F8CA8] leading-snug`}>Atualizado em {new Date(dados.atualizadoEm).toLocaleString('pt-BR')}. O ranking é renovado a cada 30 minutos.</p>
             </>
@@ -195,13 +207,42 @@ export function RankingScreen({ tokenFresco }: { tokenFresco: () => Promise<stri
           </div>
         </div>
 
-        <div className="px-[3.4cqw] pt-[1.2cqw] pb-[3cqw]">
-          <div className="relative w-full" style={{ aspectRatio: '415 / 64', maxWidth: '78%', margin: '0 auto' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={KIT_DA_FORJA.barraStatus} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full" style={{ ...pixel, objectFit: 'fill' }} />
-            <p role="status" className="absolute inset-0 flex items-center justify-center px-[6%] text-center font-cinzel font-bold text-[3cqw] leading-tight text-[#DFF3FF] [text-shadow:1px_1px_0_#05070D]">{meu}</p>
+        {/* A sua linha, fixa acima das categorias */}
+        {dados && !bloqueada && (dados.minhaPosicao || aviso) && (
+          <div className="px-[3.4cqw] pt-[1cqw]">
+            {dados.minhaPosicao && (minhaEntrada || character) ? (
+              <ol aria-label="Sua posição">
+                <Linha posicao={dados.minhaPosicao} avatarId={minhaEntrada?.avatarId ?? character!.avatarId} classeId={minhaEntrada?.classeId ?? character!.classeId} nome={minhaEntrada?.nome ?? character!.nome} subtitulo={`${CLASSES_MAP[minhaEntrada?.classeId ?? character!.classeId]?.nome ?? ''} · nível ${minhaEntrada?.nivel ?? character!.nivel}`} valor={minhaEntrada ? textoDoValor(minhaEntrada.valor) : '—'} unidade={plural} icone={definicao.icone} eu />
+              </ol>
+            ) : (
+              <p role="status" className="font-cinzel font-bold text-[3cqw] text-center text-[#DFF3FF] py-[1.4cqw] border border-[#2B5C80] bg-[#0A1B2E]">{aviso ?? `Sua posição: ${dados.minhaPosicao}º`}</p>
+            )}
           </div>
-        </div>
+        )}
+
+        {/* EMBAIXO: a seta de voltar e as categorias, com o emblema de cada uma */}
+        <nav aria-label="Rankings" className="flex items-stretch gap-[1.4cqw] px-[3.4cqw] pt-[1.4cqw] pb-[3cqw]">
+          <Link href="/menu" aria-label="Voltar ao Menu" className="w-[11cqw] shrink-0 self-center aspect-square cursor-pointer active:translate-y-px">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={KIT_DA_FORJA.voltar} alt="" aria-hidden="true" className="w-full h-full object-contain" style={pixel} />
+          </Link>
+          <div className="flex-1 grid grid-cols-5 gap-[1cqw]">
+            {ABAS_DO_RANKING.map((a) => {
+              const ativa = a.id === aba;
+              return (
+                <button key={a.id} type="button" aria-pressed={ativa} aria-label={a.bloqueada ? `${a.nome} (em breve)` : a.nome} onClick={() => setAba(a.id)} className="relative flex flex-col items-center gap-[0.4cqw] pt-[1cqw] pb-[0.8cqw] cursor-pointer active:translate-y-px min-w-0" style={{ background: ativa ? 'linear-gradient(180deg, #0F5A6E 0%, #0A2F45 100%)' : 'linear-gradient(180deg, #12233A 0%, #0A1422 100%)', border: `0.5cqw solid ${ativa ? '#6FE3EE' : '#2B5C80'}`, boxShadow: ativa ? '0 0 2cqw rgba(111,227,238,0.55)' : undefined }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={a.icone} alt="" aria-hidden="true" draggable={false} className="w-[10.4cqw] h-[10.4cqw] object-contain" style={{ ...pixel, filter: ativa ? undefined : 'brightness(0.7) saturate(0.8)' }} />
+                  <span className="font-cinzel font-extrabold uppercase text-[1.9cqw] leading-none truncate max-w-full" style={{ color: ativa ? '#F5F3E0' : '#9CC4E0' }}>{a.curto}</span>
+                  {a.bloqueada && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={KIT_DA_FORJA.proibido} alt="" aria-hidden="true" className="absolute -top-[1cqw] -right-[1cqw] w-[4.4cqw] h-[4.4cqw]" style={pixel} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
       </PalcoDaForja>
     </main>
   );
