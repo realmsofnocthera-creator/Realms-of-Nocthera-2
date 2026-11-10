@@ -70,9 +70,9 @@ export function OuroDaForja({ ouro }: { ouro: number }) {
 }
 
 /** A faixa de abas (a ativa em ciano). */
-export function Abas<T extends string>({ abas, ativa, aoMudar, rotulo }: { abas: readonly { id: T; nome: string; rotuloAcessivel?: string; bloqueada?: boolean }[]; ativa: T; aoMudar: (id: T) => void; rotulo: string }) {
+export function Abas<T extends string>({ abas, ativa, aoMudar, rotulo }: { abas: readonly { id: T; nome: string; rotuloAcessivel?: string; bloqueada?: boolean; icone?: string; contagem?: number }[]; ativa: T; aoMudar: (id: T) => void; rotulo: string }) {
   return (
-    <nav aria-label={rotulo} className="grid gap-1" style={{ gridTemplateColumns: `repeat(${abas.length}, 1fr)` }}>
+    <nav aria-label={rotulo} className="grid gap-1" style={{ gridTemplateColumns: `repeat(${abas.length}, minmax(0, 1fr))` }}>
       {abas.map((a) => {
         const on = a.id === ativa;
         return (
@@ -82,14 +82,19 @@ export function Abas<T extends string>({ abas, ativa, aoMudar, rotulo }: { abas:
             aria-pressed={on}
             aria-label={a.rotuloAcessivel}
             onClick={() => aoMudar(a.id)}
-            className={`font-cinzel font-extrabold uppercase text-[2.9cqw] leading-none py-[2.2cqw] whitespace-nowrap cursor-pointer ${on ? 'text-[#0A1A22]' : 'text-[#9CC4E0]'}`}
-            style={{ borderStyle: 'solid', borderWidth: '2cqw 3cqw', borderImage: `url(${on ? KIT_DA_FORJA.abaAtiva : KIT_DA_FORJA.aba}) 20 24 fill / 2cqw 3cqw stretch`, ...pixel }}
+            className={`font-cinzel font-extrabold uppercase leading-none cursor-pointer min-w-0 ${a.icone ? 'text-[2.2cqw] py-[1.2cqw]' : 'text-[2.9cqw] py-[2.2cqw]'} ${on ? 'text-[#0A1A22]' : 'text-[#9CC4E0]'}`}
+            style={{ borderStyle: 'solid', borderWidth: a.icone ? '1.6cqw 1.6cqw' : '2cqw 3cqw', borderImage: `url(${on ? KIT_DA_FORJA.abaAtiva : KIT_DA_FORJA.aba}) 20 24 fill / ${a.icone ? '1.6cqw 1.6cqw' : '2cqw 3cqw'} stretch`, ...pixel }}
           >
+            {a.icone && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={a.icone} alt="" aria-hidden="true" draggable={false} className="block mx-auto w-[6.4cqw] h-[6.4cqw] object-contain mb-[0.8cqw]" style={{ ...pixel, opacity: on ? 1 : 0.75 }} />
+            )}
             {a.bloqueada && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={KIT_DA_FORJA.proibido} alt="" aria-hidden="true" className="inline-block w-[2.8cqw] h-[2.8cqw] mr-[0.6cqw] align-[-0.4cqw]" style={pixel} />
             )}
-            {a.nome}
+            <span className="block truncate">{a.nome}</span>
+            {a.contagem !== undefined && <span className="block mt-[0.5cqw] text-[2cqw] tabular-nums opacity-90">({a.contagem})</span>}
           </button>
         );
       })}
