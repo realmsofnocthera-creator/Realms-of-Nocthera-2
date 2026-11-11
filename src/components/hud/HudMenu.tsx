@@ -27,7 +27,7 @@ export function HudMenu({
   const { colors } = NOCTHERA_THEME;
   // Pontos de aviso: baú de missões, expedição pronta (Provações) e recompensa do Chefe de guildas (Guilda)
   const avisos = useAvisos();
-  const pontoDe = (id: string) => (id === 'provacoes' ? avisos.expedicao : id === 'guilda' ? avisos.guilda : false);
+  const pontoDe = (id: string) => (id === 'provacoes' ? avisos.expedicao : id === 'guilda' ? avisos.guilda : id === 'menu' ? avisos.checkin : false);
 
   const handleProvacoesClick = () => {
     if (onNavigateProvacoes) {
@@ -208,12 +208,12 @@ export function HudMenu({
           })}
         </div>
 
-        {/* Missões diárias e semanais e Check-in, logo acima da barra do Menu (o ponto aparece com baú pronto ou check-in por fazer) */}
+        {/* Missões diárias e semanais, logo acima da barra do Menu (o ponto aparece com baú pronto; o Check-in sinaliza no botão do Menu) */}
         <div className="w-full flex items-end justify-start px-2 sm:px-4 mb-1 sm:mb-1.5">
           <button
             type="button"
             onClick={() => router.push('/missoes')}
-            aria-label={avisos.missoes || avisos.checkin ? 'Missões (há algo para resgatar)' : 'Missões'}
+            aria-label={avisos.missoes ? 'Missões (há algo para resgatar)' : 'Missões'}
             className="caixa-pixel pointer-events-auto relative flex items-center gap-1.5 sm:gap-2 pl-1.5 pr-3 py-1 cursor-pointer transition-transform duration-150 hover:scale-105 active:scale-95"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -227,7 +227,7 @@ export function HudMenu({
             <span className="font-[family-name:var(--font-pixel)] text-[8px] sm:text-[10px] leading-none uppercase text-[#F5E3B3] [text-shadow:1px_1px_0_#1A120B]">
               Missões
             </span>
-            {(avisos.missoes > 0 || avisos.checkin) && <NotificationBadge />}
+            {avisos.missoes > 0 && <NotificationBadge />}
           </button>
         </div>
 
