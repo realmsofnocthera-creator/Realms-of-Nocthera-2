@@ -2,162 +2,91 @@
 
 import React from 'react';
 import { CharacterDocument } from '@/server/characterService';
-import { getRaceById } from '@/rules/races';
-import { getClassById } from '@/rules/classes';
-import { resolveAvatarSrc } from '@/assets/avatars';
 import { calcularPoderTotal, xpParaProximoNivel } from '@/game';
-import { AbaFicha, FichaSidebar } from './FichaSidebar';
-import { NIVEL_DA_ALMA } from '@/rules/almas';
+import { resolveAvatarSrc } from '@/assets/avatars';
+import { FICHA_UI, ICONE_DO_PODER, POSICOES_DA_FICHA } from '@/assets/personagemUi';
+import { TEXTOS_DA_FICHA, textoDaFicha } from '@/rules/textosDaFicha';
+import { formatarCompacto } from '@/rules/numerosCompactos';
 import { FichaAtributos } from './FichaAtributos';
+import type { AbaFicha } from './FichaSidebar';
 
 interface FichaHeroProps {
   character: CharacterDocument;
-  onAvatarChange?: (newAvatarId: string) => void;
   onOpenLupa?: () => void;
-  /** Aba aberta: na de Equipamentos, os espaços tomam o lugar da moldura de atributos. */
+  /** Aba aberta: nas abas Equipamentos e Emblemas, a coluna da direita troca de conteúdo. */
   aba?: AbaFicha;
   onMudarAba?: (aba: AbaFicha) => void;
-  /** Abre a tela da Alma (7.8). */
   onAbrirAlma?: () => void;
   colunaEquipamentos?: React.ReactNode;
-  /** Na aba Emblemas, os 4 espaços de emblema tomam o lugar da moldura de atributos. */
   colunaEmblemas?: React.ReactNode;
   className?: string;
 }
 
-export function FichaHero({
-  character,
-  onOpenLupa,
-  aba = 'personagem',
-  onMudarAba,
-  onAbrirAlma,
-  colunaEquipamentos,
-  colunaEmblemas,
-  className = '',
-}: FichaHeroProps) {
-  const raca = getRaceById(character.racaId);
-  const classe = getClassById(character.classeId);
+const CONTORNO = '0.2cqw 0 0 #0B0610, -0.2cqw 0 0 #0B0610, 0 0.2cqw 0 #0B0610, 0 -0.2cqw 0 #0B0610';
+
+/**
+ * O herói da ficha (arte do Yuri): a arte de corpo inteiro atrás de tudo, a moldura de identidade (nome, nível e XP,
+ * escritos em código) e o painel de atributos à direita, e o selo de Poder Total no canto de baixo.
+ */
+export function FichaHero({ character, onOpenLupa, aba = 'personagem', colunaEquipamentos, colunaEmblemas, className = '' }: FichaHeroProps) {
   const avatarSrc = resolveAvatarSrc(character.avatarId, character.classeId);
-  // Poder Total com o bônus do Reforço de Habilidade (2.2.2) e o do equipamento equipado
+  const t = TEXTOS_DA_FICHA.identidade;
+  // Poder Total: o número que o servidor guarda (atributos efetivos mais as habilidades de armadura)
   const poderTotal =
     character.poderTotal ??
     calcularPoderTotal(character.atributos) +
     Object.values(character.bonusReforco ?? {}).reduce((soma, v) => soma + Number(v || 0), 0) +
     Object.values(character.bonusEquipamento ?? {}).reduce((soma, v) => soma + Number(v || 0), 0);
 
-  // Cálculo de XP e Nível
   const isMaxLevel = character.nivel >= 30;
   let xpNext = 0;
   if (!isMaxLevel) {
     try {
       xpNext = xpParaProximoNivel(character.nivel);
     } catch {
-      xpNext = character.xpAtual || 100;
+      xpNext = 0;
     }
   }
-
-  const xpPercent = isMaxLevel
-    ? 100
-    : xpNext > 0
-    ? Math.min(100, Math.max(0, (character.xpAtual / xpNext) * 100))
-    : 0;
+  const xpPercent = isMaxLevel ? 100 : xpNext > 0 ? Math.min(100, Math.max(0, (character.xpAtual / xpNext) * 100)) : 0;
+  const { barra } = POSICOES_DA_FICHA.identidade;
 
   return (
-    <section
-      aria-label="Herói do Personagem"
-      className={`relative w-full flex-1 min-h-0 flex flex-col justify-between overflow-hidden select-none ${className}`}
-    >
-      {/* Imagem de Corpo Inteiro da Classe/Avatar: posicionada mais à esquerda e por baixo de toda a HUD */}
-      <div className="absolute inset-y-0 left-0 right-16 sm:right-28 flex items-end justify-center pointer-events-none z-0">
+    <section aria-label="Herói do Personagem" className={`relative w-full flex-1 min-h-0 overflow-hidden select-none ${className}`}>
+      {/* A arte de corpo inteiro da classe, por baixo da moldura */}
+      <div className="absolute inset-y-0 left-0 w-[74%] flex items-end justify-center pointer-events-none z-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={avatarSrc}
-          alt={`Arte de corpo inteiro de ${character.nome}`}
-          className="h-[80%] sm:h-[95%] w-auto max-w-[85vw] sm:max-w-md object-contain object-bottom -translate-x-8 sm:-translate-x-14 select-none pointer-events-none drop-shadow-[0_12px_28px_rgba(0,0,0,0.95)]"
-        />
-        {/* Degradê escuro na base da arte para fusão com a moldura inferior */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0D0D0D] via-[#0D0D0D]/40 to-transparent pointer-events-none"
-        />
+        <img src={avatarSrc} alt={`Arte de corpo inteiro de ${character.nome}`} draggable={false} className="h-[100%] w-auto max-w-full object-contain object-bottom -translate-x-[8%] select-none pointer-events-none drop-shadow-[0_1.4cqw_2.6cqw_rgba(0,0,0,0.9)]" />
       </div>
 
-      {/* Camada de Conteúdo Interativo sobre a Arte */}
-      <div className="relative z-10 w-full flex-1 min-h-0 flex flex-col justify-between">
-        {/* TOPO: Sidebar à esquerda + Bloco de Identidade e Moldura de Atributos à direita */}
-        <div className="flex items-start justify-between gap-1.5 sm:gap-2 w-full">
-          {/* BARRA LATERAL (4 botões verticais sem botão de avatar) */}
-          <div className="flex flex-col gap-1.5 pt-0.5 shrink-0">
-            <FichaSidebar aba={aba} onMudarAba={onMudarAba} onAbrirAlma={onAbrirAlma} almaLiberada={character.nivel >= NIVEL_DA_ALMA} />
+      <div className="relative z-10 h-full w-full flex flex-col items-end gap-[1.2cqw] px-[3cqw]">
+        {/* Identidade: nome, nível e a barra de XP */}
+        <div className="relative shrink-0" style={{ width: '47cqw', aspectRatio: '479 / 105' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={FICHA_UI.identidade} alt="" aria-hidden="true" draggable={false} className="absolute inset-0 w-full h-full pointer-events-none" style={{ imageRendering: 'pixelated' }} />
+          <div className="absolute flex items-center justify-between gap-[1cqw]" style={{ left: '9%', right: '5%', top: `${POSICOES_DA_FICHA.identidade.nome.topo}%`, height: `${POSICOES_DA_FICHA.identidade.nome.altura}%` }}>
+            <h1 className="min-w-0 truncate font-cinzel font-extrabold leading-[1.3] text-[#F5F3E0]" style={{ fontSize: '3.8cqw', textShadow: CONTORNO }}>{character.nome}</h1>
+            <span className="shrink-0 font-cinzel font-black leading-none tabular-nums text-[#EDB44C]" style={{ fontSize: '3.3cqw', textShadow: CONTORNO }}>{textoDaFicha(t.nivel, { nivel: character.nivel })}</span>
           </div>
-
-          {/* COLUNA DIREITA: Bloco de Identidade (Nome, Raça, Nível, XP) + Moldura de Atributos */}
-          <div className="flex flex-col items-end gap-1 shrink-0">
-            {/* Bloco de Identidade com fundo degradê roxo escuro */}
-            <div
-              className="w-[clamp(168px,44vw,218px)] rounded-lg p-1.5 sm:p-2 border border-[#8B5CF6]/35 shadow-xl flex flex-col gap-0.5"
-              style={{
-                background:
-                  'linear-gradient(135deg, rgba(35,18,43,0.95) 0%, rgba(23,11,28,0.96) 60%, rgba(13,13,13,0.95) 100%)',
-              }}
-            >
-              <div className="flex items-start justify-between gap-1">
-                <div className="min-w-0 flex-1">
-                  <h1 className="font-cinzel font-bold text-xs sm:text-[13px] text-[#F5F3E0] tracking-wider truncate leading-tight">
-                    {character.nome}
-                  </h1>
-                  <p className="font-cinzel text-[9px] sm:text-[10px] text-[#D5C7A4] tracking-wide truncate">
-                    {raca?.nome || 'Humano'}
-                    {character.linhagem ? ` (${character.linhagem})` : ''} • {classe?.nome || 'Bárbaro'}
-                  </p>
-                </div>
-                <span className="font-cinzel font-bold text-xs sm:text-[13px] text-[#F5C542] shrink-0 tabular-nums">
-                  Nv. {character.nivel}/30
-                </span>
-              </div>
-
-              {/* Barra de XP */}
-              <div className="w-full mt-0.5">
-                <div className="w-full h-1 bg-[#0D0D0D]/90 rounded-full overflow-hidden border border-[#8B5CF6]/30">
-                  <div
-                    className="h-full bg-gradient-to-r from-[#9333EA] via-[#A855F7] to-[#ED8A0C] transition-all duration-300"
-                    style={{ width: `${xpPercent}%` }}
-                  />
-                </div>
-                <div className="flex justify-between items-center text-[8px] sm:text-[8.5px] text-[#D5C7A4]/80 font-cinzel mt-0.5 tabular-nums leading-none">
-                  <span>XP</span>
-                  <span>
-                    {isMaxLevel
-                      ? 'Nível máximo'
-                      : `${character.xpAtual} / ${xpNext}`}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Moldura de Atributos alinhada à direita */}
-            {aba === 'equipamentos' && colunaEquipamentos ? (
-              colunaEquipamentos
-            ) : aba === 'emblemas' && colunaEmblemas ? (
-              colunaEmblemas
-            ) : (
-              <FichaAtributos character={character} onOpenLupa={onOpenLupa} />
-            )}
+          <div role="progressbar" aria-label={t.xp} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(xpPercent)} className="absolute overflow-hidden bg-[#0B0610]" style={{ left: `${barra.esquerda}%`, width: `${barra.largura}%`, top: `${barra.topo}%`, height: `${barra.altura}%` }}>
+            <div className="h-full" style={{ width: `${xpPercent}%`, background: 'linear-gradient(180deg, #A78BFA 0%, #7C3AED 55%, #5B21B6 100%)', boxShadow: '0 0 1.4cqw rgba(139,92,246,0.8)' }} />
+          </div>
+          <div className="absolute flex items-center justify-between font-cinzel font-bold uppercase leading-none tabular-nums text-[#D9CBA6]" style={{ left: '9%', right: '8%', top: `${POSICOES_DA_FICHA.identidade.rodape.topo}%`, height: `${POSICOES_DA_FICHA.identidade.rodape.altura}%`, fontSize: '2.3cqw', textShadow: CONTORNO }}>
+            <span>{t.xp}</span>
+            <span>{isMaxLevel ? t.nivelMaximo : `${formatarCompacto(character.xpAtual)} / ${formatarCompacto(xpNext)}`}</span>
           </div>
         </div>
 
-        {/* BASE: Selo de Poder Total no canto inferior esquerdo */}
-        <div className="flex items-end justify-between pt-1 pb-0.5">
-          <div className="relative inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gradient-to-r from-[#D946EF]/90 via-[#A855F7]/85 to-[#7E22CE]/80 border border-[#F472B6]/60 shadow-[0_0_12px_rgba(217,70,239,0.45)] select-none">
-            {/* Ícone de Chama / Punho estilizado */}
-            <div className="w-4 h-4 rounded bg-[#120F0C] border border-[#F472B6] flex items-center justify-center text-[#F5F3E0] shadow-inner rotate-45 shrink-0">
-              <span className="-rotate-45 font-black text-[9px] text-[#F472B6]">✦</span>
-            </div>
-            <span className="font-cinzel font-black italic text-xs sm:text-sm tracking-wide text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] tabular-nums">
-              {poderTotal >= 1000 ? `${(poderTotal / 1000).toFixed(1)}K` : poderTotal}
-            </span>
-          </div>
+        {/* A coluna da direita: os atributos (ou os espaços da aba Equipamentos/Emblemas) */}
+        <div className="shrink-0" style={{ width: '47cqw' }}>
+          {aba === 'equipamentos' && colunaEquipamentos ? colunaEquipamentos : aba === 'emblemas' && colunaEmblemas ? colunaEmblemas : <FichaAtributos character={character} onOpenLupa={onOpenLupa} />}
         </div>
+      </div>
+
+      {/* BASE: o selo de Poder Total no canto de baixo à esquerda */}
+      <div aria-label={`${TEXTOS_DA_FICHA.poderTotal}: ${poderTotal}`} className="pilula-pixel absolute z-10 flex items-center gap-[1.2cqw] pl-[1cqw] pr-[2.4cqw] py-[0.8cqw]" style={{ left: '3cqw', bottom: '1cqw' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={ICONE_DO_PODER} alt="" aria-hidden="true" draggable={false} className="w-[6.4cqw] h-[6.4cqw] object-contain shrink-0" style={{ imageRendering: 'pixelated' }} />
+        <span className="font-cinzel font-black italic tabular-nums text-[#F5F3E0]" style={{ fontSize: '3.8cqw', textShadow: CONTORNO }}>{poderTotal >= 1000 ? `${(poderTotal / 1000).toFixed(1)}K` : poderTotal}</span>
       </div>
     </section>
   );

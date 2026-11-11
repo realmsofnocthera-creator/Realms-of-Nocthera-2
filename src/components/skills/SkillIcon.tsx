@@ -16,7 +16,8 @@ export interface SkillIconProps {
   isOpen?: boolean;
   onToggle?: () => void;
   className?: string;
-  size?: number;
+  /** Tamanho em px (número) ou em qualquer medida do CSS (texto, ex.: '8cqw'). */
+  size?: number | string;
   badgeIndex?: number | string;
 }
 
@@ -58,7 +59,8 @@ export function SkillIcon({
     }
   };
 
-  const sizeStyle = size ? { width: `${size}px`, height: `${size}px` } : undefined;
+  const medida = typeof size === 'number' ? `${size}px` : size;
+  const sizeStyle = size ? { width: medida, height: medida } : undefined;
   const sizeClasses = size ? '' : 'w-9 h-9 sm:w-10 sm:h-10';
 
   return (
@@ -70,7 +72,7 @@ export function SkillIcon({
         aria-haspopup="dialog"
         aria-expanded={isPopoverOpen}
         onClick={handleClick}
-        style={size ? { width: `${size}px`, height: `${size}px` } : undefined}
+        style={sizeStyle}
         className={`relative ${size ? '' : 'min-w-[40px] min-h-[40px]'} p-0 flex items-center justify-center cursor-pointer transition-transform active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ED8A0C] shrink-0 ${className}`}
       >
         {src ? (

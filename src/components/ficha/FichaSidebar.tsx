@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
-import { FICHA_ASSETS } from '@/rules/fichaAssets';
+import { ABAS_DA_FICHA_UI } from '@/assets/personagemUi';
+import { TEXTOS_DA_FICHA, textoDaFicha } from '@/rules/textosDaFicha';
+import { NIVEL_DA_ALMA } from '@/rules/almas';
 
 export type AbaFicha = 'personagem' | 'equipamentos' | 'emblemas';
 
@@ -15,132 +17,56 @@ interface FichaSidebarProps {
   onMudarAba?: (aba: AbaFicha) => void;
 }
 
+const pixel: React.CSSProperties = { imageRendering: 'pixelated' };
+
+/**
+ * As abas da ficha na barra de cima (arte do Yuri, sem texto): Personagem, Equipamentos, Emblemas e Alma. A aba aberta
+ * brilha; as outras ficam apagadas. O nome de cada aba só aparece para quem usa leitor de tela.
+ */
 export function FichaSidebar({ className = '', aba = 'personagem', onMudarAba, onAbrirAlma, almaLiberada = false }: FichaSidebarProps) {
-  const buttons = [
-    {
-      id: 'personagem',
-      label: 'Personagem',
-      src: FICHA_ASSETS.btnPersonagem,
-      active: aba === 'personagem',
-      invert: true,
-    },
-    {
-      id: 'equipamentos',
-      label: 'Equipamentos',
-      src: FICHA_ASSETS.btnEquipamentos,
-      active: aba === 'equipamentos',
-      invert: false,
-    },
-    {
-      id: 'emblemas',
-      label: 'Emblemas',
-      src: FICHA_ASSETS.btnEmblemas,
-      active: aba === 'emblemas',
-      invert: true,
-    },
-    {
-      id: 'alma',
-      label: 'Alma',
-      src: FICHA_ASSETS.btnAlma,
-      active: false,
-      invert: true,
-    },
+  const t = TEXTOS_DA_FICHA.abas;
+  const botoes = [
+    { id: 'personagem' as const, rotulo: t.personagem, src: ABAS_DA_FICHA_UI.personagem, ativa: aba === 'personagem' },
+    { id: 'equipamentos' as const, rotulo: t.equipamentos, src: ABAS_DA_FICHA_UI.equipamentos, ativa: aba === 'equipamentos' },
+    { id: 'emblemas' as const, rotulo: t.emblemas, src: ABAS_DA_FICHA_UI.emblemas, ativa: aba === 'emblemas' },
+    // a Alma tem tela própria: só aparece quando a ficha sabe abri-la
+    ...(onAbrirAlma ? [{ id: 'alma' as const, rotulo: almaLiberada ? t.alma : textoDaFicha(t.almaBloqueada, { nivel: NIVEL_DA_ALMA }), src: ABAS_DA_FICHA_UI.alma, ativa: false }] : []),
   ];
-
   return (
-    <nav
-      aria-label="Navegação da Ficha"
-      className={`flex flex-col gap-2 sm:gap-2.5 shrink-0 z-20 ${className}`}
-    >
-      {buttons.map((btn) => {
-        const aberta = btn.id === 'personagem' || btn.id === 'equipamentos' || btn.id === 'emblemas' ? (btn.id as AbaFicha) : null;
-        if (!btn.active && aberta && onMudarAba) {
-          return (
-            <button
-              key={btn.id}
-              type="button"
-              aria-label={btn.label}
-              onClick={() => onMudarAba(aberta)}
-              className="relative w-10 h-10 sm:w-11 sm:h-11 min-w-[40px] min-h-[40px] rounded-lg p-1.5 flex items-center justify-center border border-[#B2A66C]/60 cursor-pointer active:scale-95 transition-all"
-              style={{ backgroundColor: 'rgba(13,13,13,0.85)', isolation: 'isolate' }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={btn.src}
-                alt={btn.label}
-                className="w-full h-full object-contain pointer-events-none select-none"
-                style={{ filter: btn.invert ? 'invert(1)' : undefined, mixBlendMode: 'screen' }}
-              />
-            </button>
-          );
-        }
-        if (btn.active) {
-          return (
-            <button
-              key={btn.id}
-              type="button"
-              aria-label={btn.label}
-              aria-current="page"
-              className="relative w-10 h-10 sm:w-11 sm:h-11 min-w-[40px] min-h-[40px] rounded-lg p-1.5 flex items-center justify-center border-2 border-[#ED8A0C] shadow-[0_0_12px_rgba(237,138,12,0.65)] ring-1 ring-[#ED8A0C] cursor-default transition-all"
-              style={{
-                backgroundColor: 'rgba(13,13,13,0.85)',
-                isolation: 'isolate',
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={btn.src}
-                alt={btn.label}
-                className="w-full h-full object-contain pointer-events-none select-none"
-                style={{
-                  filter: btn.invert ? 'invert(1)' : undefined,
-                  mixBlendMode: 'screen',
-                }}
-              />
-            </button>
-          );
-        }
-
-        if (btn.id === 'alma' && onAbrirAlma) {
-          return (
-            <button
-              key={btn.id}
-              type="button"
-              aria-label={almaLiberada ? 'Alma' : 'Alma (abre no nível 25)'}
-              onClick={onAbrirAlma}
-              className="relative w-10 h-10 sm:w-11 sm:h-11 min-w-[40px] min-h-[40px] rounded-lg p-1.5 flex items-center justify-center border border-[#B2A66C]/60 cursor-pointer active:scale-95 transition-all"
-              style={{ backgroundColor: 'rgba(13,13,13,0.85)', isolation: 'isolate', opacity: almaLiberada ? 1 : 0.6 }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={btn.src} alt={btn.label} className="w-full h-full object-contain pointer-events-none select-none" style={{ filter: btn.invert ? 'invert(1)' : undefined, mixBlendMode: 'screen' }} />
-            </button>
-          );
-        }
-
+    <nav aria-label={TEXTOS_DA_FICHA.navegacao} className={`flex items-center gap-[0.8cqw] ${className}`}>
+      {botoes.map((b) => {
+        const alma = b.id === 'alma';
+        // a aba aberta e as que a ficha não sabe trocar ficam desligadas (aria-disabled), como antes
+        const clicavel = alma ? !!onAbrirAlma : !!onMudarAba && !b.ativa;
         return (
-          <div
-            key={btn.id}
-            role="button"
-            aria-label={btn.label}
-            aria-disabled="true"
-            tabIndex={-1}
-            className="relative w-10 h-10 sm:w-11 sm:h-11 min-w-[40px] min-h-[40px] rounded-lg p-1.5 flex items-center justify-center border border-[#B2A66C]/40 opacity-70 cursor-not-allowed select-none"
-            style={{
-              backgroundColor: 'rgba(13,13,13,0.85)',
-              isolation: 'isolate',
+          <button
+            key={b.id}
+            type="button"
+            aria-label={b.rotulo}
+            aria-current={b.ativa ? 'page' : undefined}
+            aria-disabled={clicavel ? undefined : true}
+            tabIndex={clicavel ? undefined : -1}
+            onClick={() => {
+              if (!clicavel) return;
+              if (alma) onAbrirAlma?.();
+              else onMudarAba?.(b.id as AbaFicha);
             }}
+            className={`relative block w-[9.6cqw] shrink-0 active:translate-y-px ${clicavel ? 'cursor-pointer' : 'cursor-default'}`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={btn.src}
-              alt={btn.label}
-              className="w-full h-full object-contain pointer-events-none select-none"
+              src={b.src}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              className="block w-full h-auto select-none pointer-events-none"
               style={{
-                filter: btn.invert ? 'invert(1)' : undefined,
-                mixBlendMode: 'screen',
+                ...pixel,
+                // só a moldura da aba Personagem existe acesa: quando outra aba está aberta, ela fica apagada por filtro
+                filter: b.ativa ? 'drop-shadow(0 0 1.4cqw rgba(255,180,60,0.85))' : b.id === 'personagem' ? 'saturate(0.15) brightness(0.55)' : alma && !almaLiberada ? 'brightness(0.6)' : undefined,
               }}
             />
-          </div>
+          </button>
         );
       })}
     </nav>
