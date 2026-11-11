@@ -12,10 +12,8 @@ import {
   FichaHero,
   FichaHabilidades,
   FichaBannerDesenvolvimento,
-  FichaEquipamentoModal,
+  FichaEquipamentoPixel,
   FichaLupaModal,
-  FichaResumoEquipamento,
-  FichaSlotsEquipamento,
   FichaEmblemaModal,
   FichaResumoEmblemas,
   FichaSlotsEmblema,
@@ -67,7 +65,6 @@ export function CharacterSheet({
   const [lupaOpen, setLupaOpen] = useState(false);
   // A Mochila abre a ficha direto na aba Emblemas (?aba=emblemas); a ficha só aparece depois de carregar o personagem
   const [aba, setAba] = useState<AbaFicha>(abaInicialDaUrl);
-  const [slotAberto, setSlotAberto] = useState<SlotEquipamento | null>(null);
   const [emblemasAberto, setEmblemasAberto] = useState(false);
   const [contaAberta, setContaAberta] = useState(false);
 
@@ -118,34 +115,33 @@ export function CharacterSheet({
           </div>
         )}
 
-        {/* 3) HERÓI: arte, identidade, atributos e Poder Total */}
-        <FichaHero
-          character={character}
-          onOpenLupa={() => setLupaOpen(true)}
-          aba={aba}
-          onMudarAba={onEquiparItem ? setAba : undefined}
-          onAbrirAlma={abrirAlma}
-          colunaEquipamentos={<FichaSlotsEquipamento character={character} onAbrirSlot={setSlotAberto} />}
-          colunaEmblemas={<FichaSlotsEmblema character={character} onAbrir={() => setEmblemasAberto(true)} />}
-        />
-
-        {/* 4) HABILIDADES (na aba Equipamentos ou Emblemas, o resumo dos bônus) */}
         {aba === 'equipamentos' ? (
-          <FichaResumoEquipamento character={character} className="shrink-0" />
-        ) : aba === 'emblemas' ? (
-          <FichaResumoEmblemas character={character} className="shrink-0" />
+          /* 3) EQUIPAMENTOS: os 6 espaços ao redor do personagem, o status em pop-up e a tabela de habilidades */
+          <FichaEquipamentoPixel character={character} onEquiparItem={onEquiparItem} onDesequiparItem={onDesequiparItem} />
         ) : (
-          <FichaHabilidades character={character} activePopoverId={activeSkillPopoverId} onTogglePopover={handleTogglePopover} onEquiparHabilidade={onEquiparHabilidade} className="shrink-0" />
+          <>
+            {/* 3) HERÓI: arte, identidade, atributos e Poder Total */}
+            <FichaHero
+              character={character}
+              onOpenLupa={() => setLupaOpen(true)}
+              aba={aba}
+              onMudarAba={onEquiparItem ? setAba : undefined}
+              onAbrirAlma={abrirAlma}
+              colunaEmblemas={<FichaSlotsEmblema character={character} onAbrir={() => setEmblemasAberto(true)} />}
+            />
+
+            {/* 4) HABILIDADES (na aba Emblemas, o resumo dos bônus) */}
+            {aba === 'emblemas' ? (
+              <FichaResumoEmblemas character={character} className="shrink-0" />
+            ) : (
+              <FichaHabilidades character={character} activePopoverId={activeSkillPopoverId} onTogglePopover={handleTogglePopover} onEquiparHabilidade={onEquiparHabilidade} className="shrink-0" />
+            )}
+
+            {/* 5) BANNER DE DESENVOLVIMENTO */}
+            <FichaBannerDesenvolvimento character={character} className="shrink-0" />
+          </>
         )}
-
-        {/* 5) BANNER DE DESENVOLVIMENTO */}
-        <FichaBannerDesenvolvimento character={character} className="shrink-0" />
       </div>
-
-      {/* 6) ESCOLHA DO ITEM DE UM ESPAÇO (aba Equipamentos) */}
-      {aba === 'equipamentos' && slotAberto && (
-        <FichaEquipamentoModal character={character} slot={slotAberto} onClose={() => setSlotAberto(null)} onEquipar={onEquiparItem} onDesequipar={onDesequiparItem} />
-      )}
 
       {/* 6b) INVENTÁRIO DE EMBLEMAS (aba Emblemas) */}
       {aba === 'emblemas' && emblemasAberto && (

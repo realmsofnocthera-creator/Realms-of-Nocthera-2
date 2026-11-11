@@ -30,6 +30,18 @@ export const TEXTOS_DA_FICHA = {
   habilidades: { titulo: 'Habilidades' },
   desenvolvimento: { titulo: 'Desenvolvimento de personagem', descricao: 'Aprimore e evolua as habilidades do seu personagem.' },
   poderTotal: 'Poder Total',
+  equipamentos: {
+    titulo: 'Equipamentos',
+    menu: 'Status detalhados',
+    vazioNoSlot: 'Vazio',
+    escolher: 'Toque num espaço para escolher o item.',
+    equipar: 'Equipar',
+    desequipar: 'Desequipar',
+    equipado: 'Equipado',
+    semItens: 'Você ainda não tem nada para este espaço. Fabrique no Ferreiro.',
+    status: { titulo: 'Status', arma: 'Arma', bonus: 'Bônus do equipamento', vazio: 'Nada equipado.', hp: 'HP', defesa: 'Defesa' },
+    tabela: { titulo: 'Habilidades de armadura', semHabilidades: 'Nenhuma habilidade de armadura ativa.', total: 'Total', naoVale: 'ainda não vale no combate' },
+  },
   conta: { menu: 'Menu da conta', titulo: 'Conta', desconectar: 'Desconectar da conta', fechar: 'Fechar' },
 } as const;
 

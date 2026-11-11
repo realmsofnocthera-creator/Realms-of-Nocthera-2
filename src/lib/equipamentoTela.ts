@@ -194,3 +194,44 @@ export function resumoDoEquipamento(c: Pick<CharacterDocument, 'armas' | 'armadu
       .sort((x, y) => y.nivel - x.nivel || x.nome.localeCompare(y.nome)),
   };
 }
+
+export interface LinhaDaTabelaDeHabilidades {
+  id: string;
+  nome: string;
+  /** O nível que cada peça equipada dá (só as peças que têm a habilidade). */
+  porPeca: Partial<Record<EspacoArmadura, number>>;
+  /** A soma entre as peças, limitada ao nível máximo da habilidade. */
+  total: number;
+  nivelMaximo: number;
+  /** O combate já usa o efeito desta habilidade; as outras só somam na ficha por enquanto. */
+  aplicada: boolean;
+}
+
+/**
+ * A tabela "habilidade × peça": quais habilidades de armadura estão valendo e de qual das 5 peças equipadas vem cada
+ * nível. O total é o mesmo que o combate usa (`calcularFichaEquipamento`). Do maior nível para o menor, depois por nome.
+ */
+export function tabelaDeHabilidades(c: Pick<CharacterDocument, 'armas' | 'armaduras' | 'equipamento'>): LinhaDaTabelaDeHabilidades[] {
+  const ficha = calcularFichaEquipamento(c.equipamento, c.armas, c.armaduras);
+  const porHabilidade = new Map<string, Partial<Record<EspacoArmadura, number>>>();
+  for (const espaco of ESPACOS_ARMADURA.map((e) => e.id)) {
+    const equipadaId = c.equipamento?.armadura?.[espaco];
+    const peca = equipadaId ? (c.armaduras ?? []).find((a) => a.id === equipadaId) : undefined;
+    const def = peca ? PECAS_ARMADURA_MAP[peca.pecaId] : undefined;
+    for (const h of def?.habilidades ?? []) {
+      const atual = porHabilidade.get(h.id) ?? {};
+      atual[espaco] = (atual[espaco] ?? 0) + h.nivel;
+      porHabilidade.set(h.id, atual);
+    }
+  }
+  return Object.entries(ficha.habilidades)
+    .map(([id, total]) => ({
+      id,
+      nome: HABILIDADES_ARMADURA_MAP[id]?.nome ?? id,
+      porPeca: porHabilidade.get(id) ?? {},
+      total,
+      nivelMaximo: HABILIDADES_ARMADURA_MAP[id]?.nivelMaximo ?? total,
+      aplicada: HABILIDADES_ARMADURA_APLICADAS.has(id),
+    }))
+    .sort((x, y) => y.total - x.total || x.nome.localeCompare(y.nome));
+}
