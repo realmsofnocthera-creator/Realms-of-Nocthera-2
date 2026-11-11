@@ -10,11 +10,10 @@ type Token = () => Promise<string | null>;
 const OURO = '#C8A656';
 const VERMELHO = '#E5484D';
 const VERDE = '#7BC47F';
-type Aba = 'diarias' | 'semanais' | 'checkin';
+type Aba = 'diarias' | 'semanais';
 const ABAS: readonly { id: Aba; nome: string }[] = [
   { id: 'diarias', nome: 'Diárias' },
   { id: 'semanais', nome: 'Semanais' },
-  { id: 'checkin', nome: 'Check-in' },
 ];
 
 async function chamar(tokenFresco: Token, corpo?: unknown): Promise<{ ok: boolean; dados: Record<string, unknown> }> {
@@ -34,7 +33,7 @@ async function chamar(tokenFresco: Token, corpo?: unknown): Promise<{ ok: boolea
 function abaInicial(): Aba {
   if (typeof window === 'undefined') return 'diarias';
   const aba = new URLSearchParams(window.location.search).get('aba');
-  return aba === 'semanais' || aba === 'checkin' ? aba : 'diarias';
+  return aba === 'semanais' ? aba : 'diarias';
 }
 
 function tempoAte(iso: string, agora: number): string {
@@ -133,7 +132,7 @@ export function MissoesScreen({ tokenFresco }: { tokenFresco: Token }) {
   }
 
   const pontoDaAba = (a: Aba) =>
-    !estado ? false : a === 'checkin' ? !estado.checkin.feitoHoje : (a === 'diarias' ? estado.bauDiario : estado.bauSemanal).some((d) => d.aberto && !d.resgatado);
+    !estado ? false : (a === 'diarias' ? estado.bauDiario : estado.bauSemanal).some((d) => d.aberto && !d.resgatado);
 
   return (
     <main className="min-h-dvh w-full flex flex-col items-center px-2.5 sm:px-5 py-3 sm:py-6" style={{ backgroundColor: colors.background.primary, color: colors.text.primary }}>
@@ -178,26 +177,6 @@ export function MissoesScreen({ tokenFresco }: { tokenFresco: Token }) {
                 <p className="text-[11px]" style={{ color: colors.text.secondary }}>Reiniciam na segunda-feira, em {tempoAte(estado.fechaSemanaEm, agora)}.</p>
                 <Bau titulo="Baú semanal" degraus={estado.bauSemanal} completas={estado.semanais.filter((m) => m.completa).length} ocupado={ocupado} onResgatar={() => void agir({ acao: 'bau', tipo: 'semanal' })} />
                 <ListaDeMissoes missoes={estado.semanais} />
-              </>
-            )}
-
-            {aba === 'checkin' && (
-              <>
-                <p className="text-xs" style={{ color: colors.text.secondary }}>Entre todo dia para ganhar a recompensa do calendário. Se faltar um dia, o calendário continua de onde parou.</p>
-                <div>
-                  <Botao disabled={ocupado || estado.checkin.feitoHoje} onClick={() => void agir({ acao: 'checkin' })}>
-                    {estado.checkin.feitoHoje ? 'Check-in de hoje feito' : `Fazer o Check-in (dia ${estado.checkin.proximoDia})`}
-                  </Botao>
-                </div>
-                <ul className="grid grid-cols-5 gap-1.5" aria-label="Calendário do Check-in">
-                  {estado.checkin.calendario.map((d) => (
-                    <li key={d.dia} className="rounded-sm border px-1 py-1 flex flex-col items-center gap-0.5 text-center" style={{ borderColor: d.hoje ? OURO : d.especial ? '#8E6BBF' : '#4A3F2A', backgroundColor: d.hoje ? '#3A2F18' : colors.background.secondary, opacity: d.feito ? 0.55 : 1 }}>
-                      <span className="text-[10px]" style={{ color: colors.text.secondary }}>Dia {d.dia}</span>
-                      {d.feito ? <Check className="w-4 h-4" style={{ color: VERDE }} aria-label="Feito" /> : <span className="text-[9px] leading-tight">{d.recompensa.join(' + ')}</span>}
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-[10px]" style={{ color: colors.text.secondary }}>Os dias com borda roxa (7, 14, 21 e 30) dão Diamantes.</p>
               </>
             )}
           </>

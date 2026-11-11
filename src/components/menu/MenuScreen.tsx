@@ -13,6 +13,7 @@ import { NotificationBadge } from '@/components/hud/NotificationBadge';
 import { degrausProntos } from '@/rules/conquistas';
 import { useAvisos } from '@/lib/useAvisos';
 import { useAnunciosNovos } from '@/lib/useAnunciosNovos';
+import { CheckinPopup } from '@/components/checkin/CheckinPopup';
 
 export interface MenuScreenProps {
   personagem?: CharacterDocument | null;
@@ -48,6 +49,8 @@ export function MenuScreen({ personagem, onFechar }: MenuScreenProps) {
   const anuncioNovo = useAnunciosNovos();
   const { colors } = NOCTHERA_THEME;
   const router = useRouter();
+  // O Check-in abre sobre o Menu (saiu das Missões)
+  const [checkinAberto, setCheckinAberto] = React.useState(false);
 
   return (
     <main
@@ -169,7 +172,7 @@ export function MenuScreen({ personagem, onFechar }: MenuScreenProps) {
                   if (item.id === 'buscar') router.push('/buscar');
                   if (item.id === 'colecao') router.push('/colecao');
                   if (item.id === 'conquistas') router.push('/conquistas');
-                  if (item.id === 'checkin') router.push('/missoes?aba=checkin');
+                  if (item.id === 'checkin') setCheckinAberto(true);
                   if (item.id === 'ranking') router.push('/ranking');
                   // O card Resgate abre a loja de ouro (o Mercado ganha um card próprio depois; a rota /mercado continua existindo)
                   if (item.id === 'resgate') router.push('/resgate');
@@ -211,6 +214,7 @@ export function MenuScreen({ personagem, onFechar }: MenuScreenProps) {
           <AtalhoMestre />
         </div>
       </div>
+      {checkinAberto && <CheckinPopup aoFechar={() => setCheckinAberto(false)} />}
     </main>
   );
 }
