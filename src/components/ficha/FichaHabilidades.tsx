@@ -10,7 +10,8 @@ import { habilidadeDoKitLiberada, type ChaveEspaco } from '@/lib/subclasseTela';
 import { getRaceById } from '@/rules/races';
 import { getClassById } from '@/rules/classes';
 import { getRaceSkillIcon, getClassSkillIcon } from '@/rules/skillIcons';
-import { FICHA_ASSETS } from '@/rules/fichaAssets';
+import { FICHA_UI, POSICOES_DA_FICHA } from '@/assets/personagemUi';
+import { TEXTOS_DA_FICHA } from '@/rules/textosDaFicha';
 import { SkillIcon } from '@/components/skills';
 
 interface FichaHabilidadesProps {
@@ -185,124 +186,57 @@ export function FichaHabilidades({
     );
   }
 
-  const row1 = items.slice(0, 4);
-  const row2 = items.slice(4);
+  const { lado, centros } = POSICOES_DA_FICHA.habilidades;
 
   return (
     <>
-    {erroTroca && (
-      <p role="alert" className="text-[10px] text-center text-[#F5A6A6] font-semibold shrink-0 leading-tight">
-        {erroTroca}
-      </p>
-    )}
-    <section
-      aria-label="Habilidades"
-      className={`relative w-full aspect-[1279/700] max-h-[175px] sm:max-h-[195px] bg-no-repeat bg-center bg-[length:100%_100%] shadow-2xl select-none mx-auto shrink-0 ${className}`}
-      style={{
-        backgroundImage: `url(${FICHA_ASSETS.molduraHabilidades})`,
-      }}
-    >
-      {/* Contêiner seguro bem dentro do pergaminho (top 20% a bottom 21%) */}
-      <div className="absolute inset-x-[8%] sm:inset-x-[10%] top-[20%] bottom-[21%] flex flex-col justify-around py-0.5">
-        {/* Linha 1: 4 habilidades */}
-        <div className="grid grid-cols-4 items-center justify-items-center w-full gap-x-1 sm:gap-x-2">
-          {row1.map((skill, idx) => (
-            <div
-              key={skill.id}
-              className="flex flex-col items-center justify-start gap-0.5 w-full max-w-[64px]"
-            >
-              <div className="relative">
-                <SkillIcon
-                  id={skill.id}
-                  src={skill.src}
-                  nome={skill.nome}
-                  tipo={skill.tipo}
-                  descricao={skill.descricao}
-                  nivelRequerido={skill.nivelRequerido}
-                  bloqueada={skill.bloqueada}
-                  recargaTurnos={skill.recargaTurnos}
-                  duracaoTurnos={skill.duracaoTurnos}
-                  badgeIndex={idx + 1}
-                  size={30}
-                  isOpen={activePopoverId === skill.id}
-                  onToggle={() => onTogglePopover(skill.id)}
-                />
-                {skill.troca && onEquiparHabilidade && (
-                  <button
-                    type="button"
-                    aria-label={`Trocar ${skill.nome} pela habilidade ${skill.troca.para === 'classe' ? 'da classe' : 'da subclasse'}`}
-                    title={`Usar a ${skill.troca.para === 'classe' ? 'da classe' : 'da subclasse'}`}
-                    disabled={trocando}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (skill.troca) void trocar(skill.troca);
-                    }}
-                    className="absolute -top-1 -right-1.5 w-3.5 h-3.5 rounded-full bg-[#120F0C] border border-[#F5C542] text-[#F5C542] flex items-center justify-center cursor-pointer active:scale-90 disabled:opacity-50 z-20"
-                  >
-                    <RefreshCw className="w-2 h-2" aria-hidden="true" />
-                  </button>
-                )}
-              </div>
-              <span
-                title={skill.nome}
-                className="block font-cinzel font-semibold text-[8px] sm:text-[9px] tracking-tight leading-none text-center truncate w-full px-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)] text-[#D5C7A4]"
-              >
-                {skill.bloqueada ? `Nv. ${skill.nivelRequerido}` : `Nv. ${character.nivel}`}
-              </span>
+      {erroTroca && (
+        <p role="alert" className="text-center text-[#F5A6A6] font-semibold shrink-0 leading-tight" style={{ fontSize: '2.4cqw' }}>
+          {erroTroca}
+        </p>
+      )}
+      <section aria-label={TEXTOS_DA_FICHA.habilidades.titulo} className={`relative mx-auto select-none shrink-0 ${className}`} style={{ width: '94cqw', aspectRatio: '740 / 236' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={FICHA_UI.painelHabilidades} alt="" aria-hidden="true" draggable={false} className="absolute inset-0 w-full h-full pointer-events-none" style={{ imageRendering: 'pixelated' }} />
+        <h2 className="absolute font-cinzel font-extrabold uppercase tracking-wide text-[#EDB44C] leading-none" style={{ left: '14%', top: '8.4%', fontSize: '2.9cqw', textShadow: '0.2cqw 0 0 #0B0610, -0.2cqw 0 0 #0B0610, 0 0.2cqw 0 #0B0610, 0 -0.2cqw 0 #0B0610' }}>
+          {TEXTOS_DA_FICHA.habilidades.titulo}
+        </h2>
+        {items.slice(0, centros.length).map((skill, idx) => (
+          <div key={skill.id} className="absolute flex items-center justify-center" style={{ left: `${centros[idx][0]}%`, top: `${centros[idx][1]}%`, width: `${lado}%`, aspectRatio: '1', transform: 'translate(-50%, -50%)' }}>
+            <div className="relative w-full h-full">
+              <SkillIcon
+                id={skill.id}
+                src={skill.src}
+                nome={skill.nome}
+                tipo={skill.tipo}
+                descricao={skill.descricao}
+                nivelRequerido={skill.nivelRequerido}
+                bloqueada={skill.bloqueada}
+                recargaTurnos={skill.recargaTurnos}
+                duracaoTurnos={skill.duracaoTurnos}
+                size="100%"
+                isOpen={activePopoverId === skill.id}
+                onToggle={() => onTogglePopover(skill.id)}
+              />
+              {skill.troca && onEquiparHabilidade && (
+                <button
+                  type="button"
+                  aria-label={`Trocar ${skill.nome} pela habilidade ${skill.troca.para === 'classe' ? 'da classe' : 'da subclasse'}`}
+                  title={`Usar a ${skill.troca.para === 'classe' ? 'da classe' : 'da subclasse'}`}
+                  disabled={trocando}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (skill.troca) void trocar(skill.troca);
+                  }}
+                  className="absolute -top-[18%] -right-[18%] w-[34%] h-[34%] rounded-full bg-[#120F0C] border border-[#F5C542] text-[#F5C542] flex items-center justify-center cursor-pointer active:scale-90 disabled:opacity-50 z-20"
+                >
+                  <RefreshCw className="w-[60%] h-[60%]" aria-hidden="true" />
+                </button>
+              )}
             </div>
-          ))}
-        </div>
-
-        {/* Linha 2: 3 habilidades centralizadas */}
-        <div className="flex items-center justify-center gap-3 sm:gap-6 w-full">
-          {row2.map((skill, idx) => (
-            <div
-              key={skill.id}
-              className="flex flex-col items-center justify-start gap-0.5 w-full max-w-[64px]"
-            >
-              <div className="relative">
-                <SkillIcon
-                  id={skill.id}
-                  src={skill.src}
-                  nome={skill.nome}
-                  tipo={skill.tipo}
-                  descricao={skill.descricao}
-                  nivelRequerido={skill.nivelRequerido}
-                  bloqueada={skill.bloqueada}
-                  recargaTurnos={skill.recargaTurnos}
-                  duracaoTurnos={skill.duracaoTurnos}
-                  badgeIndex={idx + 5}
-                  size={30}
-                  isOpen={activePopoverId === skill.id}
-                  onToggle={() => onTogglePopover(skill.id)}
-                />
-                {skill.troca && onEquiparHabilidade && (
-                  <button
-                    type="button"
-                    aria-label={`Trocar ${skill.nome} pela habilidade ${skill.troca.para === 'classe' ? 'da classe' : 'da subclasse'}`}
-                    title={`Usar a ${skill.troca.para === 'classe' ? 'da classe' : 'da subclasse'}`}
-                    disabled={trocando}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (skill.troca) void trocar(skill.troca);
-                    }}
-                    className="absolute -top-1 -right-1.5 w-3.5 h-3.5 rounded-full bg-[#120F0C] border border-[#F5C542] text-[#F5C542] flex items-center justify-center cursor-pointer active:scale-90 disabled:opacity-50 z-20"
-                  >
-                    <RefreshCw className="w-2 h-2" aria-hidden="true" />
-                  </button>
-                )}
-              </div>
-              <span
-                title={skill.nome}
-                className="block font-cinzel font-semibold text-[8px] sm:text-[9px] tracking-tight leading-none text-center truncate w-full px-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)] text-[#D5C7A4]"
-              >
-                {skill.bloqueada ? `Nv. ${skill.nivelRequerido}` : `Nv. ${character.nivel}`}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
+          </div>
+        ))}
+      </section>
     </>
   );
 }
