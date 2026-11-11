@@ -53,7 +53,7 @@ describe('Aba Equipamentos da ficha', () => {
 
   it('na barra lateral, Equipamentos só abre quando a ficha sabe trocar de aba', () => {
     const fechada = renderToStaticMarkup(<FichaSidebar />);
-    expect(fechada.match(/aria-disabled="true"/g)).toHaveLength(3);
+    expect(fechada.match(/aria-disabled="true"/g)).toHaveLength(4);
     const aberta = renderToStaticMarkup(<FichaSidebar aba="personagem" onMudarAba={() => {}} />);
     expect(aberta.match(/aria-disabled="true"/g)).toHaveLength(1);
     const naAba = renderToStaticMarkup(<FichaSidebar aba="equipamentos" onMudarAba={() => {}} />);

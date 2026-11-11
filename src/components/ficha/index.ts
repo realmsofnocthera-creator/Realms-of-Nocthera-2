@@ -7,5 +7,7 @@ export { FichaLupaModal } from './FichaLupaModal';
 export { FichaSlotsEquipamento, FichaResumoEquipamento, FichaEquipamentoModal } from './FichaEquipamentos';
 export { FichaEquipamentoPixel } from './FichaEquipamentoPixel';
 export { FichaEmblemasPixel } from './FichaEmblemasPixel';
+export { FichaAlmaPixel } from './FichaAlmaPixel';
+export type { AcaoDaAlma } from './FichaAlmaPixel';
 export { FichaSlotsEmblema, FichaResumoEmblemas, FichaEmblemaModal, Estrelas } from './FichaEmblemas';
 export type { AbaFicha } from './FichaSidebar';

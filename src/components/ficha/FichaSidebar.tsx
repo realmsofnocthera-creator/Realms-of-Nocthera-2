@@ -5,12 +5,11 @@ import { ABAS_DA_FICHA_UI } from '@/assets/personagemUi';
 import { TEXTOS_DA_FICHA, textoDaFicha } from '@/rules/textosDaFicha';
 import { NIVEL_DA_ALMA } from '@/rules/almas';
 
-export type AbaFicha = 'personagem' | 'equipamentos' | 'emblemas';
+export type AbaFicha = 'personagem' | 'equipamentos' | 'emblemas' | 'alma';
 
 interface FichaSidebarProps {
   className?: string;
-  /** A aba Alma (7.8) tem tela própria: abre quando o personagem tem o nível (25); antes disso o botão avisa. */
-  onAbrirAlma?: () => void;
+  /** A aba Alma (7.8) abre na mesma página, mas só tem cartas a partir do nível 25: antes disso ela avisa e fica apagada. */
   almaLiberada?: boolean;
   /** Aba aberta. Sem `onMudarAba`, só a aba Personagem funciona. */
   aba?: AbaFicha;
@@ -23,21 +22,20 @@ const pixel: React.CSSProperties = { imageRendering: 'pixelated' };
  * As abas da ficha na barra de cima (arte do Yuri, sem texto): Personagem, Equipamentos, Emblemas e Alma. A aba aberta
  * brilha; as outras ficam apagadas. O nome de cada aba só aparece para quem usa leitor de tela.
  */
-export function FichaSidebar({ className = '', aba = 'personagem', onMudarAba, onAbrirAlma, almaLiberada = false }: FichaSidebarProps) {
+export function FichaSidebar({ className = '', aba = 'personagem', onMudarAba, almaLiberada = false }: FichaSidebarProps) {
   const t = TEXTOS_DA_FICHA.abas;
   const botoes = [
     { id: 'personagem' as const, rotulo: t.personagem, src: ABAS_DA_FICHA_UI.personagem, ativa: aba === 'personagem' },
     { id: 'equipamentos' as const, rotulo: t.equipamentos, src: ABAS_DA_FICHA_UI.equipamentos, ativa: aba === 'equipamentos' },
     { id: 'emblemas' as const, rotulo: t.emblemas, src: ABAS_DA_FICHA_UI.emblemas, ativa: aba === 'emblemas' },
-    // a Alma tem tela própria: só aparece quando a ficha sabe abri-la
-    ...(onAbrirAlma ? [{ id: 'alma' as const, rotulo: almaLiberada ? t.alma : textoDaFicha(t.almaBloqueada, { nivel: NIVEL_DA_ALMA }), src: ABAS_DA_FICHA_UI.alma, ativa: false }] : []),
+    { id: 'alma' as const, rotulo: almaLiberada ? t.alma : textoDaFicha(t.almaBloqueada, { nivel: NIVEL_DA_ALMA }), src: ABAS_DA_FICHA_UI.alma, ativa: aba === 'alma' },
   ];
   return (
     <nav aria-label={TEXTOS_DA_FICHA.navegacao} className={`flex items-center gap-[0.8cqw] ${className}`}>
       {botoes.map((b) => {
         const alma = b.id === 'alma';
         // a aba aberta e as que a ficha não sabe trocar ficam desligadas (aria-disabled), como antes
-        const clicavel = alma ? !!onAbrirAlma : !!onMudarAba && !b.ativa;
+        const clicavel = !!onMudarAba && !b.ativa;
         return (
           <button
             key={b.id}
@@ -48,8 +46,7 @@ export function FichaSidebar({ className = '', aba = 'personagem', onMudarAba, o
             tabIndex={clicavel ? undefined : -1}
             onClick={() => {
               if (!clicavel) return;
-              if (alma) onAbrirAlma?.();
-              else onMudarAba?.(b.id as AbaFicha);
+              onMudarAba?.(b.id);
             }}
             className={`relative block w-[9.6cqw] shrink-0 active:translate-y-px ${clicavel ? 'cursor-pointer' : 'cursor-default'}`}
           >

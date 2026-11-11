@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, logoutUser } from '@/lib/firebase';
 import { CharacterSheet } from '@/components/CharacterSheet';
+import type { AcaoDaAlma } from '@/components/ficha';
+import { TEXTOS_DA_FICHA } from '@/rules/textosDaFicha';
 import { CharacterDocument } from '@/server/characterService';
 import type { SlotHabilidade } from '@/rules/habilidadesEquipadas';
 import type { SlotEquipamento } from '@/lib/equipamentoTela';
@@ -143,6 +145,25 @@ export default function PersonagemPage() {
   const handleEmblemaAcao = (id: string, acao: 'equipar' | 'desequipar') => chamarEmblemas('equipar', { id, acao });
   const handleFundirEmblemas = (tipo: string, estrelas: number) => chamarEmblemas('fundir', { tipo, estrelas });
 
+  /** Chama a rota da Alma e atualiza o personagem. Devolve o erro (ou null) e a mensagem de sucesso. */
+  const handleAlmaAcao: AcaoDaAlma = async (acao, extra = {}) => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return { erro: TEXTOS_DA_FICHA.alma.sessao };
+      const res = await fetch('/api/almas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ acao, ...extra }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { character?: CharacterDocument; mensagem?: string; error?: string };
+      if (!res.ok || !data.character) return { erro: data.error ?? TEXTOS_DA_FICHA.alma.erro };
+      setCharacter(data.character);
+      return { erro: null, mensagem: data.mensagem };
+    } catch {
+      return { erro: TEXTOS_DA_FICHA.alma.erro };
+    }
+  };
+
   const handleLogout = async () => {
     await logoutUser();
     router.replace('/login');
@@ -171,6 +192,7 @@ export default function PersonagemPage() {
         onDesequiparItem={handleDesequiparItem}
         onEmblemaAcao={handleEmblemaAcao}
         onFundirEmblemas={handleFundirEmblemas}
+        onAlmaAcao={handleAlmaAcao}
         userEmail={user.email || 'Aventureiro'}
       />
     </main>
