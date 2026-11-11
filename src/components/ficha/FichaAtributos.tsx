@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { CharacterDocument } from '@/server/characterService';
-import { FICHA_UI, ICONES_DA_FICHA, POSICOES_DA_FICHA } from '@/assets/personagemUi';
+import { FICHA_UI, POSICOES_DA_FICHA } from '@/assets/personagemUi';
+import { ATTRIBUTE_ICONS, RESOURCE_ICONS } from '@/assets/icons';
 import { TEXTOS_DA_FICHA } from '@/rules/textosDaFicha';
 import { calcularChanceCritico } from '@/game';
 import { formatarCompacto } from '@/rules/numerosCompactos';
@@ -28,12 +29,13 @@ export function FichaAtributos({ character, onOpenLupa, className = '' }: FichaA
   // Chance de crítico (2% de base + 0,1% por ponto de Sorte)
   const chanceCritico = `${String(character.chanceCritico ?? calcularChanceCritico(character.atributos.sorte)).replace('.', ',')}%`;
 
-  const linhas: { id: keyof typeof ICONES_DA_FICHA; nome: string; valor: string; cor: string }[] = [
-    { id: 'hp', nome: t.hp, valor: `${character.hpMax}/${character.hpMax}`, cor: '#F5D9D9' },
-    { id: 'sobreescudo', nome: t.sobreescudo, valor: `${character.sobreescudoMax}/${character.sobreescudoMax}`, cor: '#F5D9D9' },
-    { id: 'critico', nome: t.critico, valor: chanceCritico, cor: '#F5D9D9' },
+  const linhas: { id: string; icone: string; nome: string; valor: string; cor: string }[] = [
+    { id: 'hp', icone: RESOURCE_ICONS.hp, nome: t.hp, valor: `${character.hpMax}/${character.hpMax}`, cor: '#F5D9D9' },
+    { id: 'sobreescudo', icone: RESOURCE_ICONS.sobreescudo, nome: t.sobreescudo, valor: `${character.sobreescudoMax}/${character.sobreescudoMax}`, cor: '#F5D9D9' },
+    { id: 'critico', icone: ATTRIBUTE_ICONS.sorte, nome: t.critico, valor: chanceCritico, cor: '#F5D9D9' },
     ...(['vigor', 'sorte', 'forca', 'vitalidade', 'arcano', 'inteligencia', 'agilidade'] as const).map((a) => ({
       id: a,
+      icone: ATTRIBUTE_ICONS[a],
       nome: t[a],
       valor: efetivo(a) > 0 ? formatarCompacto(efetivo(a)) : '—',
       cor: '#EDB44C',
@@ -45,13 +47,13 @@ export function FichaAtributos({ character, onOpenLupa, className = '' }: FichaA
     <section aria-label={t.titulo} className={`relative w-full select-none shrink-0 ${className}`} style={{ aspectRatio: '365 / 431' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={FICHA_UI.painelAtributos} alt="" aria-hidden="true" draggable={false} className="absolute inset-0 w-full h-full pointer-events-none" style={pixel} />
-      <h2 className="absolute font-cinzel font-extrabold uppercase tracking-wide text-[#EDB44C] leading-none" style={{ left: '19%', top: '5.2%', fontSize: '2.9cqw', textShadow: CONTORNO }}>{t.titulo}</h2>
+      <h2 className="absolute font-cinzel font-extrabold uppercase tracking-wide text-[#EDB44C] leading-none" style={{ left: '19%', top: '6.3%', fontSize: '2.8cqw', textShadow: CONTORNO }}>{t.titulo}</h2>
       <button type="button" onClick={onOpenLupa} aria-label={t.explicacoes} className="absolute cursor-pointer active:scale-95" style={{ left: `${lupa.esquerda}%`, top: `${lupa.topo}%`, width: `${lupa.lado}%`, aspectRatio: '1' }} />
       <ul className="absolute flex flex-col" style={{ left: `${interior.esquerda}%`, right: `${interior.direita}%`, top: `${interior.topo}%`, bottom: `${interior.base}%` }}>
         {linhas.map((l) => (
           <li key={l.id} className="flex-1 min-h-0 flex items-center gap-[1.6cqw] border-b border-[#B2873B]/45 last:border-b-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={ICONES_DA_FICHA[l.id]} alt="" aria-hidden="true" draggable={false} className="w-[3.7cqw] h-[3.7cqw] object-contain shrink-0" style={pixel} />
+            <img src={l.icone} alt="" aria-hidden="true" draggable={false} className="w-[3.7cqw] h-[3.7cqw] object-contain shrink-0" style={pixel} />
             <span className="flex-1 min-w-0 truncate font-cinzel font-bold uppercase text-[2.7cqw] leading-[1.35] text-[#E9DDC0]" style={{ textShadow: CONTORNO }}>{l.nome}</span>
             <span className="font-cinzel font-black text-[3cqw] leading-none tabular-nums shrink-0" style={{ color: l.cor, textShadow: CONTORNO }}>{l.valor}</span>
           </li>

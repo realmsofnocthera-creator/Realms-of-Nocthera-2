@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CharacterDocument } from '@/server/characterService';
 import type { SlotHabilidade } from '@/rules/habilidadesEquipadas';
-import { FICHA_ASSETS } from '@/rules/fichaAssets';
 import { FICHA_UI } from '@/assets/personagemUi';
 import { getClassById } from '@/rules/classes';
 import { TEXTOS_DA_FICHA, textoDaFicha } from '@/rules/textosDaFicha';
@@ -88,12 +87,10 @@ export function CharacterSheet({
 
   return (
     <div className="relative h-[100dvh] max-h-[100dvh] w-full text-[#F5F3E0] overflow-hidden select-none bg-[#05070D]">
-      {/* 1) FUNDO FIXO (imagem fundo com cover + overlay escuro leve) */}
-      <div aria-hidden="true" className="fixed inset-0 z-0 pointer-events-none bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${FICHA_ASSETS.fundo})` }}>
-        <div className="absolute inset-0 bg-[#0D0D0D]/55" />
-      </div>
-
       <div className="forja-palco !justify-between gap-[1.2cqw] pt-[max(1.4cqw,env(safe-area-inset-top))] pb-[max(1.6cqw,env(safe-area-inset-bottom))]">
+        {/* 1) FUNDO: a trama escura do Yuri, com os ornamentos dos cantos sem esticar */}
+        <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ zIndex: -1, borderStyle: 'solid', borderWidth: '15cqw', borderImage: `url(${FICHA_UI.fundo}) 175 fill / 15cqw stretch`, imageRendering: 'pixelated' }} />
+
         {/* 2) BARRA DE CIMA: voltar, banner da classe, abas e bússola (a conta) */}
         <header className="flex items-center gap-[1cqw] px-[2.4cqw] shrink-0">
           <button type="button" onClick={() => router.push('/hub')} aria-label={t.voltarAoHub} className="relative block w-[8cqw] shrink-0 cursor-pointer active:translate-y-px">

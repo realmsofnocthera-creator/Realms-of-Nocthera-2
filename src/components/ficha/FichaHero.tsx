@@ -4,7 +4,7 @@ import React from 'react';
 import { CharacterDocument } from '@/server/characterService';
 import { calcularPoderTotal, xpParaProximoNivel } from '@/game';
 import { resolveAvatarSrc } from '@/assets/avatars';
-import { FICHA_UI, ICONES_DA_FICHA, POSICOES_DA_FICHA } from '@/assets/personagemUi';
+import { FICHA_UI, ICONE_DO_PODER, POSICOES_DA_FICHA } from '@/assets/personagemUi';
 import { TEXTOS_DA_FICHA, textoDaFicha } from '@/rules/textosDaFicha';
 import { formatarCompacto } from '@/rules/numerosCompactos';
 import { FichaAtributos } from './FichaAtributos';
@@ -85,7 +85,7 @@ export function FichaHero({ character, onOpenLupa, aba = 'personagem', colunaEqu
       {/* BASE: o selo de Poder Total no canto de baixo à esquerda */}
       <div aria-label={`${TEXTOS_DA_FICHA.poderTotal}: ${poderTotal}`} className="pilula-pixel absolute z-10 flex items-center gap-[1.2cqw] pl-[1cqw] pr-[2.4cqw] py-[0.8cqw]" style={{ left: '3cqw', bottom: '1cqw' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={ICONES_DA_FICHA.poder} alt="" aria-hidden="true" draggable={false} className="w-[6.4cqw] h-[6.4cqw] object-contain shrink-0" style={{ imageRendering: 'pixelated' }} />
+        <img src={ICONE_DO_PODER} alt="" aria-hidden="true" draggable={false} className="w-[6.4cqw] h-[6.4cqw] object-contain shrink-0" style={{ imageRendering: 'pixelated' }} />
         <span className="font-cinzel font-black italic tabular-nums text-[#F5F3E0]" style={{ fontSize: '3.8cqw', textShadow: CONTORNO }}>{poderTotal >= 1000 ? `${(poderTotal / 1000).toFixed(1)}K` : poderTotal}</span>
       </div>
     </section>
