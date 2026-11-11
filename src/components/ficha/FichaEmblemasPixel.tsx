@@ -11,6 +11,7 @@ import { textoDaFicha, TEXTOS_DA_FICHA } from '@/rules/textosDaFicha';
 import { atributosDoEmblemaEmTexto, atributosDosEquipadosEmTexto, habilidadesEmAcao, inventarioDeEmblemas, slotsDeEmblema } from '@/lib/emblemasTela';
 import { BotaoRedondo, PainelDaForja } from '@/components/forja/KitDaForja';
 import { Estrelas } from './FichaEmblemas';
+import { PlacaPixel } from './PlacaPixel';
 
 interface FichaEmblemasPixelProps {
   character: CharacterDocument;
@@ -23,20 +24,6 @@ interface FichaEmblemasPixelProps {
 
 const pixel: React.CSSProperties = { imageRendering: 'pixelated' };
 const CONTORNO = '0.2cqw 0 0 #05070D, -0.2cqw 0 0 #05070D, 0 0.2cqw 0 #05070D, 0 -0.2cqw 0 #05070D';
-
-/** Uma placa de texto sobre uma das molduras (título ou botão): o texto fica centrado entre as pontas ornamentadas. */
-function Placa({ src, aspecto, largura, children, onClick, rotulo, margens = [14, 14] }: { src: string; aspecto: string; largura: string; children: React.ReactNode; onClick?: () => void; rotulo?: string; margens?: [number, number] }) {
-  const Tag = onClick ? 'button' : 'div';
-  return (
-    <Tag type={onClick ? 'button' : undefined} onClick={onClick} aria-label={rotulo} className={`relative block shrink-0 ${onClick ? 'cursor-pointer active:translate-y-px' : ''}`} style={{ width: largura, aspectRatio: aspecto }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="" aria-hidden="true" draggable={false} className="absolute inset-0 w-full h-full pointer-events-none" style={pixel} />
-      <span className="absolute inset-y-0 flex items-center justify-center font-cinzel font-extrabold uppercase tracking-wide leading-[1.4] text-[#DFF3FF] text-center" style={{ left: `${margens[0]}%`, right: `${margens[1]}%`, fontSize: '2.7cqw', textShadow: CONTORNO }}>
-        <span className="truncate">{children}</span>
-      </span>
-    </Tag>
-  );
-}
 
 /** O inventário de emblemas em pop-up: equipar, desequipar e fundir emblemas iguais (as regras são as de antes). */
 function InventarioDeEmblemas({ character, aoFechar, onEmblemaAcao, onFundirEmblemas }: { character: CharacterDocument; aoFechar: () => void } & Pick<FichaEmblemasPixelProps, 'onEmblemaAcao' | 'onFundirEmblemas'>) {
@@ -157,7 +144,7 @@ export function FichaEmblemasPixel({ character, onEmblemaAcao, onFundirEmblemas,
         </section>
       </div>
 
-      <Placa src={EMBLEMAS_UI.painelLargo} aspecto="900 / 198" largura="86cqw" margens={[10, 10]}>{t.habilidades}</Placa>
+      <PlacaPixel src={EMBLEMAS_UI.painelLargo} aspecto="900 / 198" largura="86cqw" margens={[10, 10]}>{t.habilidades}</PlacaPixel>
       <section aria-label={t.habilidades} className="w-full shrink-0">
         <PainelDaForja borda="2.6cqw" className="flex flex-col gap-[1.4cqw]">
           {atributos && (
@@ -180,7 +167,7 @@ export function FichaEmblemasPixel({ character, onEmblemaAcao, onFundirEmblemas,
         </PainelDaForja>
       </section>
 
-      <Placa src={EMBLEMAS_UI.barraA} aspecto="520 / 131" largura="62cqw" onClick={() => setAberto(true)} rotulo={t.inventario} margens={[16, 14]}>{t.inventario}</Placa>
+      <PlacaPixel src={EMBLEMAS_UI.barraA} aspecto="520 / 131" largura="62cqw" onClick={() => setAberto(true)} rotulo={t.inventario} margens={[16, 14]}>{t.inventario}</PlacaPixel>
 
       {aberto && <InventarioDeEmblemas character={character} aoFechar={() => setAberto(false)} onEmblemaAcao={onEmblemaAcao} onFundirEmblemas={onFundirEmblemas} />}
     </div>
