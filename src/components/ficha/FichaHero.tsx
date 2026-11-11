@@ -16,7 +16,6 @@ interface FichaHeroProps {
   /** Aba aberta: nas abas Equipamentos e Emblemas, a coluna da direita troca de conteúdo. */
   aba?: AbaFicha;
   onMudarAba?: (aba: AbaFicha) => void;
-  onAbrirAlma?: () => void;
   colunaEquipamentos?: React.ReactNode;
   colunaEmblemas?: React.ReactNode;
   className?: string;

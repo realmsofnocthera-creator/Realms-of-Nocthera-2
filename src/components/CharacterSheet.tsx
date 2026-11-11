@@ -15,6 +15,8 @@ import {
   FichaEquipamentoPixel,
   FichaLupaModal,
   FichaEmblemasPixel,
+  FichaAlmaPixel,
+  type AcaoDaAlma,
   FichaSidebar,
 } from '@/components/ficha';
 import type { SlotEquipamento } from '@/lib/equipamentoTela';
@@ -34,6 +36,8 @@ interface CharacterSheetProps {
   onEmblemaAcao?: (id: string, acao: 'equipar' | 'desequipar') => Promise<string | null>;
   /** Funde emblemas iguais (mesmo tipo e estrela). */
   onFundirEmblemas?: (tipo: string, estrelas: number) => Promise<string | null>;
+  /** Ações da Alma (equipar, desequipar, despertar, refinar, destruir), na mesma página da ficha. */
+  onAlmaAcao?: AcaoDaAlma;
 }
 
 const pixel: React.CSSProperties = { imageRendering: 'pixelated' };
@@ -41,7 +45,7 @@ const pixel: React.CSSProperties = { imageRendering: 'pixelated' };
 function abaInicialDaUrl(): AbaFicha {
   if (typeof window === 'undefined') return 'personagem';
   const aba = new URLSearchParams(window.location.search).get('aba');
-  return aba === 'emblemas' || aba === 'equipamentos' ? aba : 'personagem';
+  return aba === 'emblemas' || aba === 'equipamentos' || aba === 'alma' ? aba : 'personagem';
 }
 
 /**
@@ -57,6 +61,7 @@ export function CharacterSheet({
   onDesequiparItem,
   onEmblemaAcao,
   onFundirEmblemas,
+  onAlmaAcao,
 }: CharacterSheetProps) {
   const router = useRouter();
   const [activeSkillPopoverId, setActiveSkillPopoverId] = useState<string | null>(null);
@@ -67,13 +72,6 @@ export function CharacterSheet({
 
   const handleTogglePopover = (skillId: string) => {
     setActiveSkillPopoverId((prev) => (prev === skillId ? null : skillId));
-  };
-
-  const [avisoAlma, setAvisoAlma] = useState(false);
-  // A aba Alma (7.8) tem tela própria; antes do nível 25, só avisa
-  const abrirAlma = () => {
-    if (character.nivel >= NIVEL_DA_ALMA) router.push('/alma');
-    else setAvisoAlma(true);
   };
 
   const classe = getClassById(character.classeId);
@@ -100,7 +98,7 @@ export function CharacterSheet({
               <span className="truncate">{classe?.nome ?? ''}</span>
             </span>
           </div>
-          <FichaSidebar aba={aba} onMudarAba={onEquiparItem ? setAba : undefined} onAbrirAlma={abrirAlma} almaLiberada={character.nivel >= NIVEL_DA_ALMA} className="ml-auto" />
+          <FichaSidebar aba={aba} onMudarAba={onEquiparItem ? setAba : undefined} almaLiberada={character.nivel >= NIVEL_DA_ALMA} className="ml-auto" />
           <button type="button" onClick={() => setContaAberta(true)} aria-label={t.conta.menu} className="relative block w-[8.4cqw] shrink-0 cursor-pointer active:translate-y-px">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={FICHA_UI.bussola} alt="" aria-hidden="true" draggable={false} className="block w-full h-auto pointer-events-none" style={pixel} />
@@ -120,10 +118,13 @@ export function CharacterSheet({
         ) : aba === 'emblemas' ? (
           /* 3) EMBLEMAS: o círculo com os 4 espaços, as habilidades dos emblemas e o inventário em pop-up */
           <FichaEmblemasPixel character={character} onEmblemaAcao={onEmblemaAcao} onFundirEmblemas={onFundirEmblemas} />
+        ) : aba === 'alma' ? (
+          /* 3) ALMA: as 3 colunas de espaços (Corpo, Alma e Mente) e a prateleira de cartas, na mesma página */
+          <FichaAlmaPixel character={character} onAlmaAcao={onAlmaAcao} />
         ) : (
           <>
             {/* 3) HERÓI: arte, identidade, atributos e Poder Total */}
-            <FichaHero character={character} onOpenLupa={() => setLupaOpen(true)} aba={aba} onMudarAba={onEquiparItem ? setAba : undefined} onAbrirAlma={abrirAlma} />
+            <FichaHero character={character} onOpenLupa={() => setLupaOpen(true)} aba={aba} onMudarAba={onEquiparItem ? setAba : undefined} />
 
             {/* 4) HABILIDADES */}
             <FichaHabilidades character={character} activePopoverId={activeSkillPopoverId} onTogglePopover={handleTogglePopover} onEquiparHabilidade={onEquiparHabilidade} className="shrink-0" />
@@ -133,16 +134,6 @@ export function CharacterSheet({
           </>
         )}
       </div>
-
-      {avisoAlma && (
-        <div role="alertdialog" aria-label="Alma bloqueada" className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-6" onClick={() => setAvisoAlma(false)}>
-          <div className="rounded-lg border border-[#B2A66C]/60 bg-[#120F0C] px-4 py-3 text-center text-sm text-[#E2D6B6] max-w-xs">
-            <p className="font-cinzel font-bold mb-1">{t.abas.alma}</p>
-            <p>{textoDaFicha('A Alma abre no nível {nivel}. Você está no nível {atual}.', { nivel: NIVEL_DA_ALMA, atual: character.nivel })}</p>
-            <button type="button" onClick={() => setAvisoAlma(false)} className="mt-2 rounded border border-[#B2A66C]/60 px-3 py-1 text-xs">Entendi</button>
-          </div>
-        </div>
-      )}
 
       {/* 7) MODAL DE EXPLICAÇÃO DOS ATRIBUTOS (LUPA) */}
       <FichaLupaModal isOpen={lupaOpen} onClose={() => setLupaOpen(false)} character={character} />
