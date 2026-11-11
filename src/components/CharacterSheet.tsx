@@ -14,9 +14,7 @@ import {
   FichaBannerDesenvolvimento,
   FichaEquipamentoPixel,
   FichaLupaModal,
-  FichaEmblemaModal,
-  FichaResumoEmblemas,
-  FichaSlotsEmblema,
+  FichaEmblemasPixel,
   FichaSidebar,
 } from '@/components/ficha';
 import type { SlotEquipamento } from '@/lib/equipamentoTela';
@@ -65,7 +63,6 @@ export function CharacterSheet({
   const [lupaOpen, setLupaOpen] = useState(false);
   // A Mochila abre a ficha direto na aba Emblemas (?aba=emblemas); a ficha só aparece depois de carregar o personagem
   const [aba, setAba] = useState<AbaFicha>(abaInicialDaUrl);
-  const [emblemasAberto, setEmblemasAberto] = useState(false);
   const [contaAberta, setContaAberta] = useState(false);
 
   const handleTogglePopover = (skillId: string) => {
@@ -84,10 +81,12 @@ export function CharacterSheet({
 
   return (
     <div className="relative h-[100dvh] max-h-[100dvh] w-full text-[#F5F3E0] overflow-hidden select-none bg-[#05070D]">
-      <div className="forja-palco !justify-between gap-[1.2cqw] pt-[max(1.4cqw,env(safe-area-inset-top))] pb-[max(1.6cqw,env(safe-area-inset-bottom))]">
-        {/* 1) FUNDO: a trama escura do Yuri, com os ornamentos dos cantos sem esticar */}
-        <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ zIndex: -1, borderStyle: 'solid', borderWidth: '15cqw', borderImage: `url(${FICHA_UI.fundo}) 175 fill / 15cqw stretch`, imageRendering: 'pixelated' }} />
+      {/* 1) FUNDO: as ruínas sob a lua (arte do Yuri), a tela toda, com um véu escuro para os textos lerem bem */}
+      <div aria-hidden="true" className="fixed inset-0 z-0 pointer-events-none bg-cover bg-no-repeat" style={{ backgroundImage: `url(${FICHA_UI.fundo})`, backgroundPosition: '76% center' }}>
+        <div className="absolute inset-0 bg-[#05070D]/35" />
+      </div>
 
+      <div className="forja-palco !justify-between gap-[1.2cqw] pt-[max(1.4cqw,env(safe-area-inset-top))] pb-[max(1.6cqw,env(safe-area-inset-bottom))]">
         {/* 2) BARRA DE CIMA: voltar, banner da classe, abas e bússola (a conta) */}
         <header className="flex items-center gap-[1cqw] px-[2.4cqw] shrink-0">
           <button type="button" onClick={() => router.push('/hub')} aria-label={t.voltarAoHub} className="relative block w-[8cqw] shrink-0 cursor-pointer active:translate-y-px">
@@ -118,35 +117,22 @@ export function CharacterSheet({
         {aba === 'equipamentos' ? (
           /* 3) EQUIPAMENTOS: os 6 espaços ao redor do personagem, o status em pop-up e a tabela de habilidades */
           <FichaEquipamentoPixel character={character} onEquiparItem={onEquiparItem} onDesequiparItem={onDesequiparItem} />
+        ) : aba === 'emblemas' ? (
+          /* 3) EMBLEMAS: o círculo com os 4 espaços, as habilidades dos emblemas e o inventário em pop-up */
+          <FichaEmblemasPixel character={character} onEmblemaAcao={onEmblemaAcao} onFundirEmblemas={onFundirEmblemas} />
         ) : (
           <>
             {/* 3) HERÓI: arte, identidade, atributos e Poder Total */}
-            <FichaHero
-              character={character}
-              onOpenLupa={() => setLupaOpen(true)}
-              aba={aba}
-              onMudarAba={onEquiparItem ? setAba : undefined}
-              onAbrirAlma={abrirAlma}
-              colunaEmblemas={<FichaSlotsEmblema character={character} onAbrir={() => setEmblemasAberto(true)} />}
-            />
+            <FichaHero character={character} onOpenLupa={() => setLupaOpen(true)} aba={aba} onMudarAba={onEquiparItem ? setAba : undefined} onAbrirAlma={abrirAlma} />
 
-            {/* 4) HABILIDADES (na aba Emblemas, o resumo dos bônus) */}
-            {aba === 'emblemas' ? (
-              <FichaResumoEmblemas character={character} className="shrink-0" />
-            ) : (
-              <FichaHabilidades character={character} activePopoverId={activeSkillPopoverId} onTogglePopover={handleTogglePopover} onEquiparHabilidade={onEquiparHabilidade} className="shrink-0" />
-            )}
+            {/* 4) HABILIDADES */}
+            <FichaHabilidades character={character} activePopoverId={activeSkillPopoverId} onTogglePopover={handleTogglePopover} onEquiparHabilidade={onEquiparHabilidade} className="shrink-0" />
 
             {/* 5) BANNER DE DESENVOLVIMENTO */}
             <FichaBannerDesenvolvimento character={character} className="shrink-0" />
           </>
         )}
       </div>
-
-      {/* 6b) INVENTÁRIO DE EMBLEMAS (aba Emblemas) */}
-      {aba === 'emblemas' && emblemasAberto && (
-        <FichaEmblemaModal character={character} onClose={() => setEmblemasAberto(false)} onAcao={onEmblemaAcao} onFundir={onFundirEmblemas} />
-      )}
 
       {avisoAlma && (
         <div role="alertdialog" aria-label="Alma bloqueada" className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-6" onClick={() => setAvisoAlma(false)}>
