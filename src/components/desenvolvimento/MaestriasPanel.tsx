@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import type { CharacterDocument } from '@/server/characterService';
 import { KIT_DA_FORJA } from '@/assets/forjaUi';
+import { iconeDaTrilha } from '@/assets/maestriasUi';
 import { diaDeBrasilia } from '@/game/batalhaSangrenta';
 import {
   marcosAlcancados,
@@ -37,12 +38,21 @@ export function Trilha({ trilha, character, dia }: { trilha: TrilhaDeMaestria; c
   const hoje = TETO_DIARIO_DE_XP - xpRestanteHoje(progresso, dia);
   const proximoMarco = nivel >= NIVEL_MAXIMO_DA_MAESTRIA ? null : (marcosAlcancados(nivel) + 1) * MARCO_A_CADA;
   const largura = xpParaProximo ? (xpNoNivel / xpParaProximo) * 100 : 100;
+  const icone = iconeDaTrilha(trilha);
+  const totalDeMarcos = NIVEL_MAXIMO_DA_MAESTRIA / MARCO_A_CADA;
+  const marcos = marcosAlcancados(nivel);
 
   return (
     <li className={trilha.bloqueada ? 'opacity-60' : ''}>
       <PainelDaForja borda="2cqw" className="flex flex-col gap-[1cqw]">
         <div className="flex items-center justify-between gap-[1cqw]">
-          <span className="flex items-center gap-[1cqw] font-cinzel font-black text-[2.8cqw] leading-[1.35] text-[#F5F3E0]" style={{ textShadow: CONTORNO_PIXEL }}>
+          <span className="flex items-center gap-[1.4cqw] font-cinzel font-black text-[2.8cqw] leading-[1.35] text-[#F5F3E0]" style={{ textShadow: CONTORNO_PIXEL }}>
+            {icone && (
+              <span className="shrink-0 w-[9cqw] h-[9cqw] flex items-center justify-center border-[0.5cqw] border-[#B8862B] bg-[#05070D] p-[0.6cqw]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={icone} alt="" aria-hidden="true" draggable={false} className="w-full h-full object-contain pointer-events-none" style={{ ...pixel, opacity: trilha.bloqueada ? 0.6 : 1 }} />
+              </span>
+            )}
             {trilha.bloqueada && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={KIT_DA_FORJA.proibido} alt="" aria-hidden="true" draggable={false} className="w-[3.4cqw] h-[3.4cqw] shrink-0 pointer-events-none" style={pixel} />
@@ -64,6 +74,12 @@ export function Trilha({ trilha, character, dia }: { trilha: TrilhaDeMaestria; c
               className="h-[2.6cqw] border-[0.5cqw] border-[#B8862B] bg-[#05070D] p-[0.3cqw]"
             >
               <div className="h-full" style={{ width: `${largura}%`, backgroundImage: 'repeating-linear-gradient(90deg, #6FE3EE 0 1.1cqw, #2F9FB8 1.1cqw 1.4cqw)' }} />
+            </div>
+            {/* os marcos (a cada 10 níveis): um quadradinho para cada, aceso quando já foi alcançado */}
+            <div role="img" aria-label={textoDaFicha(t.marcos, { n: marcos, max: totalDeMarcos })} className="flex gap-[0.8cqw]">
+              {Array.from({ length: totalDeMarcos }, (_, i) => (
+                <span key={i} aria-hidden="true" className={`flex-1 h-[1.6cqw] border border-[#05070D] ${i < marcos ? 'bg-[#EDB44C]' : 'bg-[#2B3F5C]'}`} />
+              ))}
             </div>
             <span className="font-cinzel text-[2cqw] leading-snug text-[#C9D6EA]">
               {xpParaProximo ? textoDaFicha(t.xp, { atual: fmt(xpNoNivel), total: fmt(xpParaProximo) }) : t.nivelMaximo} · {textoDaFicha(t.hoje, { n: fmt(hoje), max: fmt(TETO_DIARIO_DE_XP) })}

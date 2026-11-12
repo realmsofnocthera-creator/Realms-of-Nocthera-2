@@ -43,6 +43,7 @@ export const TEXTOS_DA_FICHA = {
     proximoMarco: 'próximo marco: Nv {n}',
     porNivel: 'Por nível:',
     aCada: 'A cada {n} níveis:',
+    marcos: 'Marcos alcançados: {n} de {max}',
   },
   ascensao: {
     titulo: 'Ascensão',
