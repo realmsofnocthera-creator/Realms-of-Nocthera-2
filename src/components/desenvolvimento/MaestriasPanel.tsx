@@ -53,7 +53,7 @@ export function Trilha({ trilha, character, dia }: { trilha: TrilhaDeMaestria; c
                 <img src={icone} alt="" aria-hidden="true" draggable={false} className="w-full h-full object-contain pointer-events-none" style={{ ...pixel, opacity: trilha.bloqueada ? 0.6 : 1 }} />
               </span>
             )}
-            {trilha.bloqueada && (
+            {trilha.bloqueada && !icone && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={KIT_DA_FORJA.proibido} alt="" aria-hidden="true" draggable={false} className="w-[3.4cqw] h-[3.4cqw] shrink-0 pointer-events-none" style={pixel} />
             )}
