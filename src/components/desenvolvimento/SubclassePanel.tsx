@@ -1,15 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AlertTriangle, Check, Gem, Lock } from 'lucide-react';
 import type { CharacterDocument } from '@/server/characterService';
 import { ATTRIBUTE_ICONS } from '@/assets/icons';
 import { HUD_ICONS } from '@/assets/hud';
+import { KIT_DA_FORJA } from '@/assets/forjaUi';
+import { arteDaSubclasse } from '@/assets/subclassesUi';
 import { ATTRIBUTE_DISPLAY_NAMES } from '@/rules/attributeInfo';
-import { COR_DA_CLASSE, bannerDaSubclasse, iconeDaHabilidadeSubclasse } from '@/rules/subclasseAssets';
+import { COR_DA_CLASSE, iconeDaHabilidadeSubclasse } from '@/rules/subclasseAssets';
 import { TIER_POR_ESPACO_HABILIDADE } from '@/rules/subclasseTiers';
 import { GAME_CONFIG } from '@/rules/config';
 import { SUBCLASSES, type Subclasse } from '@/rules/subclasses';
+import { textoDaFicha, TEXTOS_DA_FICHA } from '@/rules/textosDaFicha';
 import {
   acaoDeEscolha,
   acaoDeReset,
@@ -24,7 +26,9 @@ import {
   type TierDaLinha,
 } from '@/lib/subclasseTela';
 import { SkillIcon } from '@/components/skills';
-import { NOCTHERA_THEME } from '@/theme/theme';
+import { IconeDeMoeda } from '@/components/colecao/ArtesDaColecao';
+import { BotaoDoKit, BotaoRedondo, PainelDaForja } from '@/components/forja/KitDaForja';
+import { CONTORNO_PIXEL } from '@/components/ficha/PlacaPixel';
 
 interface SubclassePanelProps {
   character: CharacterDocument;
@@ -37,17 +41,104 @@ const SIGLAS: Record<string, string> = {
   vigor: 'Vig', sorte: 'Sor', forca: 'For', vitalidade: 'Vit', arcano: 'Arc', inteligencia: 'Int', agilidade: 'Agi',
 };
 const fmt = (n: number) => n.toLocaleString('pt-BR');
+const pixel: React.CSSProperties = { imageRendering: 'pixelated' };
 
 type Confirmacao = { titulo: string; aviso: string; acao: AcaoSubclasse; executar: () => Promise<void> };
 
+/** Ícones das moedas da tela: os de sempre para ouro e diamante e o fragmento da Coleção (roxo para o da subclasse). */
+const iconeOuro = <img src={HUD_ICONS.ouro} alt="" aria-hidden="true" className="w-[3.2cqw] h-[3.2cqw] object-contain" style={pixel} />; // eslint-disable-line @next/next/no-img-element
+const iconeDiamante = <img src={HUD_ICONS.diamante} alt="" aria-hidden="true" className="w-[3.2cqw] h-[3.2cqw] object-contain" style={pixel} />; // eslint-disable-line @next/next/no-img-element
+const iconeFragmentoDeAlma = <IconeDeMoeda moeda="fragmento" className="w-[3.2cqw] h-[3.2cqw]" />;
+const iconeFragmentoDaSubclasse = (
+  <span style={{ filter: 'hue-rotate(250deg) saturate(1.3)' }}>
+    <IconeDeMoeda moeda="fragmento" className="w-[3.2cqw] h-[3.2cqw]" />
+  </span>
+);
+
+/** A arte da subclasse: o estandarte e o personagem ao lado dele. Sem arte, um degradê na cor da classe. */
+function ArteDaSubclasseTela({ subclasse, altura }: { subclasse: Subclasse; altura: string }) {
+  const arte = arteDaSubclasse(subclasse.id);
+  const cor = COR_DA_CLASSE[subclasse.classeId] ?? '#3A8FB0';
+  if (!arte) {
+    return <div aria-hidden="true" className="w-full" style={{ height: altura, background: `linear-gradient(165deg, ${cor} 0%, #080C16 100%)` }} />;
+  }
+  return (
+    <div className="relative flex items-end justify-center gap-[0.6cqw] w-full" style={{ height: altura }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={arte.estandarte} alt="" aria-hidden="true" draggable={false} className="h-full w-auto shrink-0 pointer-events-none select-none" style={{ aspectRatio: arte.proporcaoDoEstandarte, ...pixel }} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={arte.personagem} alt="" aria-hidden="true" draggable={false} className="w-auto object-contain object-bottom pointer-events-none select-none min-w-0" style={{ height: '88%', maxWidth: '58%', aspectRatio: arte.proporcaoDoPersonagem, ...pixel }} />
+    </div>
+  );
+}
+
+function Saldo({ icone, valor, rotulo }: { icone: React.ReactNode; valor: number; rotulo: string }) {
+  return (
+    <PainelDaForja borda="1.6cqw" role="group" aria-label={`${rotulo}: ${valor}`} className="flex items-center justify-center gap-[0.8cqw] py-[0.4cqw]">
+      {icone}
+      <span className="font-cinzel font-black text-[2.4cqw] leading-[1.4] tabular-nums text-[#F5F3E0]">{fmt(valor)}</span>
+    </PainelDaForja>
+  );
+}
+
+function Custo({ icone, valor, falta, rotulo }: { icone: React.ReactNode; valor: number; falta: boolean; rotulo: string }) {
+  const t = TEXTOS_DA_FICHA.subclasseTela;
+  return (
+    <span title={rotulo} aria-label={`${rotulo}: ${valor}${falta ? ` (${t.insuficiente})` : ''}`} className={`inline-flex items-center gap-[0.6cqw] font-cinzel font-bold text-[2.1cqw] leading-[1.4] ${falta ? 'text-[#F5A6A6]' : 'text-[#E9DDC0]'}`}>
+      {icone}
+      {fmt(valor)}
+    </span>
+  );
+}
+
+function Custos({ acao }: { acao: AcaoSubclasse }) {
+  const t = TEXTOS_DA_FICHA.subclasseTela;
+  return (
+    <div className="flex items-center justify-center gap-[1.6cqw] flex-wrap">
+      {acao.custo.fragmentosAlma > 0 && <Custo icone={iconeFragmentoDeAlma} valor={acao.custo.fragmentosAlma} rotulo={t.fragmentosAlma} falta={acao.faltando.includes('fragmentos de alma')} />}
+      {acao.custo.ouro > 0 && <Custo icone={iconeOuro} valor={acao.custo.ouro} rotulo={t.ouro} falta={acao.faltando.includes('ouro')} />}
+      {acao.custo.fragmentosSubclasse > 0 && <Custo icone={iconeFragmentoDaSubclasse} valor={acao.custo.fragmentosSubclasse} rotulo={t.fragmentosSubclasse} falta={acao.faltando.includes('fragmentos da subclasse')} />}
+      {acao.custo.diamantes > 0 && <Custo icone={iconeDiamante} valor={acao.custo.diamantes} rotulo={t.diamantes} falta={acao.faltando.includes('diamantes')} />}
+    </div>
+  );
+}
+
+function BotaoDaAcao({ acao, desligado, aoClicar }: { acao: AcaoSubclasse; desligado: boolean; aoClicar: () => void }) {
+  return (
+    <div className="flex flex-col items-stretch gap-[0.8cqw]">
+      <BotaoDoKit onClick={aoClicar} disabled={!acao.habilitada || desligado} className="w-full !text-[2.3cqw]">{acao.rotulo}</BotaoDoKit>
+      <Custos acao={acao} />
+    </div>
+  );
+}
+
+/** Os atributos que a subclasse soma, em quadrinhos com o ícone de sempre. */
+function AtributosDaSubclasse({ subclasse, colunas = 2 }: { subclasse: Subclasse; colunas?: 2 | 4 }) {
+  const t = TEXTOS_DA_FICHA.subclasseTela;
+  return (
+    <div className={`grid gap-[0.8cqw] ${colunas === 2 ? 'grid-cols-2' : 'grid-cols-4'}`} aria-label={textoDaFicha(t.atributosQueSoma, { nome: subclasse.nome })}>
+      {bonusDeAtributosDaSubclasse(subclasse.id).map(({ atributo, valor }) => (
+        <div key={atributo} title={ATTRIBUTE_DISPLAY_NAMES[atributo]} aria-label={`${ATTRIBUTE_DISPLAY_NAMES[atributo]}: +${valor}`} className="flex items-center justify-center gap-[0.6cqw] border border-[#2B3F5C] bg-[#080C16]/80 py-[0.6cqw]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={ATTRIBUTE_ICONS[atributo]} alt="" aria-hidden="true" draggable={false} className="w-[3.2cqw] h-[3.2cqw] object-contain shrink-0 pointer-events-none" />
+          <span className="font-cinzel font-bold text-[2cqw] leading-[1.4] text-[#F5F3E0] whitespace-nowrap">
+            +{valor} <span className="text-[#9CC4E0]">{SIGLAS[atributo]}</span>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /**
- * Tela de Subclasse (2.1.5). Cada personagem tem uma subclasse só:
- * - sem subclasse: escolha, com um banner por subclasse da classe (atributos, habilidades e Desbloquear);
- * - com subclasse: os banners somem e entra a evolução, uma linha T1 a T4 com a explicação e o botão do tier;
+ * Tela de Subclasse (2.1.5) em pixel. Cada personagem tem uma subclasse só:
+ * - sem subclasse: escolha, com o estandarte e o personagem de cada subclasse da classe (atributos, habilidades e Desbloquear);
+ * - com subclasse: entra a evolução, uma linha T1 a T4 com a explicação e o botão do tier;
  * - Resetar a subclasse custa 100 diamantes e zera os tiers.
+ * Desbloquear a subclasse libera o retrato e o personagem dela para o perfil.
  */
 export function SubclassePanel({ character, idToken, onCharacterChange, className = '' }: SubclassePanelProps) {
-  const { colors } = NOCTHERA_THEME;
+  const t = TEXTOS_DA_FICHA.subclasseTela;
   const modo = modoDaTela(character);
 
   const [popoverAberto, setPopoverAberto] = useState<string | null>(null);
@@ -67,184 +158,80 @@ export function SubclassePanel({ character, idToken, onCharacterChange, classNam
         body: JSON.stringify(corpo ?? {}),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Não foi possível concluir a ação.');
+      if (!res.ok) throw new Error(data.error || t.erro);
       if (data.character) onCharacterChange(data.character);
       setFeedback({ type: 'success', message: sucesso });
       return true;
     } catch (err) {
-      setFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Erro ao processar a ação.' });
+      setFeedback({ type: 'error', message: err instanceof Error ? err.message : t.erroGeral });
       return false;
     } finally {
       setOcupado(false);
     }
   };
 
-  const iconeOuro = <img src={HUD_ICONS.ouro} alt="" aria-hidden="true" className="w-3 h-3 object-contain" />; // eslint-disable-line @next/next/no-img-element
-  const iconeDiamante = <img src={HUD_ICONS.diamante} alt="" aria-hidden="true" className="w-3 h-3 object-contain" />; // eslint-disable-line @next/next/no-img-element
-  const iconeFragmento = <Gem className="w-3 h-3 text-cyan-300" aria-hidden="true" />;
-
-  const Saldo = ({ icone, valor, rotulo }: { icone: React.ReactNode; valor: number; rotulo: string }) => (
-    <div
-      role="group"
-      aria-label={`${rotulo}: ${valor}`}
-      className="rounded px-1.5 py-1 flex items-center justify-center gap-1 shadow-sm"
-      style={{ backgroundColor: `${colors.background.card}ee`, border: `1px solid ${colors.border.default}44` }}
-    >
-      {icone}
-      <span className="text-[11px] font-bold font-cinzel" style={{ color: colors.text.primary }}>{fmt(valor)}</span>
-    </div>
-  );
-
-  const Custo = ({ icone, valor, falta, rotulo }: { icone: React.ReactNode; valor: number; falta: boolean; rotulo: string }) => (
-    <span
-      title={rotulo}
-      aria-label={`${rotulo}: ${valor}${falta ? ' (insuficiente)' : ''}`}
-      className="inline-flex items-center gap-0.5 text-[10px] font-bold font-cinzel"
-      style={{ color: falta ? '#F5A6A6' : colors.text.primary }}
-    >
-      {icone}
-      {fmt(valor)}
-    </span>
-  );
-
-  const Custos = ({ acao }: { acao: AcaoSubclasse }) => (
-    <div className="flex items-center justify-center gap-2 flex-wrap">
-      {acao.custo.fragmentosAlma > 0 && (
-        <Custo icone={iconeFragmento} valor={acao.custo.fragmentosAlma} rotulo="Fragmentos de alma" falta={acao.faltando.includes('fragmentos de alma')} />
-      )}
-      {acao.custo.ouro > 0 && <Custo icone={iconeOuro} valor={acao.custo.ouro} rotulo="Ouro" falta={acao.faltando.includes('ouro')} />}
-      {acao.custo.fragmentosSubclasse > 0 && (
-        <Custo icone={<Gem className="w-3 h-3 text-fuchsia-300" aria-hidden="true" />} valor={acao.custo.fragmentosSubclasse} rotulo="Fragmentos da subclasse" falta={acao.faltando.includes('fragmentos da subclasse')} />
-      )}
-      {acao.custo.diamantes > 0 && <Custo icone={iconeDiamante} valor={acao.custo.diamantes} rotulo="Diamantes" falta={acao.faltando.includes('diamantes')} />}
-    </div>
-  );
-
-  const Botao = ({ acao, principal, aoClicar }: { acao: AcaoSubclasse; principal: boolean; aoClicar: () => void }) => (
-    <div className="flex flex-col items-stretch gap-0.5">
-      <button
-        type="button"
-        disabled={!acao.habilitada || ocupado}
-        onClick={aoClicar}
-        className="w-full rounded py-1.5 px-1 text-[11px] font-bold font-cinzel leading-tight transition-all active:scale-95 disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
-        style={{
-          backgroundColor: principal ? colors.accent.primary : colors.background.cardElevated,
-          color: principal ? colors.background.secondary : colors.text.primary,
-          border: `1px solid ${principal ? colors.accent.primary : `${colors.border.default}66`}`,
-        }}
-      >
-        {acao.rotulo}
-      </button>
-      <Custos acao={acao} />
-    </div>
-  );
-
   // ---------------------------------------------------------------- Escolha da subclasse
   const renderEscolha = (sub: Subclasse) => {
     const texto = textoDaSubclasse(sub.id);
     const estado = estadoDaSubclasse(character, sub.id);
     const { acao, aviso } = acaoDeEscolha(character, sub.id);
-    const cor = COR_DA_CLASSE[sub.classeId] ?? colors.accent.primary;
-    const arte = bannerDaSubclasse(sub.id);
-    const selo = estado === 'bloqueadaPorNivel' ? `Nv ${GAME_CONFIG.SUBCLASSE_NIVEL_MINIMO}` : 'Disponível';
+    const selo = estado === 'bloqueadaPorNivel' ? textoDaFicha(t.nivelMinimo, { n: GAME_CONFIG.SUBCLASSE_NIVEL_MINIMO }) : t.disponivel;
 
     const habilidades: { chave: string; rotulo: string; id: string; nome: string; tipo: string; descricao: string; tier: number }[] = [
-      { chave: 'passiva', rotulo: 'Passiva', tipo: 'Passiva', tier: 1, ...texto.passiva },
-      { chave: 'basico', rotulo: 'Básico', tipo: 'Ataque Básico', tier: TIER_POR_ESPACO_HABILIDADE.basico, ...texto.basico },
-      { chave: 'especial', rotulo: 'Especial', tipo: 'Habilidade Especial', tier: TIER_POR_ESPACO_HABILIDADE.especial, ...texto.especial },
-      { chave: 'ultimate', rotulo: 'Ultimate', tipo: 'Ultimate', tier: TIER_POR_ESPACO_HABILIDADE.ultimate, ...texto.ultimate },
+      { chave: 'passiva', rotulo: t.passiva, tipo: t.tipoPassiva, tier: 1, ...texto.passiva },
+      { chave: 'basico', rotulo: t.basico, tipo: t.tipoBasico, tier: TIER_POR_ESPACO_HABILIDADE.basico, ...texto.basico },
+      { chave: 'especial', rotulo: t.especial, tipo: t.tipoEspecial, tier: TIER_POR_ESPACO_HABILIDADE.especial, ...texto.especial },
+      { chave: 'ultimate', rotulo: t.ultimate, tipo: t.tipoUltimate, tier: TIER_POR_ESPACO_HABILIDADE.ultimate, ...texto.ultimate },
     ];
 
     return (
-      <div key={sub.id} className="flex-1 min-w-0 flex flex-col gap-1.5" data-subclasse={sub.id}>
-        <div
-          role="group"
-          aria-label={`Subclasse ${sub.nome}: ${selo}`}
-          className="relative rounded-md overflow-hidden px-1.5 py-1.5 min-h-[78px] flex flex-col justify-end shadow-md"
-          style={{
-            background: arte ? `url('${arte}') center/cover` : `linear-gradient(165deg, ${cor} 0%, ${colors.background.secondary} 100%)`,
-            border: `1.5px solid ${colors.border.default}77`,
-          }}
-        >
-          <span
-            className="absolute top-1 right-1 text-[9px] font-bold font-cinzel px-1 py-0.5 rounded flex items-center gap-0.5"
-            style={{ backgroundColor: '#000000bb', color: colors.text.secondary }}
-          >
-            {estado === 'bloqueadaPorNivel' && <Lock className="w-2.5 h-2.5" aria-hidden="true" />}
-            {selo}
-          </span>
-          <span className="text-[13px] font-black font-cinzel leading-tight" style={{ color: colors.text.primary, textShadow: '0 1px 3px rgba(0,0,0,0.95)' }}>
-            {sub.nome}
-          </span>
-          <span className="text-[9px] leading-tight line-clamp-2" style={{ color: colors.text.secondary, textShadow: '0 1px 2px rgba(0,0,0,0.95)' }}>
-            {texto.tema}
-          </span>
-        </div>
+      <div key={sub.id} className="flex-1 min-w-0 flex flex-col gap-[1.2cqw]" data-subclasse={sub.id}>
+        <PainelDaForja borda="1.8cqw" role="group" aria-label={textoDaFicha(t.grupo, { nome: sub.nome, selo })} className="relative flex flex-col items-center gap-[0.8cqw]">
+          <span className="absolute top-[0.4cqw] right-[0.4cqw] z-10 font-cinzel font-bold text-[1.8cqw] leading-[1.4] px-[1cqw] bg-[#05070D]/80 border border-[#2B3F5C] text-[#9CC4E0]">{selo}</span>
+          <ArteDaSubclasseTela subclasse={sub} altura="38cqw" />
+          <span className="font-cinzel font-black text-[2.8cqw] leading-[1.35] text-[#F5F3E0] text-center" style={{ textShadow: CONTORNO_PIXEL }}>{sub.nome}</span>
+          <span className="font-cinzel text-[1.9cqw] leading-snug text-[#C9D6EA] text-center">{texto.tema}</span>
+        </PainelDaForja>
 
-        <div className="grid grid-cols-2 gap-1" aria-label={`Atributos que ${sub.nome} soma`}>
-          {bonusDeAtributosDaSubclasse(sub.id).map(({ atributo, valor }) => (
-            <div
-              key={atributo}
-              title={ATTRIBUTE_DISPLAY_NAMES[atributo]}
-              aria-label={`${ATTRIBUTE_DISPLAY_NAMES[atributo]}: +${valor}`}
-              className="rounded px-1 py-0.5 flex items-center justify-center gap-1"
-              style={{ backgroundColor: `${colors.background.card}ee`, border: `1px solid ${colors.border.default}44` }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={ATTRIBUTE_ICONS[atributo]} alt="" aria-hidden="true" className="w-3.5 h-3.5 object-contain shrink-0" />
-              <span className="text-[10px] font-bold font-cinzel" style={{ color: colors.text.primary }}>
-                +{valor} <span style={{ color: colors.text.secondary }}>{SIGLAS[atributo]}</span>
-              </span>
-            </div>
-          ))}
-        </div>
+        <AtributosDaSubclasse subclasse={sub} />
 
-        <div
-          className="grid grid-cols-2 gap-x-1 gap-y-2 justify-items-center rounded py-1.5"
-          style={{ backgroundColor: `${colors.background.card}99`, border: `1px solid ${colors.border.default}33` }}
-        >
+        <div className="grid grid-cols-2 gap-x-[1cqw] gap-y-[1.6cqw] justify-items-center border border-[#2B3F5C] bg-[#080C16]/70 py-[1.4cqw]">
           {habilidades.map((h) => {
             const chave = `${sub.id}-${h.chave}`;
             return (
-              <div key={h.chave} className="flex flex-col items-center gap-2">
+              <div key={h.chave} className="flex flex-col items-center gap-[1cqw]">
                 <SkillIcon
                   src={iconeDaHabilidadeSubclasse(h.id)}
                   nome={h.nome}
                   tipo={h.tipo}
-                  descricao={`Libera no tier ${h.tier}. ${h.descricao}`}
-                  size={44}
+                  descricao={textoDaFicha(t.libera, { n: h.tier, descricao: h.descricao })}
+                  size="9cqw"
                   isOpen={popoverAberto === chave}
                   onToggle={() => setPopoverAberto((p) => (p === chave ? null : chave))}
                 />
-                <span className="text-[8.5px] font-cinzel font-bold leading-none" style={{ color: colors.text.secondary }}>
-                  {h.rotulo} · T{h.tier}
-                </span>
+                <span className="font-cinzel font-bold text-[1.7cqw] leading-none text-[#9CC4E0]">{h.rotulo} · T{h.tier}</span>
               </div>
             );
           })}
         </div>
 
         {acao && (
-          <Botao
+          <BotaoDaAcao
             acao={acao}
-            principal
+            desligado={ocupado}
             aoClicar={() =>
               setConfirmacao({
-                titulo: `Desbloquear ${sub.nome}?`,
-                aviso: 'Cada personagem tem uma subclasse só: trocar depois exige resetar (100 diamantes) e perder os tiers. Os recursos abaixo serão gastos agora.',
+                titulo: textoDaFicha(t.desbloquearTitulo, { nome: sub.nome }),
+                aviso: t.desbloquearAviso,
                 acao,
                 executar: async () => {
-                  await chamar('/api/character/subclasse/escolher', { subclasseId: sub.id }, `${sub.nome} desbloqueada!`);
+                  await chamar('/api/character/subclasse/escolher', { subclasseId: sub.id }, textoDaFicha(t.desbloqueada, { nome: sub.nome }));
                 },
               })
             }
           />
         )}
-        {aviso && (
-          <span className="text-[10px] text-center font-semibold" style={{ color: colors.text.secondary }}>
-            {aviso}
-          </span>
-        )}
+        {aviso && <span className="font-cinzel font-bold text-[2cqw] leading-snug text-center text-[#9CC4E0]">{aviso}</span>}
       </div>
     );
   };
@@ -258,140 +245,109 @@ export function SubclassePanel({ character, idToken, onCharacterChange, classNam
 
     const tierAtual = tierDaSubclasse(character, subId) ?? 0;
     const linha = linhaDeTiers(character);
-    const proximo = linha.find((t) => t.estado === 'proximo')?.tier ?? 4;
+    const proximo = linha.find((x) => x.estado === 'proximo')?.tier ?? 4;
     const tier = tierSelecionado ?? proximo;
-    const item = linha.find((t) => t.tier === tier) as TierDaLinha;
+    const item = linha.find((x) => x.tier === tier) as TierDaLinha;
     const hab = item.espaco === 'passiva' ? texto.passiva : texto[item.espaco];
     const { acao, aviso } = acaoDoTier(character, tier);
     const reset = acaoDeReset(character);
-    const cor = COR_DA_CLASSE[sub.classeId] ?? colors.accent.primary;
 
     return (
-      <div className="flex flex-col gap-2" data-subclasse-ativa={subId}>
-        {/* Cabeçalho: nome, tier atual, tema e atributos */}
-        <div
-          className="rounded-md px-2 py-1.5 flex flex-col gap-1"
-          style={{ background: `linear-gradient(165deg, ${cor}99 0%, ${colors.background.card} 100%)`, border: `1.5px solid ${colors.accent.primary}88` }}
-        >
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[14px] font-black font-cinzel leading-tight" style={{ color: colors.text.primary }}>{sub.nome}</span>
-            <span className="text-[10px] font-bold font-cinzel px-1.5 py-0.5 rounded" style={{ backgroundColor: '#000000bb', color: colors.accent.primary }}>
-              Tier {tierAtual}
-            </span>
+      <div className="flex flex-col gap-[1.8cqw]" data-subclasse-ativa={subId}>
+        {/* cabeçalho: a arte, o nome, o tier atual, o tema e os atributos */}
+        <PainelDaForja borda="2cqw" className="flex gap-[1.4cqw] items-end">
+          <div className="shrink-0" style={{ width: '34cqw' }}>
+            <ArteDaSubclasseTela subclasse={sub} altura="30cqw" />
           </div>
-          <span className="text-[10px] leading-tight" style={{ color: colors.text.secondary }}>{texto.tema}</span>
-          <div className="flex flex-wrap gap-1" aria-label={`Atributos que ${sub.nome} soma`}>
-            {bonusDeAtributosDaSubclasse(subId).map(({ atributo, valor }) => (
-              <span key={atributo} title={ATTRIBUTE_DISPLAY_NAMES[atributo]} aria-label={`${ATTRIBUTE_DISPLAY_NAMES[atributo]}: +${valor}`} className="inline-flex items-center gap-0.5 text-[10px] font-bold font-cinzel" style={{ color: colors.text.primary }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={ATTRIBUTE_ICONS[atributo]} alt="" aria-hidden="true" className="w-3 h-3 object-contain" />
-                +{valor} {SIGLAS[atributo]}
-              </span>
-            ))}
+          <div className="min-w-0 flex-1 flex flex-col gap-[1cqw]">
+            <div className="flex items-center justify-between gap-[1cqw]">
+              <span className="font-cinzel font-black text-[3cqw] leading-[1.35] text-[#F5F3E0]" style={{ textShadow: CONTORNO_PIXEL }}>{sub.nome}</span>
+              <span className="shrink-0 font-cinzel font-bold text-[2cqw] leading-[1.4] px-[1cqw] bg-[#05070D]/80 border border-[#B8862B] text-[#EDB44C]">{textoDaFicha(t.tierAtual, { n: tierAtual })}</span>
+            </div>
+            <span className="font-cinzel text-[1.9cqw] leading-snug text-[#C9D6EA]">{texto.tema}</span>
+            <AtributosDaSubclasse subclasse={sub} />
           </div>
-        </div>
+        </PainelDaForja>
 
-        {/* Linha de círculos: •--•---•---• */}
-        <div className="flex items-center px-2 py-2" role="tablist" aria-label="Tiers da subclasse">
-          {linha.map((t, i) => {
-            const selecionado = t.tier === tier;
-            const comprado = t.estado === 'comprado';
-            const ehProximo = t.estado === 'proximo';
+        {/* a linha de tiers: T1 a T4 */}
+        <div className="flex items-center px-[1cqw]" role="tablist" aria-label={t.tiers}>
+          {linha.map((x, i) => {
+            const selecionado = x.tier === tier;
+            const comprado = x.estado === 'comprado';
+            const ehProximo = x.estado === 'proximo';
+            const estado = comprado ? t.comprado : ehProximo ? t.proximo : t.bloqueado;
             return (
-              <React.Fragment key={t.tier}>
-                {i > 0 && (
-                  <div
-                    aria-hidden="true"
-                    className="flex-1 h-0.5"
-                    style={{ backgroundColor: linha[i - 1].estado === 'comprado' ? colors.accent.primary : `${colors.border.default}55` }}
-                  />
-                )}
+              <React.Fragment key={x.tier}>
+                {i > 0 && <div aria-hidden="true" className={`flex-1 h-[0.8cqw] ${linha[i - 1].estado === 'comprado' ? 'bg-[#EDB44C]' : 'bg-[#2B3F5C]'}`} />}
                 <button
                   type="button"
                   role="tab"
                   aria-selected={selecionado}
-                  aria-label={`Tier ${t.tier}: ${t.rotulo} (${comprado ? 'comprado' : ehProximo ? 'próximo' : 'bloqueado'})`}
-                  onClick={() => setTierSelecionado(t.tier)}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-black font-cinzel shrink-0 cursor-pointer transition-all active:scale-95 ${ehProximo ? 'animate-pulse' : ''}`}
-                  style={{
-                    backgroundColor: comprado ? colors.accent.primary : colors.background.cardElevated,
-                    color: comprado ? colors.background.secondary : ehProximo ? colors.accent.primary : colors.text.secondary,
-                    border: `2px solid ${comprado || ehProximo ? colors.accent.primary : `${colors.border.default}66`}`,
-                    boxShadow: selecionado ? `0 0 0 3px ${colors.accent.primary}55, 0 0 10px ${colors.accent.primary}88` : 'none',
-                    opacity: t.estado === 'bloqueado' ? 0.7 : 1,
-                  }}
+                  aria-label={textoDaFicha(t.tierAria, { n: x.tier, rotulo: x.rotulo, estado })}
+                  onClick={() => setTierSelecionado(x.tier)}
+                  className={`relative shrink-0 w-[12cqw] font-cinzel font-black text-[2.8cqw] leading-[1.4] text-center cursor-pointer active:translate-y-px ${comprado ? 'text-[#0A1A22]' : ehProximo ? 'text-[#EDB44C] animate-pulse' : 'text-[#7C8AA0]'}`}
+                  style={{ borderStyle: 'solid', borderWidth: '2cqw 1.6cqw', borderImage: `url(${comprado ? KIT_DA_FORJA.abaAtiva : KIT_DA_FORJA.aba}) 20 24 fill / 2cqw 1.6cqw stretch`, filter: selecionado ? 'drop-shadow(0 0 1.4cqw rgba(255,180,60,0.9))' : undefined, ...pixel }}
                 >
-                  T{t.tier}
+                  T{x.tier}
                 </button>
               </React.Fragment>
             );
           })}
         </div>
 
-        {/* O que esse tier faz */}
-        <div
-          className="rounded-md p-2 flex items-start gap-2"
-          style={{ backgroundColor: `${colors.background.card}ee`, border: `1px solid ${colors.border.default}55` }}
-        >
+        {/* o que esse tier faz */}
+        <PainelDaForja borda="2cqw" className="flex items-start gap-[1.6cqw]">
           <SkillIcon
             src={iconeDaHabilidadeSubclasse(hab.id)}
             nome={hab.nome}
             tipo={item.rotulo}
             descricao={hab.descricao}
             bloqueada={item.estado !== 'comprado'}
-            size={44}
+            size="11cqw"
             isOpen={popoverAberto === 'tier'}
             onToggle={() => setPopoverAberto((p) => (p === 'tier' ? null : 'tier'))}
           />
-          <div className="min-w-0 flex flex-col gap-0.5">
-            <span className="text-[11px] font-bold font-cinzel leading-tight" style={{ color: colors.accent.primary }}>
-              T{tier} · {item.rotulo}
-            </span>
-            <span className="text-[12px] font-black font-cinzel leading-tight" style={{ color: colors.text.primary }}>{hab.nome}</span>
-            <span className="text-[11px] leading-snug" style={{ color: colors.text.secondary }}>{hab.descricao}</span>
+          <div className="min-w-0 flex flex-col gap-[0.6cqw]">
+            <span className="font-cinzel font-bold text-[2.2cqw] leading-[1.4] text-[#EDB44C]">{textoDaFicha(t.tierLinha, { n: tier, rotulo: item.rotulo })}</span>
+            <span className="font-cinzel font-black text-[2.6cqw] leading-[1.35] text-[#F5F3E0]">{hab.nome}</span>
+            <span className="font-cinzel text-[2.1cqw] leading-snug text-[#E9DDC0]">{hab.descricao}</span>
           </div>
-        </div>
+        </PainelDaForja>
 
-        {/* Botão do tier */}
+        {/* o botão do tier */}
         {acao ? (
-          <Botao
+          <BotaoDaAcao
             acao={acao}
-            principal
+            desligado={ocupado}
             aoClicar={() =>
               setConfirmacao({
-                titulo: `Subir para o tier ${tier}?`,
-                aviso: 'Os recursos abaixo serão gastos agora e não voltam.',
+                titulo: textoDaFicha(t.tierTitulo, { n: tier }),
+                aviso: t.tierAviso,
                 acao,
                 executar: async () => {
-                  const ok = await chamar('/api/character/subclasse/tier', { subclasseId: subId }, `${sub.nome}: tier ${tier} comprado!`);
+                  const ok = await chamar('/api/character/subclasse/tier', { subclasseId: subId }, textoDaFicha(t.tierComprado, { nome: sub.nome, n: tier }));
                   if (ok) setTierSelecionado(null);
                 },
               })
             }
           />
         ) : (
-          <div
-            className="w-full rounded py-1.5 text-[11px] text-center font-bold font-cinzel"
-            style={{ backgroundColor: colors.background.cardElevated, border: `1px solid ${colors.border.default}55`, color: aviso === 'Comprado' ? colors.accent.primary : colors.text.secondary }}
-          >
-            {aviso === 'Comprado' && <Check className="inline w-3 h-3 mr-1 -mt-0.5" aria-hidden="true" />}
-            {aviso}
-          </div>
+          <p className={`font-cinzel font-extrabold uppercase text-[2.4cqw] leading-[1.4] text-center border border-[#2B3F5C] bg-[#080C16]/80 py-[1.4cqw] ${aviso === 'Comprado' ? 'text-[#EDB44C]' : 'text-[#9CC4E0]'}`}>{aviso}</p>
         )}
 
-        {/* Resetar */}
+        {/* resetar */}
         {reset && (
-          <div className="pt-1 border-t" style={{ borderColor: `${colors.border.default}33` }}>
-            <Botao
-              acao={reset}
-              principal={false}
+          <div className="pt-[1cqw] border-t border-dashed border-[#2B3F5C]">
+            <BotaoDaAcao
+              acao={{ ...reset, rotulo: t.resetar }}
+              desligado={ocupado}
               aoClicar={() =>
                 setConfirmacao({
-                  titulo: 'Resetar a subclasse?',
-                  aviso: 'Você perde a subclasse, o bônus de atributos e todos os tiers. Para ter uma subclasse de novo, paga tudo outra vez (tier 0 em diante). O custo em diamantes não volta.',
+                  titulo: t.resetTitulo,
+                  aviso: t.resetAviso,
                   acao: reset,
                   executar: async () => {
-                    const ok = await chamar('/api/character/subclasse/resetar', undefined, 'Subclasse resetada.');
+                    const ok = await chamar('/api/character/subclasse/resetar', undefined, t.resetFeito);
                     if (ok) setTierSelecionado(null);
                   },
                 })
@@ -406,76 +362,47 @@ export function SubclassePanel({ character, idToken, onCharacterChange, classNam
   const subclasses: Subclasse[] = SUBCLASSES.filter((s) => s.classeId === character.classeId);
 
   return (
-    <div className={`h-full flex flex-col gap-1.5 w-full max-w-[320px] select-none overflow-y-auto overflow-x-hidden pr-0.5 ${className}`}>
-      {feedback && (
-        <div
-          role="alert"
-          className="rounded px-2 py-1 text-[11px] flex items-center gap-1.5 shadow-md font-medium leading-tight shrink-0"
-          style={{
-            backgroundColor: feedback.type === 'success' ? colors.status.success : colors.status.danger,
-            border: `1px solid ${feedback.type === 'success' ? colors.status.successText : colors.status.danger}`,
-            color: feedback.type === 'success' ? colors.status.successText : colors.text.primary,
-          }}
-        >
-          {feedback.type === 'success' ? <Check className="w-3.5 h-3.5 shrink-0 text-green-400" /> : <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-red-400" />}
-          <span>{feedback.message}</span>
-        </div>
-      )}
+    <div className={`flex flex-col gap-[1.8cqw] w-full select-none ${className}`}>
+      {feedback && <p role="alert" className={`font-cinzel font-bold text-[2.4cqw] leading-snug text-center ${feedback.type === 'success' ? 'text-[#9BE3A0]' : 'text-[#FFB4B4]'}`}>{feedback.message}</p>}
 
-      <div className="grid grid-cols-3 gap-1 shrink-0">
-        <Saldo icone={iconeOuro} valor={character.ouro ?? 0} rotulo="Ouro" />
-        <Saldo icone={iconeFragmento} valor={character.fragmentosAlma ?? 0} rotulo="Fragmentos de alma" />
-        <Saldo icone={iconeDiamante} valor={character.diamantes ?? 0} rotulo="Diamantes" />
+      <div className="grid grid-cols-3 gap-[1cqw] shrink-0">
+        <Saldo icone={iconeOuro} valor={character.ouro ?? 0} rotulo={t.ouro} />
+        <Saldo icone={iconeFragmentoDeAlma} valor={character.fragmentosAlma ?? 0} rotulo={t.fragmentosAlma} />
+        <Saldo icone={iconeDiamante} valor={character.diamantes ?? 0} rotulo={t.diamantes} />
       </div>
 
-      {modo === 'escolha' ? <div className="flex items-start gap-1.5">{subclasses.map(renderEscolha)}</div> : renderEvolucao()}
+      {modo === 'escolha' ? <div className="flex items-start gap-[1.4cqw]">{subclasses.map(renderEscolha)}</div> : renderEvolucao()}
 
       {confirmacao && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-subclasse-title"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in pointer-events-auto"
-        >
-          <div className="w-full max-w-sm rounded-lg p-5 flex flex-col gap-3 shadow-2xl border" style={{ backgroundColor: colors.background.card, borderColor: colors.accent.primary }}>
-            <h3 id="modal-subclasse-title" className="text-base font-bold uppercase tracking-wider font-cinzel" style={{ color: colors.text.primary }}>
-              {confirmacao.titulo}
-            </h3>
-            <p className="text-xs leading-relaxed" style={{ color: colors.text.secondary }}>{confirmacao.aviso}</p>
-            <div className="flex flex-col gap-1 text-xs" style={{ color: colors.text.primary }}>
-              {confirmacao.acao.custo.fragmentosAlma > 0 && (
-                <span>Fragmentos de alma: <b>{fmt(confirmacao.acao.custo.fragmentosAlma)}</b> (você tem {fmt(character.fragmentosAlma ?? 0)})</span>
-              )}
-              {confirmacao.acao.custo.ouro > 0 && <span>Ouro: <b>{fmt(confirmacao.acao.custo.ouro)}</b> (você tem {fmt(character.ouro ?? 0)})</span>}
-              {confirmacao.acao.custo.fragmentosSubclasse > 0 && (
-                <span>Fragmentos da subclasse: <b>{fmt(confirmacao.acao.custo.fragmentosSubclasse)}</b> (você tem {fmt(character.fragmentosSubclasse?.[character.subclasseAtualId ?? ''] ?? 0)})</span>
-              )}
-              {confirmacao.acao.custo.diamantes > 0 && <span>Diamantes: <b>{fmt(confirmacao.acao.custo.diamantes)}</b> (você tem {fmt(character.diamantes ?? 0)})</span>}
-            </div>
-            <div className="flex items-center gap-3 pt-1">
-              <button
-                type="button"
-                onClick={() => setConfirmacao(null)}
-                disabled={ocupado}
-                className="flex-1 py-2 px-3 rounded text-xs sm:text-sm font-semibold disabled:opacity-40 cursor-pointer"
-                style={{ backgroundColor: colors.background.cardElevated, border: `1px solid ${colors.border.default}55`, color: colors.text.secondary }}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  const c = confirmacao;
-                  await c.executar();
-                  setConfirmacao(null);
-                }}
-                disabled={ocupado}
-                className="flex-1 py-2 px-3 rounded text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 disabled:opacity-40 cursor-pointer shadow-md"
-                style={{ backgroundColor: colors.accent.primary, color: colors.background.secondary }}
-              >
-                {ocupado ? <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <span>Confirmar</span>}
-              </button>
-            </div>
+        <div role="dialog" aria-modal="true" aria-label={confirmacao.titulo} className="forja-palco !fixed inset-0 !z-[80] !items-center !justify-center px-[4cqw]" style={{ backgroundColor: 'rgba(3,6,14,0.7)', left: 0, right: 0 }}>
+          <div className="relative w-full max-w-[88cqw]">
+            <BotaoRedondo tipo="x" rotulo={t.cancelar} onClick={() => !ocupado && setConfirmacao(null)} className="absolute -top-[3.4cqw] -right-[2cqw] z-10 w-[9cqw] h-[9cqw]" />
+            <PainelDaForja borda="3cqw">
+              <div className="flex flex-col gap-[2.2cqw]">
+                <h2 className="font-cinzel font-extrabold uppercase text-[3.2cqw] leading-[1.35] text-[#EDB44C]">{confirmacao.titulo}</h2>
+                <p className="font-cinzel text-[2.4cqw] leading-snug text-[#E9DDC0]">{confirmacao.aviso}</p>
+                <div className="flex flex-col gap-[0.8cqw] font-cinzel text-[2.4cqw] leading-[1.4] text-[#F5F3E0]">
+                  {confirmacao.acao.custo.fragmentosAlma > 0 && <span>{t.fragmentosAlma}: <b>{fmt(confirmacao.acao.custo.fragmentosAlma)}</b> ({textoDaFicha(t.voceTem, { n: fmt(character.fragmentosAlma ?? 0) })})</span>}
+                  {confirmacao.acao.custo.ouro > 0 && <span>{t.ouro}: <b>{fmt(confirmacao.acao.custo.ouro)}</b> ({textoDaFicha(t.voceTem, { n: fmt(character.ouro ?? 0) })})</span>}
+                  {confirmacao.acao.custo.fragmentosSubclasse > 0 && <span>{t.fragmentosSubclasse}: <b>{fmt(confirmacao.acao.custo.fragmentosSubclasse)}</b> ({textoDaFicha(t.voceTem, { n: fmt(character.fragmentosSubclasse?.[character.subclasseAtualId ?? ''] ?? 0) })})</span>}
+                  {confirmacao.acao.custo.diamantes > 0 && <span>{t.diamantes}: <b>{fmt(confirmacao.acao.custo.diamantes)}</b> ({textoDaFicha(t.voceTem, { n: fmt(character.diamantes ?? 0) })})</span>}
+                </div>
+                <div className="flex items-center gap-[2cqw]">
+                  <BotaoDoKit onClick={() => setConfirmacao(null)} disabled={ocupado} className="flex-1">{t.cancelar}</BotaoDoKit>
+                  <BotaoDoKit
+                    onClick={async () => {
+                      const c = confirmacao;
+                      await c.executar();
+                      setConfirmacao(null);
+                    }}
+                    disabled={ocupado}
+                    className="flex-1"
+                  >
+                    {t.confirmar}
+                  </BotaoDoKit>
+                </div>
+              </div>
+            </PainelDaForja>
           </div>
         </div>
       )}

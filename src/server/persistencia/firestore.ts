@@ -476,6 +476,9 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(typeof data.campeonatosVencidos === 'number' && data.campeonatosVencidos > 0 ? { campeonatosVencidos: Math.floor(data.campeonatosVencidos) } : {}),
     ...(typeof data.partyId === 'string' && data.partyId ? { partyId: data.partyId } : {}),
     ...(idsDeParty(data.convitesDeParty).length ? { convitesDeParty: idsDeParty(data.convitesDeParty) } : {}),
+    ...(Array.isArray(data.subclassesDesbloqueadas) && data.subclassesDesbloqueadas.some((v: unknown) => typeof v === 'string')
+      ? { subclassesDesbloqueadas: (data.subclassesDesbloqueadas as unknown[]).filter((v): v is string => typeof v === 'string').slice(0, 20) }
+      : {}),
     ...(data.bonusSubclasseAplicado && typeof data.bonusSubclasseAplicado === 'object'
       ? { bonusSubclasseAplicado: lerAtributos(data.bonusSubclasseAplicado, ZEROS_ATRIBUTOS) }
       : {}),
@@ -506,6 +509,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     subclasseAtualId: char.subclasseAtualId ?? null,
     subclasseTiers: char.subclasseTiers ?? {},
     fragmentosSubclasse: char.fragmentosSubclasse ?? {},
+    ...(char.subclassesDesbloqueadas?.length ? { subclassesDesbloqueadas: char.subclassesDesbloqueadas } : {}),
     ...(char.bonusSubclasseAplicado ? { bonusSubclasseAplicado: char.bonusSubclasseAplicado } : {}),
     reforcoHabilidade: char.reforcoHabilidade ?? 0,
     ascensaoHabilidade: char.ascensaoHabilidade ?? 0,

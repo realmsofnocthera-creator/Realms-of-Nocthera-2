@@ -23,7 +23,7 @@ import { ATTRIBUTES, AttributeName, Attributes } from '@/rules/attributes';
 import { GAME_CONFIG } from '@/rules/config';
 import { bonusSortePassivaRacial, getRaceById } from '@/rules/races';
 import { getClassById } from '@/rules/classes';
-import { getAvatarById } from '@/rules/avatars';
+import { avatarLiberado, getAvatarById } from '@/rules/avatars';
 import { HabilidadesEquipadas } from '@/rules/habilidadesEquipadas';
 import { SUBCLASSES } from '@/rules/subclasses';
 import { custoDoTier } from '@/rules/subclasseTiers';
@@ -202,6 +202,8 @@ export interface CharacterDocument {
   fragmentosAlma?: number;
   subclasseAtualId?: string | null;
   subclasseTiers?: Record<string, number>;
+  /** As subclasses que o personagem já desbloqueou (mesmo depois de resetar): liberam o retrato e o personagem de cada uma. */
+  subclassesDesbloqueadas?: string[];
   /** Fragmentos de cada subclasse (dropam na batalha sangrenta, Etapa 5); o tier 4 gasta 5 da própria subclasse. */
   fragmentosSubclasse?: Record<string, number>;
   bonusSubclasseAplicado?: Attributes;
@@ -573,6 +575,7 @@ function mesclarPersonagem(
     ...((updates.cartasDescobertas ?? current.cartasDescobertas) ? { cartasDescobertas: updates.cartasDescobertas ?? current.cartasDescobertas } : {}),
     ...((updates.poeiraDeAlma ?? current.poeiraDeAlma) ? { poeiraDeAlma: updates.poeiraDeAlma ?? current.poeiraDeAlma } : {}),
     ...((updates.cacosDeAlma ?? current.cacosDeAlma) ? { cacosDeAlma: updates.cacosDeAlma ?? current.cacosDeAlma } : {}),
+    ...((updates.subclassesDesbloqueadas ?? current.subclassesDesbloqueadas)?.length ? { subclassesDesbloqueadas: updates.subclassesDesbloqueadas ?? current.subclassesDesbloqueadas } : {}),
     ...((updates.perfilEquipamentos ?? current.perfilEquipamentos) ? { perfilEquipamentos: updates.perfilEquipamentos ?? current.perfilEquipamentos } : {}),
     armas: updates.armas ?? current.armas ?? [],
     armaduras: updates.armaduras ?? current.armaduras ?? [],
@@ -891,7 +894,8 @@ export async function createCharacter(
   const avatarIdInformado =
     input.avatarId !== undefined ? input.avatarId : classe.id;
   const avatarValido = getAvatarById(avatarIdInformado);
-  if (!avatarValido) {
+  if (!avatarValido || avatarValido.subclasseId) {
+    // quem acabou de criar o personagem ainda não desbloqueou nenhuma subclasse
     throw new Error(`Avatar inválido: "${String(input.avatarId)}".`);
   }
 
@@ -1066,6 +1070,9 @@ export async function updateCharacterAvatar(
 
   return repositorio.executarTransacao('atualizarAvatar', async (ctx) => {
     const current = await carregarPersonagem(ctx, uid);
+    if (!avatarLiberado(avatarValido, current)) {
+      throw new Error('Esse avatar abre quando você desbloqueia a subclasse dele.');
+    }
     return salvarPersonagem(ctx, current, { avatarId: avatarValido.id });
   });
 }
@@ -1425,6 +1432,7 @@ export async function escolherSubclasse(
       bonusSubclasseAplicado: novaSubclasse.bonusAtributos,
       subclasseAtualId: novaSubclasse.id,
       subclasseTiers: { [novaSubclasse.id]: 0 },
+      subclassesDesbloqueadas: [...new Set([...(character.subclassesDesbloqueadas ?? []), novaSubclasse.id])],
     });
   });
 }
