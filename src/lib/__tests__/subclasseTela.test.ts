@@ -47,8 +47,9 @@ describe('Textos das subclasses', () => {
     }
   });
 
-  it('sem arte oficial, toda habilidade usa a imagem base', () => {
-    expect(iconeDaHabilidadeSubclasse('arquimago_meteoro')).toBe(SUBCLASSE_ICONE_BASE);
+  it('só uma habilidade sem arte própria (id desconhecido) usa a imagem base', () => {
+    expect(iconeDaHabilidadeSubclasse('subclasse_inexistente_habilidade')).toBe(SUBCLASSE_ICONE_BASE);
+    expect(iconeDaHabilidadeSubclasse('arquimago_meteoro')).not.toBe(SUBCLASSE_ICONE_BASE);
   });
 });
 
