@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from ..nucleo import CONFIG, carregar_json
 from .base import ProvedorImagem
+from .asf import ProvedorAsf
 from .comando_externo import ProvedorComandoExterno
 from .http_api import ProvedorHttp
 from .manual import ProvedorManual
@@ -16,4 +17,6 @@ def obter_provedor(nome: str | None = None) -> ProvedorImagem:
         return ProvedorComandoExterno(cfg["comando_externo"])
     if nome == "http_api":
         return ProvedorHttp(cfg["http_api"])
+    if nome == "asf_route":
+        return ProvedorAsf(cfg["asf_route"])
     raise ValueError(f"Provedor desconhecido: {nome}")

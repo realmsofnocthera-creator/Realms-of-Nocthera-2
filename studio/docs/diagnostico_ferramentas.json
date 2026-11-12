@@ -1,0 +1,56 @@
+[
+  {
+    "ferramenta": "Nocthera studio (auditor/pós-processo/viewer)",
+    "instalada": true,
+    "funciona_offline": true,
+    "gera_imagem": "não (processa, não gera)",
+    "custo": "grátis",
+    "pendencia": "nenhuma",
+    "evidencia": "auditor reprova imagem vazia: ok"
+  },
+  {
+    "ferramenta": "Pixel Art Studio (Pillow, desenho por código)",
+    "instalada": true,
+    "funciona_offline": true,
+    "gera_imagem": "por código",
+    "custo": "grátis",
+    "pendencia": "nenhuma (revisão visual obrigatória: arte desenhada por código não é geração por modelo)",
+    "evidencia": "exemplo slime: exit 0, PNG+GIF criados"
+  },
+  {
+    "ferramenta": "pixelpipe (limpeza/paleta de PNG sujo)",
+    "instalada": true,
+    "funciona_offline": true,
+    "gera_imagem": "não (limpa, não gera)",
+    "custo": "grátis",
+    "pendencia": "nenhuma",
+    "evidencia": "exit 0, clean.png criado"
+  },
+  {
+    "ferramenta": "Agent Sprite Forge (generate2dmedia/2dsprite/video2dsprite/2dmap)",
+    "instalada": true,
+    "funciona_offline": true,
+    "gera_imagem": "não",
+    "custo": "pago por chave / cota de assinatura (exige --autorizo-gasto)",
+    "pendencia": "nenhuma chave configurada (OPENAI, GEMINI, XAI, ARK/BytePlus, FAL), Codex CLI e Grok CLI ausentes",
+    "evidencia": "route_media resolve → no-route; chaves=0; codex=False; grok=False; ffmpeg=True"
+  },
+  {
+    "ferramenta": "codeart2d (ASF, arte por código)",
+    "instalada": true,
+    "funciona_offline": true,
+    "gera_imagem": "por código",
+    "custo": "grátis",
+    "pendencia": "saída 32px/paleta própria: precisa de PixelSpec 96/128 + paleta nocthera-32",
+    "evidencia": "slime.pixelspec → exit 0, qa pass=True"
+  },
+  {
+    "ferramenta": "fal MCP remoto (mcp.fal.ai/mcp-relay)",
+    "instalada": true,
+    "funciona_offline": true,
+    "gera_imagem": "não (OAuth pendente)",
+    "custo": "pago (créditos fal)",
+    "pendencia": "usuário autorizar o OAuth no navegador (conector claude.ai ou /mcp)",
+    "evidencia": "HTTP 401; OAuth anunciado: True"
+  }
+]

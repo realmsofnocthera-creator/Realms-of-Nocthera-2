@@ -22,7 +22,7 @@ Data: 12/11/2026 · Ambiente: cloud do Claude Code, Python 3.13.18, Pillow 12.3.
 | Visualizador | Chromium, emulação iPhone 13 (DPR 2), pinça via toque (CDP) | zoom trava em 50% e 800% (botões e pinça), inspetor devolve `#5B9A38 · α 255`, 5 modos funcionam, sem erros de console, sem rolagem horizontal (390=390) |
 
 ## Calibração com arte real (achados)
-- **Ícones atuais do jogo** (`src/assets/icons/attr-*.png`, `resource-hp.png`): 4.100–6.100 cores, 1.000–1.900 pixels semitransparentes, 17–20% de pixels de mistura, ~95% de clusters de 1 px → **reprovados** (são ilustrações suaves, não pixel art nativa). `race-*.png` (196×196) também fogem do padrão de resolução.
+- **Ícones atuais do jogo** (`src/assets/icons/attr-*.png`, `resource-hp.png`): 4.100–6.100 cores, 1.000–1.900 pixels semitransparentes, 17–20% de pixels de mistura, ~95% de clusters de 1 px → **reprovados** pelo padrão 96/128 nativo. *(Correção posterior: eram lidos como "ilustrações suaves", mas na verdade são pixel art de ~43 px ampliada com suavização — ver `FERRAMENTAS_EXTERNAS.md`.)* `race-*.png` (196×196) também fogem do padrão de resolução.
 - **Galeria do aseprite-ai-artist** (`pebbly-*.png` 128×128) e favicon 96×96: na verdade 16×16 ampliados 8× e 6× → `ampliado_inteiro`. A resolução "bonita" escondia a resolução nativa real.
 - **`eldritch_130x160.png` (pxl)** é uma cena com moldura. Depois do pós-processamento o auditor deu **0 erros e 0 avisos** — só a folha de revisão (silhueta preta = retângulo) mostrou o problema. Isso gerou a checagem `silhueta_retangular`. É a prova prática de que métricas não bastam e de por que a revisão visual é obrigatória.
 

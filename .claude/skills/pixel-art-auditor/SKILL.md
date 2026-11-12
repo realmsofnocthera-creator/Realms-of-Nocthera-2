@@ -54,4 +54,12 @@ Checklist completo: `python3 -m nocthera_studio checklist`. O `aprovar` recusa s
 - Um PNG pode passar em tudo e ser feio. Já ocorreu: uma cena emoldurada deu 0 erros até existir a checagem de silhueta retangular. **Confie no olho primeiro, nas métricas depois.**
 - Arte "limpa" de IA pós-processada tende a ficar mole (clusters pequenos, rampas sem contraste). Reprove e regenere; não aprove por cansaço.
 - Antialiasing detectado em poucos pixels pode ser rampa legítima de 1 px; olhe as coordenadas (`locais`) na folha antes de decidir.
-- Os ícones atuais do jogo em `src/assets/icons/*.png` são ilustrações suaves (milhares de cores) e **falham** de propósito neste auditor: não são pixel art nativa.
+- Os ícones atuais do jogo em `src/assets/icons/*.png` têm milhares de cores e alfa parcial e **falham** de propósito neste auditor (não são pixel art 96/128 nativa; na prática são arte de ~43 px ampliada com suavização, que o auditor não detecta como ampliação).
+
+
+## Ferramentas integradas
+
+- Este auditor julga **qualquer** saída, venha de onde vier (ASF, Pixel Art Studio, fal, humano). Não confie no "QA pass" das ferramentas externas: o `pixel_qa.py`/`sheet_qc.py` do ASF também declaram `notProven` (anatomia, identidade, apelo) — é exatamente o que a revisão visual cobre.
+- **Segundo par de olhos** opcional: `pixel_reduce.py` (ASF) detecta grade inteira e confirma/contradiz `ampliado_inteiro`; `pixelpipe.py` estima a grade de PNG suavizado (o auditor só detecta ampliação **exata** por vizinho mais próximo — limitação conhecida).
+- `aprovar` agora exige **origem declarada** (`origem <id> --tipo …`). Arte por código passa pelas mesmas checagens, e a origem fica no manifesto.
+- Toda geração paga deve ter vindo de `--autorizo-gasto`; confira `origem.autorizado_usd` e o ledger em `assets/.forge/ledger.jsonl` quando auditar um ativo gerado por modelo.

@@ -17,6 +17,13 @@ from .nucleo import ASSETS, sha256_arquivo
 ARQUIVO = ASSETS / "manifesto.json"
 STATUS = ("rascunho", "auditado", "reprovado", "aprovado")
 
+ORIGENS = {
+    "modelo": "gerada por modelo de imagem (API/CLI) e pós-processada",
+    "codigo": "desenhada por código (pixel-art-studio, codeart2d, pxl) — declarar ao exibir/publicar",
+    "humano": "pixel art feita por pessoa (Aseprite etc.)",
+    "referencia": "pixelada a partir de imagem de referência real/licenciada (método Codixel)",
+}
+
 CATEGORIA_DA_PASTA = {"monstros": "monstro", "armas": "arma", "icones": "icone"}
 
 CHECKLIST_VISUAL = {
@@ -104,6 +111,10 @@ def aprovar(ativo_id: str, revisor: str, leitura_fria: str, itens_confirmados: l
         raise ValueError("A leitura fria precisa descrever o sprite (≥30 caracteres), sem copiar o briefing.")
     if not revisor.strip():
         raise ValueError("Informe o revisor.")
+    tipo = (a.get("origem") or {}).get("tipo")
+    if tipo not in ORIGENS:
+        raise ValueError("Origem da arte não declarada. Rode `origem <id> --tipo " + "|".join(ORIGENS) +
+                         " --detalhe '...'` (a arte por código precisa ser divulgada como tal).")
     faltam = [k for k in CHECKLIST_VISUAL if k not in itens_confirmados and k != "leitura_fria"]
     if faltam:
         raise ValueError("Itens do checklist visual não confirmados: " + ", ".join(faltam))
@@ -118,6 +129,18 @@ def aprovar(ativo_id: str, revisor: str, leitura_fria: str, itens_confirmados: l
                       "checklist": {k: (k in itens_confirmados or k == "leitura_fria") for k in CHECKLIST_VISUAL},
                       "notas": notas, "sha256": rel["sha256"]})
     a.pop("revisao_invalidada", None)
+    salvar_manifesto(m)
+    return a
+
+
+def declarar_origem(ativo_id: str, tipo: str, detalhe: str = "") -> dict:
+    if tipo not in ORIGENS:
+        raise ValueError(f"tipo de origem inválido: {tipo} (use {', '.join(ORIGENS)})")
+    m = carregar_manifesto()
+    a = achar(m, ativo_id)
+    if a is None:
+        raise ValueError(f"Ativo desconhecido: {ativo_id}")
+    a.setdefault("origem", {}).update(tipo=tipo, detalhe=detalhe, declarada_em=agora())
     salvar_manifesto(m)
     return a
 

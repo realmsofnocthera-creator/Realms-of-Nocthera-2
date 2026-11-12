@@ -10,7 +10,7 @@ Infraestrutura para **produzir, validar e revisar** pixel art do jogo (criaturas
 
 ```bash
 cd studio
-./setup.sh                     # confere Python/Pillow e roda os testes (35)
+./setup.sh                     # confere Python/Pillow e roda os testes (42)
 python3 -m nocthera_studio auditar caminho/sprite.png -c monstro --folha
 python3 -m nocthera_studio manifesto && python3 -m nocthera_studio servir   # http://localhost:8000/viewer/
 ```
@@ -49,7 +49,7 @@ studio/
 ├── scripts/               verificar_dimensoes|transparencia|paleta|pixels.py · auditar.py
 ├── viewer/index.html      visualizador responsivo (celular), zoom até 800%
 ├── assets/                entrada · bruto · candidatos · aprovados · relatorios · previews · manifesto.json
-├── tests/                 35 testes (unittest)
+├── tests/                 42 testes (unittest)
 └── docs/
 ```
 
@@ -68,6 +68,19 @@ studio/
 
 Todos via `python3 -m nocthera_studio <comando>`. Categorias (`-c`): `monstro`, `arma`, `icone`, `generico`.
 
+## Ferramentas externas (ASF, Pixel Art Studio, fal MCP)
+
+Instaladas em `.claude/skills/` (ver `docs/FERRAMENTAS_EXTERNAS.md`). **Estado real:** hoje **nenhuma** gera imagem a partir de texto neste ambiente — falta rota de modelo (sem chave/Codex/Grok) e o OAuth do fal é do usuário (`docs/FAL_MCP_OAUTH.md`). Elas só desenham por código (Pixel Art Studio, codeart2d) ou limpam/conformam imagens.
+
+```bash
+./setup.sh --completo                      # numpy, scipy, resvg-py… (o contêiner é efêmero)
+python3 -m nocthera_studio diagnostico     # sonda cada ferramenta agora e diz o que gera imagem
+python3 -m nocthera_studio gerar B.json --provedor asf_route --planejar          # grátis: rota + estimativa
+python3 -m nocthera_studio gerar B.json --provedor asf_route --autorizo-gasto 0.5 # só com teto autorizado pelo usuário
+python3 -m nocthera_studio origem <id> --tipo modelo|codigo|humano|referencia    # exigida para aprovar
+```
+**Nenhum provedor além do `manual` executa sem `--autorizo-gasto <USD>`.** Direção de arte e roteador: skill `nocthera-art-direction`.
+
 ## Documentação
 
 - `docs/FLUXO_DE_TRABALHO.md` — do briefing à aprovação
@@ -75,4 +88,5 @@ Todos via `python3 -m nocthera_studio <comando>`. Categorias (`-c`): `monstro`, 
 - `docs/INTEGRACAO_API.md` — ligar um modelo de geração de imagens
 - `docs/VISUALIZADOR.md` — uso no celular (zoom, grade, comparação)
 - `docs/REFERENCIAS.md` — como usar `codixel`, `pxl` e `aseprite-ai-artist`
+- `docs/FERRAMENTAS_EXTERNAS.md` · `docs/FAL_MCP_OAUTH.md` · `docs/RELATORIO_FERRAMENTAS.md` — ferramentas externas, OAuth e relatório de testes
 - `docs/RELATORIO_INICIAL.md` — o que foi construído, testado e o que falta

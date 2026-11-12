@@ -75,24 +75,31 @@ class TestManifesto(unittest.TestCase):
             p.stop()
 
     def test_nao_aprova_sem_checklist(self):
-        manifesto.registrar(self.png, "monstro")
+        manifesto.registrar(self.png, "monstro", origem={"tipo": "humano"})
         with self.assertRaisesRegex(ValueError, "checklist"):
             manifesto.aprovar("m1", "Ana", self.leitura, self.itens[:3])
 
     def test_nao_aprova_sem_leitura_fria(self):
-        manifesto.registrar(self.png, "monstro")
+        manifesto.registrar(self.png, "monstro", origem={"tipo": "humano"})
         with self.assertRaisesRegex(ValueError, "leitura fria"):
             manifesto.aprovar("m1", "Ana", "ok", self.itens)
 
     def test_nao_aprova_arquivo_reprovado_mesmo_com_checklist(self):
         F.ampliado().save(self.png)
-        manifesto.registrar(self.png, "monstro")
+        manifesto.registrar(self.png, "monstro", origem={"tipo": "humano"})
         self.assertEqual(manifesto.achar(manifesto.carregar_manifesto(), "m1")["status"], "reprovado")
         with self.assertRaisesRegex(ValueError, "reprova"):
             manifesto.aprovar("m1", "Ana", self.leitura, self.itens)
 
-    def test_aprova_e_invalida_se_arquivo_mudar(self):
+    def test_nao_aprova_sem_origem_declarada(self):
         manifesto.registrar(self.png, "monstro")
+        with self.assertRaisesRegex(ValueError, "Origem"):
+            manifesto.aprovar("m1", "Ana", self.leitura, self.itens)
+        with self.assertRaises(ValueError):
+            manifesto.declarar_origem("m1", "inventada")
+
+    def test_aprova_e_invalida_se_arquivo_mudar(self):
+        manifesto.registrar(self.png, "monstro", origem={"tipo": "humano"})
         self.assertEqual(manifesto.achar(manifesto.carregar_manifesto(), "m1")["status"], "auditado")
         r = manifesto.aprovar("m1", "Ana", self.leitura, self.itens)
         self.assertEqual(r["status"], "aprovado")
@@ -232,8 +239,91 @@ class TestFluxoCompletoCLI(unittest.TestCase):
         recusa = self.cli("aprovar", "monstro-rato-da-peste", "--revisor", "T", "--leitura-fria", "curta")
         self.assertEqual(recusa.returncode, 1)
         if m["ativos"][0]["auditoria"]["erros"] == 0:
+            sem = self.cli("aprovar", "monstro-rato-da-peste", "--revisor", "Teste", "--leitura-fria",
+                           "Um bloco verde arredondado com uma faixa vermelha no centro, silhueta simples.",
+                           "--confirmo", *itens)
+            self.assertEqual(sem.returncode, 1)  # origem não declarada (provedor manual)
+            self.assertEqual(self.cli("origem", "monstro-rato-da-peste", "--tipo", "referencia").returncode, 0)
             ok = self.cli("aprovar", "monstro-rato-da-peste", "--revisor", "Teste", "--leitura-fria",
                           "Um bloco verde arredondado com uma faixa vermelha no centro, silhueta simples.",
                           "--confirmo", *itens)
             self.assertEqual(ok.returncode, 0, ok.stdout)
             self.assertTrue((self.raiz / "assets/aprovados/monstro/monstro-rato-da-peste.png").exists())
+
+
+@unittest.skipUnless((RAIZ.parent / ".claude/skills/generate2dmedia/scripts/route_media.py").exists(),
+                     "Agent Sprite Forge não instalado")
+class TestPortaoDeGasto(unittest.TestCase):
+    """Provedor asf_route: chave FICTÍCIA + script simulado (seam do ASF). Nunca chega à rede nem cobra."""
+
+    def setUp(self):
+        self.raiz = Path(tempfile.mkdtemp())
+        (self.raiz / "assets").mkdir()
+        self.marca = self.raiz / "executou.txt"
+        fake = self.raiz / "fake.py"
+        fake.write_text(
+            "import sys, json, pathlib\n"
+            "a = sys.argv[1:]\n"
+            "if '--dry-run' in a:\n"
+            "    print(json.dumps({'status': 'dry-run', 'route': 'api:fal', 'estimateUsd': 0.08, 'model': 'fake', "
+            "'estimate': '1 x 0.08 simulado'})); sys.exit(0)\n"
+            f"pathlib.Path({str(self.marca)!r}).write_text('sim')\n"
+            "out = pathlib.Path(a[a.index('--out-dir') + 1]); out.mkdir(parents=True, exist_ok=True)\n"
+            f"open(out / 'generated.png', 'wb').write(open({str(self.raiz / 'bruto.png')!r}, 'rb').read())\n"
+            "print(json.dumps({'status': 'ok', 'route': 'api:fal', 'artifact': str(out / 'generated.png'), "
+            "'sha256': 'x', 'estimateUsd': 0.08}))\n")
+        F.bruto_de_modelo().save(self.raiz / "bruto.png")
+        F.sprite_valido().save(self.raiz / "ref.png")
+        b = json.loads((RAIZ / "config/briefs/exemplo-monstro-rato-da-peste.json").read_text())
+        b["referencias"] = [str(self.raiz / "ref.png")]
+        self.briefing = self.raiz / "b.json"
+        self.briefing.write_text(json.dumps(b))
+        self.env = {k: v for k, v in os.environ.items() if not k.endswith("_API_KEY")}
+        self.env.update(NOCTHERA_ASSETS=str(self.raiz / "assets"), FAL_KEY="fake:fake",
+                        FORGE_ROUTE_MEDIA_FAKE=str(fake), HOME=str(self.raiz))
+
+    def cli(self, *args):
+        return subprocess.run([sys.executable, "-m", "nocthera_studio", "gerar", str(self.briefing),
+                               "--provedor", "asf_route", *map(str, args)], cwd=RAIZ, capture_output=True,
+                              text=True, env=self.env)
+
+    def test_planejar_nao_executa_nada(self):
+        r = self.cli("--planejar")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("api:fal", r.stdout)
+        self.assertIn("0.08", r.stdout)
+        self.assertFalse(self.marca.exists())
+
+    def test_sem_autorizacao_recusa_e_nao_executa(self):
+        r = self.cli()
+        self.assertEqual(r.returncode, 4, r.stdout + r.stderr)
+        self.assertIn("NÃO autorizada" if "NÃO autorizada" in r.stdout else "--autorizo-gasto", r.stdout)
+        self.assertFalse(self.marca.exists())
+        self.assertFalse(list((self.raiz / "assets").rglob("candidatos/**/*.png")))
+
+    def test_teto_abaixo_da_estimativa_recusa(self):
+        r = self.cli("--autorizo-gasto", "0.01")
+        self.assertEqual(r.returncode, 4, r.stdout)
+        self.assertFalse(self.marca.exists())
+
+    def test_com_teto_suficiente_gera_e_registra_a_rota(self):
+        r = self.cli("--autorizo-gasto", "0.5")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertTrue(self.marca.exists())
+        m = json.loads((self.raiz / "assets/manifesto.json").read_text())
+        origem = m["ativos"][0]["origem"]
+        self.assertEqual(origem["rota"], "api:fal")
+        self.assertEqual(origem["autorizado_usd"], 0.5)
+        self.assertNotEqual(m["ativos"][0]["status"], "aprovado")
+
+    def test_sem_rota_nao_inventa_arte(self):
+        self.env.pop("FAL_KEY")
+        self.env.pop("FORGE_ROUTE_MEDIA_FAKE")  # sem seam: o ASF resolve a rota de verdade (nenhuma)
+        r = self.cli("--autorizo-gasto", "1")
+        self.assertEqual(r.returncode, 2, r.stdout)
+        self.assertFalse(self.marca.exists())
+
+    def test_http_api_tambem_exige_autorizacao(self):
+        r = subprocess.run([sys.executable, "-m", "nocthera_studio", "gerar", str(self.briefing), "--provedor", "http_api"],
+                           cwd=RAIZ, capture_output=True, text=True, env=self.env)
+        self.assertEqual(r.returncode, 4, r.stdout)

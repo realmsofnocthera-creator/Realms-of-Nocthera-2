@@ -111,12 +111,20 @@ def posprocessar_fn(*args, **kw):
 
 def cmd_gerar(a) -> int:
     from .fluxo import gerar_ativo
-    from .geracao import AguardandoImagem, ProvedorNaoConfigurado
+    from .geracao import AguardandoImagem, GastoNaoAutorizado, ProvedorNaoConfigurado
     try:
-        res = gerar_ativo(a.briefing, a.provedor, a.metodo)
+        res = gerar_ativo(a.briefing, a.provedor, a.metodo, a.autorizo_gasto, a.planejar)
     except (AguardandoImagem, ProvedorNaoConfigurado) as e:
         print(f"⏸ {e}")
         return 2
+    except GastoNaoAutorizado as e:
+        print(f"⛔ {e}")
+        if e.plano:
+            print("   plano:", json.dumps(e.plano, ensure_ascii=False))
+        return 4
+    if a.planejar:
+        print("plano (nada foi gerado nem cobrado):", json.dumps(res["plano"], ensure_ascii=False))
+        return 0
     for s in res["saidas"]:
         print(s["resumo"])
         print("   candidato:", s["candidato"], "\n   folha:", s["folha"])
@@ -130,6 +138,16 @@ def cmd_aprovar(a) -> int:
         print(f"✖ aprovação recusada: {e}")
         return 1
     print(f"✔ {r['id']} aprovado por {a.revisor}: {r['arquivo_aprovado']}")
+    return 0
+
+
+def cmd_origem(a) -> int:
+    try:
+        manifesto.declarar_origem(a.id, a.tipo, a.detalhe or "")
+    except ValueError as e:
+        print(f"✖ {e}")
+        return 1
+    print(f"✔ origem de {a.id}: {a.tipo} — {manifesto.ORIGENS[a.tipo]}")
     return 0
 
 
@@ -160,6 +178,18 @@ def cmd_paleta(a) -> int:
         print(exportar_hex(pal), end="")
     else:
         print(f"{pal.nome}: {len(pal.cores)} cores, {len(pal.rampas)} rampas")
+    return 0
+
+
+def cmd_diagnostico(a) -> int:
+    from . import ferramentas
+    linhas = ferramentas.diagnosticar(rede=not a.sem_rede)
+    if a.json:
+        print(json.dumps(linhas, ensure_ascii=False, indent=2))
+    else:
+        print(ferramentas.tabela(linhas))
+    if a.salvar:
+        ferramentas.SAIDA_JSON.write_text(json.dumps(linhas, ensure_ascii=False, indent=2), encoding="utf-8")
     return 0
 
 
@@ -194,7 +224,10 @@ def main(argv=None) -> int:
     s.set_defaults(f=cmd_posprocessar)
 
     s = sub.add_parser("gerar", help="briefing JSON → prompt → provedor → pós-processo → auditoria")
-    s.add_argument("briefing"); s.add_argument("--provedor", choices=["manual", "comando_externo", "http_api"])
+    s.add_argument("briefing"); s.add_argument("--provedor", choices=["manual", "comando_externo", "http_api", "asf_route"])
+    s.add_argument("--planejar", action="store_true", help="mostra rota e estimativa sem gerar nem gastar")
+    s.add_argument("--autorizo-gasto", type=float, metavar="USD",
+                   help="teto em USD AUTORIZADO PELO USUÁRIO; sem isso nenhum provedor pago/de cota executa")
     s.add_argument("--metodo", choices=["box", "nearest", "moda"], default="box")
     s.set_defaults(f=cmd_gerar)
 
@@ -202,6 +235,10 @@ def main(argv=None) -> int:
     s.add_argument("id"); s.add_argument("--revisor", required=True); s.add_argument("--leitura-fria", required=True)
     s.add_argument("--confirmo", nargs="*", help="chaves do checklist (veja `checklist`)"); s.add_argument("--notas")
     s.set_defaults(f=cmd_aprovar)
+
+    s = sub.add_parser("origem", help="declara a origem da arte (modelo|codigo|humano|referencia); exigida para aprovar")
+    s.add_argument("id"); s.add_argument("--tipo", required=True, choices=list(manifesto.ORIGENS))
+    s.add_argument("--detalhe"); s.set_defaults(f=cmd_origem)
 
     sub.add_parser("checklist", help="lista o checklist de revisão visual").set_defaults(f=cmd_checklist)
 
@@ -215,6 +252,10 @@ def main(argv=None) -> int:
     s = sub.add_parser("paleta", help="inspeciona/exporta uma paleta")
     s.add_argument("paleta", nargs="?", default="nocthera-32"); s.add_argument("--exportar-hex", action="store_true")
     s.set_defaults(f=cmd_paleta)
+
+    s = sub.add_parser("diagnostico", help="sonda cada ferramenta instalada e diz o que realmente gera imagem aqui")
+    s.add_argument("--json", action="store_true"); s.add_argument("--salvar", action="store_true")
+    s.add_argument("--sem-rede", action="store_true"); s.set_defaults(f=cmd_diagnostico)
 
     s = sub.add_parser("servir", help="serve studio/ para abrir o visualizador no navegador/celular")
     s.add_argument("--porta", type=int, default=8000); s.set_defaults(f=cmd_servir)

@@ -10,3 +10,7 @@ coverage/
 # Gerados
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+
+# Python (estúdio e ferramentas de skills)
+__pycache__/
+*.pyc

@@ -1,7 +1,9 @@
 {
-  "$comentario": "Provedores de geração de imagem. Nenhum está ativo por padrão (sem chave = sem chamada de rede). Para ligar uma API: preencha 'http_api', exporte a variável de ambiente da chave e use `gerar --provedor http_api`. Veja docs/INTEGRACAO_API.md.",
+  "$comentario": "Provedores de geração de imagem. Nenhum está ativo por padrão (sem chave = sem chamada de rede). Para ligar uma API: preencha 'http_api', exporte a variável de ambiente da chave e use `gerar --provedor http_api`. Veja docs/INTEGRACAO_API.md. TODO provedor que não seja 'manual' exige --autorizo-gasto <USD> no comando gerar.",
   "padrao": "manual",
-  "manual": { "descricao": "Você (ou outra ferramenta) coloca a imagem em assets/entrada/<id>.png e o estúdio pós-processa e audita." },
+  "manual": {
+    "descricao": "Você (ou outra ferramenta) coloca a imagem em assets/entrada/<id>.png e o estúdio pós-processa e audita."
+  },
   "comando_externo": {
     "descricao": "Executa um comando local (ex.: um gerador do pxl/codixel). Sem shell. Placeholders: {prompt_file} {saida} {semente} {tamanho}.",
     "comando": []
@@ -11,9 +13,28 @@
     "descricao": "POST JSON genérico. Adapte url/corpo/resposta ao fornecedor escolhido.",
     "url": "",
     "metodo": "POST",
-    "cabecalhos": { "Authorization": "Bearer ${NOCTHERA_IMAGE_API_KEY}", "Content-Type": "application/json" },
-    "corpo": { "model": "", "prompt": "{prompt}", "negative_prompt": "{negativo}", "size": "{largura}x{altura}", "seed": "{semente}", "n": 1 },
-    "resposta": { "tipo": "base64", "caminho": "data.0.b64_json" },
+    "cabecalhos": {
+      "Authorization": "Bearer ${NOCTHERA_IMAGE_API_KEY}",
+      "Content-Type": "application/json"
+    },
+    "corpo": {
+      "model": "",
+      "prompt": "{prompt}",
+      "negative_prompt": "{negativo}",
+      "size": "{largura}x{altura}",
+      "seed": "{semente}",
+      "n": 1
+    },
+    "resposta": {
+      "tipo": "base64",
+      "caminho": "data.0.b64_json"
+    },
     "timeout_s": 120
+  },
+  "asf_route": {
+    "descricao": "Usa o route_media.py do Agent Sprite Forge (API por chave > CLI Codex/Grok logado). SÓ executa com --autorizo-gasto <USD>; sem isso apenas planeja (dry-run gratuito). A rota fal do ASF é edição por referência: exige ao menos 1 imagem em 'referencias' do briefing.",
+    "rota": "auto",
+    "tier": "draft",
+    "tamanho": "1024x1024"
   }
 }

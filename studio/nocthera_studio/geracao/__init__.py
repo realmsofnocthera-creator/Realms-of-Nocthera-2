@@ -1,6 +1,6 @@
 """Camada de geração: interface comum para provedores de imagem (manual, comando externo, API HTTP)."""
-from .base import AguardandoImagem, PedidoGeracao, ProvedorImagem, ProvedorNaoConfigurado, ResultadoGeracao
+from .base import AguardandoImagem, GastoNaoAutorizado, PedidoGeracao, ProvedorImagem, ProvedorNaoConfigurado, ResultadoGeracao
 from .registro import obter_provedor
 
-__all__ = ["AguardandoImagem", "PedidoGeracao", "ProvedorImagem", "ProvedorNaoConfigurado",
+__all__ = ["AguardandoImagem", "GastoNaoAutorizado", "PedidoGeracao", "ProvedorImagem", "ProvedorNaoConfigurado",
            "ResultadoGeracao", "obter_provedor"]

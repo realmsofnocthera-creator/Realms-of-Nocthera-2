@@ -45,3 +45,11 @@ python3 -m nocthera_studio gerar config/briefs/<briefing>.json
 python3 -m nocthera_studio auditar assets/candidatos/armas/<id>.png -c arma --folha
 ```
 Limite de **16 cores** para armas. Revisão visual e `aprovar` conforme `pixel-art-auditor`. Para variantes de raridade da mesma arma, gere a base aprovada e varie **apenas** rampas de acento (troca de paleta controlada), preservando a silhueta.
+
+
+## Ferramentas integradas
+
+- **Armas/itens por modelo**: `master_still.py prompt --class prop --finish hibit --identity "<lâmina, guarda, empunhadura, materiais>"` (ASF) dá o insumo certo; depois `posprocessar`/`hibit` e `auditar -c arma --folha`. Mantenha a diagonal canônica e ≥70% de extensão.
+- **Variantes de raridade**: `pixel-art-studio` (rampas `ramp()`, troca de paleta) ou `palette_tool.py` do ASF, **preservando a silhueta** da arma-base aprovada; origem `codigo` para as variantes por troca de paleta.
+- **Armas simples e geométricas** (adaga, escudo liso) podem sair do `pixel-art-studio` com revisão visual — declarar origem `codigo`.
+- Custos e OAuth: `nocthera-art-direction` (seção 4).

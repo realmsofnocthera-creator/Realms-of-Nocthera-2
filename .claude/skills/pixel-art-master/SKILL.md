@@ -48,3 +48,14 @@ Pillow shading (sombreado concêntrico), outline 2 px irregular, banding paralel
 ## Honestidade nos relatórios
 
 Reporte o que foi **medido** e o que foi **visto**. Se você não abriu a folha de revisão, não diga que revisou. Se uma checagem falhou, mostre a saída. Nunca declare "aprovado" sem o comando `aprovar` ter concluído com sucesso.
+
+
+## Ferramentas integradas (Agent Sprite Forge, Pixel Art Studio, fal MCP)
+
+Decida pelo roteador de **`nocthera-art-direction`** (situação → ferramenta, política de custo, origem). Em resumo:
+
+- **Antes de gerar**: `python3 -m nocthera_studio diagnostico` mostra o que realmente gera imagem neste ambiente. No estado atual **nenhuma rota de modelo está ativa** (sem chave/Codex/Grok; fal MCP aguarda OAuth do usuário).
+- **Geração**: `gerar … --provedor asf_route --planejar` (grátis) → só com teto autorizado pelo usuário `--autorizo-gasto <USD>`. Todo provedor que não seja `manual` exige essa autorização.
+- **Conformação**: ASF `pixel_reduce.py`/`finish_frames.py hibit` e `pixel-art-studio/scripts/pixelpipe.py` ajudam, mas o padrão 96/128 + `nocthera-32` é imposto pelo estúdio e pelo auditor.
+- **Origem**: `origem <id> --tipo modelo|codigo|humano|referencia` é obrigatória para `aprovar`.
+- As skills de terceiros (`generate2dsprite`, `generate2dmedia`, `video2dsprite`, `generate2dmap`, `codeart2d`, `pixel-art-studio`) são motores; **não** aprovam nada.

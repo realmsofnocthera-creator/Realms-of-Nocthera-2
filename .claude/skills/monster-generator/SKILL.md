@@ -49,3 +49,12 @@ Depois, **abra a folha com Read**, faça a leitura fria e use `pixel-art-auditor
 ## Reprovação típica de monstros
 
 Olhos ilegíveis · corpo em "bolha" sem silhueta · rampa única (tudo da mesma cor) · patas fundidas com o fundo (sem contorno) · textura de ruído no pelo/pele (use 2 tons em clusters, não pontos aleatórios) · cabeça/olhos fora do terço superior · sprite mole (clusters médios < 3 px).
+
+
+## Ferramentas integradas
+
+- **Prompt de criatura para modelo**: além do bloco do estúdio, o ASF oferece `generate2dsprite/scripts/master_still.py prompt --class mob --finish hibit --identity "<descrição longa e precisa>"` (arte lisa, sem contorno, ≤3 tons/material — o insumo ideal para virar pixel). Use `--identity` com anatomia, cores e traços do briefing; `--facing right`.
+- **Conformação**: saída de modelo → `posprocessar` (estúdio) ou `finish_frames.py hibit --canvas 96x96` (ASF) → `auditar -c monstro --folha`.
+- **Imagem suja/ampliada** de criatura: `pixel_reduce.py` (ASF) → `pixelpipe.py` (Pixel Art Studio) → auditar resolução nativa.
+- **Não** desenhe criatura complexa por código (`pixel-art-studio`/`codeart2d`): fica ruim; use só para retoques e variantes de paleta, com origem `codigo`.
+- Custos e OAuth: regras em `nocthera-art-direction` (seção 4).

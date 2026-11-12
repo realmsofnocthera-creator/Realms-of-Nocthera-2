@@ -37,4 +37,12 @@ Limite de **16 cores**. Conferência final em `pixel-art-auditor`.
 
 ## Aviso sobre os ícones atuais do repositório
 
-`src/assets/icons/*.png` (atributos, raças, recursos) são **ilustrações suaves** com milhares de cores e alfa parcial: o auditor as reprova em paleta/antialiasing/ruído. Se o jogo adotar pixel art nativa, eles precisam ser **refeitos**; não "pixelize por redução" esperando passar — a revisão visual decide.
+`src/assets/icons/*.png` (atributos, raças, recursos) têm milhares de cores e alfa parcial: o auditor as reprova em paleta/antialiasing/ruído. **Correção (12/11/2026):** não são "ilustrações suaves" — o `pixelpipe` recuperou uma grade de ~43×43 (pixel art ampliada ~3× com suavização). Para o padrão 96/128 nativo é preciso decidir entre manter 43 px nativos ou refazer (ver `studio/docs/FERRAMENTAS_EXTERNAS.md`). Não "pixelize por redução" esperando passar — a revisão visual decide.
+
+
+## Ferramentas integradas
+
+- **Ícones** são o melhor caso para `pixel-art-studio` (Pillow): pequenos, de silhueta simples, com rampas controladas — origem `codigo`, 2–3 passadas ver→criticar→corrigir, sempre com `auditar -c icone --folha`.
+- **Via modelo**: `master_still.py prompt --class prop --finish hibit` (ASF) → conformação → auditoria. Para conjuntos, mantenha prompt, semente e paleta fixos e revise a série lado a lado no visualizador.
+- **Ícones atuais do jogo** (`src/assets/icons/*.png`): ver correção em `studio/docs/FERRAMENTAS_EXTERNAS.md` — o `pixelpipe` recupera uma grade de ~43 px e reduz 668→15 cores no `attr-forca.png`. Resolução nativa de **43 px conflita com o padrão 96/128**: é uma decisão do dono do projeto (manter 43 px nativos ou refazer a 96/128).
+- Custos e OAuth: `nocthera-art-direction` (seção 4).

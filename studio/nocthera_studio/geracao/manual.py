@@ -7,6 +7,10 @@ from .base import AguardandoImagem, PedidoGeracao, ProvedorImagem, ResultadoGera
 class ProvedorManual(ProvedorImagem):
     """Pega o que já foi gerado fora (outro modelo, Aseprite, pxl, mão humana) em assets/entrada/."""
     nome = "manual"
+    gasta = False
+
+    def planejar(self, pedido):
+        return {"provedor": "manual", "rota": "manual", "estimativa_usd": 0.0, "observacao": "sem geração"}
 
     def gerar(self, pedido: PedidoGeracao) -> ResultadoGeracao:
         achados = sorted((ASSETS / "entrada").glob(f"{pedido.id}*.*"))
