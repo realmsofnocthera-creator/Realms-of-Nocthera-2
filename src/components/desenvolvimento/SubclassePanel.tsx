@@ -203,7 +203,7 @@ export function SubclassePanel({ character, idToken, onCharacterChange, classNam
           <span className="absolute top-[0.4cqw] right-[0.4cqw] z-10 font-cinzel font-bold text-[1.8cqw] leading-[1.4] px-[1cqw] bg-[#05070D]/80 border border-[#2B3F5C] text-[#9CC4E0]">{selo}</span>
           <ArteDaSubclasseTela subclasse={sub} altura="38cqw" />
           <span className="font-cinzel font-black text-[2.8cqw] leading-[1.35] text-[#F5F3E0] text-center" style={{ textShadow: CONTORNO_PIXEL }}>{sub.nome}</span>
-          <span className="font-cinzel text-[1.9cqw] leading-snug text-[#C9D6EA] text-center">{texto.tema}</span>
+          <span className="font-cinzel text-[1.9cqw] leading-snug text-[#C9D6EA] text-center min-h-[5.4cqw]">{texto.tema}</span>
         </PainelDaForja>
 
         <AtributosDaSubclasse subclasse={sub} />

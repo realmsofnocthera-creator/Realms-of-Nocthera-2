@@ -12,7 +12,7 @@ const render = (c: CharacterDocument) => renderToStaticMarkup(<SubclassePanel ch
 
 describe('Subclasse em pixel: estandarte e personagem lado a lado', () => {
   it('as 4 subclasses com arte existem e têm o estandarte e o personagem', () => {
-    expect(Object.keys(ARTE_DAS_SUBCLASSES).sort()).toEqual(['bastiao', 'berserker', 'colosso', 'vanguarda']);
+    expect(Object.keys(ARTE_DAS_SUBCLASSES).sort()).toEqual(['arquimago', 'bastiao', 'berserker', 'colosso', 'sabio_arcano', 'vanguarda']);
     for (const id of Object.keys(ARTE_DAS_SUBCLASSES)) {
       expect(SUBCLASSES.some((s) => s.id === id)).toBe(true);
       const a = arteDaSubclasse(id)!;
@@ -38,6 +38,16 @@ describe('Subclasse em pixel: estandarte e personagem lado a lado', () => {
     expect(html).toContain(arteDaSubclasse('vanguarda')!.personagem);
     expect(html).toContain(arteDaSubclasse('bastiao')!.personagem);
     expect(html).not.toContain(arteDaSubclasse('berserker')!.estandarte as string);
+  });
+
+  it('o Feiticeiro mostra o Arquimago e a Sábia Arcana, só com o personagem, ainda sem estandarte', () => {
+    expect(arteDaSubclasse('arquimago')!.estandarte).toBeNull();
+    expect(arteDaSubclasse('sabio_arcano')!.estandarte).toBeNull();
+    const html = render(personagem('feiticeiro'));
+    expect(html).toContain('data-subclasse="arquimago"');
+    expect(html).toContain('data-subclasse="sabio_arcano"');
+    expect(html).toContain(arteDaSubclasse('arquimago')!.personagem);
+    expect(html).toContain(arteDaSubclasse('sabio_arcano')!.personagem);
   });
 
   it('subclasse sem arte ainda aparece (degradê da cor da classe), sem imagens quebradas', () => {

@@ -15,6 +15,8 @@ import avatarBerserkerImg from './images/subclasses/berserker-personagem.webp';
 import avatarColossoImg from './images/subclasses/colosso-personagem.webp';
 import avatarVanguardaImg from './images/subclasses/vanguarda-personagem.webp';
 import avatarBastiaoImg from './images/subclasses/bastiao-personagem.webp';
+import avatarArquimagoImg from './images/subclasses/arquimago-personagem.webp';
+import avatarSabioArcanoImg from './images/subclasses/sabio-arcano-personagem.webp';
 import { srcDaImagem } from '@/assets/srcDaImagem';
 
 export const AVATAR_IMAGES: Record<AvatarAssetKey, string> = {
@@ -28,6 +30,8 @@ export const AVATAR_IMAGES: Record<AvatarAssetKey, string> = {
   'avatar-colosso': srcDaImagem(avatarColossoImg),
   'avatar-vanguarda': srcDaImagem(avatarVanguardaImg),
   'avatar-bastiao': srcDaImagem(avatarBastiaoImg),
+  'avatar-arquimago': srcDaImagem(avatarArquimagoImg),
+  'avatar-sabio_arcano': srcDaImagem(avatarSabioArcanoImg),
 };
 
 /**
@@ -49,6 +53,8 @@ export const AVATAR_FACE_FRAMING: Record<
   colosso: { objectPosition: '50% 0%', transformOrigin: '50% 6%', scale: 1.9 },
   vanguarda: { objectPosition: '50% 0%', transformOrigin: '52% 8%', scale: 2.1 },
   bastiao: { objectPosition: '50% 0%', transformOrigin: '53% 8%', scale: 2.1 },
+  arquimago: { objectPosition: '50% 0%', transformOrigin: '57% 14%', scale: 2.2 },
+  sabio_arcano: { objectPosition: '50% 0%', transformOrigin: '49% 17%', scale: 2.2 },
 };
 
 export function resolveAvatarDefinition(
