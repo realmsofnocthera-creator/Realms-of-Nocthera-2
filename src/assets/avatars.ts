@@ -19,6 +19,8 @@ import avatarArquimagoImg from './images/subclasses/arquimago-personagem.webp';
 import avatarSabioArcanoImg from './images/subclasses/sabio-arcano-personagem.webp';
 import avatarDuelistaImg from './images/subclasses/duelista-personagem.webp';
 import avatarAssassinoImg from './images/subclasses/assassino-personagem.webp';
+import avatarInquisidorImg from './images/subclasses/inquisidor-personagem.webp';
+import avatarSacerdoteImg from './images/subclasses/sacerdote-personagem.webp';
 import { srcDaImagem } from '@/assets/srcDaImagem';
 
 export const AVATAR_IMAGES: Record<AvatarAssetKey, string> = {
@@ -36,6 +38,8 @@ export const AVATAR_IMAGES: Record<AvatarAssetKey, string> = {
   'avatar-sabio_arcano': srcDaImagem(avatarSabioArcanoImg),
   'avatar-duelista': srcDaImagem(avatarDuelistaImg),
   'avatar-assassino': srcDaImagem(avatarAssassinoImg),
+  'avatar-inquisidor': srcDaImagem(avatarInquisidorImg),
+  'avatar-sacerdote': srcDaImagem(avatarSacerdoteImg),
 };
 
 /**
@@ -61,6 +65,8 @@ export const AVATAR_FACE_FRAMING: Record<
   sabio_arcano: { objectPosition: '50% 0%', transformOrigin: '49% 17%', scale: 2.2 },
   duelista: { objectPosition: '50% 0%', transformOrigin: '58% 17%', scale: 2.2 },
   assassino: { objectPosition: '50% 0%', transformOrigin: '47% 11%', scale: 2.2 },
+  inquisidor: { objectPosition: '50% 0%', transformOrigin: '58% 17%', scale: 1.9 },
+  sacerdote: { objectPosition: '50% 0%', transformOrigin: '52% 9%', scale: 2.2 },
 };
 
 export function resolveAvatarDefinition(

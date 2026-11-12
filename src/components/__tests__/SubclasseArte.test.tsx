@@ -11,8 +11,8 @@ const personagem = (classeId: string, extra: Record<string, unknown> = {}) =>
 const render = (c: CharacterDocument) => renderToStaticMarkup(<SubclassePanel character={c} idToken="x" onCharacterChange={() => {}} />);
 
 describe('Subclasse em pixel: estandarte e personagem lado a lado', () => {
-  it('as 8 subclasses com personagem existem e têm a imagem', () => {
-    expect(Object.keys(ARTE_DAS_SUBCLASSES).sort()).toEqual(['arquimago', 'assassino', 'bastiao', 'berserker', 'colosso', 'duelista', 'sabio_arcano', 'vanguarda']);
+  it('as 10 subclasses com personagem existem e têm a imagem (faltam só o Kensei e o Ronin)', () => {
+    expect(Object.keys(ARTE_DAS_SUBCLASSES).sort()).toEqual(['arquimago', 'assassino', 'bastiao', 'berserker', 'colosso', 'duelista', 'inquisidor', 'sabio_arcano', 'sacerdote', 'vanguarda']);
     for (const id of Object.keys(ARTE_DAS_SUBCLASSES)) {
       expect(SUBCLASSES.some((s) => s.id === id)).toBe(true);
       expect(arteDaSubclasse(id)!.personagem).toBeTruthy();
@@ -49,6 +49,7 @@ describe('Subclasse em pixel: estandarte e personagem lado a lado', () => {
     ['cavaleiro', ['vanguarda', 'bastiao']],
     ['feiticeiro', ['arquimago', 'sabio_arcano']],
     ['bandido', ['assassino', 'duelista']],
+    ['profeta', ['sacerdote', 'inquisidor']],
   ])('%s: as duas subclasses aparecem com o personagem e o estandarte padrão', (classe, ids) => {
     const html = render(personagem(classe));
     for (const id of ids) {

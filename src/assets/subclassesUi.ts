@@ -9,6 +9,8 @@ import imgArquimagoPersonagem from './images/subclasses/arquimago-personagem.web
 import imgSabioArcanoPersonagem from './images/subclasses/sabio-arcano-personagem.webp';
 import imgDuelistaPersonagem from './images/subclasses/duelista-personagem.webp';
 import imgAssassinoPersonagem from './images/subclasses/assassino-personagem.webp';
+import imgInquisidorPersonagem from './images/subclasses/inquisidor-personagem.webp';
+import imgSacerdotePersonagem from './images/subclasses/sacerdote-personagem.webp';
 import { SUBCLASSES } from '@/rules/subclasses';
 
 /** A arte de uma subclasse: o personagem (e, se tiver, o estandarte próprio). Largura / altura de cada imagem, para a proporção certa. */
@@ -23,7 +25,7 @@ export interface ArteDaSubclasse {
 /**
  * As subclasses com arte (folhas do Yuri). O Berserker é o cavaleiro de armadura negra agachado e o Colosso é o guerreiro de
  * armadura dourada e elmo, cada um com o seu estandarte. A Vanguarda (espada), o Bastião (escudo e maça), o Arquimago, a Sábia
- * Arcana, a Duelista (florete) e o Assassino já têm o personagem; as demais subclasses ainda não têm arte de personagem.
+ * Arcana, a Duelista (florete), o Assassino, o Inquisidor (capuz e cruz) e o Sacerdote já têm o personagem; só o Kensei e o Ronin (Samurai) ainda não têm arte de personagem.
  */
 export const ARTE_DAS_SUBCLASSES: Readonly<Record<string, ArteDaSubclasse>> = {
   berserker: { estandarte: srcDaImagem(imgBerserkerEstandarte), personagem: srcDaImagem(imgBerserkerPersonagem), proporcaoDoEstandarte: 292 / 905, proporcaoDoPersonagem: 464 / 463 },
@@ -34,6 +36,8 @@ export const ARTE_DAS_SUBCLASSES: Readonly<Record<string, ArteDaSubclasse>> = {
   sabio_arcano: { personagem: srcDaImagem(imgSabioArcanoPersonagem), proporcaoDoPersonagem: 726 / 957 },
   duelista: { personagem: srcDaImagem(imgDuelistaPersonagem), proporcaoDoPersonagem: 843 / 1018 },
   assassino: { personagem: srcDaImagem(imgAssassinoPersonagem), proporcaoDoPersonagem: 685 / 1003 },
+  inquisidor: { personagem: srcDaImagem(imgInquisidorPersonagem), proporcaoDoPersonagem: 767 / 1019 },
+  sacerdote: { personagem: srcDaImagem(imgSacerdotePersonagem), proporcaoDoPersonagem: 683 / 1000 },
 };
 
 export function arteDaSubclasse(subclasseId: string): ArteDaSubclasse | null {
