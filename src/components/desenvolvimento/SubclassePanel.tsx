@@ -5,9 +5,9 @@ import type { CharacterDocument } from '@/server/characterService';
 import { ATTRIBUTE_ICONS } from '@/assets/icons';
 import { HUD_ICONS } from '@/assets/hud';
 import { KIT_DA_FORJA } from '@/assets/forjaUi';
-import { arteDaSubclasse } from '@/assets/subclassesUi';
+import { arteDaSubclasse, estandarteDaSubclasse } from '@/assets/subclassesUi';
 import { ATTRIBUTE_DISPLAY_NAMES } from '@/rules/attributeInfo';
-import { COR_DA_CLASSE, iconeDaHabilidadeSubclasse } from '@/rules/subclasseAssets';
+import { iconeDaHabilidadeSubclasse } from '@/rules/subclasseAssets';
 import { TIER_POR_ESPACO_HABILIDADE } from '@/rules/subclasseTiers';
 import { GAME_CONFIG } from '@/rules/config';
 import { SUBCLASSES, type Subclasse } from '@/rules/subclasses';
@@ -59,28 +59,18 @@ const iconeFragmentoDaSubclasse = (
   </span>
 );
 
-/** A arte da subclasse: o estandarte e o personagem ao lado dele. Sem arte, um degradê na cor da classe. */
+/** A arte da subclasse: o estandarte (o próprio ou o padrão na cor da classe) e, se já tiver, o personagem ao lado dele. */
 function ArteDaSubclasseTela({ subclasse, altura }: { subclasse: Subclasse; altura: string }) {
   const arte = arteDaSubclasse(subclasse.id);
-  const cor = COR_DA_CLASSE[subclasse.classeId] ?? '#3A8FB0';
-  if (!arte) {
-    return <div aria-hidden="true" className="w-full" style={{ height: altura, background: `linear-gradient(165deg, ${cor} 0%, #080C16 100%)` }} />;
-  }
-  if (!arte.estandarte) {
-    // sem estandarte: o personagem sozinho, no centro
-    return (
-      <div className="relative flex items-end justify-center w-full" style={{ height: altura }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={arte.personagem} alt="" aria-hidden="true" draggable={false} className="h-full w-auto max-w-full object-contain object-bottom pointer-events-none select-none" style={{ aspectRatio: arte.proporcaoDoPersonagem, ...pixel }} />
-      </div>
-    );
-  }
+  const estandarte = estandarteDaSubclasse(subclasse.id);
   return (
-    <div className="relative flex items-end justify-center gap-[0.6cqw] w-full" style={{ height: altura }}>
+    <div className="relative flex items-end justify-center w-full" style={{ height: altura }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={arte.estandarte} alt="" aria-hidden="true" draggable={false} className="h-full w-auto shrink-0 pointer-events-none select-none" style={{ aspectRatio: arte.proporcaoDoEstandarte, ...pixel }} />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={arte.personagem} alt="" aria-hidden="true" draggable={false} className="w-auto object-contain object-bottom pointer-events-none select-none min-w-0" style={{ height: '88%', maxWidth: '58%', aspectRatio: arte.proporcaoDoPersonagem, ...pixel }} />
+      <img src={estandarte.src} alt="" aria-hidden="true" draggable={false} className="h-full w-auto shrink-0 pointer-events-none select-none" style={{ aspectRatio: estandarte.proporcao, filter: estandarte.filtro, ...pixel }} />
+      {arte && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={arte.personagem} alt="" aria-hidden="true" draggable={false} className="w-auto object-contain object-bottom pointer-events-none select-none min-w-0" style={{ height: '88%', maxWidth: '66%', marginLeft: '-2cqw', aspectRatio: arte.proporcaoDoPersonagem, ...pixel }} />
+      )}
     </div>
   );
 }

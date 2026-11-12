@@ -11,7 +11,9 @@ export type AvatarId =
   | 'vanguarda'
   | 'bastiao'
   | 'arquimago'
-  | 'sabio_arcano';
+  | 'sabio_arcano'
+  | 'duelista'
+  | 'assassino';
 
 export type AvatarAssetKey =
   | 'avatar-barbaro'
@@ -25,7 +27,9 @@ export type AvatarAssetKey =
   | 'avatar-vanguarda'
   | 'avatar-bastiao'
   | 'avatar-arquimago'
-  | 'avatar-sabio_arcano';
+  | 'avatar-sabio_arcano'
+  | 'avatar-duelista'
+  | 'avatar-assassino';
 
 export interface AvatarDefinition {
   id: AvatarId;
@@ -69,6 +73,8 @@ export const AVATARES_DE_SUBCLASSE: readonly AvatarDefinition[] = [
   { id: 'bastiao', assetKey: 'avatar-bastiao', subclasseId: 'bastiao' },
   { id: 'arquimago', assetKey: 'avatar-arquimago', subclasseId: 'arquimago' },
   { id: 'sabio_arcano', assetKey: 'avatar-sabio_arcano', subclasseId: 'sabio_arcano' },
+  { id: 'duelista', assetKey: 'avatar-duelista', subclasseId: 'duelista' },
+  { id: 'assassino', assetKey: 'avatar-assassino', subclasseId: 'assassino' },
 ] as const;
 
 export const DEFAULT_AVATAR_ID: AvatarId = AVATARES_DISPONIVEIS[0].id;
