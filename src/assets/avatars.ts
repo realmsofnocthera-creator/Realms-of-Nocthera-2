@@ -13,7 +13,6 @@ import avatarProfetaImg from './images/avatares/avatar-profeta.webp';
 import avatarSamuraiImg from './images/avatares/avatar-samurai.webp';
 import avatarBerserkerImg from './images/subclasses/berserker-personagem.webp';
 import avatarColossoImg from './images/subclasses/colosso-personagem.webp';
-import avatarCavaleiroNegroImg from './images/subclasses/cavaleiro-personagem.webp';
 import { srcDaImagem } from '@/assets/srcDaImagem';
 
 export const AVATAR_IMAGES: Record<AvatarAssetKey, string> = {
@@ -25,9 +24,6 @@ export const AVATAR_IMAGES: Record<AvatarAssetKey, string> = {
   'avatar-samurai': srcDaImagem(avatarSamuraiImg),
   'avatar-berserker': srcDaImagem(avatarBerserkerImg),
   'avatar-colosso': srcDaImagem(avatarColossoImg),
-  // a Vanguarda e o Bastião dividem, por enquanto, o cavaleiro negro agachado com a espada nas costas
-  'avatar-vanguarda': srcDaImagem(avatarCavaleiroNegroImg),
-  'avatar-bastiao': srcDaImagem(avatarCavaleiroNegroImg),
 };
 
 /**
@@ -45,10 +41,8 @@ export const AVATAR_FACE_FRAMING: Record<
   profeta: { objectPosition: '50% 0%', transformOrigin: '50% 1%', scale: 1.9 },
   samurai: { objectPosition: '50% 0%', transformOrigin: '50% 1%', scale: 1.9 },
   // as artes das subclasses têm outra proporção: o enquadramento mira o rosto de cada uma
-  berserker: { objectPosition: '50% 0%', transformOrigin: '50% 7%', scale: 1.9 },
+  berserker: { objectPosition: '50% 0%', transformOrigin: '34% 27%', scale: 2.3 },
   colosso: { objectPosition: '50% 0%', transformOrigin: '50% 6%', scale: 1.9 },
-  vanguarda: { objectPosition: '50% 0%', transformOrigin: '34% 27%', scale: 2.3 },
-  bastiao: { objectPosition: '50% 0%', transformOrigin: '34% 27%', scale: 2.3 },
 };
 
 export function resolveAvatarDefinition(

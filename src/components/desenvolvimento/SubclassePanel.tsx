@@ -11,6 +11,7 @@ import { COR_DA_CLASSE, iconeDaHabilidadeSubclasse } from '@/rules/subclasseAsse
 import { TIER_POR_ESPACO_HABILIDADE } from '@/rules/subclasseTiers';
 import { GAME_CONFIG } from '@/rules/config';
 import { SUBCLASSES, type Subclasse } from '@/rules/subclasses';
+import { AVATARES_DE_SUBCLASSE } from '@/rules/avatars';
 import { textoDaFicha, TEXTOS_DA_FICHA } from '@/rules/textosDaFicha';
 import {
   acaoDeEscolha,
@@ -42,6 +43,9 @@ const SIGLAS: Record<string, string> = {
 };
 const fmt = (n: number) => n.toLocaleString('pt-BR');
 const pixel: React.CSSProperties = { imageRendering: 'pixelated' };
+
+/** Só algumas subclasses já têm retrato e personagem para o perfil. */
+const temAvatar = (subclasseId: string) => AVATARES_DE_SUBCLASSE.some((a) => a.subclasseId === subclasseId);
 
 type Confirmacao = { titulo: string; aviso: string; acao: AcaoSubclasse; executar: () => Promise<void> };
 
@@ -222,10 +226,10 @@ export function SubclassePanel({ character, idToken, onCharacterChange, classNam
             aoClicar={() =>
               setConfirmacao({
                 titulo: textoDaFicha(t.desbloquearTitulo, { nome: sub.nome }),
-                aviso: t.desbloquearAviso,
+                aviso: t.desbloquearAviso + (temAvatar(sub.id) ? t.desbloquearAvisoAvatar : ''),
                 acao,
                 executar: async () => {
-                  await chamar('/api/character/subclasse/escolher', { subclasseId: sub.id }, textoDaFicha(t.desbloqueada, { nome: sub.nome }));
+                  await chamar('/api/character/subclasse/escolher', { subclasseId: sub.id }, textoDaFicha(temAvatar(sub.id) ? t.desbloqueadaComAvatar : t.desbloqueada, { nome: sub.nome }));
                 },
               })
             }
@@ -344,7 +348,7 @@ export function SubclassePanel({ character, idToken, onCharacterChange, classNam
               aoClicar={() =>
                 setConfirmacao({
                   titulo: t.resetTitulo,
-                  aviso: t.resetAviso,
+                  aviso: t.resetAviso + (temAvatar(subId) ? t.resetAvisoAvatar : ''),
                   acao: reset,
                   executar: async () => {
                     const ok = await chamar('/api/character/subclasse/resetar', undefined, t.resetFeito);

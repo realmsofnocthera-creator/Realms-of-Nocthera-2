@@ -19,7 +19,7 @@ describe('Avatares das subclasses: o retrato e o personagem abrem ao desbloquear
   }
 
   it('cada avatar de subclasse aponta para uma subclasse que existe e tem imagem e enquadramento do rosto', () => {
-    expect(AVATARES_DE_SUBCLASSE.map((a) => a.id)).toEqual(['berserker', 'colosso', 'vanguarda', 'bastiao']);
+    expect(AVATARES_DE_SUBCLASSE.map((a) => a.id)).toEqual(['berserker', 'colosso']);
     for (const a of AVATARES_DE_SUBCLASSE) {
       expect(SUBCLASSES.some((s) => s.id === a.subclasseId)).toBe(true);
       expect(AVATAR_IMAGES[a.assetKey]).toBeTruthy();
