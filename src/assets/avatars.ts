@@ -21,6 +21,8 @@ import avatarDuelistaImg from './images/subclasses/duelista-personagem.webp';
 import avatarAssassinoImg from './images/subclasses/assassino-personagem.webp';
 import avatarInquisidorImg from './images/subclasses/inquisidor-personagem.webp';
 import avatarSacerdoteImg from './images/subclasses/sacerdote-personagem.webp';
+import avatarKenseiImg from './images/subclasses/kensei-personagem.webp';
+import avatarRoninImg from './images/subclasses/ronin-personagem.webp';
 import { srcDaImagem } from '@/assets/srcDaImagem';
 
 export const AVATAR_IMAGES: Record<AvatarAssetKey, string> = {
@@ -40,6 +42,8 @@ export const AVATAR_IMAGES: Record<AvatarAssetKey, string> = {
   'avatar-assassino': srcDaImagem(avatarAssassinoImg),
   'avatar-inquisidor': srcDaImagem(avatarInquisidorImg),
   'avatar-sacerdote': srcDaImagem(avatarSacerdoteImg),
+  'avatar-kensei': srcDaImagem(avatarKenseiImg),
+  'avatar-ronin': srcDaImagem(avatarRoninImg),
 };
 
 /**
@@ -67,6 +71,8 @@ export const AVATAR_FACE_FRAMING: Record<
   assassino: { objectPosition: '50% 0%', transformOrigin: '47% 11%', scale: 2.2 },
   inquisidor: { objectPosition: '50% 0%', transformOrigin: '58% 17%', scale: 1.9 },
   sacerdote: { objectPosition: '50% 0%', transformOrigin: '52% 9%', scale: 2.2 },
+  kensei: { objectPosition: '50% 0%', transformOrigin: '25% 19%', scale: 2.3 },
+  ronin: { objectPosition: '50% 0%', transformOrigin: '46% 13%', scale: 1.9 },
 };
 
 export function resolveAvatarDefinition(

@@ -11,13 +11,13 @@ const personagem = (classeId: string, extra: Record<string, unknown> = {}) =>
 const render = (c: CharacterDocument) => renderToStaticMarkup(<SubclassePanel character={c} idToken="x" onCharacterChange={() => {}} />);
 
 describe('Subclasse em pixel: estandarte e personagem lado a lado', () => {
-  it('as 10 subclasses com personagem existem e têm a imagem (faltam só o Kensei e o Ronin)', () => {
-    expect(Object.keys(ARTE_DAS_SUBCLASSES).sort()).toEqual(['arquimago', 'assassino', 'bastiao', 'berserker', 'colosso', 'duelista', 'inquisidor', 'sabio_arcano', 'sacerdote', 'vanguarda']);
+  it('as 12 subclasses têm personagem e imagem', () => {
+    expect(Object.keys(ARTE_DAS_SUBCLASSES).sort()).toEqual(SUBCLASSES.map((s) => s.id).sort());
     for (const id of Object.keys(ARTE_DAS_SUBCLASSES)) {
       expect(SUBCLASSES.some((s) => s.id === id)).toBe(true);
       expect(arteDaSubclasse(id)!.personagem).toBeTruthy();
     }
-    expect(arteDaSubclasse('kensei')).toBeNull();
+    expect(arteDaSubclasse('subclasse-inexistente')).toBeNull();
   });
 
   it('todas as 12 subclasses têm estandarte: o próprio (Berserker e Colosso) ou o padrão na cor da classe', () => {
@@ -50,6 +50,7 @@ describe('Subclasse em pixel: estandarte e personagem lado a lado', () => {
     ['feiticeiro', ['arquimago', 'sabio_arcano']],
     ['bandido', ['assassino', 'duelista']],
     ['profeta', ['sacerdote', 'inquisidor']],
+    ['samurai', ['kensei', 'ronin']],
   ])('%s: as duas subclasses aparecem com o personagem e o estandarte padrão', (classe, ids) => {
     const html = render(personagem(classe));
     for (const id of ids) {
@@ -57,13 +58,6 @@ describe('Subclasse em pixel: estandarte e personagem lado a lado', () => {
       expect(html).toContain(arteDaSubclasse(id)!.personagem);
       expect(html).toContain(estandarteDaSubclasse(id).src);
     }
-  });
-
-  it('subclasse sem personagem ainda mostra o estandarte (sem imagem de personagem quebrada)', () => {
-    const html = render(personagem('samurai'));
-    expect(html).toContain('data-subclasse="kensei"');
-    expect(html).toContain(estandarteDaSubclasse('kensei').src);
-    expect(html).not.toContain(arteDaSubclasse('berserker')!.personagem);
   });
 
   it('com a subclasse ativa mostra o cabeçalho com a arte, a linha de tiers e o botão de resetar', () => {

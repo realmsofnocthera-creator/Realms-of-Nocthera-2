@@ -11,6 +11,8 @@ import imgDuelistaPersonagem from './images/subclasses/duelista-personagem.webp'
 import imgAssassinoPersonagem from './images/subclasses/assassino-personagem.webp';
 import imgInquisidorPersonagem from './images/subclasses/inquisidor-personagem.webp';
 import imgSacerdotePersonagem from './images/subclasses/sacerdote-personagem.webp';
+import imgKenseiPersonagem from './images/subclasses/kensei-personagem.webp';
+import imgRoninPersonagem from './images/subclasses/ronin-personagem.webp';
 import { SUBCLASSES } from '@/rules/subclasses';
 
 /** A arte de uma subclasse: o personagem (e, se tiver, o estandarte próprio). Largura / altura de cada imagem, para a proporção certa. */
@@ -25,7 +27,7 @@ export interface ArteDaSubclasse {
 /**
  * As subclasses com arte (folhas do Yuri). O Berserker é o cavaleiro de armadura negra agachado e o Colosso é o guerreiro de
  * armadura dourada e elmo, cada um com o seu estandarte. A Vanguarda (espada), o Bastião (escudo e maça), o Arquimago, a Sábia
- * Arcana, a Duelista (florete), o Assassino, o Inquisidor (capuz e cruz) e o Sacerdote já têm o personagem; só o Kensei e o Ronin (Samurai) ainda não têm arte de personagem.
+ * Arcana, a Duelista (florete), o Assassino, o Inquisidor (capuz e cruz), o Sacerdote, o Kensei (dragão espiritual) e o Ronin (chapéu de palha) já têm o personagem: as 12 subclasses têm arte.
  */
 export const ARTE_DAS_SUBCLASSES: Readonly<Record<string, ArteDaSubclasse>> = {
   berserker: { estandarte: srcDaImagem(imgBerserkerEstandarte), personagem: srcDaImagem(imgBerserkerPersonagem), proporcaoDoEstandarte: 292 / 905, proporcaoDoPersonagem: 464 / 463 },
@@ -38,6 +40,8 @@ export const ARTE_DAS_SUBCLASSES: Readonly<Record<string, ArteDaSubclasse>> = {
   assassino: { personagem: srcDaImagem(imgAssassinoPersonagem), proporcaoDoPersonagem: 685 / 1003 },
   inquisidor: { personagem: srcDaImagem(imgInquisidorPersonagem), proporcaoDoPersonagem: 767 / 1019 },
   sacerdote: { personagem: srcDaImagem(imgSacerdotePersonagem), proporcaoDoPersonagem: 683 / 1000 },
+  kensei: { personagem: srcDaImagem(imgKenseiPersonagem), proporcaoDoPersonagem: 676 / 1003 },
+  ronin: { personagem: srcDaImagem(imgRoninPersonagem), proporcaoDoPersonagem: 846 / 978 },
 };
 
 export function arteDaSubclasse(subclasseId: string): ArteDaSubclasse | null {
