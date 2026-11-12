@@ -257,7 +257,7 @@ export function DesenvolvimentoScreen() {
             {secaoAtiva === 'subclasse' && <SubclassePanel character={character} idToken={idToken} onCharacterChange={setCharacter} />}
             {secaoAtiva === 'melhorarHabilidade' && <ReforcoPanel character={character} idToken={idToken} onCharacterChange={setCharacter} />}
             {secaoAtiva === 'avancoHabilidade' && <AscensaoPanel character={character} idToken={idToken} onCharacterChange={setCharacter} />}
-            {secaoAtiva === 'maestrias' && <MaestriasPanel character={character} className="h-full" />}
+            {secaoAtiva === 'maestrias' && <MaestriasPanel character={character} />}
           </section>
         </div>
 
