@@ -30,6 +30,15 @@ export const TEXTOS_DA_FICHA = {
   habilidades: { titulo: 'Habilidades' },
   desenvolvimento: { titulo: 'Desenvolvimento de personagem', descricao: 'Aprimore e evolua as habilidades do seu personagem.' },
   poderTotal: 'Poder Total',
+  lupa: {
+    titulo: 'Atributos',
+    principais: 'Atributos Principais',
+    outros: 'Outros bônus',
+    nenhum: 'Nenhum bônus no momento.',
+    fechar: 'Fechar explicações',
+    tipoAtributo: 'Atributo',
+    tipoBonus: 'Bônus',
+  },
   subclasseTela: {
     ouro: 'Ouro',
     fragmentosAlma: 'Fragmentos de alma',
