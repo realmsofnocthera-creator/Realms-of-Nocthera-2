@@ -1,0 +1,19 @@
+{
+  "$comentario": "Provedores de geração de imagem. Nenhum está ativo por padrão (sem chave = sem chamada de rede). Para ligar uma API: preencha 'http_api', exporte a variável de ambiente da chave e use `gerar --provedor http_api`. Veja docs/INTEGRACAO_API.md.",
+  "padrao": "manual",
+  "manual": { "descricao": "Você (ou outra ferramenta) coloca a imagem em assets/entrada/<id>.png e o estúdio pós-processa e audita." },
+  "comando_externo": {
+    "descricao": "Executa um comando local (ex.: um gerador do pxl/codixel). Sem shell. Placeholders: {prompt_file} {saida} {semente} {tamanho}.",
+    "comando": []
+  },
+  "http_api": {
+    "ativo": false,
+    "descricao": "POST JSON genérico. Adapte url/corpo/resposta ao fornecedor escolhido.",
+    "url": "",
+    "metodo": "POST",
+    "cabecalhos": { "Authorization": "Bearer ${NOCTHERA_IMAGE_API_KEY}", "Content-Type": "application/json" },
+    "corpo": { "model": "", "prompt": "{prompt}", "negative_prompt": "{negativo}", "size": "{largura}x{altura}", "seed": "{semente}", "n": 1 },
+    "resposta": { "tipo": "base64", "caminho": "data.0.b64_json" },
+    "timeout_s": 120
+  }
+}

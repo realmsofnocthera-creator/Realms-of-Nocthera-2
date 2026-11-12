@@ -1,0 +1,13 @@
+{
+  "id": "icone-dente-afiado",
+  "categoria": "icone",
+  "nome": "Dente Afiado",
+  "descricao": "a single large curved fang, yellowed bone with a darker root and a bright edge highlight, slightly chipped tip",
+  "materiais": ["bone", "dried blood at the root"],
+  "raridade": "comum",
+  "tamanho": 96,
+  "paleta": "nocthera-32",
+  "semente": 3303,
+  "referencias": [],
+  "fonte_no_jogo": "src/rules/materiais.ts (material 'Dente Afiado')"
+}

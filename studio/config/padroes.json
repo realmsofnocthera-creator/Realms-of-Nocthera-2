@@ -1,0 +1,36 @@
+{
+  "$comentario": "Padrões técnicos do estúdio. Os limiares foram calibrados contra arte real (ver docs/RELATORIO_INICIAL.md). Altere aqui, não no código.",
+  "tamanhos_nativos": [[96, 96], [128, 128]],
+  "paleta_padrao": "nocthera-32",
+  "categorias": {
+    "monstro": { "max_cores": 24, "extensao": [0.60, 0.95], "contorno": true },
+    "arma":    { "max_cores": 16, "extensao": [0.70, 0.97], "contorno": true },
+    "icone":   { "max_cores": 16, "extensao": [0.55, 0.95], "contorno": true },
+    "generico":{ "max_cores": 32, "extensao": [0.40, 0.98], "contorno": false }
+  },
+  "limiares": {
+    "alfa_parcial_erro": 1,
+    "cores_quase_iguais_distancia": 6,
+    "cores_raras_pixels": 2,
+    "cores_raras_aviso": 4,
+    "cores_excessivas_fator_erro": 2.0,
+    "pixels_soltos_aviso": 1,
+    "pixels_soltos_erro": 6,
+    "ruido_1px_aviso": 0.10,
+    "ruido_1px_erro": 0.25,
+    "xadrez_dither_aviso": 0.06,
+    "mistura_aa_aviso": 0.04,
+    "mistura_aa_erro": 0.10,
+    "mistura_aa_tolerancia": 14,
+    "mistura_aa_contraste_min": 40,
+    "contorno_escuro_aviso": 0.70,
+    "contorno_escuro_erro": 0.40,
+    "silhueta_fragmentos_aviso": 1,
+    "silhueta_maior_fracao_min": 0.90,
+    "complexidade_perimetro_aviso": 14.0,
+    "retangular_aviso": 0.90,
+    "retangular_erro": 0.97,
+    "cluster_medio_aviso": 3.0,
+    "ampliacao_proporcao": 0.97
+  }
+}

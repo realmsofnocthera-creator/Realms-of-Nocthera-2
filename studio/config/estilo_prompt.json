@@ -1,0 +1,17 @@
+{
+  "$comentario": "Blocos de estilo enviados ao modelo de imagens. Em inglês porque a maioria dos modelos responde melhor; edite livremente.",
+  "base": "authentic pixel art sprite, dark fantasy RPG, hand-placed pixels, crisp 1px outline, limited palette of at most {max_cores} colors, deliberate color clusters, selective light from the top-left, strong readable silhouette, centered, single subject, plain flat solid #FF00FF magenta background, front or three-quarter view",
+  "negativo": "anti-aliasing, blur, soft edges, gradients, smooth shading, photorealistic, 3d render, painterly, noise, grain, dithering noise, jpeg artifacts, text, watermark, signature, frame, border, cropped, multiple subjects, drop shadow, glow halo",
+  "categorias": {
+    "monstro": "creature design: {descricao}. Single full-body creature with a distinctive silhouette and one clear focal point (eyes or weapon). Material callouts: {materiais}.",
+    "arma": "equipment item: {descricao}. Shown on a clean diagonal (bottom-left to top-right), hilt to tip, no hand, no character. Material callouts: {materiais}.",
+    "icone": "game icon / collectible: {descricao}. Compact object centered with a bold silhouette readable at 32px. Rarity mood: {raridade}."
+  },
+  "raridades": {
+    "comum": "plain, muted, desaturated tones",
+    "raro": "slightly richer tones with a small steel-blue accent",
+    "muitoRaro": "confident jewel tones with one glowing accent",
+    "epico": "ornate details, arcane purple glow accent, rim light",
+    "lendario": "radiant gold and ember accents, intricate silhouette, aura of power"
+  }
+}

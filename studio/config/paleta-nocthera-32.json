@@ -1,0 +1,27 @@
+{
+  "nome": "nocthera-32",
+  "descricao": "Paleta controlada de 32 cores para dark fantasy de Realms of Nocthera. Rampas de 2 a 6 tons por material; sombras puxam para violeta, nunca para preto puro.",
+  "cores": {
+    "sombra-0": "#0b0812", "sombra-1": "#17121f", "sombra-2": "#241c30",
+    "sombra-3": "#3a2f4a", "sombra-4": "#5a4d6b", "sombra-5": "#857a94",
+    "osso-0": "#b8ad9e", "osso-1": "#d9cfbd", "osso-2": "#fffaf0",
+    "sangue-0": "#2e0f1a", "sangue-1": "#5c1526", "sangue-2": "#9a2233", "sangue-3": "#d2404a",
+    "brasa-0": "#7a2e12", "brasa-1": "#c25a1a", "brasa-2": "#f08a2c",
+    "ouro-0": "#6b4a14", "ouro-1": "#b98a22", "ouro-2": "#f2c744",
+    "musgo-0": "#1a2e1c", "musgo-1": "#2f5a2a", "musgo-2": "#5b9a38", "musgo-3": "#a5d65a",
+    "aco-0": "#1d2b3d", "aco-1": "#3c5a78", "aco-2": "#6e9bc0",
+    "arcano-0": "#3a1a5c", "arcano-1": "#6b34a8", "arcano-2": "#b070e8",
+    "pele-0": "#8a5a48", "pele-1": "#c48a6a", "gelo-0": "#b4dcf0"
+  },
+  "rampas": {
+    "sombra": ["sombra-0","sombra-1","sombra-2","sombra-3","sombra-4","sombra-5"],
+    "osso": ["osso-0","osso-1","osso-2"],
+    "sangue": ["sangue-0","sangue-1","sangue-2","sangue-3"],
+    "brasa": ["brasa-0","brasa-1","brasa-2"],
+    "ouro": ["ouro-0","ouro-1","ouro-2"],
+    "musgo": ["musgo-0","musgo-1","musgo-2","musgo-3"],
+    "aco": ["aco-0","aco-1","aco-2","gelo-0"],
+    "arcano": ["arcano-0","arcano-1","arcano-2"],
+    "pele": ["pele-0","pele-1"]
+  }
+}

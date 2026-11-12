@@ -1,0 +1,13 @@
+{
+  "id": "arma-espada-longa-enferrujada",
+  "categoria": "arma",
+  "nome": "Espada Longa Enferrujada",
+  "descricao": "a battered arming sword with a rust-pitted steel blade, nicked edge, simple crossguard, leather-wrapped grip and a worn pommel",
+  "materiais": ["rusted steel blade with a lighter edge highlight", "dark leather grip", "dull bronze guard"],
+  "raridade": "comum",
+  "tamanho": 128,
+  "paleta": "nocthera-32",
+  "semente": 2202,
+  "notas_de_arte": "diagonal composition, the blade carries one clear highlight line from guard to tip",
+  "referencias": []
+}

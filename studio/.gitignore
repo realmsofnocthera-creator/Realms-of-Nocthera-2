@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+# Brutos de modelo (grandes, reproduzíveis a partir do prompt.json) e previews gerados
+assets/bruto/*/
+assets/previews/*.png
+assets/entrada/*
+!assets/entrada/.gitkeep

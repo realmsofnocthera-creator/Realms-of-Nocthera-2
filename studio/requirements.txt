@@ -1,0 +1,2 @@
+# Único requisito de runtime. O resto é biblioteca padrão do Python (>= 3.10).
+Pillow>=10.0

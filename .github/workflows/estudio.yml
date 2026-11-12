@@ -1,0 +1,21 @@
+name: Estúdio de Pixel Art
+
+on:
+  push:
+    paths: ['studio/**', '.claude/skills/**', '.github/workflows/estudio.yml']
+  pull_request:
+    paths: ['studio/**', '.claude/skills/**', '.github/workflows/estudio.yml']
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: studio
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -t . -v
