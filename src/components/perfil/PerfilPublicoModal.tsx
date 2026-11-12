@@ -519,6 +519,7 @@ export function PerfilPublicoModal({
 
                       <AvatarPicker
                         selectedAvatarId={viewedProfile.avatarId}
+                        personagem={ownCharacter}
                         onSelect={(novoAvatarId) => {
                           setLocalOwnAvatarId(novoAvatarId);
                           onAvatarUpdated?.(novoAvatarId);

@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { Check } from 'lucide-react';
 import { auth } from '@/lib/firebase';
-import { AVATARES_DISPONIVEIS, DEFAULT_AVATAR_ID } from '@/rules/avatars';
+import { avataresLiberados, DEFAULT_AVATAR_ID } from '@/rules/avatars';
+import { SUBCLASSES } from '@/rules/subclasses';
 import { getClassById } from '@/rules/classes';
 import { AVATAR_IMAGES } from '@/assets/avatars';
 import { NOCTHERA_THEME } from '@/theme/theme';
@@ -13,6 +14,8 @@ export interface AvatarPickerProps {
   selectedAvatarId?: string;
   idToken?: string;
   onSelect?: (avatarId: string) => void;
+  /** O personagem que escolhe: libera, além dos avatares das classes, os das subclasses que ele desbloqueou. */
+  personagem?: { subclassesDesbloqueadas?: readonly string[]; subclasseAtualId?: string | null };
 }
 
 async function resolveCurrentToken(explicitToken?: string): Promise<string | null> {
@@ -33,6 +36,7 @@ export function AvatarPicker({
   selectedAvatarId,
   idToken,
   onSelect,
+  personagem,
 }: AvatarPickerProps) {
   const { colors } = NOCTHERA_THEME;
   const [currentId, setCurrentId] = useState<string>(
@@ -94,10 +98,10 @@ export function AvatarPicker({
         aria-label="Selecionar Avatar"
         className="grid grid-cols-3 sm:grid-cols-6 gap-2.5 sm:gap-3"
       >
-        {AVATARES_DISPONIVEIS.map((avatar) => {
+        {avataresLiberados(personagem ?? {}).map((avatar) => {
           const isSelected = avatar.id === activeAvatarId;
           const imgSrc = AVATAR_IMAGES[avatar.assetKey];
-          const classeNome = getClassById(avatar.id)?.nome || avatar.id;
+          const classeNome = getClassById(avatar.id)?.nome || SUBCLASSES.find((s) => s.id === avatar.subclasseId)?.nome || avatar.id;
 
           return (
             <button

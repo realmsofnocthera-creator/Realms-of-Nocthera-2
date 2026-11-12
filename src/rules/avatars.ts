@@ -4,7 +4,20 @@ export type AvatarId =
   | 'feiticeiro'
   | 'bandido'
   | 'profeta'
-  | 'samurai';
+  | 'samurai'
+  // avatares das subclasses (liberados ao desbloquear a subclasse)
+  | 'berserker'
+  | 'colosso'
+  | 'vanguarda'
+  | 'bastiao'
+  | 'arquimago'
+  | 'sabio_arcano'
+  | 'duelista'
+  | 'assassino'
+  | 'inquisidor'
+  | 'sacerdote'
+  | 'kensei'
+  | 'ronin';
 
 export type AvatarAssetKey =
   | 'avatar-barbaro'
@@ -12,11 +25,25 @@ export type AvatarAssetKey =
   | 'avatar-feiticeiro'
   | 'avatar-bandido'
   | 'avatar-profeta'
-  | 'avatar-samurai';
+  | 'avatar-samurai'
+  | 'avatar-berserker'
+  | 'avatar-colosso'
+  | 'avatar-vanguarda'
+  | 'avatar-bastiao'
+  | 'avatar-arquimago'
+  | 'avatar-sabio_arcano'
+  | 'avatar-duelista'
+  | 'avatar-assassino'
+  | 'avatar-inquisidor'
+  | 'avatar-sacerdote'
+  | 'avatar-kensei'
+  | 'avatar-ronin';
 
 export interface AvatarDefinition {
   id: AvatarId;
   assetKey: AvatarAssetKey;
+  /** Só os avatares de subclasse têm: a subclasse que libera o retrato e o personagem. */
+  subclasseId?: string;
 }
 
 export const AVATARES_DISPONIVEIS: readonly AvatarDefinition[] = [
@@ -46,9 +73,40 @@ export const AVATARES_DISPONIVEIS: readonly AvatarDefinition[] = [
   },
 ] as const;
 
+/** Os avatares das subclasses: o jogador ganha o retrato e o personagem ao desbloquear a subclasse (e fica com eles). */
+export const AVATARES_DE_SUBCLASSE: readonly AvatarDefinition[] = [
+  { id: 'berserker', assetKey: 'avatar-berserker', subclasseId: 'berserker' },
+  { id: 'colosso', assetKey: 'avatar-colosso', subclasseId: 'colosso' },
+  { id: 'vanguarda', assetKey: 'avatar-vanguarda', subclasseId: 'vanguarda' },
+  { id: 'bastiao', assetKey: 'avatar-bastiao', subclasseId: 'bastiao' },
+  { id: 'arquimago', assetKey: 'avatar-arquimago', subclasseId: 'arquimago' },
+  { id: 'sabio_arcano', assetKey: 'avatar-sabio_arcano', subclasseId: 'sabio_arcano' },
+  { id: 'duelista', assetKey: 'avatar-duelista', subclasseId: 'duelista' },
+  { id: 'assassino', assetKey: 'avatar-assassino', subclasseId: 'assassino' },
+  { id: 'inquisidor', assetKey: 'avatar-inquisidor', subclasseId: 'inquisidor' },
+  { id: 'sacerdote', assetKey: 'avatar-sacerdote', subclasseId: 'sacerdote' },
+  { id: 'kensei', assetKey: 'avatar-kensei', subclasseId: 'kensei' },
+  { id: 'ronin', assetKey: 'avatar-ronin', subclasseId: 'ronin' },
+] as const;
+
 export const DEFAULT_AVATAR_ID: AvatarId = AVATARES_DISPONIVEIS[0].id;
 
 export function getAvatarById(id?: string | null): AvatarDefinition | undefined {
   if (!id || typeof id !== 'string') return undefined;
-  return AVATARES_DISPONIVEIS.find((item) => item.id === id);
+  return AVATARES_DISPONIVEIS.find((item) => item.id === id) ?? AVATARES_DE_SUBCLASSE.find((item) => item.id === id);
+}
+
+/** As subclasses que o personagem já desbloqueou (as guardadas mais a que está ativa agora). */
+export function subclassesDesbloqueadasDe(char: { subclassesDesbloqueadas?: readonly string[]; subclasseAtualId?: string | null }): string[] {
+  return [...new Set([...(char.subclassesDesbloqueadas ?? []), ...(char.subclasseAtualId ? [char.subclasseAtualId] : [])])];
+}
+
+/** O avatar está liberado: os das classes sempre; os de subclasse só depois de desbloquear a subclasse. */
+export function avatarLiberado(avatar: AvatarDefinition, char: { subclassesDesbloqueadas?: readonly string[]; subclasseAtualId?: string | null }): boolean {
+  return !avatar.subclasseId || subclassesDesbloqueadasDe(char).includes(avatar.subclasseId);
+}
+
+/** Os avatares que o personagem pode escolher agora: os das classes e os das subclasses que desbloqueou. */
+export function avataresLiberados(char: { subclassesDesbloqueadas?: readonly string[]; subclasseAtualId?: string | null }): AvatarDefinition[] {
+  return [...AVATARES_DISPONIVEIS, ...AVATARES_DE_SUBCLASSE.filter((a) => avatarLiberado(a, char))];
 }
