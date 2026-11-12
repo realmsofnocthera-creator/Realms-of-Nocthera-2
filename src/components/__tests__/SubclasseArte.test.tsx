@@ -12,46 +12,44 @@ const render = (c: CharacterDocument) => renderToStaticMarkup(<SubclassePanel ch
 
 describe('Subclasse em pixel: estandarte e personagem lado a lado', () => {
   it('as 4 subclasses com arte existem e têm o estandarte e o personagem', () => {
-    expect(Object.keys(ARTE_DAS_SUBCLASSES).sort()).toEqual(['berserker', 'colosso']);
+    expect(Object.keys(ARTE_DAS_SUBCLASSES).sort()).toEqual(['bastiao', 'berserker', 'colosso', 'vanguarda']);
     for (const id of Object.keys(ARTE_DAS_SUBCLASSES)) {
       expect(SUBCLASSES.some((s) => s.id === id)).toBe(true);
       const a = arteDaSubclasse(id)!;
-      expect(a.estandarte).toBeTruthy();
       expect(a.personagem).toBeTruthy();
     }
     expect(arteDaSubclasse('kensei')).toBeNull();
-    expect(arteDaSubclasse('vanguarda')).toBeNull();
-    expect(arteDaSubclasse('bastiao')).toBeNull();
   });
 
   it('a escolha do Bárbaro mostra o estandarte e o personagem de cada subclasse, com o botão Desbloquear', () => {
     const html = render(personagem('barbaro'));
     for (const id of ['berserker', 'colosso']) {
       expect(html).toContain(`data-subclasse="${id}"`);
-      expect(html).toContain(arteDaSubclasse(id)!.estandarte);
+      expect(html).toContain(arteDaSubclasse(id)!.estandarte as string);
       expect(html).toContain(arteDaSubclasse(id)!.personagem);
     }
     expect(html.match(/Desbloquear/g)?.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('o Cavaleiro ainda não tem arte: a Vanguarda e o Bastião aparecem com o degradê, sem imagem', () => {
+  it('o Cavaleiro mostra a Vanguarda (espada) e o Bastião (escudo e maça), só com o personagem, ainda sem estandarte', () => {
+    expect(arteDaSubclasse('vanguarda')!.estandarte).toBeNull();
+    expect(arteDaSubclasse('bastiao')!.estandarte).toBeNull();
     const html = render(personagem('cavaleiro'));
-    expect(html).toContain('data-subclasse="vanguarda"');
-    expect(html).toContain('data-subclasse="bastiao"');
-    expect(html).not.toContain(arteDaSubclasse('berserker')!.estandarte);
-    expect(html).not.toContain(arteDaSubclasse('colosso')!.estandarte);
+    expect(html).toContain(arteDaSubclasse('vanguarda')!.personagem);
+    expect(html).toContain(arteDaSubclasse('bastiao')!.personagem);
+    expect(html).not.toContain(arteDaSubclasse('berserker')!.estandarte as string);
   });
 
   it('subclasse sem arte ainda aparece (degradê da cor da classe), sem imagens quebradas', () => {
     const html = render(personagem('samurai'));
     expect(html).toContain('data-subclasse="kensei"');
-    expect(html).not.toContain(arteDaSubclasse('berserker')!.estandarte);
+    expect(html).not.toContain(arteDaSubclasse('berserker')!.personagem);
   });
 
   it('com a subclasse ativa mostra o cabeçalho com a arte, a linha de tiers e o botão de resetar', () => {
     const html = render(personagem('barbaro', { subclasseAtualId: 'berserker', subclasseTiers: { berserker: 1 } }));
     expect(html).toContain('data-subclasse-ativa="berserker"');
-    expect(html).toContain(arteDaSubclasse('berserker')!.estandarte);
+    expect(html).toContain(arteDaSubclasse('berserker')!.estandarte as string);
     expect(html).toContain('role="tablist"');
     expect(html).toContain('Resetar subclasse');
   });

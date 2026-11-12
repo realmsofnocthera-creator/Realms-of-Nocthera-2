@@ -66,6 +66,15 @@ function ArteDaSubclasseTela({ subclasse, altura }: { subclasse: Subclasse; altu
   if (!arte) {
     return <div aria-hidden="true" className="w-full" style={{ height: altura, background: `linear-gradient(165deg, ${cor} 0%, #080C16 100%)` }} />;
   }
+  if (!arte.estandarte) {
+    // sem estandarte: o personagem sozinho, no centro
+    return (
+      <div className="relative flex items-end justify-center w-full" style={{ height: altura }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={arte.personagem} alt="" aria-hidden="true" draggable={false} className="h-full w-auto max-w-full object-contain object-bottom pointer-events-none select-none" style={{ aspectRatio: arte.proporcaoDoPersonagem, ...pixel }} />
+      </div>
+    );
+  }
   return (
     <div className="relative flex items-end justify-center gap-[0.6cqw] w-full" style={{ height: altura }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
