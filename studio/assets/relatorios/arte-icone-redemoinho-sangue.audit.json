@@ -1,0 +1,147 @@
+{
+  "arquivo": "/home/user/Realms-of-Nocthera-2/studio/assets/candidatos/icones/arte-icone-redemoinho-sangue.png",
+  "sha256": "ecd47b98fcc87e60a1bda755538a5c3914f1e7dfc1e0ed710a305558ccbea8e9",
+  "categoria": "icone",
+  "paleta": "nocthera-32",
+  "tamanho": [
+    96,
+    96
+  ],
+  "veredito_tecnico": "pendente_revisao_visual",
+  "erros": 0,
+  "avisos": 0,
+  "verificacoes": [
+    {
+      "nome": "dimensoes",
+      "metricas": {
+        "largura": 96,
+        "altura": 96,
+        "formato": "PNG",
+        "modo_original": "RGBA",
+        "fator_ampliacao": 1,
+        "fator_ampliacao_provavel": 1
+      },
+      "achados": []
+    },
+    {
+      "nome": "transparencia",
+      "metricas": {
+        "pixels_transparentes": 5932,
+        "pixels_opacos": 3284,
+        "pixels_semitransparentes": 0,
+        "proporcao_transparente": 0.6437,
+        "pixels_rgb_oculto": 0,
+        "caixa": [
+          6,
+          6,
+          90,
+          94
+        ],
+        "largura_sprite": 85,
+        "altura_sprite": 89,
+        "extensao": 0.927,
+        "ocupacao": 0.356
+      },
+      "achados": []
+    },
+    {
+      "nome": "paleta",
+      "metricas": {
+        "cores_unicas": 11,
+        "max_cores": 16,
+        "cores": [
+          {
+            "hex": "#0b0812",
+            "pixels": 496,
+            "nome": "sombra-0"
+          },
+          {
+            "hex": "#5c1526",
+            "pixels": 468,
+            "nome": "sangue-1"
+          },
+          {
+            "hex": "#d2404a",
+            "pixels": 439,
+            "nome": "sangue-3"
+          },
+          {
+            "hex": "#241c30",
+            "pixels": 329,
+            "nome": "sombra-2"
+          },
+          {
+            "hex": "#9a2233",
+            "pixels": 299,
+            "nome": "sangue-2"
+          },
+          {
+            "hex": "#17121f",
+            "pixels": 269,
+            "nome": "sombra-1"
+          },
+          {
+            "hex": "#fffaf0",
+            "pixels": 258,
+            "nome": "osso-2"
+          },
+          {
+            "hex": "#5a4d6b",
+            "pixels": 225,
+            "nome": "sombra-4"
+          },
+          {
+            "hex": "#6b4a14",
+            "pixels": 211,
+            "nome": "ouro-0"
+          },
+          {
+            "hex": "#b8ad9e",
+            "pixels": 182,
+            "nome": "osso-0"
+          },
+          {
+            "hex": "#b98a22",
+            "pixels": 108,
+            "nome": "ouro-1"
+          }
+        ],
+        "pixels_fora_da_paleta": 0,
+        "cores_fora_da_paleta": 0,
+        "uso_por_rampa": {
+          "sombra": 1319,
+          "sangue": 1206,
+          "osso": 440,
+          "ouro": 319
+        },
+        "pares_quase_iguais": 0,
+        "cores_raras": 0
+      },
+      "achados": []
+    },
+    {
+      "nome": "pixels",
+      "metricas": {
+        "pixels_de_mistura": 50,
+        "proporcao_mistura": 0.0152,
+        "cores_so_de_mistura": 0,
+        "pixels_soltos": 0,
+        "clusters": 314,
+        "cluster_medio": 10.46,
+        "cluster_mediano": 2,
+        "proporcao_clusters_1px": 0.0405,
+        "proporcao_dither_xadrez": 0.0009,
+        "pixels_de_borda": 453,
+        "contorno_mais_escuro": 1.0,
+        "componentes": 7,
+        "maior_componente": 0.973,
+        "fragmentos_pequenos": 0,
+        "buracos_minusculos": 0,
+        "preenchimento_da_caixa": 0.434,
+        "complexidade_perimetro": 7.9
+      },
+      "achados": []
+    }
+  ],
+  "nota": "Passar nas verificações técnicas não aprova o sprite. Falta a revisão visual: silhueta, clusters, leitura em tamanho 1x, coerência com a direção de arte (use `aprovar`)."
+}

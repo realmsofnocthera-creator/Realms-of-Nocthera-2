@@ -1,0 +1,168 @@
+{
+  "arquivo": "/home/user/Realms-of-Nocthera-2/studio/assets/candidatos/monstros/arte-inquisidor-encapuzado.png",
+  "sha256": "171313abe658a66db8fb34b28d295823162e34513713090075a576e70295fc2c",
+  "categoria": "monstro",
+  "paleta": "nocthera-32",
+  "tamanho": [
+    128,
+    128
+  ],
+  "veredito_tecnico": "pendente_revisao_visual",
+  "erros": 0,
+  "avisos": 1,
+  "verificacoes": [
+    {
+      "nome": "dimensoes",
+      "metricas": {
+        "largura": 128,
+        "altura": 128,
+        "formato": "PNG",
+        "modo_original": "RGBA",
+        "fator_ampliacao": 1,
+        "fator_ampliacao_provavel": 1
+      },
+      "achados": []
+    },
+    {
+      "nome": "transparencia",
+      "metricas": {
+        "pixels_transparentes": 7438,
+        "pixels_opacos": 8946,
+        "pixels_semitransparentes": 0,
+        "proporcao_transparente": 0.454,
+        "pixels_rgb_oculto": 0,
+        "caixa": [
+          2,
+          2,
+          118,
+          126
+        ],
+        "largura_sprite": 117,
+        "altura_sprite": 125,
+        "extensao": 0.977,
+        "ocupacao": 0.546
+      },
+      "achados": [
+        {
+          "verificacao": "transparencia",
+          "codigo": "extensao_fora_do_padrao",
+          "severidade": "aviso",
+          "mensagem": "O sprite ocupa 98% da maior dimensão da tela; esperado entre 60% e 95% para esta categoria.",
+          "dados": {
+            "extensao": 0.9765625
+          }
+        }
+      ]
+    },
+    {
+      "nome": "paleta",
+      "metricas": {
+        "cores_unicas": 13,
+        "max_cores": 24,
+        "cores": [
+          {
+            "hex": "#241c30",
+            "pixels": 3015,
+            "nome": "sombra-2"
+          },
+          {
+            "hex": "#17121f",
+            "pixels": 1196,
+            "nome": "sombra-1"
+          },
+          {
+            "hex": "#0b0812",
+            "pixels": 928,
+            "nome": "sombra-0"
+          },
+          {
+            "hex": "#d9cfbd",
+            "pixels": 913,
+            "nome": "osso-1"
+          },
+          {
+            "hex": "#3a2f4a",
+            "pixels": 770,
+            "nome": "sombra-3"
+          },
+          {
+            "hex": "#857a94",
+            "pixels": 726,
+            "nome": "sombra-5"
+          },
+          {
+            "hex": "#b8ad9e",
+            "pixels": 653,
+            "nome": "osso-0"
+          },
+          {
+            "hex": "#fffaf0",
+            "pixels": 235,
+            "nome": "osso-2"
+          },
+          {
+            "hex": "#8a5a48",
+            "pixels": 214,
+            "nome": "pele-0"
+          },
+          {
+            "hex": "#5a4d6b",
+            "pixels": 207,
+            "nome": "sombra-4"
+          },
+          {
+            "hex": "#c48a6a",
+            "pixels": 64,
+            "nome": "pele-1"
+          },
+          {
+            "hex": "#b4dcf0",
+            "pixels": 13,
+            "nome": "gelo-0"
+          },
+          {
+            "hex": "#6b4a14",
+            "pixels": 12,
+            "nome": "ouro-0"
+          }
+        ],
+        "pixels_fora_da_paleta": 0,
+        "cores_fora_da_paleta": 0,
+        "uso_por_rampa": {
+          "sombra": 6842,
+          "osso": 1801,
+          "pele": 278,
+          "aco": 13,
+          "ouro": 12
+        },
+        "pares_quase_iguais": 0,
+        "cores_raras": 0
+      },
+      "achados": []
+    },
+    {
+      "nome": "pixels",
+      "metricas": {
+        "pixels_de_mistura": 51,
+        "proporcao_mistura": 0.0057,
+        "cores_so_de_mistura": 0,
+        "pixels_soltos": 0,
+        "clusters": 735,
+        "cluster_medio": 12.17,
+        "cluster_mediano": 2,
+        "proporcao_clusters_1px": 0.0317,
+        "proporcao_dither_xadrez": 0.0088,
+        "pixels_de_borda": 702,
+        "contorno_mais_escuro": 1.0,
+        "componentes": 1,
+        "maior_componente": 1.0,
+        "fragmentos_pequenos": 0,
+        "buracos_minusculos": 0,
+        "preenchimento_da_caixa": 0.612,
+        "complexidade_perimetro": 7.42
+      },
+      "achados": []
+    }
+  ],
+  "nota": "Passar nas verificações técnicas não aprova o sprite. Falta a revisão visual: silhueta, clusters, leitura em tamanho 1x, coerência com a direção de arte (use `aprovar`)."
+}

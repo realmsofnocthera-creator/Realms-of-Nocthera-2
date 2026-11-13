@@ -1,0 +1,373 @@
+{
+  "arquivo": "/home/user/Realms-of-Nocthera-2/studio/assets/candidatos/icones/arte-icone-explosao-cristal.png",
+  "sha256": "b001899748f595aea6e706500d0919694ca2c0f0efa3b596c4197ccc2a269ac5",
+  "categoria": "icone",
+  "paleta": "nocthera-32",
+  "tamanho": [
+    96,
+    96
+  ],
+  "veredito_tecnico": "pendente_revisao_visual",
+  "erros": 0,
+  "avisos": 4,
+  "verificacoes": [
+    {
+      "nome": "dimensoes",
+      "metricas": {
+        "largura": 96,
+        "altura": 96,
+        "formato": "PNG",
+        "modo_original": "RGBA",
+        "fator_ampliacao": 1,
+        "fator_ampliacao_provavel": 1
+      },
+      "achados": []
+    },
+    {
+      "nome": "transparencia",
+      "metricas": {
+        "pixels_transparentes": 5568,
+        "pixels_opacos": 3648,
+        "pixels_semitransparentes": 0,
+        "proporcao_transparente": 0.6042,
+        "pixels_rgb_oculto": 0,
+        "caixa": [
+          2,
+          0,
+          94,
+          94
+        ],
+        "largura_sprite": 93,
+        "altura_sprite": 95,
+        "extensao": 0.99,
+        "ocupacao": 0.396
+      },
+      "achados": [
+        {
+          "verificacao": "transparencia",
+          "codigo": "encosta_na_borda",
+          "severidade": "aviso",
+          "mensagem": "O sprite toca a borda (topo): possível corte. Deixe ≥1 px de margem.",
+          "dados": {
+            "lados": [
+              "topo"
+            ]
+          }
+        },
+        {
+          "verificacao": "transparencia",
+          "codigo": "extensao_fora_do_padrao",
+          "severidade": "aviso",
+          "mensagem": "O sprite ocupa 99% da maior dimensão da tela; esperado entre 55% e 95% para esta categoria.",
+          "dados": {
+            "extensao": 0.9895833333333334
+          }
+        }
+      ]
+    },
+    {
+      "nome": "paleta",
+      "metricas": {
+        "cores_unicas": 13,
+        "max_cores": 16,
+        "cores": [
+          {
+            "hex": "#0b0812",
+            "pixels": 861,
+            "nome": "sombra-0"
+          },
+          {
+            "hex": "#3c5a78",
+            "pixels": 690,
+            "nome": "aco-1"
+          },
+          {
+            "hex": "#6e9bc0",
+            "pixels": 536,
+            "nome": "aco-2"
+          },
+          {
+            "hex": "#5c1526",
+            "pixels": 449,
+            "nome": "sangue-1"
+          },
+          {
+            "hex": "#d2404a",
+            "pixels": 292,
+            "nome": "sangue-3"
+          },
+          {
+            "hex": "#b4dcf0",
+            "pixels": 225,
+            "nome": "gelo-0"
+          },
+          {
+            "hex": "#17121f",
+            "pixels": 160,
+            "nome": "sombra-1"
+          },
+          {
+            "hex": "#d9cfbd",
+            "pixels": 154,
+            "nome": "osso-1"
+          },
+          {
+            "hex": "#9a2233",
+            "pixels": 99,
+            "nome": "sangue-2"
+          },
+          {
+            "hex": "#b98a22",
+            "pixels": 91,
+            "nome": "ouro-1"
+          },
+          {
+            "hex": "#fffaf0",
+            "pixels": 51,
+            "nome": "osso-2"
+          },
+          {
+            "hex": "#3a2f4a",
+            "pixels": 37,
+            "nome": "sombra-3"
+          },
+          {
+            "hex": "#f2c744",
+            "pixels": 3,
+            "nome": "ouro-2"
+          }
+        ],
+        "pixels_fora_da_paleta": 0,
+        "cores_fora_da_paleta": 0,
+        "uso_por_rampa": {
+          "aco": 1451,
+          "sombra": 1058,
+          "sangue": 840,
+          "osso": 205,
+          "ouro": 94
+        },
+        "pares_quase_iguais": 0,
+        "cores_raras": 0
+      },
+      "achados": []
+    },
+    {
+      "nome": "pixels",
+      "metricas": {
+        "pixels_de_mistura": 78,
+        "proporcao_mistura": 0.0214,
+        "cores_so_de_mistura": 0,
+        "pixels_soltos": 0,
+        "clusters": 780,
+        "cluster_medio": 4.68,
+        "cluster_mediano": 1,
+        "proporcao_clusters_1px": 0.1113,
+        "proporcao_dither_xadrez": 0.0099,
+        "pixels_de_borda": 781,
+        "contorno_mais_escuro": 0.999,
+        "componentes": 5,
+        "maior_componente": 0.986,
+        "fragmentos_pequenos": 0,
+        "buracos_minusculos": 3,
+        "preenchimento_da_caixa": 0.413,
+        "complexidade_perimetro": 12.93
+      },
+      "achados": [
+        {
+          "verificacao": "pixels",
+          "codigo": "ruido",
+          "severidade": "aviso",
+          "mensagem": "11% dos pixels são clusters de 1 px. Agrupe os tons em manchas.",
+          "dados": {
+            "locais": [
+              [
+                21,
+                1
+              ],
+              [
+                21,
+                2
+              ],
+              [
+                22,
+                2
+              ],
+              [
+                40,
+                2
+              ],
+              [
+                21,
+                3
+              ],
+              [
+                39,
+                3
+              ],
+              [
+                63,
+                3
+              ],
+              [
+                22,
+                5
+              ],
+              [
+                24,
+                5
+              ],
+              [
+                24,
+                6
+              ],
+              [
+                25,
+                8
+              ],
+              [
+                26,
+                8
+              ],
+              [
+                61,
+                8
+              ],
+              [
+                77,
+                8
+              ],
+              [
+                62,
+                9
+              ],
+              [
+                76,
+                9
+              ],
+              [
+                78,
+                9
+              ],
+              [
+                75,
+                10
+              ],
+              [
+                79,
+                10
+              ],
+              [
+                83,
+                10
+              ],
+              [
+                28,
+                11
+              ],
+              [
+                76,
+                11
+              ],
+              [
+                29,
+                12
+              ],
+              [
+                77,
+                12
+              ],
+              [
+                27,
+                13
+              ],
+              [
+                73,
+                13
+              ],
+              [
+                78,
+                13
+              ],
+              [
+                72,
+                14
+              ],
+              [
+                79,
+                14
+              ],
+              [
+                85,
+                14
+              ],
+              [
+                31,
+                15
+              ],
+              [
+                71,
+                15
+              ],
+              [
+                73,
+                15
+              ],
+              [
+                81,
+                15
+              ],
+              [
+                84,
+                15
+              ],
+              [
+                70,
+                16
+              ],
+              [
+                82,
+                16
+              ],
+              [
+                83,
+                16
+              ],
+              [
+                5,
+                17
+              ],
+              [
+                76,
+                17
+              ]
+            ],
+            "total": 406
+          }
+        },
+        {
+          "verificacao": "pixels",
+          "codigo": "buracos_minusculos",
+          "severidade": "aviso",
+          "mensagem": "3 buraco(s) de 1-2 px dentro da silhueta.",
+          "dados": {
+            "locais": [
+              [
+                21,
+                73
+              ],
+              [
+                32,
+                75
+              ],
+              [
+                28,
+                88
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "nota": "Passar nas verificações técnicas não aprova o sprite. Falta a revisão visual: silhueta, clusters, leitura em tamanho 1x, coerência com a direção de arte (use `aprovar`)."
+}

@@ -1,0 +1,226 @@
+{
+  "versao": 1,
+  "ativos": [
+    {
+      "id": "arte-icone-explosao-cristal",
+      "status": "auditado",
+      "criado_em": "2026-11-13T00:02:58+00:00",
+      "categoria": "icone",
+      "arquivo": "assets/candidatos/icones/arte-icone-explosao-cristal.png",
+      "sha256": "b001899748f595aea6e706500d0919694ca2c0f0efa3b596c4197ccc2a269ac5",
+      "origem": {
+        "tipo": "codigo",
+        "detalhe": "Desenhada por código (Pixel Art Studio/Pillow), paleta nocthera-32; fonte em studio/arte/",
+        "declarada_em": "2026-11-13T00:02:58+00:00"
+      },
+      "auditoria": {
+        "veredito": "pendente_revisao_visual",
+        "erros": 0,
+        "avisos": 4,
+        "relatorio": "assets/relatorios/arte-icone-explosao-cristal.audit.json",
+        "sha256": "b001899748f595aea6e706500d0919694ca2c0f0efa3b596c4197ccc2a269ac5"
+      }
+    },
+    {
+      "id": "arte-icone-golpe-carmesim",
+      "status": "auditado",
+      "criado_em": "2026-11-13T00:02:58+00:00",
+      "categoria": "icone",
+      "arquivo": "assets/candidatos/icones/arte-icone-golpe-carmesim.png",
+      "sha256": "9c409c87b6faf04547b8aad7fc7dbfec5a61dc83cfd4b576efd6b20708a13fd4",
+      "origem": {
+        "tipo": "codigo",
+        "detalhe": "Desenhada por código (Pixel Art Studio/Pillow), paleta nocthera-32; fonte em studio/arte/",
+        "declarada_em": "2026-11-13T00:02:59+00:00"
+      },
+      "auditoria": {
+        "veredito": "pendente_revisao_visual",
+        "erros": 0,
+        "avisos": 3,
+        "relatorio": "assets/relatorios/arte-icone-golpe-carmesim.audit.json",
+        "sha256": "9c409c87b6faf04547b8aad7fc7dbfec5a61dc83cfd4b576efd6b20708a13fd4"
+      }
+    },
+    {
+      "id": "arte-icone-lua-de-sangue",
+      "status": "auditado",
+      "criado_em": "2026-11-13T00:02:58+00:00",
+      "categoria": "icone",
+      "arquivo": "assets/candidatos/icones/arte-icone-lua-de-sangue.png",
+      "sha256": "b253ae2f626f32fc25ef8bc71b50e07059e5fab5e1c0b1fd4eb0e3ecc9ed1c29",
+      "origem": {
+        "tipo": "codigo",
+        "detalhe": "Desenhada por código (Pixel Art Studio/Pillow), paleta nocthera-32; fonte em studio/arte/",
+        "declarada_em": "2026-11-13T00:02:59+00:00"
+      },
+      "auditoria": {
+        "veredito": "pendente_revisao_visual",
+        "erros": 0,
+        "avisos": 2,
+        "relatorio": "assets/relatorios/arte-icone-lua-de-sangue.audit.json",
+        "sha256": "b253ae2f626f32fc25ef8bc71b50e07059e5fab5e1c0b1fd4eb0e3ecc9ed1c29"
+      }
+    },
+    {
+      "id": "arte-icone-meditacao-agua",
+      "status": "auditado",
+      "criado_em": "2026-11-13T00:02:58+00:00",
+      "categoria": "icone",
+      "arquivo": "assets/candidatos/icones/arte-icone-meditacao-agua.png",
+      "sha256": "cd6a0f09bfbe3b4eb8659126d49828e9027c249f58bd65669efd090a083d6b02",
+      "origem": {
+        "tipo": "codigo",
+        "detalhe": "Desenhada por código (Pixel Art Studio/Pillow), paleta nocthera-32; fonte em studio/arte/",
+        "declarada_em": "2026-11-13T00:02:58+00:00"
+      },
+      "auditoria": {
+        "veredito": "pendente_revisao_visual",
+        "erros": 0,
+        "avisos": 2,
+        "relatorio": "assets/relatorios/arte-icone-meditacao-agua.audit.json",
+        "sha256": "cd6a0f09bfbe3b4eb8659126d49828e9027c249f58bd65669efd090a083d6b02"
+      }
+    },
+    {
+      "id": "arte-icone-onda-katana",
+      "status": "auditado",
+      "criado_em": "2026-11-13T00:02:58+00:00",
+      "categoria": "icone",
+      "arquivo": "assets/candidatos/icones/arte-icone-onda-katana.png",
+      "sha256": "d1e3d0ed8c0c5e4a109a18666fa9646e0683b32369f85de9467125022fa85ec7",
+      "origem": {
+        "tipo": "codigo",
+        "detalhe": "Desenhada por código (Pixel Art Studio/Pillow), paleta nocthera-32; fonte em studio/arte/",
+        "declarada_em": "2026-11-13T00:02:58+00:00"
+      },
+      "auditoria": {
+        "veredito": "pendente_revisao_visual",
+        "erros": 0,
+        "avisos": 3,
+        "relatorio": "assets/relatorios/arte-icone-onda-katana.audit.json",
+        "sha256": "d1e3d0ed8c0c5e4a109a18666fa9646e0683b32369f85de9467125022fa85ec7"
+      }
+    },
+    {
+      "id": "arte-icone-redemoinho-sangue",
+      "status": "auditado",
+      "criado_em": "2026-11-13T00:02:58+00:00",
+      "categoria": "icone",
+      "arquivo": "assets/candidatos/icones/arte-icone-redemoinho-sangue.png",
+      "sha256": "ecd47b98fcc87e60a1bda755538a5c3914f1e7dfc1e0ed710a305558ccbea8e9",
+      "origem": {
+        "tipo": "codigo",
+        "detalhe": "Desenhada por código (Pixel Art Studio/Pillow), paleta nocthera-32; fonte em studio/arte/",
+        "declarada_em": "2026-11-13T00:02:59+00:00"
+      },
+      "auditoria": {
+        "veredito": "pendente_revisao_visual",
+        "erros": 0,
+        "avisos": 0,
+        "relatorio": "assets/relatorios/arte-icone-redemoinho-sangue.audit.json",
+        "sha256": "ecd47b98fcc87e60a1bda755538a5c3914f1e7dfc1e0ed710a305558ccbea8e9"
+      }
+    },
+    {
+      "id": "arte-icone-ronin-kasa",
+      "status": "auditado",
+      "criado_em": "2026-11-13T00:02:58+00:00",
+      "categoria": "icone",
+      "arquivo": "assets/candidatos/icones/arte-icone-ronin-kasa.png",
+      "sha256": "f13221208374dbee32de95e6780ed02ec260a138676bb3c7ac3b53d4a91e7aa0",
+      "origem": {
+        "tipo": "codigo",
+        "detalhe": "Desenhada por código (Pixel Art Studio/Pillow), paleta nocthera-32; fonte em studio/arte/",
+        "declarada_em": "2026-11-13T00:02:58+00:00"
+      },
+      "auditoria": {
+        "veredito": "pendente_revisao_visual",
+        "erros": 0,
+        "avisos": 1,
+        "relatorio": "assets/relatorios/arte-icone-ronin-kasa.audit.json",
+        "sha256": "f13221208374dbee32de95e6780ed02ec260a138676bb3c7ac3b53d4a91e7aa0"
+      }
+    },
+    {
+      "id": "arte-icone-saque-agua",
+      "status": "auditado",
+      "criado_em": "2026-11-13T00:02:58+00:00",
+      "categoria": "icone",
+      "arquivo": "assets/candidatos/icones/arte-icone-saque-agua.png",
+      "sha256": "5a92c2df9be71763f15ed77622dd66c5f7abc896ce4344b518d62b881ae7aa84",
+      "origem": {
+        "tipo": "codigo",
+        "detalhe": "Desenhada por código (Pixel Art Studio/Pillow), paleta nocthera-32; fonte em studio/arte/",
+        "declarada_em": "2026-11-13T00:02:58+00:00"
+      },
+      "auditoria": {
+        "veredito": "pendente_revisao_visual",
+        "erros": 0,
+        "avisos": 2,
+        "relatorio": "assets/relatorios/arte-icone-saque-agua.audit.json",
+        "sha256": "5a92c2df9be71763f15ed77622dd66c5f7abc896ce4344b518d62b881ae7aa84"
+      }
+    },
+    {
+      "id": "arte-arquimago-vestes-negras",
+      "status": "auditado",
+      "criado_em": "2026-11-13T00:02:58+00:00",
+      "categoria": "monstro",
+      "arquivo": "assets/candidatos/monstros/arte-arquimago-vestes-negras.png",
+      "sha256": "c168e9781cb4e9b224b0d7aee810ec7f2b5d10402d26f8d87dff1b27106a7fe8",
+      "origem": {
+        "tipo": "codigo",
+        "detalhe": "Desenhada por código (Pixel Art Studio/Pillow), paleta nocthera-32; fonte em studio/arte/",
+        "declarada_em": "2026-11-13T00:02:58+00:00"
+      },
+      "auditoria": {
+        "veredito": "pendente_revisao_visual",
+        "erros": 0,
+        "avisos": 2,
+        "relatorio": "assets/relatorios/arte-arquimago-vestes-negras.audit.json",
+        "sha256": "c168e9781cb4e9b224b0d7aee810ec7f2b5d10402d26f8d87dff1b27106a7fe8"
+      }
+    },
+    {
+      "id": "arte-cavaleiro-das-cinzas",
+      "status": "auditado",
+      "criado_em": "2026-11-13T00:02:58+00:00",
+      "categoria": "monstro",
+      "arquivo": "assets/candidatos/monstros/arte-cavaleiro-das-cinzas.png",
+      "sha256": "8d777bc77bb54a786bbda3aca00881899b6c9c57ba3b15383d319f41c6b3b648",
+      "origem": {
+        "tipo": "codigo",
+        "detalhe": "Desenhada por código (Pixel Art Studio/Pillow), paleta nocthera-32; fonte em studio/arte/",
+        "declarada_em": "2026-11-13T00:02:58+00:00"
+      },
+      "auditoria": {
+        "veredito": "pendente_revisao_visual",
+        "erros": 0,
+        "avisos": 3,
+        "relatorio": "assets/relatorios/arte-cavaleiro-das-cinzas.audit.json",
+        "sha256": "8d777bc77bb54a786bbda3aca00881899b6c9c57ba3b15383d319f41c6b3b648"
+      }
+    },
+    {
+      "id": "arte-inquisidor-encapuzado",
+      "status": "auditado",
+      "criado_em": "2026-11-13T00:02:58+00:00",
+      "categoria": "monstro",
+      "arquivo": "assets/candidatos/monstros/arte-inquisidor-encapuzado.png",
+      "sha256": "171313abe658a66db8fb34b28d295823162e34513713090075a576e70295fc2c",
+      "origem": {
+        "tipo": "codigo",
+        "detalhe": "Desenhada por código (Pixel Art Studio/Pillow), paleta nocthera-32; fonte em studio/arte/",
+        "declarada_em": "2026-11-13T00:02:58+00:00"
+      },
+      "auditoria": {
+        "veredito": "pendente_revisao_visual",
+        "erros": 0,
+        "avisos": 1,
+        "relatorio": "assets/relatorios/arte-inquisidor-encapuzado.audit.json",
+        "sha256": "171313abe658a66db8fb34b28d295823162e34513713090075a576e70295fc2c"
+      }
+    }
+  ],
+  "atualizado_em": "2026-11-13T00:03:00+00:00"
+}

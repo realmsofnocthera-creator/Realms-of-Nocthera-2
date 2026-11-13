@@ -1,0 +1,172 @@
+{
+  "arquivo": "/home/user/Realms-of-Nocthera-2/studio/assets/candidatos/icones/arte-icone-golpe-carmesim.png",
+  "sha256": "9c409c87b6faf04547b8aad7fc7dbfec5a61dc83cfd4b576efd6b20708a13fd4",
+  "categoria": "icone",
+  "paleta": "nocthera-32",
+  "tamanho": [
+    96,
+    96
+  ],
+  "veredito_tecnico": "pendente_revisao_visual",
+  "erros": 0,
+  "avisos": 3,
+  "verificacoes": [
+    {
+      "nome": "dimensoes",
+      "metricas": {
+        "largura": 96,
+        "altura": 96,
+        "formato": "PNG",
+        "modo_original": "RGBA",
+        "fator_ampliacao": 1,
+        "fator_ampliacao_provavel": 1
+      },
+      "achados": []
+    },
+    {
+      "nome": "transparencia",
+      "metricas": {
+        "pixels_transparentes": 5526,
+        "pixels_opacos": 3690,
+        "pixels_semitransparentes": 0,
+        "proporcao_transparente": 0.5996,
+        "pixels_rgb_oculto": 0,
+        "caixa": [
+          0,
+          10,
+          95,
+          92
+        ],
+        "largura_sprite": 96,
+        "altura_sprite": 83,
+        "extensao": 1.0,
+        "ocupacao": 0.4
+      },
+      "achados": [
+        {
+          "verificacao": "transparencia",
+          "codigo": "encosta_na_borda",
+          "severidade": "aviso",
+          "mensagem": "O sprite toca a borda (esquerda, direita): possível corte. Deixe ≥1 px de margem.",
+          "dados": {
+            "lados": [
+              "esquerda",
+              "direita"
+            ]
+          }
+        },
+        {
+          "verificacao": "transparencia",
+          "codigo": "extensao_fora_do_padrao",
+          "severidade": "aviso",
+          "mensagem": "O sprite ocupa 100% da maior dimensão da tela; esperado entre 55% e 95% para esta categoria.",
+          "dados": {
+            "extensao": 1.0
+          }
+        }
+      ]
+    },
+    {
+      "nome": "paleta",
+      "metricas": {
+        "cores_unicas": 10,
+        "max_cores": 16,
+        "cores": [
+          {
+            "hex": "#9a2233",
+            "pixels": 674,
+            "nome": "sangue-2"
+          },
+          {
+            "hex": "#0b0812",
+            "pixels": 673,
+            "nome": "sombra-0"
+          },
+          {
+            "hex": "#d2404a",
+            "pixels": 425,
+            "nome": "sangue-3"
+          },
+          {
+            "hex": "#5c1526",
+            "pixels": 385,
+            "nome": "sangue-1"
+          },
+          {
+            "hex": "#17121f",
+            "pixels": 343,
+            "nome": "sombra-1"
+          },
+          {
+            "hex": "#d9cfbd",
+            "pixels": 336,
+            "nome": "osso-1"
+          },
+          {
+            "hex": "#241c30",
+            "pixels": 317,
+            "nome": "sombra-2"
+          },
+          {
+            "hex": "#fffaf0",
+            "pixels": 254,
+            "nome": "osso-2"
+          },
+          {
+            "hex": "#5a4d6b",
+            "pixels": 248,
+            "nome": "sombra-4"
+          },
+          {
+            "hex": "#6b4a14",
+            "pixels": 35,
+            "nome": "ouro-0"
+          }
+        ],
+        "pixels_fora_da_paleta": 0,
+        "cores_fora_da_paleta": 0,
+        "uso_por_rampa": {
+          "sombra": 1581,
+          "sangue": 1484,
+          "osso": 590,
+          "ouro": 35
+        },
+        "pares_quase_iguais": 0,
+        "cores_raras": 0
+      },
+      "achados": []
+    },
+    {
+      "nome": "pixels",
+      "metricas": {
+        "pixels_de_mistura": 8,
+        "proporcao_mistura": 0.0022,
+        "cores_so_de_mistura": 0,
+        "pixels_soltos": 0,
+        "clusters": 275,
+        "cluster_medio": 13.42,
+        "cluster_mediano": 2,
+        "proporcao_clusters_1px": 0.0295,
+        "proporcao_dither_xadrez": 0.0011,
+        "pixels_de_borda": 510,
+        "contorno_mais_escuro": 0.996,
+        "componentes": 8,
+        "maior_componente": 0.875,
+        "fragmentos_pequenos": 0,
+        "buracos_minusculos": 0,
+        "preenchimento_da_caixa": 0.463,
+        "complexidade_perimetro": 8.4
+      },
+      "achados": [
+        {
+          "verificacao": "pixels",
+          "codigo": "silhueta_fragmentada",
+          "severidade": "aviso",
+          "mensagem": "O maior corpo contínuo tem só 88% dos pixels: silhueta partida em ilhas.",
+          "dados": {}
+        }
+      ]
+    }
+  ],
+  "nota": "Passar nas verificações técnicas não aprova o sprite. Falta a revisão visual: silhueta, clusters, leitura em tamanho 1x, coerência com a direção de arte (use `aprovar`)."
+}

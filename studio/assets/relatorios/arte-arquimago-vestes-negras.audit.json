@@ -1,0 +1,187 @@
+{
+  "arquivo": "/home/user/Realms-of-Nocthera-2/studio/assets/candidatos/monstros/arte-arquimago-vestes-negras.png",
+  "sha256": "c168e9781cb4e9b224b0d7aee810ec7f2b5d10402d26f8d87dff1b27106a7fe8",
+  "categoria": "monstro",
+  "paleta": "nocthera-32",
+  "tamanho": [
+    128,
+    128
+  ],
+  "veredito_tecnico": "pendente_revisao_visual",
+  "erros": 0,
+  "avisos": 2,
+  "verificacoes": [
+    {
+      "nome": "dimensoes",
+      "metricas": {
+        "largura": 128,
+        "altura": 128,
+        "formato": "PNG",
+        "modo_original": "RGBA",
+        "fator_ampliacao": 1,
+        "fator_ampliacao_provavel": 1
+      },
+      "achados": []
+    },
+    {
+      "nome": "transparencia",
+      "metricas": {
+        "pixels_transparentes": 7751,
+        "pixels_opacos": 8633,
+        "pixels_semitransparentes": 0,
+        "proporcao_transparente": 0.4731,
+        "pixels_rgb_oculto": 0,
+        "caixa": [
+          22,
+          2,
+          114,
+          126
+        ],
+        "largura_sprite": 93,
+        "altura_sprite": 125,
+        "extensao": 0.977,
+        "ocupacao": 0.527
+      },
+      "achados": [
+        {
+          "verificacao": "transparencia",
+          "codigo": "extensao_fora_do_padrao",
+          "severidade": "aviso",
+          "mensagem": "O sprite ocupa 98% da maior dimensão da tela; esperado entre 60% e 95% para esta categoria.",
+          "dados": {
+            "extensao": 0.9765625
+          }
+        }
+      ]
+    },
+    {
+      "nome": "paleta",
+      "metricas": {
+        "cores_unicas": 14,
+        "max_cores": 24,
+        "cores": [
+          {
+            "hex": "#241c30",
+            "pixels": 2695,
+            "nome": "sombra-2"
+          },
+          {
+            "hex": "#17121f",
+            "pixels": 2355,
+            "nome": "sombra-1"
+          },
+          {
+            "hex": "#0b0812",
+            "pixels": 1291,
+            "nome": "sombra-0"
+          },
+          {
+            "hex": "#3a2f4a",
+            "pixels": 557,
+            "nome": "sombra-3"
+          },
+          {
+            "hex": "#b98a22",
+            "pixels": 480,
+            "nome": "ouro-1"
+          },
+          {
+            "hex": "#c48a6a",
+            "pixels": 258,
+            "nome": "pele-1"
+          },
+          {
+            "hex": "#6b4a14",
+            "pixels": 219,
+            "nome": "ouro-0"
+          },
+          {
+            "hex": "#8a5a48",
+            "pixels": 188,
+            "nome": "pele-0"
+          },
+          {
+            "hex": "#d9cfbd",
+            "pixels": 163,
+            "nome": "osso-1"
+          },
+          {
+            "hex": "#b8ad9e",
+            "pixels": 135,
+            "nome": "osso-0"
+          },
+          {
+            "hex": "#857a94",
+            "pixels": 108,
+            "nome": "sombra-5"
+          },
+          {
+            "hex": "#fffaf0",
+            "pixels": 94,
+            "nome": "osso-2"
+          },
+          {
+            "hex": "#5a4d6b",
+            "pixels": 46,
+            "nome": "sombra-4"
+          },
+          {
+            "hex": "#f2c744",
+            "pixels": 44,
+            "nome": "ouro-2"
+          }
+        ],
+        "pixels_fora_da_paleta": 0,
+        "cores_fora_da_paleta": 0,
+        "uso_por_rampa": {
+          "sombra": 7052,
+          "ouro": 743,
+          "pele": 446,
+          "osso": 392
+        },
+        "pares_quase_iguais": 0,
+        "cores_raras": 0
+      },
+      "achados": []
+    },
+    {
+      "nome": "pixels",
+      "metricas": {
+        "pixels_de_mistura": 141,
+        "proporcao_mistura": 0.0163,
+        "cores_so_de_mistura": 0,
+        "pixels_soltos": 0,
+        "clusters": 591,
+        "cluster_medio": 14.61,
+        "cluster_mediano": 2,
+        "proporcao_clusters_1px": 0.0211,
+        "proporcao_dither_xadrez": 0.0025,
+        "pixels_de_borda": 487,
+        "contorno_mais_escuro": 1.0,
+        "componentes": 1,
+        "maior_componente": 1.0,
+        "fragmentos_pequenos": 0,
+        "buracos_minusculos": 1,
+        "preenchimento_da_caixa": 0.743,
+        "complexidade_perimetro": 5.24
+      },
+      "achados": [
+        {
+          "verificacao": "pixels",
+          "codigo": "buracos_minusculos",
+          "severidade": "aviso",
+          "mensagem": "1 buraco(s) de 1-2 px dentro da silhueta.",
+          "dados": {
+            "locais": [
+              [
+                31,
+                78
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "nota": "Passar nas verificações técnicas não aprova o sprite. Falta a revisão visual: silhueta, clusters, leitura em tamanho 1x, coerência com a direção de arte (use `aprovar`)."
+}

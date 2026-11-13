@@ -1,0 +1,168 @@
+{
+  "arquivo": "/home/user/Realms-of-Nocthera-2/studio/assets/candidatos/icones/arte-icone-lua-de-sangue.png",
+  "sha256": "b253ae2f626f32fc25ef8bc71b50e07059e5fab5e1c0b1fd4eb0e3ecc9ed1c29",
+  "categoria": "icone",
+  "paleta": "nocthera-32",
+  "tamanho": [
+    96,
+    96
+  ],
+  "veredito_tecnico": "pendente_revisao_visual",
+  "erros": 0,
+  "avisos": 2,
+  "verificacoes": [
+    {
+      "nome": "dimensoes",
+      "metricas": {
+        "largura": 96,
+        "altura": 96,
+        "formato": "PNG",
+        "modo_original": "RGBA",
+        "fator_ampliacao": 1,
+        "fator_ampliacao_provavel": 1
+      },
+      "achados": []
+    },
+    {
+      "nome": "transparencia",
+      "metricas": {
+        "pixels_transparentes": 3160,
+        "pixels_opacos": 6056,
+        "pixels_semitransparentes": 0,
+        "proporcao_transparente": 0.3429,
+        "pixels_rgb_oculto": 0,
+        "caixa": [
+          0,
+          3,
+          94,
+          94
+        ],
+        "largura_sprite": 95,
+        "altura_sprite": 92,
+        "extensao": 0.99,
+        "ocupacao": 0.657
+      },
+      "achados": [
+        {
+          "verificacao": "transparencia",
+          "codigo": "encosta_na_borda",
+          "severidade": "aviso",
+          "mensagem": "O sprite toca a borda (esquerda): possível corte. Deixe ≥1 px de margem.",
+          "dados": {
+            "lados": [
+              "esquerda"
+            ]
+          }
+        },
+        {
+          "verificacao": "transparencia",
+          "codigo": "extensao_fora_do_padrao",
+          "severidade": "aviso",
+          "mensagem": "O sprite ocupa 99% da maior dimensão da tela; esperado entre 55% e 95% para esta categoria.",
+          "dados": {
+            "extensao": 0.9895833333333334
+          }
+        }
+      ]
+    },
+    {
+      "nome": "paleta",
+      "metricas": {
+        "cores_unicas": 11,
+        "max_cores": 16,
+        "cores": [
+          {
+            "hex": "#17121f",
+            "pixels": 1829,
+            "nome": "sombra-1"
+          },
+          {
+            "hex": "#9a2233",
+            "pixels": 1349,
+            "nome": "sangue-2"
+          },
+          {
+            "hex": "#5c1526",
+            "pixels": 1110,
+            "nome": "sangue-1"
+          },
+          {
+            "hex": "#d2404a",
+            "pixels": 621,
+            "nome": "sangue-3"
+          },
+          {
+            "hex": "#0b0812",
+            "pixels": 478,
+            "nome": "sombra-0"
+          },
+          {
+            "hex": "#3a2f4a",
+            "pixels": 260,
+            "nome": "sombra-3"
+          },
+          {
+            "hex": "#5a4d6b",
+            "pixels": 159,
+            "nome": "sombra-4"
+          },
+          {
+            "hex": "#6b4a14",
+            "pixels": 88,
+            "nome": "ouro-0"
+          },
+          {
+            "hex": "#b8ad9e",
+            "pixels": 81,
+            "nome": "osso-0"
+          },
+          {
+            "hex": "#241c30",
+            "pixels": 65,
+            "nome": "sombra-2"
+          },
+          {
+            "hex": "#b98a22",
+            "pixels": 16,
+            "nome": "ouro-1"
+          }
+        ],
+        "pixels_fora_da_paleta": 0,
+        "cores_fora_da_paleta": 0,
+        "uso_por_rampa": {
+          "sangue": 3080,
+          "sombra": 2791,
+          "ouro": 104,
+          "osso": 81
+        },
+        "pares_quase_iguais": 0,
+        "cores_raras": 0
+      },
+      "achados": []
+    },
+    {
+      "nome": "pixels",
+      "metricas": {
+        "pixels_de_mistura": 59,
+        "proporcao_mistura": 0.0097,
+        "cores_so_de_mistura": 0,
+        "pixels_soltos": 0,
+        "clusters": 426,
+        "cluster_medio": 14.22,
+        "cluster_mediano": 1,
+        "proporcao_clusters_1px": 0.039,
+        "proporcao_dither_xadrez": 0.0119,
+        "pixels_de_borda": 447,
+        "contorno_mais_escuro": 1.0,
+        "componentes": 5,
+        "maior_componente": 0.99,
+        "fragmentos_pequenos": 0,
+        "buracos_minusculos": 0,
+        "preenchimento_da_caixa": 0.693,
+        "complexidade_perimetro": 5.74
+      },
+      "achados": []
+    }
+  ],
+  "nota": "Passar nas verificações técnicas não aprova o sprite. Falta a revisão visual: silhueta, clusters, leitura em tamanho 1x, coerência com a direção de arte (use `aprovar`)."
+}

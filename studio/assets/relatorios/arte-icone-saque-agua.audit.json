@@ -1,0 +1,188 @@
+{
+  "arquivo": "/home/user/Realms-of-Nocthera-2/studio/assets/candidatos/icones/arte-icone-saque-agua.png",
+  "sha256": "5a92c2df9be71763f15ed77622dd66c5f7abc896ce4344b518d62b881ae7aa84",
+  "categoria": "icone",
+  "paleta": "nocthera-32",
+  "tamanho": [
+    96,
+    96
+  ],
+  "veredito_tecnico": "pendente_revisao_visual",
+  "erros": 0,
+  "avisos": 2,
+  "verificacoes": [
+    {
+      "nome": "dimensoes",
+      "metricas": {
+        "largura": 96,
+        "altura": 96,
+        "formato": "PNG",
+        "modo_original": "RGBA",
+        "fator_ampliacao": 1,
+        "fator_ampliacao_provavel": 1
+      },
+      "achados": []
+    },
+    {
+      "nome": "transparencia",
+      "metricas": {
+        "pixels_transparentes": 4241,
+        "pixels_opacos": 4975,
+        "pixels_semitransparentes": 0,
+        "proporcao_transparente": 0.4602,
+        "pixels_rgb_oculto": 0,
+        "caixa": [
+          3,
+          1,
+          94,
+          94
+        ],
+        "largura_sprite": 92,
+        "altura_sprite": 94,
+        "extensao": 0.979,
+        "ocupacao": 0.54
+      },
+      "achados": [
+        {
+          "verificacao": "transparencia",
+          "codigo": "extensao_fora_do_padrao",
+          "severidade": "aviso",
+          "mensagem": "O sprite ocupa 98% da maior dimensão da tela; esperado entre 55% e 95% para esta categoria.",
+          "dados": {
+            "extensao": 0.9791666666666666
+          }
+        }
+      ]
+    },
+    {
+      "nome": "paleta",
+      "metricas": {
+        "cores_unicas": 14,
+        "max_cores": 16,
+        "cores": [
+          {
+            "hex": "#3c5a78",
+            "pixels": 1235,
+            "nome": "aco-1"
+          },
+          {
+            "hex": "#6e9bc0",
+            "pixels": 928,
+            "nome": "aco-2"
+          },
+          {
+            "hex": "#17121f",
+            "pixels": 712,
+            "nome": "sombra-1"
+          },
+          {
+            "hex": "#0b0812",
+            "pixels": 642,
+            "nome": "sombra-0"
+          },
+          {
+            "hex": "#1d2b3d",
+            "pixels": 640,
+            "nome": "aco-0"
+          },
+          {
+            "hex": "#b4dcf0",
+            "pixels": 396,
+            "nome": "gelo-0"
+          },
+          {
+            "hex": "#fffaf0",
+            "pixels": 181,
+            "nome": "osso-2"
+          },
+          {
+            "hex": "#b98a22",
+            "pixels": 118,
+            "nome": "ouro-1"
+          },
+          {
+            "hex": "#c48a6a",
+            "pixels": 62,
+            "nome": "pele-1"
+          },
+          {
+            "hex": "#3a2f4a",
+            "pixels": 26,
+            "nome": "sombra-3"
+          },
+          {
+            "hex": "#5a4d6b",
+            "pixels": 19,
+            "nome": "sombra-4"
+          },
+          {
+            "hex": "#d9cfbd",
+            "pixels": 7,
+            "nome": "osso-1"
+          },
+          {
+            "hex": "#8a5a48",
+            "pixels": 5,
+            "nome": "pele-0"
+          },
+          {
+            "hex": "#f2c744",
+            "pixels": 4,
+            "nome": "ouro-2"
+          }
+        ],
+        "pixels_fora_da_paleta": 0,
+        "cores_fora_da_paleta": 0,
+        "uso_por_rampa": {
+          "aco": 3199,
+          "sombra": 1399,
+          "osso": 188,
+          "ouro": 122,
+          "pele": 67
+        },
+        "pares_quase_iguais": 0,
+        "cores_raras": 0
+      },
+      "achados": []
+    },
+    {
+      "nome": "pixels",
+      "metricas": {
+        "pixels_de_mistura": 27,
+        "proporcao_mistura": 0.0054,
+        "cores_so_de_mistura": 0,
+        "pixels_soltos": 0,
+        "clusters": 620,
+        "cluster_medio": 8.02,
+        "cluster_mediano": 2,
+        "proporcao_clusters_1px": 0.0557,
+        "proporcao_dither_xadrez": 0.0032,
+        "pixels_de_borda": 598,
+        "contorno_mais_escuro": 1.0,
+        "componentes": 4,
+        "maior_componente": 0.97,
+        "fragmentos_pequenos": 0,
+        "buracos_minusculos": 1,
+        "preenchimento_da_caixa": 0.575,
+        "complexidade_perimetro": 8.48
+      },
+      "achados": [
+        {
+          "verificacao": "pixels",
+          "codigo": "buracos_minusculos",
+          "severidade": "aviso",
+          "mensagem": "1 buraco(s) de 1-2 px dentro da silhueta.",
+          "dados": {
+            "locais": [
+              [
+                19,
+                32
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "nota": "Passar nas verificações técnicas não aprova o sprite. Falta a revisão visual: silhueta, clusters, leitura em tamanho 1x, coerência com a direção de arte (use `aprovar`)."
+}

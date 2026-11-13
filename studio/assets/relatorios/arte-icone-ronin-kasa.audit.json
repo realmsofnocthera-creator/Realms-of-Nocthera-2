@@ -1,0 +1,196 @@
+{
+  "arquivo": "/home/user/Realms-of-Nocthera-2/studio/assets/candidatos/icones/arte-icone-ronin-kasa.png",
+  "sha256": "f13221208374dbee32de95e6780ed02ec260a138676bb3c7ac3b53d4a91e7aa0",
+  "categoria": "icone",
+  "paleta": "nocthera-32",
+  "tamanho": [
+    96,
+    96
+  ],
+  "veredito_tecnico": "pendente_revisao_visual",
+  "erros": 0,
+  "avisos": 1,
+  "verificacoes": [
+    {
+      "nome": "dimensoes",
+      "metricas": {
+        "largura": 96,
+        "altura": 96,
+        "formato": "PNG",
+        "modo_original": "RGBA",
+        "fator_ampliacao": 1,
+        "fator_ampliacao_provavel": 1
+      },
+      "achados": []
+    },
+    {
+      "nome": "transparencia",
+      "metricas": {
+        "pixels_transparentes": 6408,
+        "pixels_opacos": 2808,
+        "pixels_semitransparentes": 0,
+        "proporcao_transparente": 0.6953,
+        "pixels_rgb_oculto": 0,
+        "caixa": [
+          12,
+          4,
+          90,
+          94
+        ],
+        "largura_sprite": 79,
+        "altura_sprite": 91,
+        "extensao": 0.948,
+        "ocupacao": 0.305
+      },
+      "achados": []
+    },
+    {
+      "nome": "paleta",
+      "metricas": {
+        "cores_unicas": 16,
+        "max_cores": 16,
+        "cores": [
+          {
+            "hex": "#241c30",
+            "pixels": 631,
+            "nome": "sombra-2"
+          },
+          {
+            "hex": "#0b0812",
+            "pixels": 404,
+            "nome": "sombra-0"
+          },
+          {
+            "hex": "#17121f",
+            "pixels": 403,
+            "nome": "sombra-1"
+          },
+          {
+            "hex": "#5a4d6b",
+            "pixels": 348,
+            "nome": "sombra-4"
+          },
+          {
+            "hex": "#6b4a14",
+            "pixels": 211,
+            "nome": "ouro-0"
+          },
+          {
+            "hex": "#b8ad9e",
+            "pixels": 186,
+            "nome": "osso-0"
+          },
+          {
+            "hex": "#b98a22",
+            "pixels": 170,
+            "nome": "ouro-1"
+          },
+          {
+            "hex": "#9a2233",
+            "pixels": 141,
+            "nome": "sangue-2"
+          },
+          {
+            "hex": "#d2404a",
+            "pixels": 99,
+            "nome": "sangue-3"
+          },
+          {
+            "hex": "#6e9bc0",
+            "pixels": 94,
+            "nome": "aco-2"
+          },
+          {
+            "hex": "#3c5a78",
+            "pixels": 58,
+            "nome": "aco-1"
+          },
+          {
+            "hex": "#fffaf0",
+            "pixels": 24,
+            "nome": "osso-2"
+          },
+          {
+            "hex": "#3a2f4a",
+            "pixels": 18,
+            "nome": "sombra-3"
+          },
+          {
+            "hex": "#5c1526",
+            "pixels": 10,
+            "nome": "sangue-1"
+          },
+          {
+            "hex": "#b4dcf0",
+            "pixels": 8,
+            "nome": "gelo-0"
+          },
+          {
+            "hex": "#f2c744",
+            "pixels": 3,
+            "nome": "ouro-2"
+          }
+        ],
+        "pixels_fora_da_paleta": 0,
+        "cores_fora_da_paleta": 0,
+        "uso_por_rampa": {
+          "sombra": 1804,
+          "ouro": 384,
+          "sangue": 250,
+          "osso": 210,
+          "aco": 160
+        },
+        "pares_quase_iguais": 0,
+        "cores_raras": 0
+      },
+      "achados": []
+    },
+    {
+      "nome": "pixels",
+      "metricas": {
+        "pixels_de_mistura": 6,
+        "proporcao_mistura": 0.0021,
+        "cores_so_de_mistura": 0,
+        "pixels_soltos": 0,
+        "clusters": 363,
+        "cluster_medio": 7.74,
+        "cluster_mediano": 1,
+        "proporcao_clusters_1px": 0.0716,
+        "proporcao_dither_xadrez": 0.0075,
+        "pixels_de_borda": 385,
+        "contorno_mais_escuro": 1.0,
+        "componentes": 8,
+        "maior_componente": 0.956,
+        "fragmentos_pequenos": 0,
+        "buracos_minusculos": 3,
+        "preenchimento_da_caixa": 0.391,
+        "complexidade_perimetro": 7.27
+      },
+      "achados": [
+        {
+          "verificacao": "pixels",
+          "codigo": "buracos_minusculos",
+          "severidade": "aviso",
+          "mensagem": "3 buraco(s) de 1-2 px dentro da silhueta.",
+          "dados": {
+            "locais": [
+              [
+                86,
+                29
+              ],
+              [
+                73,
+                81
+              ],
+              [
+                76,
+                85
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "nota": "Passar nas verificações técnicas não aprova o sprite. Falta a revisão visual: silhueta, clusters, leitura em tamanho 1x, coerência com a direção de arte (use `aprovar`)."
+}

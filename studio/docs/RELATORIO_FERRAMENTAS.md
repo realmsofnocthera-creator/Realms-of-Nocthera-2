@@ -61,3 +61,6 @@ Mudança de rede no ambiente "Default" (aprovada): `mcp.fal.ai` adicionado à al
 8. `pixel-art-studio` carrega 3 patches locais; atualizar o upstream exige reaplicá-los. A `description` dele ganhou um prefixo de roteamento (o gatilho original competia com as skills do Nocthera).
 9. Gatilhos das skills (12 no total, várias com descrições longas e sobrepostas) **não foram validados** por execução real de agente.
 10. ElevenLabs (`creative_generate_image`) e Pixelwright aparecem como ferramentas MCP **desta sessão**, não fazem parte do pedido, **não foram testadas** e a primeira cobra créditos.
+
+## Rodapé — suíte completa do ASF (`pytest`, 11 min 51 s)
+**3.082 passaram, 3 falharam, 11 ignorados.** Os 3 erros são do mesmo arquivo (`test_e2e_smoke.py`) e vêm do falso positivo de `HOME=/root` descrito acima; rodando esse arquivo com `HOME` longo, 5/5 passam. Nenhuma falha de produto encontrada.

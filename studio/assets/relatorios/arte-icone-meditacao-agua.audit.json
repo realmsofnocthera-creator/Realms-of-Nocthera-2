@@ -1,0 +1,182 @@
+{
+  "arquivo": "/home/user/Realms-of-Nocthera-2/studio/assets/candidatos/icones/arte-icone-meditacao-agua.png",
+  "sha256": "cd6a0f09bfbe3b4eb8659126d49828e9027c249f58bd65669efd090a083d6b02",
+  "categoria": "icone",
+  "paleta": "nocthera-32",
+  "tamanho": [
+    96,
+    96
+  ],
+  "veredito_tecnico": "pendente_revisao_visual",
+  "erros": 0,
+  "avisos": 2,
+  "verificacoes": [
+    {
+      "nome": "dimensoes",
+      "metricas": {
+        "largura": 96,
+        "altura": 96,
+        "formato": "PNG",
+        "modo_original": "RGBA",
+        "fator_ampliacao": 1,
+        "fator_ampliacao_provavel": 1
+      },
+      "achados": []
+    },
+    {
+      "nome": "transparencia",
+      "metricas": {
+        "pixels_transparentes": 4891,
+        "pixels_opacos": 4325,
+        "pixels_semitransparentes": 0,
+        "proporcao_transparente": 0.5307,
+        "pixels_rgb_oculto": 0,
+        "caixa": [
+          6,
+          2,
+          90,
+          94
+        ],
+        "largura_sprite": 85,
+        "altura_sprite": 93,
+        "extensao": 0.969,
+        "ocupacao": 0.469
+      },
+      "achados": [
+        {
+          "verificacao": "transparencia",
+          "codigo": "extensao_fora_do_padrao",
+          "severidade": "aviso",
+          "mensagem": "O sprite ocupa 97% da maior dimensão da tela; esperado entre 55% e 95% para esta categoria.",
+          "dados": {
+            "extensao": 0.96875
+          }
+        }
+      ]
+    },
+    {
+      "nome": "paleta",
+      "metricas": {
+        "cores_unicas": 12,
+        "max_cores": 16,
+        "cores": [
+          {
+            "hex": "#3c5a78",
+            "pixels": 1231,
+            "nome": "aco-1"
+          },
+          {
+            "hex": "#6e9bc0",
+            "pixels": 970,
+            "nome": "aco-2"
+          },
+          {
+            "hex": "#0b0812",
+            "pixels": 733,
+            "nome": "sombra-0"
+          },
+          {
+            "hex": "#1d2b3d",
+            "pixels": 525,
+            "nome": "aco-0"
+          },
+          {
+            "hex": "#17121f",
+            "pixels": 280,
+            "nome": "sombra-1"
+          },
+          {
+            "hex": "#b4dcf0",
+            "pixels": 238,
+            "nome": "gelo-0"
+          },
+          {
+            "hex": "#fffaf0",
+            "pixels": 118,
+            "nome": "osso-2"
+          },
+          {
+            "hex": "#c48a6a",
+            "pixels": 117,
+            "nome": "pele-1"
+          },
+          {
+            "hex": "#8a5a48",
+            "pixels": 69,
+            "nome": "pele-0"
+          },
+          {
+            "hex": "#d9cfbd",
+            "pixels": 29,
+            "nome": "osso-1"
+          },
+          {
+            "hex": "#b98a22",
+            "pixels": 10,
+            "nome": "ouro-1"
+          },
+          {
+            "hex": "#5a4d6b",
+            "pixels": 5,
+            "nome": "sombra-4"
+          }
+        ],
+        "pixels_fora_da_paleta": 0,
+        "cores_fora_da_paleta": 0,
+        "uso_por_rampa": {
+          "aco": 2964,
+          "sombra": 1018,
+          "pele": 186,
+          "osso": 147,
+          "ouro": 10
+        },
+        "pares_quase_iguais": 0,
+        "cores_raras": 0
+      },
+      "achados": []
+    },
+    {
+      "nome": "pixels",
+      "metricas": {
+        "pixels_de_mistura": 41,
+        "proporcao_mistura": 0.0095,
+        "cores_so_de_mistura": 0,
+        "pixels_soltos": 0,
+        "clusters": 888,
+        "cluster_medio": 4.87,
+        "cluster_mediano": 2,
+        "proporcao_clusters_1px": 0.0932,
+        "proporcao_dither_xadrez": 0.0086,
+        "pixels_de_borda": 585,
+        "contorno_mais_escuro": 1.0,
+        "componentes": 6,
+        "maior_componente": 0.988,
+        "fragmentos_pequenos": 0,
+        "buracos_minusculos": 2,
+        "preenchimento_da_caixa": 0.547,
+        "complexidade_perimetro": 8.9
+      },
+      "achados": [
+        {
+          "verificacao": "pixels",
+          "codigo": "buracos_minusculos",
+          "severidade": "aviso",
+          "mensagem": "2 buraco(s) de 1-2 px dentro da silhueta.",
+          "dados": {
+            "locais": [
+              [
+                24,
+                58
+              ],
+              [
+                72,
+                58
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "nota": "Passar nas verificações técnicas não aprova o sprite. Falta a revisão visual: silhueta, clusters, leitura em tamanho 1x, coerência com a direção de arte (use `aprovar`)."
+}

@@ -1,0 +1,228 @@
+{
+  "arquivo": "/home/user/Realms-of-Nocthera-2/studio/assets/candidatos/monstros/arte-cavaleiro-das-cinzas.png",
+  "sha256": "8d777bc77bb54a786bbda3aca00881899b6c9c57ba3b15383d319f41c6b3b648",
+  "categoria": "monstro",
+  "paleta": "nocthera-32",
+  "tamanho": [
+    128,
+    128
+  ],
+  "veredito_tecnico": "pendente_revisao_visual",
+  "erros": 0,
+  "avisos": 3,
+  "verificacoes": [
+    {
+      "nome": "dimensoes",
+      "metricas": {
+        "largura": 128,
+        "altura": 128,
+        "formato": "PNG",
+        "modo_original": "RGBA",
+        "fator_ampliacao": 1,
+        "fator_ampliacao_provavel": 1
+      },
+      "achados": []
+    },
+    {
+      "nome": "transparencia",
+      "metricas": {
+        "pixels_transparentes": 7867,
+        "pixels_opacos": 8517,
+        "pixels_semitransparentes": 0,
+        "proporcao_transparente": 0.4802,
+        "pixels_rgb_oculto": 0,
+        "caixa": [
+          6,
+          0,
+          119,
+          126
+        ],
+        "largura_sprite": 114,
+        "altura_sprite": 127,
+        "extensao": 0.992,
+        "ocupacao": 0.52
+      },
+      "achados": [
+        {
+          "verificacao": "transparencia",
+          "codigo": "encosta_na_borda",
+          "severidade": "aviso",
+          "mensagem": "O sprite toca a borda (topo): possível corte. Deixe ≥1 px de margem.",
+          "dados": {
+            "lados": [
+              "topo"
+            ]
+          }
+        },
+        {
+          "verificacao": "transparencia",
+          "codigo": "extensao_fora_do_padrao",
+          "severidade": "aviso",
+          "mensagem": "O sprite ocupa 99% da maior dimensão da tela; esperado entre 60% e 95% para esta categoria.",
+          "dados": {
+            "extensao": 0.9921875
+          }
+        }
+      ]
+    },
+    {
+      "nome": "paleta",
+      "metricas": {
+        "cores_unicas": 18,
+        "max_cores": 24,
+        "cores": [
+          {
+            "hex": "#3c5a78",
+            "pixels": 1963,
+            "nome": "aco-1"
+          },
+          {
+            "hex": "#6e9bc0",
+            "pixels": 1258,
+            "nome": "aco-2"
+          },
+          {
+            "hex": "#1d2b3d",
+            "pixels": 1146,
+            "nome": "aco-0"
+          },
+          {
+            "hex": "#5c1526",
+            "pixels": 869,
+            "nome": "sangue-1"
+          },
+          {
+            "hex": "#0b0812",
+            "pixels": 837,
+            "nome": "sombra-0"
+          },
+          {
+            "hex": "#9a2233",
+            "pixels": 458,
+            "nome": "sangue-2"
+          },
+          {
+            "hex": "#b98a22",
+            "pixels": 458,
+            "nome": "ouro-1"
+          },
+          {
+            "hex": "#b4dcf0",
+            "pixels": 451,
+            "nome": "gelo-0"
+          },
+          {
+            "hex": "#17121f",
+            "pixels": 382,
+            "nome": "sombra-1"
+          },
+          {
+            "hex": "#2e0f1a",
+            "pixels": 370,
+            "nome": "sangue-0"
+          },
+          {
+            "hex": "#fffaf0",
+            "pixels": 81,
+            "nome": "osso-2"
+          },
+          {
+            "hex": "#f2c744",
+            "pixels": 80,
+            "nome": "ouro-2"
+          },
+          {
+            "hex": "#d9cfbd",
+            "pixels": 75,
+            "nome": "osso-1"
+          },
+          {
+            "hex": "#d2404a",
+            "pixels": 33,
+            "nome": "sangue-3"
+          },
+          {
+            "hex": "#3a2f4a",
+            "pixels": 23,
+            "nome": "sombra-3"
+          },
+          {
+            "hex": "#6b4a14",
+            "pixels": 20,
+            "nome": "ouro-0"
+          },
+          {
+            "hex": "#f08a2c",
+            "pixels": 12,
+            "nome": "brasa-2"
+          },
+          {
+            "hex": "#c25a1a",
+            "pixels": 1,
+            "nome": "brasa-1"
+          }
+        ],
+        "pixels_fora_da_paleta": 0,
+        "cores_fora_da_paleta": 0,
+        "uso_por_rampa": {
+          "aco": 4818,
+          "sangue": 1730,
+          "sombra": 1242,
+          "ouro": 558,
+          "osso": 156,
+          "brasa": 13
+        },
+        "pares_quase_iguais": 0,
+        "cores_raras": 1
+      },
+      "achados": []
+    },
+    {
+      "nome": "pixels",
+      "metricas": {
+        "pixels_de_mistura": 13,
+        "proporcao_mistura": 0.0015,
+        "cores_so_de_mistura": 0,
+        "pixels_soltos": 0,
+        "clusters": 452,
+        "cluster_medio": 18.84,
+        "cluster_mediano": 3,
+        "proporcao_clusters_1px": 0.0135,
+        "proporcao_dither_xadrez": 0.0014,
+        "pixels_de_borda": 646,
+        "contorno_mais_escuro": 1.0,
+        "componentes": 1,
+        "maior_componente": 1.0,
+        "fragmentos_pequenos": 0,
+        "buracos_minusculos": 3,
+        "preenchimento_da_caixa": 0.588,
+        "complexidade_perimetro": 7.0
+      },
+      "achados": [
+        {
+          "verificacao": "pixels",
+          "codigo": "buracos_minusculos",
+          "severidade": "aviso",
+          "mensagem": "3 buraco(s) de 1-2 px dentro da silhueta.",
+          "dados": {
+            "locais": [
+              [
+                81,
+                17
+              ],
+              [
+                47,
+                57
+              ],
+              [
+                84,
+                89
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "nota": "Passar nas verificações técnicas não aprova o sprite. Falta a revisão visual: silhueta, clusters, leitura em tamanho 1x, coerência com a direção de arte (use `aprovar`)."
+}
