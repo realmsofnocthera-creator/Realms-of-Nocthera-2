@@ -45,12 +45,12 @@ describe('Maestrias (pixel)', () => {
     expect(html).toContain('role="progressbar"');
   });
 
-  it('a trilha bloqueada (monstros) mostra o cadeado e "Em breve", sem barra', () => {
+  it('a trilha bloqueada (monstros) mostra "Em breve" e o ícone apagado, sem barra', () => {
     const tr = TRILHAS_DE_MAESTRIA.find((x) => x.bloqueada)!;
     expect(tr).toBeTruthy();
     const html = renderToStaticMarkup(<ul><Trilha trilha={tr} character={personagem()} dia="2026-11-12" /></ul>);
     expect(html).toContain(t.emBreve);
-    expect(html).toContain(KIT_DA_FORJA.proibido);
+    expect(html).toContain(iconeDaTrilha(tr) as string);
     expect(html).not.toContain('role="progressbar"');
   });
 
@@ -76,10 +76,17 @@ describe('Maestrias (pixel)', () => {
     }
   });
 
-  it('as trilhas de monstro ainda não têm ícone (os 13 entram quando chegarem)', () => {
+  it('as 13 trilhas de monstro têm cada uma o seu ícone, e a bloqueada mostra o ícone apagado', () => {
     const monstros = TRILHAS_DE_MAESTRIA.filter((tr) => tr.grupo === 'monstros');
     expect(monstros).toHaveLength(13);
-    for (const tr of monstros) expect(iconeDaTrilha(tr)).toBeNull();
+    const icones = monstros.map((tr) => iconeDaTrilha(tr));
+    for (const i of icones) expect(i).toBeTruthy();
+    expect(new Set(icones).size).toBe(13);
+    const html = renderToStaticMarkup(<ul><Trilha trilha={monstros[0]} character={personagem()} dia="2026-11-12" /></ul>);
+    expect(html).toContain(iconeDaTrilha(monstros[0]) as string);
+    expect(html).toContain('opacity:0.6');
+    expect(html).not.toContain(KIT_DA_FORJA.proibido);
+    expect(html).toContain(t.emBreve);
   });
 
   it('mostra os 10 marcos e acende os já alcançados', () => {
