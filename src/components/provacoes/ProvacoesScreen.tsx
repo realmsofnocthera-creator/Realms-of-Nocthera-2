@@ -2,328 +2,144 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Home, Lock } from 'lucide-react';
 import { CharacterDocument } from '@/server/characterService';
 import { PROVACOES, ProvacaoDefinition, ProvacaoId } from '@/rules/provacoes';
 import { PROVACOES_IMAGES } from '@/assets/provacoes';
 import { CENAS_DAS_PROVACOES } from '@/assets/landing';
-import { NOCTHERA_THEME } from '@/theme/theme';
+import { FICHA_UI } from '@/assets/personagemUi';
+import { KIT_DA_FORJA } from '@/assets/forjaUi';
+import { textoDaFicha } from '@/rules/textosDaFicha';
+import { TEXTOS_DAS_PROVACOES as T } from '@/rules/textosDasProvacoes';
+import { BarraDeTitulo, PainelDaForja } from '@/components/forja/KitDaForja';
+import { CONTORNO_PIXEL } from '@/components/ficha/PlacaPixel';
 
 export interface ProvacoesScreenProps {
   personagem: CharacterDocument;
 }
 
-function obterProvacao(id: ProvacaoId): ProvacaoDefinition {
-  const encontrada = PROVACOES.find((p) => p.id === id);
-  if (!encontrada) {
-    throw new Error(`Provação não encontrada: ${id}`);
-  }
-  return encontrada;
+const pixel: React.CSSProperties = { imageRendering: 'pixelated' };
+
+/** A tela de cada provação (todas já têm a sua). */
+const DESTINOS: Readonly<Record<ProvacaoId, string>> = {
+  cacada: '/cacada',
+  'batalha-sangrenta': '/batalha-sangrenta',
+  'torre-celestial': '/torre-celestial',
+  guerreiro: '/guerreiro',
+  'teste-equipe': '/teste-equipe',
+  expedicao: '/expedicao',
+  'chefe-mundial': '/chefe-mundial',
+};
+
+/** As provações em ordem de nível (do menor para o maior; no empate, a ordem em que foram definidas). */
+export function provacoesPorNivel(): ProvacaoDefinition[] {
+  return PROVACOES.map((p, i) => ({ p, i })).sort((a, b) => a.p.nivelRequerido - b.p.nivelRequerido || a.i - b.i).map(({ p }) => p);
 }
 
-interface ProvacaoCardProps {
-  provacao: ProvacaoDefinition;
-  nivelPersonagem: number;
-  variant?: 'horizontal' | 'vertical' | 'stacked';
+/** A cena de uma provação: a arte nova (a mais larga) ou, sem ela, a antiga; sem nenhuma, o nome sobre um fundo escuro. */
+function CenaDaProvacao({ provacao }: { provacao: ProvacaoDefinition }) {
+  const cena = CENAS_DAS_PROVACOES[provacao.id] ?? (provacao.assetKey ? PROVACOES_IMAGES[provacao.assetKey] : null);
+  if (!cena) return <div aria-hidden="true" className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, #46341C 0%, #120E0A 80%)' }} />;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={cena} alt="" aria-hidden="true" draggable={false} className="absolute inset-0 w-full h-full object-cover object-[50%_40%] select-none pointer-events-none" style={pixel} />;
 }
 
-function OrnateCorners({ locked }: { locked: boolean }) {
-  const borderColor = locked ? 'rgba(178, 166, 108, 0.45)' : '#D4AF37';
-  return (
-    <>
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute top-1 left-1 w-2.5 h-2.5 border-t-2 border-l-2 z-20"
-        style={{ borderColor }}
-      />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute top-1 right-1 w-2.5 h-2.5 border-t-2 border-r-2 z-20"
-        style={{ borderColor }}
-      />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute bottom-1 left-1 w-2.5 h-2.5 border-b-2 border-l-2 z-20"
-        style={{ borderColor }}
-      />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute bottom-1 right-1 w-2.5 h-2.5 border-b-2 border-r-2 z-20"
-        style={{ borderColor }}
-      />
-    </>
-  );
-}
-
-/** A cena da provação com o nome escrito por cima; sem cena nova, a arte antiga (que já traz o título) ou o nome sobre um fundo escuro. */
-function ArteDaProvacao({ provacao, bloqueada = false }: { provacao: ProvacaoDefinition; bloqueada?: boolean }) {
-  const cena = CENAS_DAS_PROVACOES[provacao.id];
-  if (cena) {
-    return (
-      <>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={cena}
-          alt={provacao.nome}
-          className={`absolute inset-0 w-full h-full object-cover object-[50%_35%] select-none pointer-events-none${bloqueada ? ' grayscale-[45%]' : ''}`}
-        />
-        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 to-transparent pointer-events-none" />
-        <span
-          className="absolute bottom-2 left-3 right-3 z-10 font-cinzel font-extrabold uppercase tracking-widest text-sm sm:text-base drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] pointer-events-none"
-          style={{ color: '#F5E3B3' }}
-        >
-          {provacao.nome}
-        </span>
-      </>
-    );
-  }
-  if (!provacao.assetKey) {
-    return (
-      <div
-        className="absolute inset-0 flex items-center justify-center px-3 text-center select-none pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at center, rgba(70, 52, 28, 0.95) 0%, rgba(18, 14, 10, 1) 80%)', filter: bloqueada ? 'grayscale(45%)' : undefined }}
-      >
-        <span className="font-cinzel font-extrabold italic uppercase tracking-widest text-lg sm:text-xl drop-shadow-[0_3px_6px_rgba(0,0,0,0.95)]" style={{ color: '#F5E3B3' }}>
-          {provacao.nome}
-        </span>
-      </div>
-    );
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={PROVACOES_IMAGES[provacao.assetKey]}
-      alt={provacao.nome}
-      className={`absolute inset-0 w-full h-full object-cover object-center select-none pointer-events-none${bloqueada ? ' grayscale-[45%]' : ''}`}
-    />
-  );
-}
-
-function ProvacaoCard({
-  provacao,
-  nivelPersonagem,
-  variant = 'horizontal',
-}: ProvacaoCardProps) {
-  const { colors } = NOCTHERA_THEME;
-  const desbloqueada = nivelPersonagem >= provacao.nivelRequerido;
-
-  const heightClasses =
-    variant === 'vertical'
-      ? 'h-full min-h-[220px] sm:min-h-[268px]'
-      : variant === 'stacked'
-        ? 'h-[105px] sm:h-[128px]'
-        : 'h-[112px] sm:h-[136px]';
-
-  if (!desbloqueada) {
-    return (
-      <article
-        aria-label={`${provacao.nome} - Requer Nível ${provacao.nivelRequerido}`}
-        className={`relative w-full ${heightClasses} rounded-sm border-2 overflow-hidden flex flex-col justify-end opacity-60 cursor-not-allowed shadow-lg select-none`}
-        style={{
-          backgroundColor: colors.background.secondary,
-          borderColor: `${colors.border.default}75`,
-        }}
-      >
-        <OrnateCorners locked />
-
-        <ArteDaProvacao provacao={provacao} bloqueada />
-
-        {/* Topo direito: Cadeado + Requisito "Nível X" em destaque */}
-        <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
-          <span
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] sm:text-xs font-cinzel font-bold tracking-wider uppercase shadow-md"
-            style={{
-              backgroundColor: 'rgba(18, 12, 14, 0.92)',
-              borderColor: colors.status.danger,
-              color: '#FF8A80',
-            }}
-          >
-            <Lock className="w-3 h-3 shrink-0" aria-label="Provação bloqueada" />
-            Nível {provacao.nivelRequerido}
-          </span>
-        </div>
-      </article>
-    );
-  }
-
-  // Todas as provações têm tela própria e viram link
-  const destino = provacao.id === 'cacada' ? '/cacada' : provacao.id === 'batalha-sangrenta' ? '/batalha-sangrenta' : provacao.id === 'torre-celestial' ? '/torre-celestial' : provacao.id === 'guerreiro' ? '/guerreiro' : provacao.id === 'teste-equipe' ? '/teste-equipe' : provacao.id === 'expedicao' ? '/expedicao' : provacao.id === 'chefe-mundial' ? '/chefe-mundial' : null;
-  const card = (
+/** O cartão de uma provação: a cena, o nome por cima e, se ainda não abriu, o cadeado e o nível que falta. */
+function CartaoDaProvacao({ provacao, nivelDoPersonagem, proxima }: { provacao: ProvacaoDefinition; nivelDoPersonagem: number; proxima: boolean }) {
+  const aberta = nivelDoPersonagem >= provacao.nivelRequerido;
+  const corte = provacao.id === 'expedicao'; // a arte é vertical: corta em cima e embaixo, então a moldura dourada é refeita
+  const faltam = provacao.nivelRequerido - nivelDoPersonagem;
+  const conteudo = (
     <article
-      aria-label={`${provacao.nome} - Nível ${provacao.nivelRequerido}`}
-      className={`group relative w-full ${heightClasses} rounded-sm border-2 overflow-hidden flex flex-col justify-end shadow-xl select-none`}
-      style={{
-        backgroundColor: colors.background.secondary,
-        borderColor: '#C8A656',
-      }}
+      aria-label={textoDaFicha(aberta ? T.abertaAria : T.bloqueadaAria, { nome: provacao.nome, n: provacao.nivelRequerido })}
+      className={`relative w-full overflow-hidden select-none ${aberta ? '' : 'cursor-not-allowed'}`}
+      style={{ aspectRatio: '16 / 9', boxShadow: aberta ? '0 0.8cqw 2cqw rgba(0,0,0,0.7)' : undefined }}
     >
-      <OrnateCorners locked={false} />
-
-      <ArteDaProvacao provacao={provacao} />
-
-      {/* Topo direito: Badge discreto de Nível da provação */}
-      <div className="absolute top-2 right-2 z-20 flex items-center">
-        <span
-          className="inline-flex items-center px-2 py-0.5 rounded border text-[10px] sm:text-xs font-cinzel font-bold tracking-wider uppercase shadow-md"
-          style={{
-            backgroundColor: 'rgba(18, 15, 12, 0.88)',
-            borderColor: `${colors.border.default}AA`,
-            color: colors.text.primary,
-          }}
-        >
-          Nível {provacao.nivelRequerido}
-        </span>
+      <div className="absolute inset-0" style={{ filter: aberta ? undefined : 'grayscale(0.7) brightness(0.5)' }}>
+        <CenaDaProvacao provacao={provacao} />
       </div>
+      {corte && <span aria-hidden="true" className="absolute inset-0 pointer-events-none border-y-[0.9cqw] border-x-0 border-[#C8962E]" />}
+      <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-black/85 to-transparent pointer-events-none" />
+      <span className="absolute left-[4.6cqw] right-[4.6cqw] bottom-[3.2cqw] font-cinzel font-extrabold uppercase tracking-wider leading-[1.25] text-[3.4cqw] text-[#FFE9B0] pointer-events-none" style={{ textShadow: CONTORNO_PIXEL }}>
+        {provacao.nome}
+      </span>
+      {!aberta && (
+        <span className="absolute top-[3.2cqw] right-[4.4cqw] z-10 flex items-center gap-[1cqw] px-[1.6cqw] py-[0.6cqw] bg-[#05070D]/90 border border-[#E5484D] font-cinzel font-extrabold uppercase text-[2.1cqw] leading-[1.4] text-[#FFB4B4]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={KIT_DA_FORJA.proibido} alt="" aria-hidden="true" draggable={false} className="w-[3.2cqw] h-[3.2cqw] shrink-0" style={pixel} />
+          {textoDaFicha(T.abreNoNivel, { n: provacao.nivelRequerido })}
+        </span>
+      )}
+      {!aberta && proxima && (
+        <span className="absolute top-[3.2cqw] left-[4.4cqw] z-10 px-[1.6cqw] py-[0.6cqw] bg-[#05070D]/90 border border-[#EDB44C] font-cinzel font-extrabold uppercase text-[2.1cqw] leading-[1.4] text-[#EDB44C]">
+          {T.proxima} · {faltam === 1 ? T.falta : textoDaFicha(T.faltam, { n: faltam })}
+        </span>
+      )}
     </article>
   );
-  return destino ? (
-    <Link href={destino} className="block w-full h-full cursor-pointer" aria-label={`Entrar na ${provacao.nome}`}>
-      {card}
+  return aberta ? (
+    <Link href={DESTINOS[provacao.id]} aria-label={textoDaFicha(T.entrar, { nome: provacao.nome })} className="block w-full cursor-pointer active:translate-y-px">
+      {conteudo}
     </Link>
   ) : (
-    card
+    conteudo
   );
 }
 
+/**
+ * As Provações em pixel: uma lista só, do menor nível para o maior, com a trilha dos níveis ao lado (acesa até onde o
+ * personagem já chegou) e o fundo das ruínas. Cada provação aberta é um link para a tela dela; as que ainda não abriram
+ * ficam apagadas, com o cadeado e o nível que pedem, e a próxima a abrir ganha a faixa "Próxima".
+ */
 export function ProvacoesScreen({ personagem }: ProvacoesScreenProps) {
-  const { colors } = NOCTHERA_THEME;
-
-  // Disposição exata conforme o layout de referência:
-  // Linha 1 (Topo - 2 colunas): Batalha Sangrenta (esq) | Guerreiro (dir)
-  // Linha 2 (Meio - Assimétrica): Expedição vertical (esq, no lugar da Dungeon) | Chefe Mundial + Caçada empilhados (dir)
-  // Linha 3 (Base - 2 colunas): Torre Celestial (esq) | Teste de Equipe (dir)
-  const cardTopoEsq = obterProvacao('batalha-sangrenta');
-  const cardTopoDir = obterProvacao('guerreiro');
-  const cardMeioVerticalEsq = obterProvacao('expedicao');
-  const cardMeioDirTopo = obterProvacao('chefe-mundial');
-  const cardMeioDirBase = obterProvacao('cacada');
-  const cardBaseEsq = obterProvacao('torre-celestial');
-  const cardBaseDir = obterProvacao('teste-equipe');
+  const lista = provacoesPorNivel();
+  const proximaId = lista.find((p) => personagem.nivel < p.nivelRequerido)?.id;
 
   return (
-    <main
-      className="min-h-dvh w-full flex flex-col items-center px-2.5 sm:px-5 py-3 sm:py-6 select-none"
-      style={{
-        backgroundColor: colors.background.primary,
-        backgroundImage:
-          'radial-gradient(ellipse at top, rgba(32, 24, 18, 0.92) 0%, rgba(13, 13, 13, 1) 75%)',
-        color: colors.text.primary,
-      }}
-    >
-      <div className="w-full max-w-[480px] flex flex-col gap-2.5 sm:gap-3.5">
-        {/* Barra Superior de Navegação (Voltar + Ícone Home/Hub) */}
-        <header className="w-full flex flex-col gap-1.5">
-          <div className="w-full flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Link
-                href="/hub"
-                aria-label="Voltar ao Hub"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-cinzel font-bold uppercase tracking-wider transition-colors"
-                style={{
-                  backgroundColor: colors.background.secondary,
-                  borderColor: '#C8A656',
-                  color: '#E6C775',
-                }}
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Voltar</span>
-              </Link>
+    <main className="relative h-[100dvh] max-h-[100dvh] w-full overflow-hidden select-none bg-[#05070D] text-[#F5F3E0]">
+      {/* o fundo: as ruínas sob a lua, com um véu escuro para o texto ler bem */}
+      <div aria-hidden="true" className="fixed inset-0 z-0 pointer-events-none bg-cover bg-no-repeat" style={{ backgroundImage: `url(${FICHA_UI.fundo})`, backgroundPosition: '76% center' }}>
+        <div className="absolute inset-0 bg-[#05070D]/50" />
+      </div>
 
-              <Link
-                href="/hub"
-                aria-label="Ir para o Hub"
-                title="Hub Principal"
-                className="w-7 h-7 rotate-45 rounded-xs border flex items-center justify-center transition-colors"
-                style={{
-                  backgroundColor: colors.background.card,
-                  borderColor: `${colors.border.default}99`,
-                  color: colors.text.secondary,
-                }}
-              >
-                <Home className="w-3.5 h-3.5 -rotate-45" />
-              </Link>
-            </div>
-
-            <span
-              className="text-[11px] sm:text-xs font-cinzel tracking-wider"
-              style={{ color: colors.text.secondary }}
-            >
-              {personagem.nome} · Nv. {personagem.nivel}
-            </span>
-          </div>
-
-          {/* Banner Central "PROVAÇÕES" com faixa rubro-escura ao fundo */}
-          <div className="relative w-full flex items-center justify-center py-1.5 sm:py-2">
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-8 h-7 sm:h-9 rounded-full blur-xs pointer-events-none"
-              style={{
-                background:
-                  'linear-gradient(90deg, transparent 0%, rgba(122, 18, 28, 0.78) 25%, rgba(148, 22, 34, 0.88) 50%, rgba(122, 18, 28, 0.78) 75%, transparent 100%)',
-              }}
-            />
-            <h1
-              className="relative z-10 text-2xl sm:text-3xl font-cinzel font-extrabold italic tracking-widest uppercase drop-shadow-[0_3px_6px_rgba(0,0,0,0.95)]"
-              style={{ color: '#F5E3B3' }}
-            >
-              PROVAÇÕES
-            </h1>
-          </div>
+      <div className="forja-palco !justify-start gap-[1.6cqw] pt-[max(1.4cqw,env(safe-area-inset-top))] pb-[max(1.6cqw,env(safe-area-inset-bottom))]">
+        <header className="flex items-center gap-[2cqw] px-[2.4cqw] shrink-0">
+          <Link href="/hub" aria-label={T.voltar} className="relative block w-[8cqw] shrink-0 cursor-pointer active:translate-y-px">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={FICHA_UI.voltar} alt="" aria-hidden="true" draggable={false} className="block w-full h-auto pointer-events-none" style={pixel} />
+          </Link>
+          <BarraDeTitulo titulo={T.titulo} className="w-[56cqw]" />
+          <PainelDaForja borda="1.4cqw" className="ml-auto shrink-0 py-[0.2cqw]">
+            <span className="font-cinzel font-extrabold text-[2.1cqw] leading-[1.4] text-[#F5F3E0] whitespace-nowrap">{textoDaFicha(T.jogador, { nome: personagem.nome, nivel: personagem.nivel })}</span>
+          </PainelDaForja>
         </header>
 
-        {/* MOSAICO DAS 7 PROVAÇÕES (Disposição idêntica à imagem de referência) */}
-        <section aria-label="Lista de Provações" className="w-full flex flex-col gap-2.5 sm:gap-3">
-          {/* LINHA 1: 2 Cards Horizontais Lado a Lado */}
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-            <ProvacaoCard
-              provacao={cardTopoEsq}
-              nivelPersonagem={personagem.nivel}
-              variant="horizontal"
-            />
-            <ProvacaoCard
-              provacao={cardTopoDir}
-              nivelPersonagem={personagem.nivel}
-              variant="horizontal"
-            />
-          </div>
-
-          {/* LINHA 2: Card Vertical Alto à Esquerda + 2 Cards Horizontais Empilhados à Direita */}
-          <div className="grid grid-cols-12 gap-2.5 sm:gap-3 items-stretch">
-            <div className="col-span-5 flex">
-              <ProvacaoCard
-                provacao={cardMeioVerticalEsq}
-                nivelPersonagem={personagem.nivel}
-                variant="vertical"
-              />
-            </div>
-
-            <div className="col-span-7 flex flex-col justify-between gap-2.5 sm:gap-3">
-              <ProvacaoCard
-                provacao={cardMeioDirTopo}
-                nivelPersonagem={personagem.nivel}
-                variant="stacked"
-              />
-              <ProvacaoCard
-                provacao={cardMeioDirBase}
-                nivelPersonagem={personagem.nivel}
-                variant="stacked"
-              />
-            </div>
-          </div>
-
-          {/* LINHA 3: 2 Cards Horizontais Lado a Lado na Base */}
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-            <ProvacaoCard
-              provacao={cardBaseEsq}
-              nivelPersonagem={personagem.nivel}
-              variant="horizontal"
-            />
-            <ProvacaoCard
-              provacao={cardBaseDir}
-              nivelPersonagem={personagem.nivel}
-              variant="horizontal"
-            />
-          </div>
+        <section aria-label={T.lista} className="flex-1 min-h-0 overflow-y-auto forja-rolagem px-[3cqw] pt-[1cqw] pb-[3cqw]">
+          <ol className="flex flex-col">
+            {lista.map((p, i) => {
+              const aberta = personagem.nivel >= p.nivelRequerido;
+              const proximaDaLista = lista[i + 1];
+              const linhaAcesa = !!proximaDaLista && personagem.nivel >= proximaDaLista.nivelRequerido;
+              return (
+                <li key={p.id} className="flex gap-[2.4cqw] items-stretch">
+                  {/* a trilha dos níveis: a medalha do nível e a linha até a próxima */}
+                  <div className="flex flex-col items-center shrink-0 w-[13cqw]">
+                    <span
+                      role="img"
+                      aria-label={textoDaFicha(T.nivelAria, { n: p.nivelRequerido })}
+                      className={`flex flex-col items-center justify-center w-[12cqw] h-[12cqw] shrink-0 border-[0.6cqw] font-cinzel font-black leading-none ${aberta ? 'border-[#EDB44C] bg-[#1A2F6A] text-[#FFE9B0] shadow-[0_0_2cqw_rgba(237,180,76,0.55)]' : 'border-[#3A4766] bg-[#0A1230] text-[#7C8AA0]'}`}
+                    >
+                      <span className="text-[1.7cqw] uppercase tracking-wider">Nv</span>
+                      <span className="text-[4.2cqw]">{p.nivelRequerido}</span>
+                    </span>
+                    {proximaDaLista && <span aria-hidden="true" className={`flex-1 w-[1cqw] min-h-[3cqw] ${linhaAcesa ? 'bg-[#EDB44C]' : 'bg-[#2B3F5C]'}`} />}
+                  </div>
+                  <div className={`flex-1 min-w-0 ${proximaDaLista ? 'pb-[3.2cqw]' : ''}`}>
+                    <CartaoDaProvacao provacao={p} nivelDoPersonagem={personagem.nivel} proxima={p.id === proximaId} />
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
         </section>
       </div>
     </main>
