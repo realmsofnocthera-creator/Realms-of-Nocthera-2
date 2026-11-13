@@ -62,7 +62,11 @@ const nextConfig = (phase: string): NextConfig => ({
   },
   poweredByHeader: false,
   async headers() {
-    return [{source: '/:path*', headers: securityHeaders(phase === PHASE_DEVELOPMENT_SERVER)}];
+    return [
+      {source: '/:path*', headers: securityHeaders(phase === PHASE_DEVELOPMENT_SERVER)},
+      // os vídeos têm versão no nome (praca-v1): podem ficar um ano no cache do navegador, sem baixar de novo a cada visita
+      {source: '/videos/:path*', headers: [{key: 'Cache-Control', value: 'public, max-age=31536000, immutable'}]},
+    ];
   },
   output: 'standalone',
   transpilePackages: ['motion'],
