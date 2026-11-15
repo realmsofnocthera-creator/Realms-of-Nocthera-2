@@ -7,14 +7,14 @@ import { TEXTOS_DA_CACADA as T } from '@/rules/textosDaCacada';
 export const TINTA = '#582914';
 
 /** Botão de pixel (madeira escura com friso dourado), no estilo do kit do livro. */
-export function BotaoPixel({ children, aoClicar, desligado, destaque, rotulo, className = '' }: { children: React.ReactNode; aoClicar: () => void; desligado?: boolean; destaque?: boolean; rotulo?: string; className?: string }) {
+export function BotaoPixel({ children, aoClicar, desligado, destaque, compacto, rotulo, className = '' }: { children: React.ReactNode; aoClicar: () => void; desligado?: boolean; destaque?: boolean; compacto?: boolean; rotulo?: string; className?: string }) {
   return (
     <button
       type="button"
       onClick={aoClicar}
       disabled={desligado}
       aria-label={rotulo}
-      className={`px-[4cqw] py-[1.8cqw] font-cinzel font-black uppercase tracking-wider text-[3.2cqw] leading-none border-[0.6cqw] cursor-pointer enabled:active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-[0.6cqw] focus-visible:outline-[#6FE3EE] ${className}`}
+      className={`${compacto ? 'px-[2cqw] py-[1cqw] text-[2.6cqw] border-[0.4cqw]' : 'px-[4cqw] py-[1.8cqw] text-[3.2cqw] border-[0.6cqw]'} font-cinzel font-black uppercase tracking-wider leading-none cursor-pointer enabled:active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-[0.6cqw] focus-visible:outline-[#6FE3EE] ${className}`}
       style={{
         color: '#FFE9B0',
         borderColor: destaque ? '#F3C769' : '#2A0F0A',

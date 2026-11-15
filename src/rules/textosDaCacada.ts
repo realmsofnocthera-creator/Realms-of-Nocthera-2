@@ -5,7 +5,7 @@
 export const TEXTOS_DA_CACADA = {
   titulo: 'Caçada',
   voltar: 'Voltar às Provações',
-  livro: 'Livro da Caçada: os monstros à esquerda e a ficha do monstro escolhido à direita',
+  livro: 'Livro da Caçada: os monstros à esquerda e o monstro escolhido à direita',
   jogador: '{nome} · Nv. {nivel}',
   /** As abas de cima (ranque) e as fitas da borda (estrelas). */
   abaBaixo: 'Rank Baixo',
@@ -23,18 +23,19 @@ export const TEXTOS_DA_CACADA = {
   escolher: 'Ver {nome}',
   /** A página da direita. */
   fraquezas: 'Fraquezas',
-  resistencias: 'Resistências',
+  resistencias: 'Resist.',
   drops: 'Drops',
-  nenhuma: 'Nenhuma',
-  maisDrops: '+{n}',
-  atacaCom: 'Ataque',
+  nenhuma: '—',
+  fechar: 'Fechar',
+  /** O que cada ícone conta quando é tocado. */
+  infoFraqueza: 'Fraqueza: recebe {n}% a mais de dano de {nome}.',
+  infoResistencia: 'Resistência: recebe {n}% a menos de dano de {nome}.',
+  infoDrop: '{raridade} · {chance}',
+  infoDropTitulo: 'Drop: {nome}',
+  iconeAria: '{nome}: ver informações',
+  fraquezasAria: 'Fraquezas',
   cacar: 'Caçar',
   cacando: 'Caçando...',
-  ficha: 'Ficha',
-  fechar: 'Fechar',
-  fichaTitulo: 'Ficha de {nome}',
-  descricao: 'Descrição',
-  chanceDosDrops: 'Chance dos drops',
   semArte: 'Sem retrato ainda',
   /** Páginas e avisos. */
   paginaAnterior: 'Página anterior',

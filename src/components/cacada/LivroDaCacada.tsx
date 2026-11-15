@@ -6,11 +6,15 @@ import type { RanqueCacada } from '@/rules/cacada';
 import { LIVRO_DA_CACADA as L, caixaEmPorcento } from '@/assets/cacadaLivroUi';
 import { LIVRO_DAS_PROVACOES as P } from '@/assets/provacoesLivroUi';
 import { SPRITE_MONSTRO } from '@/lib/cacadaArte';
-import { estrelasDoRanque, monstrosDaEstrela, ranquesDaCacada, type MonstroTela } from '@/lib/cacadaTela';
+import { estrelasDoRanque, monstrosDaEstrela, ranquesDaCacada, type MonstroTela, type TracoTela } from '@/lib/cacadaTela';
 import { fitaDaEstrela, ladoNaPagina, paginasDeMonstros } from '@/lib/cacadaLivro';
 import { textoDaFicha } from '@/rules/textosDaFicha';
 import { TEXTOS_DA_CACADA as T } from '@/rules/textosDaCacada';
 import type { CharacterDocument } from '@/server/characterService';
+import { iconeDeElemento } from '@/assets/elementos';
+import { ICONE_DA_CATEGORIA, ICONE_DANO_FISICO, ICONE_DANO_MAGICO } from '@/assets/forjaItens';
+import { MODIFICADOR_FRAQUEZA, MODIFICADOR_RESISTENCIA_FORTE } from '@/rules/elements';
+import { IconeDoMaterial } from '../forja/IconeDoMaterial';
 import { BotaoDePagina } from '../provacoes/LivroAnimado';
 import { BotaoPixel, JanelaDaCacada, TINTA } from './JanelaDaCacada';
 
@@ -85,20 +89,45 @@ function MonstroNaLista({ monstro, indice, escolhido, aoEscolher }: { monstro: M
   );
 }
 
-function Lista({ titulo, itens }: { titulo: string; itens: readonly string[] }) {
+/** O que um ícone conta quando é tocado. */
+interface InfoDoIcone {
+  titulo: string;
+  texto: string;
+}
+
+/** Um ícone pequeno e tocável (fraqueza, resistência ou drop); a moldura muda de cor conforme o grupo. */
+function Icone({ nome, cor, aoTocar, children }: { nome: string; cor: string; aoTocar: () => void; children: React.ReactNode }) {
   return (
-    <div>
-      <div className="font-cinzel font-black uppercase text-[2.2cqw] leading-tight opacity-70">{titulo}</div>
-      <div className="font-cinzel font-bold text-[2.3cqw] leading-[1.15]">{itens.length ? itens.join(', ') : T.nenhuma}</div>
+    <button
+      type="button"
+      onClick={aoTocar}
+      aria-label={textoDaFicha(T.iconeAria, { nome })}
+      className="relative flex items-center justify-center w-[5.2cqw] h-[5.2cqw] border-[0.4cqw] cursor-pointer active:translate-y-px before:absolute before:-inset-[0.6cqw] before:content-[''] focus-visible:outline focus-visible:outline-[0.6cqw] focus-visible:outline-[#6FE3EE]"
+      style={{ borderColor: cor, background: 'rgba(42,15,10,0.78)' }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function iconeDoTraco(t: TracoTela): React.ReactNode {
+  const src = t.elemento ? iconeDeElemento(t.elemento) : t.golpe === 'magico' ? ICONE_DANO_MAGICO : t.golpe === 'corte' ? ICONE_DA_CATEGORIA.katana : t.golpe === 'perfuracao' ? ICONE_DA_CATEGORIA.lanca : ICONE_DANO_FISICO;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt="" aria-hidden="true" draggable={false} className="w-[80%] h-[80%] object-contain pointer-events-none" style={pixel} />;
+}
+
+function GrupoDeIcones({ titulo, vazio, children }: { titulo: string; vazio: boolean; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <div className="font-cinzel font-black uppercase text-[2cqw] leading-tight opacity-70">{titulo}</div>
+      <div className="flex flex-wrap gap-[0.8cqw] pt-[0.4cqw]">{vazio ? <span className="font-cinzel font-bold text-[2.2cqw] opacity-70">{T.nenhuma}</span> : children}</div>
     </div>
   );
 }
 
-function DetalhesDoMonstro({ monstro }: { monstro: MonstroTela }) {
-  const mostrados = monstro.drops.slice(0, 1);
-  const resto = monstro.drops.length - mostrados.length;
+function DetalhesDoMonstro({ monstro, aoInfo, cacar }: { monstro: MonstroTela; aoInfo: (i: InfoDoIcone) => void; cacar: React.ReactNode }) {
   return (
-    <div className="h-full flex flex-col gap-[0.8cqw] overflow-hidden" style={{ color: TINTA }}>
+    <div className="h-full flex flex-col gap-[1.2cqw] overflow-hidden" style={{ color: TINTA }}>
       <div className="text-center">
         <h2 className="font-cinzel font-black text-[2.8cqw] leading-[1.1] flex items-center justify-center gap-[0.6cqw]">
           {monstro.chave && <Crown aria-label={T.monstroChave} style={{ width: '3cqw', height: '3cqw', color: '#B8832E' }} />}
@@ -106,28 +135,34 @@ function DetalhesDoMonstro({ monstro }: { monstro: MonstroTela }) {
         </h2>
         <div className="font-cinzel font-bold text-[2.2cqw] leading-tight opacity-80">{textoDaFicha(T.monstroNivel, { n: monstro.nivel })}</div>
       </div>
-      <div className="flex justify-center"><Retrato monstro={monstro} tamanho="7cqw" /></div>
-      <Lista titulo={T.fraquezas} itens={monstro.fraquezas} />
-      <Lista titulo={T.resistencias} itens={monstro.resistencias} />
-      <div>
-        <div className="font-cinzel font-black uppercase text-[2.2cqw] leading-tight opacity-70">{T.drops}</div>
-        <ul className="font-cinzel font-bold text-[2.4cqw] leading-[1.2]">
-          {mostrados.map((d) => (
-            <li key={d.id} className="flex items-center gap-[0.8cqw]">
-              <span aria-hidden="true" className="shrink-0 inline-block w-[1.6cqw] h-[1.6cqw] border-[0.3cqw] border-[#2A0F0A]" style={{ background: d.cor }} />
-              <span className="truncate">{d.nome}</span>
-            </li>
+      <div className="flex justify-center"><Retrato monstro={monstro} tamanho="9.4cqw" /></div>
+      <div className="grid grid-cols-2 gap-[1.2cqw]">
+        <GrupoDeIcones titulo={T.fraquezas} vazio={!monstro.tracosFracos.length}>
+          {monstro.tracosFracos.map((t) => (
+            <Icone key={t.id} nome={t.nome} cor="#5FCB6A" aoTocar={() => aoInfo({ titulo: t.nome, texto: textoDaFicha(T.infoFraqueza, { n: t.elemento ? MODIFICADOR_FRAQUEZA : 25, nome: t.nome }) })}>{iconeDoTraco(t)}</Icone>
           ))}
-          {resto > 0 && <li className="opacity-70">{textoDaFicha(T.maisDrops, { n: resto })}</li>}
-        </ul>
+        </GrupoDeIcones>
+        <GrupoDeIcones titulo={T.resistencias} vazio={!monstro.tracosResistentes.length}>
+          {monstro.tracosResistentes.map((t) => (
+            <Icone key={t.id} nome={t.nome} cor="#5AA7F0" aoTocar={() => aoInfo({ titulo: t.nome, texto: textoDaFicha(T.infoResistencia, { n: t.elemento ? -MODIFICADOR_RESISTENCIA_FORTE : 25, nome: t.nome }) })}>{iconeDoTraco(t)}</Icone>
+          ))}
+        </GrupoDeIcones>
       </div>
+      <GrupoDeIcones titulo={T.drops} vazio={!monstro.drops.length}>
+        {monstro.drops.map((d) => (
+          <Icone key={d.id} nome={d.nome} cor={d.cor} aoTocar={() => aoInfo({ titulo: textoDaFicha(T.infoDropTitulo, { nome: d.nome }), texto: textoDaFicha(T.infoDrop, { raridade: d.raridadeNome, chance: d.chance }) })}>
+            <IconeDoMaterial id={d.id} nome={d.nome} cor={d.cor} className="w-[80%] h-[80%]" tamanhoDaInicial="2.4cqw" />
+          </Icone>
+        ))}
+      </GrupoDeIcones>
+      <div className="mt-auto flex justify-center">{cacar}</div>
     </div>
   );
 }
 
 /**
  * O livro da Caçada (arte do Yuri, o livro vermelho): a página da esquerda lista os monstros da dificuldade (3 por página,
- * em zigue-zague, um à esquerda e o seguinte à direita), e a da direita abre a ficha do monstro escolhido (retrato,
+ * em zigue-zague, um à esquerda e o seguinte à direita), e a da direita abre os ícones do monstro escolhido (retrato,
  * fraquezas, resistências e drops). As duas abas de cima são os ranques e as fitas da borda são as estrelas, todas
  * clicáveis. Trocar de página, de aba ou de fita vira a página com a animação de 6 quadros; escolher um monstro só muda
  * a página da direita. Com "reduzir movimento" ligado, tudo troca na hora. Os pré-requisitos só travam o botão Caçar:
@@ -136,7 +171,7 @@ function DetalhesDoMonstro({ monstro }: { monstro: MonstroTela }) {
 export function LivroDaCacada({ personagem, lugar, aoMudarLugar, ocupado, aoCacar, className = '' }: LivroDaCacadaProps) {
   const [virando, setVirando] = useState<{ dir: 1 | -1; destino: LugarNoLivro } | null>(null);
   const [quadro, setQuadro] = useState(0);
-  const [fichaAberta, setFichaAberta] = useState(false);
+  const [info, setInfo] = useState<InfoDoIcone | null>(null);
   const inicioDoGesto = useRef<number | null>(null);
 
   const monstros = monstrosDaEstrela(lugar.estrela);
@@ -210,13 +245,13 @@ export function LivroDaCacada({ personagem, lugar, aoMudarLugar, ocupado, aoCaca
   // setas do teclado
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => {
-      if (fichaAberta) return;
+      if (info) return;
       if (e.key === 'ArrowRight') irParaPagina(1);
       else if (e.key === 'ArrowLeft') irParaPagina(-1);
     };
     window.addEventListener('keydown', tecla);
     return () => window.removeEventListener('keydown', tecla);
-  }, [irParaPagina, fichaAberta]);
+  }, [irParaPagina, info]);
 
   const abas = [
     { ranque: 'baixo' as const, rotulo: T.abaBaixo, arte: L.abas.baixo },
@@ -300,7 +335,13 @@ export function LivroDaCacada({ personagem, lugar, aoMudarLugar, ocupado, aoCaca
             {!monstros.length && <p className="text-center font-cinzel font-bold text-[2.6cqw]" style={{ color: TINTA }}>{T.semMonstros}</p>}
           </div>
           <div className="absolute pointer-events-auto" style={caixaEmPorcento(L.paginas.direita)} data-pagina="direita">
-            {monstro && <DetalhesDoMonstro monstro={monstro} />}
+            {monstro && (
+              <DetalhesDoMonstro
+                monstro={monstro}
+                aoInfo={setInfo}
+                cacar={<BotaoPixel compacto destaque aoClicar={() => aoCacar(lugar)} desligado={!!bloqueio || ocupado || !!virando}>{ocupado ? T.cacando : T.cacar}</BotaoPixel>}
+              />
+            )}
           </div>
         </div>
 
@@ -325,28 +366,11 @@ export function LivroDaCacada({ personagem, lugar, aoMudarLugar, ocupado, aoCaca
       </nav>
       <div className="flex flex-col items-center gap-[1.6cqw] mt-[3cqw]">
         {bloqueio && <p role="status" className="flex items-center gap-[1cqw] font-cinzel font-bold text-[2.8cqw] leading-tight text-[#FFB4A8]" style={{ textShadow: SOMBRA_CLARA }}><Lock aria-hidden="true" style={{ width: '2.8cqw', height: '2.8cqw' }} />{bloqueio}</p>}
-        <div className="flex items-center justify-center gap-[3cqw]">
-          <BotaoPixel aoClicar={() => setFichaAberta(true)} desligado={!monstro}>{T.ficha}</BotaoPixel>
-          <BotaoPixel aoClicar={() => aoCacar(lugar)} desligado={!monstro || !!bloqueio || ocupado || !!virando} destaque>{ocupado ? T.cacando : T.cacar}</BotaoPixel>
-        </div>
       </div>
 
-      {fichaAberta && monstro && (
-        <JanelaDaCacada titulo={textoDaFicha(T.fichaTitulo, { nome: monstro.nome })} aoFechar={() => setFichaAberta(false)}>
-          <p className="font-cinzel font-bold text-[3cqw] leading-snug">{monstro.descricao}</p>
-          <p className="font-cinzel font-bold text-[3cqw]">{monstro.tipo}</p>
-          {monstro.elemento && <p className="font-cinzel font-bold text-[3cqw]">{T.atacaCom}: {monstro.elemento}</p>}
-          <div>
-            <div className="font-cinzel font-black uppercase text-[2.8cqw] opacity-70">{T.chanceDosDrops}</div>
-            <ul className="font-cinzel font-bold text-[3cqw] leading-snug">
-              {monstro.drops.map((d) => (
-                <li key={d.id} className="flex justify-between gap-[2cqw]">
-                  <span>{d.nome}</span>
-                  <span className="opacity-80">{d.raridadeNome} · {d.chance}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+      {info && (
+        <JanelaDaCacada titulo={info.titulo} aoFechar={() => setInfo(null)}>
+          <p className="text-center font-cinzel font-bold text-[3.2cqw] leading-snug">{info.texto}</p>
         </JanelaDaCacada>
       )}
     </section>

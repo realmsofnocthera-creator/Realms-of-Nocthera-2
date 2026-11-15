@@ -99,11 +99,36 @@ export interface MonstroTela {
   fraquezas: string[];
   /** Tudo a que o monstro resiste (tipos de golpe e elementos), sem repetir. */
   resistencias: string[];
+  /** As mesmas listas com o que o ícone precisa (elemento ou tipo de golpe). */
+  tracosFracos: TracoTela[];
+  tracosResistentes: TracoTela[];
   drops: DropTela[];
 }
 
-const unicos = (l: string[]) => Array.from(new Set(l));
-const nomesDosGolpes = (l: readonly TipoGolpe[]) => l.map((t) => NOMES_TIPO_GOLPE[t]);
+/** Uma fraqueza ou resistência: um elemento (ícone do elemento) ou um tipo de golpe. */
+export interface TracoTela {
+  id: string;
+  nome: string;
+  elemento: Elemento | null;
+  golpe: TipoGolpe | null;
+}
+
+const tracoDeGolpe = (t: TipoGolpe): TracoTela => ({ id: t, nome: NOMES_TIPO_GOLPE[t], elemento: null, golpe: t });
+const tracoDeElemento = (e: Elemento): TracoTela => ({ id: e, nome: NOME_ELEMENTO[e], elemento: e, golpe: null });
+const tracosUnicos = (l: TracoTela[]) => l.filter((t, i) => l.findIndex((x) => x.id === t.id) === i);
+
+function tracosFracos(d: (typeof MONSTROS_CACADA_DADOS)[number]): TracoTela[] {
+  const corpo = CORPOS[d.categoriaCorporal];
+  return tracosUnicos([
+    ...[...corpo.fraquezas, ...(d.fraquezasProprias ?? [])].map(tracoDeGolpe),
+    ...[...(corpo.fraquezasElementais ?? []), ...(d.fracoA ?? [])].map(tracoDeElemento),
+  ]);
+}
+
+function tracosResistentes(d: (typeof MONSTROS_CACADA_DADOS)[number]): TracoTela[] {
+  const corpo = CORPOS[d.categoriaCorporal];
+  return tracosUnicos([...[...corpo.resistencias, ...(d.resistenciasProprias ?? [])].map(tracoDeGolpe), ...(d.resisteA ?? []).map(tracoDeElemento)]);
+}
 
 export function monstrosDaEstrela(estrela: number): MonstroTela[] {
   return MONSTROS_CACADA_DADOS.filter((m) => m.estrela === estrela).map((d) => ({
@@ -115,14 +140,10 @@ export function monstrosDaEstrela(estrela: number): MonstroTela[] {
     nivel: MONSTROS_CACADA_MAP[d.id].nivel,
     elemento: d.elementoAtaque ? NOME_ELEMENTO[d.elementoAtaque] : null,
     fracoA: (d.fracoA ?? []).map((e) => NOME_ELEMENTO[e]),
-    fraquezas: unicos([
-      ...nomesDosGolpes([...CORPOS[d.categoriaCorporal].fraquezas, ...(d.fraquezasProprias ?? [])]),
-      ...[...(CORPOS[d.categoriaCorporal].fraquezasElementais ?? []), ...(d.fracoA ?? [])].map((e) => NOME_ELEMENTO[e]),
-    ]),
-    resistencias: unicos([
-      ...nomesDosGolpes([...CORPOS[d.categoriaCorporal].resistencias, ...(d.resistenciasProprias ?? [])]),
-      ...(d.resisteA ?? []).map((e) => NOME_ELEMENTO[e]),
-    ]),
+    fraquezas: tracosFracos(d).map((t) => t.nome),
+    resistencias: tracosResistentes(d).map((t) => t.nome),
+    tracosFracos: tracosFracos(d),
+    tracosResistentes: tracosResistentes(d),
     drops: dropsTela(d.drops),
   }));
 }

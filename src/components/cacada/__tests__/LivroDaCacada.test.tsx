@@ -19,7 +19,7 @@ describe('LivroDaCacada', () => {
     expect(h).toContain('Rank Alto');
     for (let n = 1; n <= 5; n++) expect(h).toContain(`Dificuldade ${n} estrelas`);
     expect(h).toContain('Caçar');
-    expect(h).toContain('Ficha');
+    expect(h).not.toContain('Ficha');
   });
   it('no ranque Alto, as fitas são de 6★ a 9★', () => {
     const h = html(personagem(25, [5]), { ranque: 'alto', estrela: 6, monstroId: lugarInicial().monstroId });
@@ -33,7 +33,7 @@ describe('LivroDaCacada', () => {
   it('a página da direita mostra fraquezas, resistências e drops', () => {
     const h = html(personagem(10));
     expect(h).toContain('Fraquezas');
-    expect(h).toContain('Resistências');
+    expect(h).toContain('Resist.');
     expect(h).toContain('Drops');
   });
   it('as caixas de abas, fitas e virada cabem no livro', () => {
