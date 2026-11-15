@@ -4,6 +4,7 @@ import { MATERIAIS_MAP } from '@/rules/materiais';
 import { RARIDADE_MAP, RaridadeMaterial } from '@/rules/raridades';
 import { estadoDaEstrela, ranqueLiberado } from '@/game/cacada';
 import type { Elemento } from '@/rules/elements';
+import { CORPOS, NOMES_TIPO_GOLPE, type TipoGolpe } from '@/rules/corposMonstros';
 
 /** Lógica das telas da Caçada (ranque → estrelas → catálogo), sem React. */
 
@@ -94,8 +95,15 @@ export interface MonstroTela {
   nivel: number;
   elemento: string | null;
   fracoA: string[];
+  /** Tudo a que o monstro é fraco (tipos de golpe e elementos), sem repetir. */
+  fraquezas: string[];
+  /** Tudo a que o monstro resiste (tipos de golpe e elementos), sem repetir. */
+  resistencias: string[];
   drops: DropTela[];
 }
+
+const unicos = (l: string[]) => Array.from(new Set(l));
+const nomesDosGolpes = (l: readonly TipoGolpe[]) => l.map((t) => NOMES_TIPO_GOLPE[t]);
 
 export function monstrosDaEstrela(estrela: number): MonstroTela[] {
   return MONSTROS_CACADA_DADOS.filter((m) => m.estrela === estrela).map((d) => ({
@@ -107,6 +115,14 @@ export function monstrosDaEstrela(estrela: number): MonstroTela[] {
     nivel: MONSTROS_CACADA_MAP[d.id].nivel,
     elemento: d.elementoAtaque ? NOME_ELEMENTO[d.elementoAtaque] : null,
     fracoA: (d.fracoA ?? []).map((e) => NOME_ELEMENTO[e]),
+    fraquezas: unicos([
+      ...nomesDosGolpes([...CORPOS[d.categoriaCorporal].fraquezas, ...(d.fraquezasProprias ?? [])]),
+      ...[...(CORPOS[d.categoriaCorporal].fraquezasElementais ?? []), ...(d.fracoA ?? [])].map((e) => NOME_ELEMENTO[e]),
+    ]),
+    resistencias: unicos([
+      ...nomesDosGolpes([...CORPOS[d.categoriaCorporal].resistencias, ...(d.resistenciasProprias ?? [])]),
+      ...(d.resisteA ?? []).map((e) => NOME_ELEMENTO[e]),
+    ]),
     drops: dropsTela(d.drops),
   }));
 }
