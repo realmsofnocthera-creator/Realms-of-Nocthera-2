@@ -1,37 +1,59 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { ProvacoesScreen, provacoesPorNivel } from '@/components/provacoes/ProvacoesScreen';
+import { aberturasDoLivro, ProvacoesScreen, provacoesPorNivel, PROVACOES_POR_PAGINA } from '@/components/provacoes/ProvacoesScreen';
 import { PROVACOES } from '@/rules/provacoes';
 import { TEXTOS_DAS_PROVACOES as T } from '@/rules/textosDasProvacoes';
 import { textoDaFicha } from '@/rules/textosDaFicha';
-import { FICHA_UI } from '@/assets/personagemUi';
+import { LIVRO_DAS_PROVACOES as L, CARTAS_DAS_PROVACOES } from '@/assets/provacoesLivroUi';
 import type { CharacterDocument } from '@/server/characterService';
 
 vi.mock('next/link', () => ({ default: ({ href, children, ...p }: { href: string; children: React.ReactNode }) => <a href={href} {...p}>{children}</a> }));
 
 const render = (nivel: number) => renderToStaticMarkup(<ProvacoesScreen personagem={{ nome: 'Yuri', nivel } as CharacterDocument} />);
 
-describe('Provações (pixel, em ordem de nível)', () => {
-  it('as 7 provações aparecem em ordem de nível, do menor para o maior', () => {
+describe('Provações em forma de livro', () => {
+  it('as provações ficam em ordem de nível, do menor para o maior', () => {
     const ordem = provacoesPorNivel();
     expect(ordem).toHaveLength(PROVACOES.length);
-    expect(ordem.map((p) => p.nivelRequerido)).toEqual([...ordem.map((p) => p.nivelRequerido)].sort((a, b) => a - b));
     expect(ordem.map((p) => p.id)).toEqual(['cacada', 'torre-celestial', 'guerreiro', 'expedicao', 'chefe-mundial', 'batalha-sangrenta', 'teste-equipe']);
+    expect(ordem.map((p) => p.nivelRequerido)).toEqual([...ordem.map((p) => p.nivelRequerido)].sort((a, b) => a - b));
     const html = render(30);
     const posicoes = ordem.map((p) => html.indexOf(`>${p.nome}</span>`));
     for (const pos of posicoes) expect(pos).toBeGreaterThan(-1);
     expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b));
   });
 
-  it('mostra o título, o voltar ao Hub, o jogador e o fundo das ruínas', () => {
+  it('cada página leva 2 provações: 7 provações viram 2 aberturas (4 e 3)', () => {
+    expect(PROVACOES_POR_PAGINA).toBe(2);
+    const aberturas = aberturasDoLivro(provacoesPorNivel());
+    expect(aberturas).toHaveLength(2);
+    expect(aberturas[0].esquerda.map((p) => p.id)).toEqual(['cacada', 'torre-celestial']);
+    expect(aberturas[0].direita.map((p) => p.id)).toEqual(['guerreiro', 'expedicao']);
+    expect(aberturas[1].esquerda.map((p) => p.id)).toEqual(['chefe-mundial', 'batalha-sangrenta']);
+    expect(aberturas[1].direita.map((p) => p.id)).toEqual(['teste-equipe']);
+    for (const a of aberturas) {
+      expect(a.esquerda.length).toBeLessThanOrEqual(2);
+      expect(a.direita.length).toBeLessThanOrEqual(2);
+    }
+    expect(aberturasDoLivro([])).toEqual([]);
+  });
+
+  it('mostra o título, o voltar ao Hub, o jogador, a mesa de fundo e o livro parado', () => {
     const html = render(14);
     expect(html).toContain(T.titulo);
     expect(html).toContain('href="/hub"');
     expect(html).toContain(`aria-label="${T.voltar}"`);
     expect(html).toContain(textoDaFicha(T.jogador, { nome: 'Yuri', nivel: 14 }));
-    expect(html).toContain(FICHA_UI.fundo);
-    expect(html).toContain(`aria-label="${T.lista}"`);
+    expect(html).toContain(L.mesa);
+    expect(html).toContain(L.livro);
+    expect(html).toContain(`aria-label="${T.livro}"`);
+  });
+
+  it('só a abertura atual aparece: a outra fica no documento, escondida, com as imagens já carregadas', () => {
+    const html = render(30);
+    expect(html.match(/hidden=""/g)).toHaveLength(1); // a abertura 2
+    for (const c of Object.values(CARTAS_DAS_PROVACOES)) expect(html).toContain(c.src);
   });
 
   it('cada provação aberta é um link para a própria tela; as que faltam nível não são', () => {
@@ -50,11 +72,22 @@ describe('Provações (pixel, em ordem de nível)', () => {
     expect(render(15)).toContain('aria-label="Expedição - Nível 15"');
   });
 
-  it('só a próxima a abrir ganha a faixa "Próxima", com quantos níveis faltam', () => {
+  it('só a próxima a abrir ganha a fita "Próxima", com quantos níveis faltam', () => {
     const html = render(14);
-    expect(html.match(new RegExp(T.proxima, 'g'))).toHaveLength(1);
+    const fita = new RegExp(`${T.proxima} · `, 'g'); // a fita; "Próxima página" é o botão do livro
+    expect(html.match(fita)).toHaveLength(1);
     expect(html).toContain(T.falta);
     expect(render(10)).toContain(textoDaFicha(T.faltam, { n: 2 })); // a próxima é a do nível 12
-    expect(render(30)).not.toContain(T.proxima);
+    expect(render(30).match(fita)).toBeNull();
+  });
+
+  it('tem os botões de página (a anterior apagada na primeira) e o número da página', () => {
+    const html = render(14);
+    expect(html).toContain(`aria-label="${T.paginaAnterior}"`);
+    expect(html).toContain(`aria-label="${T.paginaSeguinte}"`);
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-label="Página anterior"|<button[^>]*aria-label="Página anterior"[^>]*disabled=""/);
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*aria-label="Próxima página"|<button[^>]*aria-label="Próxima página"[^>]*disabled=""/);
+    expect(html).toContain(`aria-label="${textoDaFicha(T.paginaDe, { n: 1, total: 2 })}"`);
+    expect(html).toContain(textoDaFicha(T.paginaCurta, { n: 1, total: 2 }));
   });
 });
