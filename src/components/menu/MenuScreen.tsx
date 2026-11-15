@@ -22,10 +22,11 @@ export interface MenuScreenProps {
 }
 
 const MENU_GRID_AREAS = `
-  "conquistas conquistas conquistas"
-  "colecao buscar mochila"
-  "colecao producao resgate"
-  "ranking checkin anuncios"
+  "conquistas conquistas conquistas conquistas conquistas conquistas"
+  "colecao colecao buscar buscar mochila mochila"
+  "colecao colecao producao producao resgate resgate"
+  "ranking ranking checkin checkin anuncios anuncios"
+  "bestiario bestiario bestiario leilao leilao leilao"
 `;
 
 // Onde o nome entra em cada arte (altura em % do cartão) e a cor: as artes deixam o espaço do nome vazio; o Conquistas já traz o nome
@@ -38,6 +39,8 @@ const NOME_NA_ARTE: Partial<Record<MenuPrincipalId, { y: number; claro: boolean 
   ranking: { y: 77, claro: true },
   checkin: { y: 79, claro: true },
   anuncios: { y: 79, claro: true },
+  bestiario: { y: 78, claro: false },
+  leilao: { y: 78, claro: false },
 };
 
 const CONTORNO_DO_NOME =
@@ -142,12 +145,12 @@ export function MenuScreen({ personagem, onFechar }: MenuScreenProps) {
           </div>
         </header>
 
-        {/* Grid Bento Nomeado com os 9 Cards em Vitrine */}
+        {/* Grid Bento Nomeado com os 11 Cards em Vitrine */}
         <section
           aria-label="Opções do Menu Principal"
           className="w-full grid gap-2 sm:gap-2.5"
           style={{
-            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
             gridTemplateAreas: MENU_GRID_AREAS,
           }}
         >
@@ -174,12 +177,14 @@ export function MenuScreen({ personagem, onFechar }: MenuScreenProps) {
                   if (item.id === 'conquistas') router.push('/conquistas');
                   if (item.id === 'checkin') setCheckinAberto(true);
                   if (item.id === 'ranking') router.push('/ranking');
+                  if (item.id === 'bestiario') router.push('/bestiario');
+                  if (item.id === 'leilao') router.push('/mercado?aba=leilao');
                   // O card Resgate abre a loja de ouro (o Mercado ganha um card próprio depois; a rota /mercado continua existindo)
                   if (item.id === 'resgate') router.push('/resgate');
                 }}
                 style={{ gridArea: item.id }}
                 className={`group relative w-full select-none cursor-pointer transition-transform duration-150 hover:scale-[1.03] active:scale-[0.98] ${
-                  item.id === 'conquistas' ? 'aspect-[960/274]' : item.id === 'colecao' ? 'h-full min-h-0' : 'aspect-square'
+                  item.id === 'conquistas' ? 'aspect-[960/274]' : item.id === 'colecao' ? 'h-full min-h-0' : item.id === 'bestiario' || item.id === 'leilao' ? 'aspect-[480/405]' : 'aspect-square'
                 }`}
               >
                 {/* A arte já traz a moldura; o nome entra no espaço deixado nela (o Conquistas já traz o nome) */}

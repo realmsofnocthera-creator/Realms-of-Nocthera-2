@@ -8,6 +8,8 @@ import menuResgateImg from './images/menu/menu-resgate.webp';
 import menuRankingImg from './images/menu/menu-ranking.webp';
 import menuCheckinImg from './images/menu/menu-checkin.webp';
 import menuAnunciosImg from './images/menu/menu-anuncios.webp';
+import menuBestiarioImg from './images/menu/menu-bestiario.webp';
+import menuLeilaoImg from './images/menu/menu-leilao.webp';
 import { srcDaImagem } from '@/assets/srcDaImagem';
 
 export const MENU_PRINCIPAL_IMAGES: Record<MenuPrincipalAssetKey, string> = {
@@ -20,4 +22,6 @@ export const MENU_PRINCIPAL_IMAGES: Record<MenuPrincipalAssetKey, string> = {
   'menu-ranking': srcDaImagem(menuRankingImg),
   'menu-checkin': srcDaImagem(menuCheckinImg),
   'menu-anuncios': srcDaImagem(menuAnunciosImg),
+  'menu-bestiario': srcDaImagem(menuBestiarioImg),
+  'menu-leilao': srcDaImagem(menuLeilaoImg),
 };

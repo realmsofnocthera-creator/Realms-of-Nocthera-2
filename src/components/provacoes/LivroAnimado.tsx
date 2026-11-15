@@ -31,7 +31,7 @@ function caixaDaPagina(p: { x: number; y: number; largura: number; altura: numbe
   return { left: `${(p.x / L.largura) * 100}%`, top: `${(p.y / L.altura) * 100}%`, width: `${(p.largura / L.largura) * 100}%`, height: `${(p.altura / L.altura) * 100}%` };
 }
 
-function BotaoDePagina({ lado, ativo, rotulo, aoClicar }: { lado: 'esq' | 'dir'; ativo: boolean; rotulo: string; aoClicar: () => void }) {
+export function BotaoDePagina({ lado, ativo, rotulo, aoClicar }: { lado: 'esq' | 'dir'; ativo: boolean; rotulo: string; aoClicar: () => void }) {
   const src = lado === 'esq' ? (ativo ? L.setas.esq : L.setas.esqApagada) : ativo ? L.setas.dir : L.setas.dirApagada;
   return (
     <button

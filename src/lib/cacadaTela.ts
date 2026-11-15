@@ -4,6 +4,7 @@ import { MATERIAIS_MAP } from '@/rules/materiais';
 import { RARIDADE_MAP, RaridadeMaterial } from '@/rules/raridades';
 import { estadoDaEstrela, ranqueLiberado } from '@/game/cacada';
 import type { Elemento } from '@/rules/elements';
+import { CORPOS, NOMES_TIPO_GOLPE, type TipoGolpe } from '@/rules/corposMonstros';
 
 /** Lógica das telas da Caçada (ranque → estrelas → catálogo), sem React. */
 
@@ -90,11 +91,45 @@ export interface MonstroTela {
   nome: string;
   chave: boolean;
   tipo: string;
+  /** A categoria do monstro (o `tipo`, sem a região): as divisões do Bestiário. */
+  categoria: string;
   descricao: string;
   nivel: number;
   elemento: string | null;
   fracoA: string[];
+  /** Tudo a que o monstro é fraco (tipos de golpe e elementos), sem repetir. */
+  fraquezas: string[];
+  /** Tudo a que o monstro resiste (tipos de golpe e elementos), sem repetir. */
+  resistencias: string[];
+  /** As mesmas listas com o que o ícone precisa (elemento ou tipo de golpe). */
+  tracosFracos: TracoTela[];
+  tracosResistentes: TracoTela[];
   drops: DropTela[];
+}
+
+/** Uma fraqueza ou resistência: um elemento (ícone do elemento) ou um tipo de golpe. */
+export interface TracoTela {
+  id: string;
+  nome: string;
+  elemento: Elemento | null;
+  golpe: TipoGolpe | null;
+}
+
+const tracoDeGolpe = (t: TipoGolpe): TracoTela => ({ id: t, nome: NOMES_TIPO_GOLPE[t], elemento: null, golpe: t });
+const tracoDeElemento = (e: Elemento): TracoTela => ({ id: e, nome: NOME_ELEMENTO[e], elemento: e, golpe: null });
+const tracosUnicos = (l: TracoTela[]) => l.filter((t, i) => l.findIndex((x) => x.id === t.id) === i);
+
+function tracosFracos(d: (typeof MONSTROS_CACADA_DADOS)[number]): TracoTela[] {
+  const corpo = CORPOS[d.categoriaCorporal];
+  return tracosUnicos([
+    ...[...corpo.fraquezas, ...(d.fraquezasProprias ?? [])].map(tracoDeGolpe),
+    ...[...(corpo.fraquezasElementais ?? []), ...(d.fracoA ?? [])].map(tracoDeElemento),
+  ]);
+}
+
+function tracosResistentes(d: (typeof MONSTROS_CACADA_DADOS)[number]): TracoTela[] {
+  const corpo = CORPOS[d.categoriaCorporal];
+  return tracosUnicos([...[...corpo.resistencias, ...(d.resistenciasProprias ?? [])].map(tracoDeGolpe), ...(d.resisteA ?? []).map(tracoDeElemento)]);
 }
 
 export function monstrosDaEstrela(estrela: number): MonstroTela[] {
@@ -103,14 +138,24 @@ export function monstrosDaEstrela(estrela: number): MonstroTela[] {
     nome: d.nome,
     chave: d.chave === true,
     tipo: [d.tipo, d.regiao].filter(Boolean).join(' · '),
+    categoria: d.tipo,
     descricao: d.descricao,
     nivel: MONSTROS_CACADA_MAP[d.id].nivel,
     elemento: d.elementoAtaque ? NOME_ELEMENTO[d.elementoAtaque] : null,
     fracoA: (d.fracoA ?? []).map((e) => NOME_ELEMENTO[e]),
+    fraquezas: tracosFracos(d).map((t) => t.nome),
+    resistencias: tracosResistentes(d).map((t) => t.nome),
+    tracosFracos: tracosFracos(d),
+    tracosResistentes: tracosResistentes(d),
     drops: dropsTela(d.drops),
   }));
 }
 
 export function estrelaDoMonstro(id: string): number | null {
   return DADOS_CACADA_MAP[id]?.estrela ?? null;
+}
+
+/** Todas as criaturas do jogo, da 1★ à 9★ (a ordem em que aparecem na Caçada). */
+export function todosOsMonstros(): MonstroTela[] {
+  return Array.from({ length: 9 }, (_, i) => monstrosDaEstrela(i + 1)).flat();
 }

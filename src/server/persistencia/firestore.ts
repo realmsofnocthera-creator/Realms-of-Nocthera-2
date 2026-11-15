@@ -31,6 +31,7 @@ import { chavesDoDocumento, partyDoDocumento, type PartyDocumento } from '@/rule
 import { colecionaveisDoDocumento, contadorPorSeloDoDocumento } from '@/rules/colecionaveis';
 import { expedicoesDoDocumento } from '@/rules/expedicao';
 import { maestriasDoDocumento } from '@/rules/maestrias';
+import { bestiarioDoDocumento } from '@/rules/bestiario';
 import { conquistasDoDocumento, estatisticasDoDocumento, MAXIMO_DE_MONSTROS_DERROTADOS, monstrosDerrotadosDoDocumento, vocacoesDerrotadasDoDocumento } from '@/rules/conquistas';
 import { ehTitulo, titulosDoDocumento } from '@/rules/titulos';
 import { checkinDoDocumento, diarioDoDocumento } from '@/rules/diario';
@@ -461,6 +462,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(vocacoesDerrotadasDoDocumento(data.vocacoesDerrotadasPvp) ? { vocacoesDerrotadasPvp: vocacoesDerrotadasDoDocumento(data.vocacoesDerrotadasPvp) } : {}),
     ...(typeof data.guildaDesde === 'string' && Number.isFinite(Date.parse(data.guildaDesde)) ? { guildaDesde: data.guildaDesde } : {}),
     ...(monstrosDerrotadosDoDocumento(data.monstrosDerrotados) ? { monstrosDerrotados: monstrosDerrotadosDoDocumento(data.monstrosDerrotados) } : {}),
+    ...(bestiarioDoDocumento(data.bestiario) ? { bestiario: bestiarioDoDocumento(data.bestiario) } : {}),
     ...(conquistasDoDocumento(data.conquistas) ? { conquistas: conquistasDoDocumento(data.conquistas) } : {}),
     ...(titulosDoDocumento(data.titulos) ? { titulos: titulosDoDocumento(data.titulos) } : {}),
     ...(ehTitulo(data.tituloId) && titulosDoDocumento(data.titulos)?.includes(data.tituloId) ? { tituloId: data.tituloId } : {}),
@@ -579,6 +581,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.guildaDesde ? { guildaDesde: char.guildaDesde } : {}),
     ...(char.vocacoesDerrotadasPvp?.length ? { vocacoesDerrotadasPvp: char.vocacoesDerrotadasPvp.slice(0, 12) } : {}),
     ...(char.monstrosDerrotados?.length ? { monstrosDerrotados: char.monstrosDerrotados.slice(0, MAXIMO_DE_MONSTROS_DERROTADOS) } : {}),
+    ...(char.bestiario && Object.keys(char.bestiario).length ? { bestiario: char.bestiario } : {}),
     ...(char.conquistas && Object.keys(char.conquistas).length ? { conquistas: char.conquistas } : {}),
     ...(char.titulos?.length ? { titulos: char.titulos } : {}),
     ...(char.tituloId ? { tituloId: char.tituloId } : {}),

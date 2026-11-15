@@ -7,7 +7,9 @@ export type MenuPrincipalId =
   | 'resgate'
   | 'ranking'
   | 'checkin'
-  | 'anuncios';
+  | 'anuncios'
+  | 'bestiario'
+  | 'leilao';
 
 export type MenuPrincipalAssetKey =
   | 'menu-conquistas'
@@ -18,7 +20,9 @@ export type MenuPrincipalAssetKey =
   | 'menu-resgate'
   | 'menu-ranking'
   | 'menu-checkin'
-  | 'menu-anuncios';
+  | 'menu-anuncios'
+  | 'menu-bestiario'
+  | 'menu-leilao';
 
 export interface MenuPrincipalItem {
   id: MenuPrincipalId;
@@ -71,5 +75,15 @@ export const MENU_PRINCIPAL: readonly MenuPrincipalItem[] = [
     id: 'anuncios',
     nome: 'Anúncios',
     assetKey: 'menu-anuncios',
+  },
+  {
+    id: 'bestiario',
+    nome: 'Bestiário',
+    assetKey: 'menu-bestiario',
+  },
+  {
+    id: 'leilao',
+    nome: 'Leilão',
+    assetKey: 'menu-leilao',
   },
 ] as const;

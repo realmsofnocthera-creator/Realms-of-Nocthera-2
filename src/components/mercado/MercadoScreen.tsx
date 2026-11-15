@@ -96,6 +96,10 @@ export function MercadoScreen({ tokenFresco }: { tokenFresco: Token }) {
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [aba, setAba] = useState<Aba>('comprar');
+  // o card Leilão do Menu abre direto na aba do leilão (?aba=leilao)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('aba') === 'leilao') setAba('leilao');
+  }, []);
   const [filtro, setFiltro] = useState<Filtro>({ categoria: '', raridade: '', busca: '', ordem: 'menorPreco', pagina: 1 });
   const [busca, setBusca] = useState('');
 
