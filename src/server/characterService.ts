@@ -163,6 +163,7 @@ import { semanaDe } from '@/rules/chefeSemanal';
 import { conquistasEmDestaque, somarEstatisticas, type ConquistasDoJogador, type Contador, type EstatisticasDoJogador } from '@/rules/conquistas';
 import { detalheDaVitoria, type DetalheDaVitoria } from '@/game/resumoDaLuta';
 import { TITULO_MAP } from '@/rules/titulos';
+import { somarVitoriasNoBestiario } from '@/rules/bestiario';
 import { ELEMENTOS, type Elemento } from '@/rules/elements';
 import { ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
 import { equipamentosDoPerfil, validarEscolhaDoPerfil, type EquipamentoPerfil } from '@/lib/perfilEquipamentos';
@@ -330,6 +331,8 @@ export interface CharacterDocument {
   estatisticas?: EstatisticasDoJogador;
   /** Os monstros (por id) que o jogador já derrotou, sem repetir: o Bestiário, as Subespécies e os Chefes especiais das Conquistas. */
   monstrosDerrotados?: string[];
+  /** O XP de Bestiário de cada criatura (por id): 1 por vitória, até o teto do nível 4. */
+  bestiario?: Record<string, number>;
   /** Quando o jogador entrou na guilda em que está (ISO): as Conquistas contam os dias. */
   guildaDesde?: string;
   /** As vocações (classeId) de quem o jogador já venceu no PvP, sem repetir: o "todas as vocações" das Conquistas. */
@@ -639,28 +642,33 @@ export function progressoDoDia(char: Pick<CharacterDocument, 'diario'>, ganhos: 
  * de Chefes (com o teto do dia), os totais das conquistas e as missões do dia. Devolve o patch para salvar junto.
  */
 export function progressoDasVitorias(
-  char: Pick<CharacterDocument, 'maestrias' | 'equipamento' | 'armas' | 'estatisticas' | 'diario' | 'monstrosDerrotados'>,
+  char: Pick<CharacterDocument, 'maestrias' | 'equipamento' | 'armas' | 'estatisticas' | 'diario' | 'monstrosDerrotados' | 'bestiario'>,
   vitorias: readonly boolean[],
   agora: Date,
   /** O que cada vitória contou (na mesma ordem de `vitorias`); sem o detalhe, só os totais simples contam. */
   detalhes?: readonly (DetalheDaVitoria | undefined)[]
-): { maestrias?: MaestriasDoJogador; estatisticas?: EstatisticasDoJogador; diario?: DiarioDoJogador; monstrosDerrotados?: string[] } {
+): { maestrias?: MaestriasDoJogador; estatisticas?: EstatisticasDoJogador; diario?: DiarioDoJogador; monstrosDerrotados?: string[]; bestiario?: Record<string, number> } {
   if (!vitorias.length) return {};
   const arma = char.equipamento?.armaId ? char.armas?.find((a) => a.id === char.equipamento!.armaId) : undefined;
   const novas = ganharXpDeMaestria(char.maestrias, xpDasVitorias(arma?.categoria, vitorias), diaDeBrasilia(agora));
   const chefes = vitorias.filter(Boolean).length;
   const ganhos: Partial<Record<Contador, number>> = { vitorias: vitorias.length, vitoriasContraChefes: chefes };
   const ids = new Set(char.monstrosDerrotados ?? []);
+  const vencidos: string[] = [];
   for (const d of detalhes ?? []) {
     if (!d) continue;
     for (const [k, v] of Object.entries(d.contadores) as [Contador, number][]) ganhos[k] = (ganhos[k] ?? 0) + v;
-    if (d.monstroId) ids.add(d.monstroId);
+    if (d.monstroId) {
+      ids.add(d.monstroId);
+      vencidos.push(d.monstroId);
+    }
   }
   const mudouOsIds = ids.size !== (char.monstrosDerrotados?.length ?? 0);
   return {
     ...(novas ? { maestrias: novas } : {}),
     estatisticas: somarEstatisticas(char.estatisticas, ganhos),
     ...(mudouOsIds ? { monstrosDerrotados: [...ids].sort() } : {}),
+    ...(vencidos.length ? { bestiario: somarVitoriasNoBestiario(char.bestiario, vencidos) as Record<string, number> } : {}),
     ...progressoDoDia(char, { vitorias: vitorias.length, chefes }, agora),
   };
 }

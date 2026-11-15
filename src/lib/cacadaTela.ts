@@ -91,6 +91,8 @@ export interface MonstroTela {
   nome: string;
   chave: boolean;
   tipo: string;
+  /** A categoria do monstro (o `tipo`, sem a região): as divisões do Bestiário. */
+  categoria: string;
   descricao: string;
   nivel: number;
   elemento: string | null;
@@ -136,6 +138,7 @@ export function monstrosDaEstrela(estrela: number): MonstroTela[] {
     nome: d.nome,
     chave: d.chave === true,
     tipo: [d.tipo, d.regiao].filter(Boolean).join(' · '),
+    categoria: d.tipo,
     descricao: d.descricao,
     nivel: MONSTROS_CACADA_MAP[d.id].nivel,
     elemento: d.elementoAtaque ? NOME_ELEMENTO[d.elementoAtaque] : null,
@@ -150,4 +153,9 @@ export function monstrosDaEstrela(estrela: number): MonstroTela[] {
 
 export function estrelaDoMonstro(id: string): number | null {
   return DADOS_CACADA_MAP[id]?.estrela ?? null;
+}
+
+/** Todas as criaturas do jogo, da 1★ à 9★ (a ordem em que aparecem na Caçada). */
+export function todosOsMonstros(): MonstroTela[] {
+  return Array.from({ length: 9 }, (_, i) => monstrosDaEstrela(i + 1)).flat();
 }

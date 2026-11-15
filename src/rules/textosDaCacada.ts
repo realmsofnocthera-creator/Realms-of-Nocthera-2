@@ -32,6 +32,8 @@ export const TEXTOS_DA_CACADA = {
   infoResistencia: 'Resistência: recebe {n}% a menos de dano de {nome}.',
   infoDrop: '{raridade} · {chance}',
   infoDropTitulo: 'Drop: {nome}',
+  naoDescoberto: 'Ainda não descoberto',
+  desbloqueiaNoNivel: 'Aparece no nível {n} do Bestiário. Derrote esta criatura mais vezes.',
   iconeAria: '{nome}: ver informações',
   fraquezasAria: 'Fraquezas',
   cacar: 'Caçar',
