@@ -41,3 +41,12 @@ describe('Bestiário', () => {
     expect(h).not.toContain('Ainda não descoberto');
   });
 });
+
+describe('Bestiário: nomes na lista', () => {
+  it('palavras longas ganham fonte menor para caber na coluna', async () => {
+    const { tamanhoDoNome } = await import('../BestiarioScreen');
+    expect(tamanhoDoNome('Rato')).toBe(1.8);
+    expect(tamanhoDoNome('Floragoth Carmesim')).toBe(1.7);
+    expect(tamanhoDoNome('Esqueleto Amaldiçoado')).toBe(1.55);
+  });
+});

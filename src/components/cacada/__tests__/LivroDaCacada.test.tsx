@@ -61,3 +61,22 @@ describe('LivroDaCacada', () => {
     }
   });
 });
+
+describe('layout da ficha: o botão Caçar nunca some', () => {
+  it('os ícones encolhem para caber numa linha só', async () => {
+    const { tamanhoDoIcone } = await import('../DetalhesDoMonstro');
+    expect(tamanhoDoIcone(2, 25)).toBe('4.8cqw');
+    expect(parseFloat(tamanhoDoIcone(5, 25))).toBeLessThanOrEqual(4.6);
+    for (let n = 1; n <= 7; n++) {
+      const t = parseFloat(tamanhoDoIcone(n, 25));
+      expect(t * n + 0.6 * (n - 1)).toBeLessThanOrEqual(25.01);
+    }
+    for (let n = 1; n <= 4; n++) expect(parseFloat(tamanhoDoIcone(n, 14.2)) * n + 0.6 * (n - 1)).toBeLessThanOrEqual(14.21);
+  });
+  it('o botão Caçar fica fora da área que corta o conteúdo', () => {
+    const h = html(personagem(10), { ranque: 'alto', estrela: 6, monstroId: 'raizark' });
+    const i = h.indexOf('shrink-0 flex justify-center');
+    expect(i).toBeGreaterThan(h.indexOf('overflow-hidden'));
+    expect(h.indexOf('Caçar', i)).toBeGreaterThan(i);
+  });
+});
