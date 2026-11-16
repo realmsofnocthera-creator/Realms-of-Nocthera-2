@@ -44,6 +44,12 @@ function Marcas({ nivel }: { nivel: number }) {
   );
 }
 
+/** O tamanho do nome (cqw) pela maior palavra, para ela caber na coluna estreita sem estourar. */
+export function tamanhoDoNome(nome: string): number {
+  const maior = Math.max(...nome.split(/\s+/).map((p) => p.length));
+  return maior >= 10 ? 1.55 : maior >= 8 ? 1.7 : 1.8;
+}
+
 function CriaturaNaLista({ monstro, nivel, escolhida, aoEscolher }: { monstro: MonstroTela; nivel: number; escolhida: boolean; aoEscolher: () => void }) {
   return (
     <button
@@ -51,14 +57,14 @@ function CriaturaNaLista({ monstro, nivel, escolhida, aoEscolher }: { monstro: M
       onClick={aoEscolher}
       aria-pressed={escolhida}
       aria-label={textoDaFicha(TC.escolher, { nome: monstro.nome })}
-      className="flex flex-col items-center gap-[0.4cqw] px-[0.4cqw] py-[0.6cqw] text-center cursor-pointer border-[0.4cqw] active:translate-y-px focus-visible:outline focus-visible:outline-[0.6cqw] focus-visible:outline-[#6FE3EE]"
+      className="flex flex-col items-center gap-[0.3cqw] px-[0.4cqw] py-[0.2cqw] text-center cursor-pointer border-[0.4cqw] active:translate-y-px focus-visible:outline focus-visible:outline-[0.6cqw] focus-visible:outline-[#6FE3EE]"
       style={{ borderColor: escolhida ? '#8E2A1B' : 'transparent', background: escolhida ? 'rgba(142,42,27,0.16)' : 'transparent', color: TINTA }}
     >
       <span className="relative">
-        <Retrato monstro={monstro} tamanho="7.2cqw" />
+        <Retrato monstro={monstro} tamanho="5.6cqw" />
         {monstro.chave && <Crown aria-label={TC.monstroChave} className="absolute -top-[1cqw] -right-[1.2cqw]" style={{ width: '2.6cqw', height: '2.6cqw', color: '#B8832E', filter: 'drop-shadow(0 0 0.2cqw #2A0F0A)' }} />}
       </span>
-      <span className="font-cinzel font-black text-[1.9cqw] leading-[1.1] line-clamp-2 [overflow-wrap:break-word]">{monstro.nome.split(',')[0]}</span>
+      <span className="font-cinzel font-black leading-[1.1] line-clamp-2 [overflow-wrap:anywhere]" style={{ fontSize: `${tamanhoDoNome(monstro.nome.split(',')[0])}cqw` }}>{monstro.nome.split(',')[0]}</span>
       <Marcas nivel={nivel} />
     </button>
   );

@@ -56,15 +56,14 @@ function MonstroNaLista({ monstro, indice, escolhido, aoEscolher }: { monstro: M
       aria-label={textoDaFicha(T.escolher, { nome: monstro.nome })}
       aria-pressed={escolhido}
       data-lado={lado}
-      className={`flex flex-col items-center gap-[0.4cqw] w-[72%] px-[0.6cqw] py-[0.8cqw] text-center cursor-pointer border-[0.4cqw] active:translate-y-px focus-visible:outline focus-visible:outline-[0.6cqw] focus-visible:outline-[#6FE3EE] ${lado === 'dir' ? 'self-end' : 'self-start'}`}
+      className={`flex flex-col items-center gap-[0.4cqw] w-[72%] px-[0.6cqw] py-[0.4cqw] text-center cursor-pointer border-[0.4cqw] active:translate-y-px focus-visible:outline focus-visible:outline-[0.6cqw] focus-visible:outline-[#6FE3EE] ${lado === 'dir' ? 'self-end' : 'self-start'}`}
       style={{ borderColor: escolhido ? '#8E2A1B' : 'transparent', background: escolhido ? 'rgba(142,42,27,0.16)' : 'transparent', transform: `rotate(${lado === 'dir' ? 1 : -1}deg)`, color: TINTA }}
     >
-      <Retrato monstro={monstro} tamanho="6cqw" />
-      <span className="font-cinzel font-black text-[2.4cqw] leading-[1.1] flex items-center justify-center gap-[0.5cqw]">
+      <Retrato monstro={monstro} tamanho="5.4cqw" />
+      <span className="font-cinzel font-black text-[2.2cqw] leading-[1.1] flex items-center justify-center gap-[0.5cqw]">
         {monstro.chave && <Crown aria-label={T.monstroChave} className="shrink-0" style={{ width: '2.4cqw', height: '2.4cqw', color: '#B8832E' }} />}
-        <span>{monstro.nome}</span>
+        <span className="line-clamp-2 [overflow-wrap:break-word]">{monstro.nome.split(',')[0]}</span>
       </span>
-      <span className="font-cinzel font-bold text-[2.1cqw] leading-none opacity-80">{textoDaFicha(T.monstroNivel, { n: monstro.nivel })}</span>
     </button>
   );
 }
