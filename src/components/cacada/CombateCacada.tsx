@@ -221,7 +221,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
             <div key={tremor.monstro} className={tremor.monstro > 0 ? 'cacada-golpe w-full h-full' : 'w-full h-full'}>
               {spriteMonstro ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={spriteMonstro.src} alt={monstro.nome} className="w-full h-full object-contain" draggable={false} />
+                <img src={spriteMonstro.src} alt={monstro.nome} className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} draggable={false} />
               ) : (
                 <div role="img" aria-label={monstro.nome} className="w-full h-full rounded-full flex items-center justify-center"
                   style={{ background: 'radial-gradient(circle at 50% 40%, rgba(25,12,20,0.95), rgba(0,0,0,0.85) 70%)', border: `2px solid ${OURO}55` }}>
