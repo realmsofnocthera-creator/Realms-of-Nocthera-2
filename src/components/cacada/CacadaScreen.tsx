@@ -127,7 +127,7 @@ export function CacadaScreen({ character, onCharacterChange, tokenFresco }: Caca
           <div role="alert" className="mx-[3cqw] px-[2cqw] py-[1.2cqw] text-[2.8cqw] font-cinzel font-bold bg-[#8E1F1A] text-[#FFE9B0] border-[0.4cqw] border-[#2A0F0A]">{erro}</div>
         )}
 
-        <div className="flex-1 min-h-0 flex items-center px-[2cqw] overflow-y-auto">
+        <div className="flex-1 min-h-0 flex items-center overflow-y-auto overflow-x-hidden">
           <LivroDaCacada personagem={character} lugar={lugar} aoMudarLugar={setLugar} ocupado={ocupado} aoCacar={cacar} className="pb-[4cqw]" />
         </div>
       </div>

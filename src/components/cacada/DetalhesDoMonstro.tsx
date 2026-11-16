@@ -26,13 +26,13 @@ export interface InfoDoIcone {
  * A arte do monstro num quadro: o ÍCONE (quadro quadrado, para as listas da esquerda e a base do Bestiário) ou o RETRATO
  * (a criatura de corpo inteiro, para a página da direita). Sem arte ainda, um quadrado com "?".
  */
-export function Retrato({ monstro, tamanho, tipo = 'icone' }: { monstro: Pick<MonstroTela, 'id'>; tamanho: string; tipo?: 'icone' | 'retrato' }) {
+export function Retrato({ monstro, tamanho, largura, tipo = 'icone' }: { monstro: Pick<MonstroTela, 'id'>; tamanho: string; /** largura do quadro, se for diferente da altura */ largura?: string; tipo?: 'icone' | 'retrato' }) {
   const src = tipo === 'retrato' ? SPRITE_MONSTRO[monstro.id]?.src : ICONE_MONSTRO[monstro.id];
   return (
     <span
       aria-hidden="true"
       className="relative shrink-0 flex items-center justify-center overflow-hidden border-[0.4cqw]"
-      style={{ width: tamanho, height: tamanho, borderColor: '#6B3A1E', background: 'rgba(88,41,20,0.22)' }}
+      style={{ width: largura ?? tamanho, height: tamanho, borderColor: '#6B3A1E', background: 'rgba(88,41,20,0.22)' }}
     >
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -114,7 +114,7 @@ const LARGURA_AO_LADO_DO_RETRATO = 14.2;
  * ícones cabe numa linha só (o ícone encolhe quando há muitos), e `rodape` (o botão Caçar) fica sempre à vista, no fim da
  * página, qualquer que seja o tamanho do nome ou da lista de drops.
  */
-export function DetalhesDoMonstro({ monstro, nivelBestiario, aoInfo, rodape }: { monstro: MonstroTela; nivelBestiario: number; aoInfo: (i: InfoDoIcone) => void; rodape?: React.ReactNode }) {
+export function DetalhesDoMonstro({ monstro, nivelBestiario, aoInfo, rodape, comTracos = true }: { monstro: MonstroTela; nivelBestiario: number; aoInfo: (i: InfoDoIcone) => void; rodape?: React.ReactNode; /** false: só o retrato (grande) e os drops, sem fraquezas e resistências (a Caçada) */ comTracos?: boolean }) {
   const aberto = fichaDesbloqueada(nivelBestiario, monstro.drops.length);
   const metade = Math.ceil(monstro.drops.length / 2);
   const tamFracos = tamanhoDoIcone(aberto.fraquezas ? monstro.tracosFracos.length : 1, LARGURA_AO_LADO_DO_RETRATO);
@@ -129,32 +129,41 @@ export function DetalhesDoMonstro({ monstro, nivelBestiario, aoInfo, rodape }: {
           </h2>
           <div className="font-cinzel font-bold text-[2cqw] leading-tight opacity-80">{textoDaFicha(T.monstroNivel, { n: monstro.nivel })}</div>
         </div>
-        <div className="flex items-start gap-[1.2cqw] shrink-0">
-          <span className="relative shrink-0">
-            <Retrato monstro={monstro} tamanho="9.2cqw" tipo="retrato" />
-            {monstro.chave && <Crown aria-label={T.monstroChave} className="absolute -top-[1.2cqw] -left-[1.2cqw]" style={{ width: '3cqw', height: '3cqw', color: '#B8832E', filter: 'drop-shadow(0 0 0.2cqw #2A0F0A)' }} />}
-          </span>
-          <div className="flex flex-col gap-[0.8cqw] min-w-0">
-            <GrupoDeIcones titulo={T.fraquezas} vazio={aberto.fraquezas && !monstro.tracosFracos.length}>
-              {aberto.fraquezas ? (
-                monstro.tracosFracos.map((t) => (
-                  <Icone key={t.id} nome={t.nome} cor="#5FCB6A" tamanho={tamFracos} aoTocar={() => aoInfo({ titulo: t.nome, texto: textoDaFicha(T.infoFraqueza, { n: t.elemento ? MODIFICADOR_FRAQUEZA : 25, nome: t.nome }) })}>{iconeDoTraco(t)}</Icone>
-                ))
-              ) : (
-                <IconeBloqueado nivel={4} tamanho={tamFracos} aoTocar={aoInfo} />
-              )}
-            </GrupoDeIcones>
-            <GrupoDeIcones titulo={T.resistencias} vazio={aberto.resistencias && !monstro.tracosResistentes.length}>
-              {aberto.resistencias ? (
-                monstro.tracosResistentes.map((t) => (
-                  <Icone key={t.id} nome={t.nome} cor="#5AA7F0" tamanho={tamResistentes} aoTocar={() => aoInfo({ titulo: t.nome, texto: textoDaFicha(T.infoResistencia, { n: t.elemento ? -MODIFICADOR_RESISTENCIA_FORTE : 25, nome: t.nome }) })}>{iconeDoTraco(t)}</Icone>
-                ))
-              ) : (
-                <IconeBloqueado nivel={3} tamanho={tamResistentes} aoTocar={aoInfo} />
-              )}
-            </GrupoDeIcones>
+        {comTracos ? (
+          <div className="flex items-start gap-[1.2cqw] shrink-0">
+            <span className="relative shrink-0">
+              <Retrato monstro={monstro} tamanho="9.2cqw" tipo="retrato" />
+              {monstro.chave && <Crown aria-label={T.monstroChave} className="absolute -top-[1.2cqw] -left-[1.2cqw]" style={{ width: '3cqw', height: '3cqw', color: '#B8832E', filter: 'drop-shadow(0 0 0.2cqw #2A0F0A)' }} />}
+            </span>
+            <div className="flex flex-col gap-[0.8cqw] min-w-0">
+              <GrupoDeIcones titulo={T.fraquezas} vazio={aberto.fraquezas && !monstro.tracosFracos.length}>
+                {aberto.fraquezas ? (
+                  monstro.tracosFracos.map((t) => (
+                    <Icone key={t.id} nome={t.nome} cor="#5FCB6A" tamanho={tamFracos} aoTocar={() => aoInfo({ titulo: t.nome, texto: textoDaFicha(T.infoFraqueza, { n: t.elemento ? MODIFICADOR_FRAQUEZA : 25, nome: t.nome }) })}>{iconeDoTraco(t)}</Icone>
+                  ))
+                ) : (
+                  <IconeBloqueado nivel={4} tamanho={tamFracos} aoTocar={aoInfo} />
+                )}
+              </GrupoDeIcones>
+              <GrupoDeIcones titulo={T.resistencias} vazio={aberto.resistencias && !monstro.tracosResistentes.length}>
+                {aberto.resistencias ? (
+                  monstro.tracosResistentes.map((t) => (
+                    <Icone key={t.id} nome={t.nome} cor="#5AA7F0" tamanho={tamResistentes} aoTocar={() => aoInfo({ titulo: t.nome, texto: textoDaFicha(T.infoResistencia, { n: t.elemento ? -MODIFICADOR_RESISTENCIA_FORTE : 25, nome: t.nome }) })}>{iconeDoTraco(t)}</Icone>
+                  ))
+                ) : (
+                  <IconeBloqueado nivel={3} tamanho={tamResistentes} aoTocar={aoInfo} />
+                )}
+              </GrupoDeIcones>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex justify-center shrink-0">
+            <span className="relative">
+              <Retrato monstro={monstro} tamanho="17cqw" largura="24cqw" tipo="retrato" />
+              {monstro.chave && <Crown aria-label={T.monstroChave} className="absolute -top-[1.2cqw] -left-[1.2cqw]" style={{ width: '3.4cqw', height: '3.4cqw', color: '#B8832E', filter: 'drop-shadow(0 0 0.2cqw #2A0F0A)' }} />}
+            </span>
+          </div>
+        )}
         <GrupoDeIcones titulo={T.drops} vazio={!monstro.drops.length}>
           {monstro.drops.map((d, i) =>
             i < aberto.drops ? (
