@@ -4,7 +4,7 @@ import React from 'react';
 import { Crown } from 'lucide-react';
 import { iconeDeElemento } from '@/assets/elementos';
 import { ICONE_DA_CATEGORIA, ICONE_DANO_FISICO, ICONE_DANO_MAGICO } from '@/assets/forjaItens';
-import { SPRITE_MONSTRO } from '@/lib/cacadaArte';
+import { ICONE_MONSTRO, SPRITE_MONSTRO } from '@/lib/cacadaArte';
 import type { MonstroTela, TracoTela } from '@/lib/cacadaTela';
 import { fichaDesbloqueada } from '@/rules/bestiario';
 import { MODIFICADOR_FRAQUEZA, MODIFICADOR_RESISTENCIA_FORTE } from '@/rules/elements';
@@ -22,18 +22,21 @@ export interface InfoDoIcone {
   texto: string;
 }
 
-/** O retrato do monstro (a arte, ou um quadrado com "?" enquanto não tem arte). */
-export function Retrato({ monstro, tamanho }: { monstro: Pick<MonstroTela, 'id'>; tamanho: string }) {
-  const arte = SPRITE_MONSTRO[monstro.id];
+/**
+ * A arte do monstro num quadro: o ÍCONE (quadro quadrado, para as listas da esquerda e a base do Bestiário) ou o RETRATO
+ * (a criatura de corpo inteiro, para a página da direita). Sem arte ainda, um quadrado com "?".
+ */
+export function Retrato({ monstro, tamanho, tipo = 'icone' }: { monstro: Pick<MonstroTela, 'id'>; tamanho: string; tipo?: 'icone' | 'retrato' }) {
+  const src = tipo === 'retrato' ? SPRITE_MONSTRO[monstro.id]?.src : ICONE_MONSTRO[monstro.id];
   return (
     <span
       aria-hidden="true"
       className="relative shrink-0 flex items-center justify-center overflow-hidden border-[0.4cqw]"
       style={{ width: tamanho, height: tamanho, borderColor: '#6B3A1E', background: 'rgba(88,41,20,0.22)' }}
     >
-      {arte ? (
+      {src ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={arte.src} alt="" draggable={false} className="max-w-full max-h-full object-contain" style={pixel} />
+        <img src={src} alt="" draggable={false} className="max-w-full max-h-full object-contain" style={pixel} />
       ) : (
         <span className="font-cinzel font-black leading-none opacity-60" style={{ color: TINTA, fontSize: `calc(${tamanho} * 0.55)` }}>?</span>
       )}
@@ -128,7 +131,7 @@ export function DetalhesDoMonstro({ monstro, nivelBestiario, aoInfo, rodape }: {
         </div>
         <div className="flex items-start gap-[1.2cqw] shrink-0">
           <span className="relative shrink-0">
-            <Retrato monstro={monstro} tamanho="8.8cqw" />
+            <Retrato monstro={monstro} tamanho="9.2cqw" tipo="retrato" />
             {monstro.chave && <Crown aria-label={T.monstroChave} className="absolute -top-[1.2cqw] -left-[1.2cqw]" style={{ width: '3cqw', height: '3cqw', color: '#B8832E', filter: 'drop-shadow(0 0 0.2cqw #2A0F0A)' }} />}
           </span>
           <div className="flex flex-col gap-[0.8cqw] min-w-0">

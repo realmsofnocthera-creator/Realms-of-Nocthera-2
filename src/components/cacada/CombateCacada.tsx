@@ -8,7 +8,7 @@ import type { MonsterDefinition } from '@/rules/monsters';
 import type { EfeitoStatus } from '@/rules/statusEffects';
 import { EFEITOS_STATUS } from '@/rules/statusEffects';
 import { resolveAvatarSrc } from '@/assets/avatars';
-import { ALTURA_MONSTRO_PADRAO, CENARIO_ESTRELA, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
+import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, CENARIO_ESTRELA, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
 import { larguraDasBarras, montarQuadros, PainelLuta, QuadroLuta, TipoLinha } from '@/lib/cacadaReplay';
 
 interface CombateCacadaProps {
@@ -204,7 +204,10 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   const retrato = resolveAvatarSrc(personagem.avatarId, personagem.classeId);
   const g = geometriaDaCena(caixa.w, caixa.h);
   const alturaJogador = spriteJogador ? g.jogador.altura : g.jogador.altura * 0.7;
-  const alturaMonstro = spriteMonstro ? g.monstro.altura : g.monstro.altura * (ALTURA_MONSTRO_PADRAO / 22);
+  // com arte: a altura segue a da arte (as criaturas das estrelas altas são maiores), sem passar de 46% da largura da arena
+  const alturaMonstro = spriteMonstro
+    ? Math.min(g.monstro.altura * (spriteMonstro.altura / ALTURA_DE_REFERENCIA_DA_ARTE), (caixa.w * 0.46) / spriteMonstro.proporcao)
+    : g.monstro.altura * (ALTURA_MONSTRO_PADRAO / 22);
 
   return (
     <div className="relative w-full h-dvh flex flex-col select-none overflow-hidden" style={{ backgroundColor: '#07050a' }}>
