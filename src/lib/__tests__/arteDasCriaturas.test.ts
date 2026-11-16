@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { MONSTROS_CACADA_DADOS } from '@/rules/cacada';
-import { SPRITE_MONSTRO } from '../cacadaArte';
+import { ICONE_MONSTRO, SPRITE_MONSTRO } from '../cacadaArte';
 
 describe('arte das criaturas', () => {
   it('toda criatura da Caçada tem a sua arte, e o arquivo existe e é leve', () => {
@@ -10,6 +10,16 @@ describe('arte das criaturas', () => {
       const arte = SPRITE_MONSTRO[m.id];
       expect(arte, m.id).toBeDefined();
       const arquivo = join(process.cwd(), 'public', arte.src);
+      expect(existsSync(arquivo), arquivo).toBe(true);
+      expect(statSync(arquivo).size, m.id).toBeLessThanOrEqual(350 * 1024);
+    }
+  });
+  it('todo monstro tem também o ícone (a arte da esquerda), diferente do retrato', () => {
+    for (const m of MONSTROS_CACADA_DADOS) {
+      const icone = ICONE_MONSTRO[m.id];
+      expect(icone, m.id).toBeDefined();
+      expect(icone).not.toBe(SPRITE_MONSTRO[m.id].src);
+      const arquivo = join(process.cwd(), 'public', icone);
       expect(existsSync(arquivo), arquivo).toBe(true);
       expect(statSync(arquivo).size, m.id).toBeLessThanOrEqual(350 * 1024);
     }

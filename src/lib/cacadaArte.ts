@@ -15,8 +15,8 @@ export const SPRITE_CLASSE: Readonly<Record<string, SpriteLuta>> = {
 };
 
 /**
- * As criaturas de corpo inteiro (pixel art do Yuri, de frente, fundo transparente e já cortadas rente à arte), uma por id
- * de monstro: [largura, altura] em pixels da arte. O tamanho de cada uma já carrega a escala da estrela (as de 5★ a 9★ são
+ * Os RETRATOS: as criaturas de corpo inteiro (pixel art do Yuri, de frente, fundo transparente e já cortadas rente à arte),
+ * uma por id de monstro. Aparecem na página da direita (ficha da criatura) e na luta. Cada tamanho abaixo é [largura, altura] em pixels da arte. O tamanho de cada uma já carrega a escala da estrela (as de 5★ a 9★ são
  * mais altas), então na luta a altura na tela segue a altura da arte. Sempre com `image-rendering: pixelated`.
  */
 const TAMANHO_DA_ARTE: Readonly<Record<string, readonly [number, number]>> = {
@@ -103,13 +103,19 @@ const TAMANHO_DA_ARTE: Readonly<Record<string, readonly [number, number]>> = {
 /** A altura de arte (px) que vale a altura padrão do monstro na cena da luta. */
 export const ALTURA_DE_REFERENCIA_DA_ARTE = 118;
 
+/**
+ * Os ÍCONES: o quadro quadrado de cada criatura (pixel art do Yuri). Ficam na página da esquerda da Caçada e como base do
+ * Bestiário. São outra arte, diferente do retrato.
+ */
+export const ICONE_MONSTRO: Readonly<Record<string, string>> = Object.fromEntries(Object.keys(TAMANHO_DA_ARTE).map((id) => [id, `/images/cacada/criaturas/${id}.webp`]));
+
 export interface SpriteDaCriatura extends SpriteLuta {
   /** a altura da arte, em pixels */
   altura: number;
 }
 
 export const SPRITE_MONSTRO: Readonly<Record<string, SpriteDaCriatura>> = Object.fromEntries(
-  Object.entries(TAMANHO_DA_ARTE).map(([id, [l, a]]) => [id, { src: `/images/cacada/criaturas/${id}.webp`, proporcao: l / a, altura: a }])
+  Object.entries(TAMANHO_DA_ARTE).map(([id, [l, a]]) => [id, { src: `/images/cacada/retratos/${id}.webp`, proporcao: l / a, altura: a }])
 );
 
 /** Cenário de cada estrela, com a plataforma do monstro em cima à direita e a do jogador embaixo. */
