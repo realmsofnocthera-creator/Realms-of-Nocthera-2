@@ -36,10 +36,10 @@ describe('AberturaDeBatalha', () => {
     expect(h).toContain(VIDEO_DA_ABERTURA.src);
     const arquivo = join(process.cwd(), 'public', VIDEO_DA_ABERTURA.src);
     expect(existsSync(arquivo)).toBe(true);
-    expect(statSync(arquivo).size).toBeLessThanOrEqual(400 * 1024);
+    expect(statSync(arquivo).size).toBeLessThanOrEqual(500 * 1024);
   });
   it('a abertura acaba antes do tremor final do vídeo', () => {
     expect(TEMPOS_DA_ABERTURA.fimDaFaixa).toBeLessThan(4.25);
-    expect(TEMPOS_DA_ABERTURA.rachaduras).toBeLessThan(TEMPOS_DA_ABERTURA.fimDaFaixa);
+    expect(VIDEO_DA_ABERTURA.altura / VIDEO_DA_ABERTURA.largura).toBeCloseTo(1.5, 5);
   });
 });

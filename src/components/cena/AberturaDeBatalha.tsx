@@ -3,15 +3,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { TEXTOS_DA_ABERTURA as T } from '@/rules/textosDaAbertura';
 
-/** O vídeo da abertura (arte do Yuri): 768 x 432, 24 quadros por segundo, com o fundo verde que vira transparente. */
-export const VIDEO_DA_ABERTURA = { src: '/videos/batalha-abertura.mp4', largura: 768, altura: 432 } as const;
+/** O vídeo da abertura (arte do Yuri): vertical, 576 x 864 (1024 x 1536 reduzido), 24 quadros por segundo, com o fundo verde que vira transparente. */
+export const VIDEO_DA_ABERTURA = { src: '/videos/batalha-abertura-v2.mp4', largura: 576, altura: 864 } as const;
 
 /**
- * A linha do tempo do vídeo (em segundos): a cena escura abre, a faixa de tela estilhaça e o "BATALHA!" aparece. O
- * fundo escuro (que cobre a tela inteira, pois o vídeo é deitado) some quando as rachaduras começam, e a abertura acaba
- * antes do tremor final do vídeo.
+ * A linha do tempo do vídeo (em segundos): a cena escura (que já cobre a tela inteira, pois o vídeo é vertical) racha,
+ * estilhaça e o "BATALHA!" aparece. A abertura acaba antes do tremor final do vídeo.
  */
-export const TEMPOS_DA_ABERTURA = { rachaduras: 1.62, fimDaFaixa: 4.05, esperaMaxima: 2.5 } as const;
+export const TEMPOS_DA_ABERTURA = { fimDaFaixa: 4.05, esperaMaxima: 2.5 } as const;
 
 /** Luz de uma cor para decidir se o quadro é um clarão branco. */
 const LIMITE_DE_CLARAO = 150;
@@ -40,7 +39,8 @@ export function tirarOVerde(dados: Uint8ClampedArray): number {
 
 /**
  * A abertura de TODO combate: a cena do Yuri (a tela escura estilhaça e aparece "BATALHA! — o confronto começa —") por
- * cima da luta, que só começa quando a abertura acaba (`aoTerminar`). O vídeo tem fundo verde: cada quadro passa por um
+ * cima da luta, em tela cheia (o vídeo é vertical e preenche a tela, cortando um pouco as laterais em celulares mais
+ * estreitos), que só começa quando a abertura acaba (`aoTerminar`). O vídeo tem fundo verde: cada quadro passa por um
  * canvas que apaga o verde, então o que está por baixo aparece pelos estilhaços. Os clarões brancos que piscam rápido
  * viram um único clarão suave (segurança para quem é sensível a luz), e quem pede "reduzir movimento" pula a abertura.
  * Tocar na tela pula. Se o vídeo não carregar ou não tocar, a luta começa na hora.
@@ -49,7 +49,6 @@ export function AberturaDeBatalha({ aoTerminar }: { aoTerminar: () => void }) {
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const acabou = useRef(false);
-  const [coberto, setCoberto] = useState(true);
   const [clarao, setClarao] = useState(false);
   const [saindo, setSaindo] = useState(false);
 
@@ -77,7 +76,6 @@ export function AberturaDeBatalha({ aoTerminar }: { aoTerminar: () => void }) {
       quadro = requestAnimationFrame(desenhar);
       if (v.readyState < 2) return;
       const t = v.currentTime;
-      if (t >= TEMPOS_DA_ABERTURA.rachaduras) setCoberto(false);
       if (t >= TEMPOS_DA_ABERTURA.fimDaFaixa) {
         terminar();
         return;
@@ -118,8 +116,6 @@ export function AberturaDeBatalha({ aoTerminar }: { aoTerminar: () => void }) {
       className="fixed inset-0 z-[100] overflow-hidden cursor-pointer select-none"
       style={{ opacity: saindo ? 0 : 1, transition: 'opacity 160ms ease-out', touchAction: 'manipulation' }}
     >
-      {/* o fundo escuro (a cena do vídeo é deitada, então ele cobre o resto da tela até as rachaduras) */}
-      <div aria-hidden="true" className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 40%, #1b1224 0%, #0b0710 80%)', opacity: coberto ? 1 : 0, transition: 'opacity 280ms ease-out' }} />
       <video ref={video} muted playsInline preload="auto" aria-hidden="true" className="hidden" onEnded={terminar} onError={terminar}>
         <source src={VIDEO_DA_ABERTURA.src} type="video/mp4" />
       </video>
@@ -128,8 +124,8 @@ export function AberturaDeBatalha({ aoTerminar }: { aoTerminar: () => void }) {
         aria-hidden="true"
         width={VIDEO_DA_ABERTURA.largura}
         height={VIDEO_DA_ABERTURA.altura}
-        className="absolute left-0 top-1/2 w-full -translate-y-1/2"
-        style={{ imageRendering: 'pixelated', aspectRatio: `${VIDEO_DA_ABERTURA.largura} / ${VIDEO_DA_ABERTURA.altura}` }}
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ imageRendering: 'pixelated' }}
       />
       <div aria-hidden="true" className="absolute inset-0 bg-white pointer-events-none" style={{ opacity: clarao ? 0.55 : 0, transition: 'opacity 90ms linear' }} />
     </div>
