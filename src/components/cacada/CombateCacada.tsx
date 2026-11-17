@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Bug, Droplet, FastForward, Flame, Ghost, Hourglass, Moon, Skull, SkipForward, Snowflake, Sparkles, Zap, Shield } from 'lucide-react';
 import type { CharacterDocument } from '@/server/characterService';
 import type { ResultadoCombate } from '@/game/combat';
@@ -11,6 +11,7 @@ import { resolveAvatarSrc } from '@/assets/avatars';
 import { MAPAS_DA_CACADA } from '@/assets/mapasDaCacada';
 import { MapaDaCacada } from './MapaDaCacada';
 import { AberturaDeBatalha } from '@/components/cena/AberturaDeBatalha';
+import { TelaDeFimDeLuta, type TelaDeFimProps } from '@/components/cena/TelaDeFimDeLuta';
 import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
 import { larguraDasBarras, montarQuadros, PainelLuta, QuadroLuta } from '@/lib/cacadaReplay';
 import { textoDaFicha } from '@/rules/textosDaFicha';
@@ -25,7 +26,13 @@ interface CombateCacadaProps {
   estrela?: number;
   /** HP com que o personagem entra na luta (Batalha Sangrenta). */
   hpInicialJogador?: number;
+  /**
+   * A luta acabou. Com `telaDeFim`, é chamado quando a tela de vitória/derrota aparece (a tela fica, com os botões); sem
+   * ela, quando a tela de vitória/derrota termina sozinha.
+   */
   onFim: () => void;
+  /** O que a tela de vitória/derrota mostra (retrato, XP, ouro, espólios) e os botões de voltar e de repetir. */
+  telaDeFim?: Omit<TelaDeFimProps, 'tipo'>;
 }
 
 const OURO = '#C8A656';
@@ -130,7 +137,7 @@ export function geometriaDaCena(largura: number, altura: number) {
  * (só os ícones e quantos ataques faltam) embaixo à direita. O dano sobe flutuando perto de quem apanhou, os efeitos
  * (DoTs, debuffs, enfurecido) ficam embaixo de cada barra e a tela não rola durante a luta. Não há mais log na tela.
  */
-export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, hpInicialJogador, onFim }: CombateCacadaProps) {
+export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, hpInicialJogador, onFim, telaDeFim }: CombateCacadaProps) {
   const quadros: QuadroLuta[] = useMemo(() => montarQuadros(resultado, personagem, monstro, 5, hpInicialJogador), [resultado, personagem, monstro, hpInicialJogador]);
   const [indice, setIndice] = useState(0);
   // a abertura de batalha (a cena do Yuri) toca antes de a luta começar
@@ -151,15 +158,31 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
     return () => ro.disconnect();
   }, []);
 
+  const venceu = resultado.vencedor === 'personagem';
+  // o último golpe do herói é em câmera lenta: a câmera aproxima um pouco antes e o golpe dura mais
+  const cameraLenta = venceu && !abertura && quadros.length > 1 && indice >= quadros.length - 2;
+  const [telaFinal, setTelaFinal] = useState(false);
+  const avisouFim = useRef(false);
+  const avisarFim = useCallback(() => {
+    if (avisouFim.current) return;
+    avisouFim.current = true;
+    onFim();
+  }, [onFim]);
+
   useEffect(() => {
-    if (abertura) return;
+    if (abertura || telaFinal) return;
     if (fim) {
-      const t = setTimeout(onFim, 1200);
+      const t = setTimeout(() => {
+        setTelaFinal(true);
+        if (telaDeFim) avisarFim();
+      }, venceu ? 1900 : 1100);
       return () => clearTimeout(t);
     }
-    const t = setTimeout(() => setIndice((i) => Math.min(quadros.length - 1, i + 1)), rapido ? 450 : 900);
+    const passo = rapido ? 450 : 900;
+    const ultimoGolpe = venceu && indice === quadros.length - 2;
+    const t = setTimeout(() => setIndice((i) => Math.min(quadros.length - 1, i + 1)), ultimoGolpe ? passo + 900 : passo);
     return () => clearTimeout(t);
-  }, [abertura, indice, fim, rapido, quadros.length, onFim]);
+  }, [abertura, telaFinal, indice, fim, rapido, quadros.length, venceu, telaDeFim, avisarFim]);
 
   const q = quadros[indice];
 
@@ -206,11 +229,23 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   return (
     <div className="fixed inset-0 select-none overflow-hidden overscroll-none" style={{ backgroundColor: '#07050a', touchAction: 'none' }}>
       {abertura && <AberturaDeBatalha aoTerminar={() => setAbertura(false)} />}
+      {telaFinal && (
+        <TelaDeFimDeLuta
+          tipo={venceu ? 'vitoria' : 'derrota'}
+          {...telaDeFim}
+          retrato={telaDeFim?.retrato ?? (venceu ? spriteMonstro?.src ?? retrato : retrato)}
+          aoAcabar={telaDeFim ? telaDeFim.aoAcabar : avisarFim}
+        />
+      )}
       <style>{`@media (prefers-reduced-motion: no-preference){@keyframes cacadaGolpe{0%{transform:translateX(0);filter:brightness(1)}20%{transform:translateX(-5px);filter:brightness(2.2) saturate(.3)}45%{transform:translateX(5px)}70%{transform:translateX(-2px)}100%{transform:translateX(0);filter:brightness(1)}}.cacada-golpe{animation:cacadaGolpe .35s ease-out}}
+@keyframes cacadaLento{0%{transform:translateX(0);filter:brightness(1)}15%{transform:translateX(-7px);filter:brightness(2.6) saturate(.2)}40%{transform:translateX(7px)}65%{transform:translateX(-3px)}100%{transform:translateX(0);filter:brightness(1)}}.cacada-golpe-lento{animation:cacadaLento 1.3s ease-out}
+@keyframes cacadaNumeroLento{0%{transform:translate(-50%,0) scale(.6);opacity:0}20%{transform:translate(-50%,-10px) scale(1.6);opacity:1}75%{opacity:1}100%{transform:translate(-50%,-60px) scale(1.4);opacity:0}}.cacada-numero-lento{animation:cacadaNumeroLento 2.1s ease-out forwards}
 @keyframes cacadaNumero{0%{transform:translate(-50%,0) scale(.7);opacity:0}15%{transform:translate(-50%,-6px) scale(1.15);opacity:1}70%{opacity:1}100%{transform:translate(-50%,-42px) scale(1);opacity:0}}.cacada-numero{animation:cacadaNumero .9s ease-out forwards}`}</style>
 
       {/* o mapa ocupa a tela inteira, com a HUD por cima */}
       <div ref={arenaRef} className="absolute inset-0 overflow-hidden" style={{ backgroundColor: '#0d1412' }}>
+        {/* câmera lenta: aproxima do monstro e escurece em volta, no último golpe */}
+        <div className="absolute inset-0" style={{ transform: cameraLenta ? 'scale(1.12)' : 'scale(1)', transformOrigin: `${g.monstro.x}px ${g.monstro.pes - alturaMonstro / 2}px`, transition: 'transform 900ms ease-in-out' }}>
         {estrela && MAPAS_DA_CACADA[estrela] ? (
           <MapaDaCacada estrela={estrela} style={{ width: g.imgW, height: g.imgH, left: -g.esq, top: -g.topo }} />
         ) : (
@@ -222,7 +257,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
         {/* Monstro */}
         <div className="absolute -translate-x-1/2" style={{ left: g.monstro.x, top: g.monstro.pes - alturaMonstro, height: alturaMonstro,
           aspectRatio: spriteMonstro ? String(spriteMonstro.proporcao) : '1', opacity: q.monstro.hp > 0 ? 1 : 0.2, transition: 'opacity 0.6s' }}>
-          <div key={tremor.monstro} className={tremor.monstro > 0 ? 'cacada-golpe w-full h-full' : 'w-full h-full'}>
+          <div key={tremor.monstro} className={tremor.monstro > 0 ? `${cameraLenta && fim ? 'cacada-golpe-lento' : 'cacada-golpe'} w-full h-full` : 'w-full h-full'}>
             {spriteMonstro ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={spriteMonstro.src} alt={monstro.nome} className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} draggable={false} />
@@ -234,7 +269,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
             )}
           </div>
         </div>
-        <NumeroFlutuante chave={`m-${indice}`} valor={numeros.monstro} x={g.monstro.x} y={g.monstro.pes - alturaMonstro} />
+        <NumeroFlutuante chave={`m-${indice}`} valor={numeros.monstro} x={g.monstro.x} y={g.monstro.pes - alturaMonstro} lento={cameraLenta && fim} />
 
         {/* Jogador (de costas, virado para o monstro) */}
         <div className="absolute -translate-x-1/2" style={{ left: g.jogador.x, top: g.jogador.pes - alturaJogador, height: alturaJogador,
@@ -250,6 +285,8 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
           </div>
         </div>
         <NumeroFlutuante chave={`j-${indice}`} valor={numeros.jogador} x={g.jogador.x} y={g.jogador.pes - alturaJogador} />
+        </div>
+        <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 45% 45%, transparent 35%, rgba(0,0,0,.65) 100%)', opacity: cameraLenta ? 1 : 0, transition: 'opacity 700ms ease-in-out' }} />
       </div>
 
       {/* o que acontece, só para leitores de tela (a luta não tem mais log na tela) */}
@@ -314,11 +351,11 @@ function variacao(antes: PainelLuta, agora: PainelLuta): number {
 }
 
 /** O número que sobe flutuando: dano em vermelho-amarelado, cura em verde. */
-function NumeroFlutuante({ chave, valor, x, y }: { chave: string; valor: number; x: number; y: number }) {
+function NumeroFlutuante({ chave, valor, x, y, lento }: { chave: string; valor: number; x: number; y: number; lento?: boolean }) {
   if (!valor) return null;
   const dano = valor < 0;
   return (
-    <span key={chave} className="cacada-numero absolute z-10 pointer-events-none font-cinzel font-black text-[22px] leading-none"
+    <span key={chave} className={`${lento ? 'cacada-numero-lento' : 'cacada-numero'} absolute z-10 pointer-events-none font-cinzel font-black text-[22px] leading-none`}
       aria-label={textoDaFicha(dano ? T.dano : T.cura, { n: Math.abs(valor) })}
       style={{ left: x, top: y - 6, color: dano ? '#FFD45C' : '#7CF07C', textShadow: '2px 2px 0 #3A0606, -1px -1px 0 #3A0606, 1px -1px 0 #3A0606, -1px 1px 0 #3A0606' }}>
       {dano ? `-${Math.abs(valor)}` : `+${valor}`}

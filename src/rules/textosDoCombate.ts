@@ -15,3 +15,18 @@ export const TEXTOS_DO_COMBATE = {
   dano: 'menos {n} de vida',
   cura: 'mais {n} de vida',
 } as const;
+
+/** Os textos das telas de vitória e de derrota (o resto da arte já vem escrito no vídeo do Yuri). */
+export const TEXTOS_DO_FIM_DA_LUTA = {
+  vitoria: 'Vitória! A batalha foi vencida.',
+  derrota: 'Derrota. Os heróis caíram.',
+  xp: '+{n} XP',
+  subiuNivel: '+{n} XP · Nível {nivel}!',
+  ouro: '+{n}',
+  ouroPerdido: '{n}',
+  ouroAria: 'Ouro {n}',
+  xpAria: 'XP ganho: {n}',
+  espolio: '{nome} ×{qtd}',
+  semEspolio: 'Sem espólio',
+  continuar: 'Continuar',
+} as const;
