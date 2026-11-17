@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bug, Droplet, Flame, Ghost, Moon, Skull, SkipForward, Snowflake, Sparkles, Swords, Zap, Shield, Heart, Info } from 'lucide-react';
+import { Bug, Droplet, FastForward, Flame, Ghost, Hourglass, Moon, Skull, SkipForward, Snowflake, Sparkles, Zap, Shield } from 'lucide-react';
 import type { CharacterDocument } from '@/server/characterService';
 import type { ResultadoCombate } from '@/game/combat';
 import type { MonsterDefinition } from '@/rules/monsters';
@@ -12,7 +12,9 @@ import { MAPAS_DA_CACADA } from '@/assets/mapasDaCacada';
 import { MapaDaCacada } from './MapaDaCacada';
 import { AberturaDeBatalha } from '@/components/cena/AberturaDeBatalha';
 import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
-import { larguraDasBarras, montarQuadros, PainelLuta, QuadroLuta, TipoLinha } from '@/lib/cacadaReplay';
+import { larguraDasBarras, montarQuadros, PainelLuta, QuadroLuta } from '@/lib/cacadaReplay';
+import { textoDaFicha } from '@/rules/textosDaFicha';
+import { TEXTOS_DO_COMBATE as T } from '@/rules/textosDoCombate';
 
 interface CombateCacadaProps {
   resultado: ResultadoCombate;
@@ -41,17 +43,8 @@ const ICONE_STATUS: Record<EfeitoStatus, { Icone: typeof Flame; cor: string }> =
   queimadura: { Icone: Flame, cor: '#F58A3C' },
 };
 
-const ICONE_LINHA: Record<TipoLinha, { Icone: typeof Flame; cor: string }> = {
-  ataque: { Icone: Swords, cor: '#D9D9D9' },
-  habilidade: { Icone: Sparkles, cor: '#F3C769' },
-  dano: { Icone: Zap, cor: '#E5484D' },
-  status: { Icone: Droplet, cor: '#E5484D' },
-  cura: { Icone: Heart, cor: '#5FCB6A' },
-  info: { Icone: Info, cor: '#9A9A9A' },
-};
-
 /** Barra única: vermelha por baixo (vida) e azul por cima (Sobreescudo); a vida aparece conforme o escudo cai. */
-export function BarraVidaEscudo({ painel }: { painel: PainelLuta }) {
+export function BarraVidaEscudo({ painel, semTexto }: { painel: PainelLuta; /** sem os números por dentro (quando já aparecem por fora) */ semTexto?: boolean }) {
   const { vida, escudo } = larguraDasBarras(painel);
   return (
     <div className="relative h-4 rounded-sm overflow-hidden border" style={{ borderColor: '#000', backgroundColor: '#2a1214' }} role="group"
@@ -60,10 +53,10 @@ export function BarraVidaEscudo({ painel }: { painel: PainelLuta }) {
       {escudo > 0 && (
         <div className="absolute inset-y-0 left-0 transition-all duration-200" style={{ width: `${escudo}%`, background: 'linear-gradient(180deg,#5AA7F0,#1F5FA8)', opacity: 0.92 }} />
       )}
-      <div className="absolute inset-0 flex items-center justify-end gap-1.5 px-1.5 text-[10px] font-bold font-cinzel text-white" style={{ textShadow: '0 1px 2px #000' }}>
+      {!semTexto && <div className="absolute inset-0 flex items-center justify-end gap-1.5 px-1.5 text-[10px] font-bold font-cinzel text-white" style={{ textShadow: '0 1px 2px #000' }}>
         {painel.escudo > 0 && <span style={{ color: '#BFE0FF' }}>+{Math.round(painel.escudo)}</span>}
         <span>{Math.round(painel.hp)} / {painel.hpMax}</span>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -72,8 +65,8 @@ function Status({ status, enfurecido }: { status: EfeitoStatus[]; enfurecido?: b
   return (
     <div className="flex items-center gap-1 flex-wrap">
       {enfurecido && (
-        <span title="Enfurecido" className="w-[19px] h-[19px] rounded-sm flex items-center justify-center border" style={{ backgroundColor: '#3a0d0d', borderColor: '#E5484D' }}>
-          <Flame className="w-3 h-3" style={{ color: '#FF6B4A' }} aria-label="Enfurecido" />
+        <span title={T.enfurecido} className="w-[19px] h-[19px] rounded-sm flex items-center justify-center border" style={{ backgroundColor: '#3a0d0d', borderColor: '#E5484D' }}>
+          <Flame className="w-3 h-3" style={{ color: '#FF6B4A' }} aria-label={T.enfurecido} />
         </span>
       )}
       {status.map((s) => {
@@ -109,37 +102,12 @@ export function destacarLinha(texto: string): React.ReactNode[] {
   return partes;
 }
 
-function Painel({ painel, retrato }: { painel: PainelLuta; retrato?: string }) {
-  const temStatus = painel.enfurecido || painel.status.length > 0;
-  return (
-    <div className="relative flex items-stretch gap-1">
-      {retrato && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={retrato} alt="" aria-hidden="true" className="w-[42px] h-[42px] shrink-0 rounded-sm object-cover border-2" style={{ borderColor: OURO }} />
-      )}
-      <div className="flex-1 min-w-0 rounded-sm border-2 px-1.5 py-0.5 flex flex-col gap-0.5" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO }}>
-        <div className="flex items-center justify-between gap-2 font-cinzel text-[12px] leading-tight text-[#F3E6CC]">
-          <span className="truncate font-bold min-w-0">{painel.nome}</span>
-          <span className="shrink-0 text-[11px]">Nv. {painel.nivel}</span>
-        </div>
-        <BarraVidaEscudo painel={painel} />
-      </div>
-      {/* Status logo abaixo da barra, sem aumentar o painel */}
-      {temStatus && (
-        <div className={`absolute top-full mt-1 ${retrato ? 'left-[46px]' : 'left-0'}`}>
-          <Status status={painel.status} enfurecido={painel.enfurecido} />
-        </div>
-      )}
-    </div>
-  );
-}
-
 /**
- * Cenário de 1024×1536 com a plataforma do monstro em cima (x 65%, y 36%) e a do jogador embaixo (x 50%, y 80%).
- * A imagem cobre toda a área do mapa (sem deformar) e as plataformas viram posições em pixels, então nada sai
- * do lugar em telas de tamanhos diferentes. Para caber do monstro aos pés do jogador, o mapa precisa de ~0,93 da largura em altura.
+ * O mapa (1024 x 1536) cobre a tela inteira sem deformar: o monstro fica no chão, à esquerda e mais ao fundo (x 40%, pés a
+ * 50% da altura), e o jogador à direita, mais perto (x 64%, pés a 80%), de costas e virado para o monstro, como na
+ * referência do Yuri. As posições viram pixels, então nada sai do lugar em telas de tamanhos diferentes.
  */
-const CENA = { w: 1024, h: 1536, topo: 0.28, base: 0.94, monstroX: 0.62, monstroPes: 0.55, jogadorX: 0.38, jogadorPes: 0.9, alturaMonstro: 0.15, alturaJogador: 0.28 };
+const CENA = { w: 1024, h: 1536, topo: 0.28, base: 0.94, monstroX: 0.4, monstroPes: 0.5, jogadorX: 0.64, jogadorPes: 0.8, alturaMonstro: 0.15, alturaJogador: 0.26 };
 
 export function geometriaDaCena(largura: number, altura: number) {
   const escala = Math.max(largura / CENA.w, altura / CENA.h);
@@ -156,8 +124,11 @@ export function geometriaDaCena(largura: number, altura: number) {
 }
 
 /**
- * Tela de combate da Caçada: reprodução automática da luta resolvida no servidor (×1 / ×2), com barras únicas de
- * vida e escudo, status, log e as 5 habilidades com o quanto falta para cada uma ativar.
+ * Tela de combate (Caçada, Torre, Guerreiro, Batalha Sangrenta): reprodução automática da luta resolvida no servidor
+ * (×1 / ×2). O mapa ocupa a tela inteira e a HUD fica por cima, como na referência do Yuri: turno e opções no alto à
+ * esquerda, a vida do inimigo no alto à direita, o retrato com a vida e o sobreescudo embaixo à esquerda e as habilidades
+ * (só os ícones e quantos ataques faltam) embaixo à direita. O dano sobe flutuando perto de quem apanhou, os efeitos
+ * (DoTs, debuffs, enfurecido) ficam embaixo de cada barra e a tela não rola durante a luta. Não há mais log na tela.
  */
 export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, hpInicialJogador, onFim }: CombateCacadaProps) {
   const quadros: QuadroLuta[] = useMemo(() => montarQuadros(resultado, personagem, monstro, 5, hpInicialJogador), [resultado, personagem, monstro, hpInicialJogador]);
@@ -214,110 +185,193 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
     ? Math.min(g.monstro.altura * (spriteMonstro.altura / ALTURA_DE_REFERENCIA_DA_ARTE), (caixa.w * 0.46) / spriteMonstro.proporcao)
     : g.monstro.altura * (ALTURA_MONSTRO_PADRAO / 22);
 
+  // a tela não rola durante a luta (nem para cima nem para baixo)
+  useEffect(() => {
+    const html = document.documentElement;
+    const antes = { overflow: document.body.style.overflow, overscroll: html.style.overscrollBehavior };
+    document.body.style.overflow = 'hidden';
+    html.style.overscrollBehavior = 'none';
+    return () => {
+      document.body.style.overflow = antes.overflow;
+      html.style.overscrollBehavior = antes.overscroll;
+    };
+  }, []);
+
+  // o dano (e a cura) de cada quadro sobe flutuando perto de quem recebeu
+  const ant = indice > 0 ? quadros[indice - 1] : null;
+  const numeros = ant ? { monstro: variacao(ant.monstro, q.monstro), jogador: variacao(ant.jogador, q.jogador) } : { monstro: 0, jogador: 0 };
+  const ultimaLinha = q.linhas[q.linhas.length - 1]?.texto ?? '';
+  const comContagem = q.habilidades.filter((h) => !h.bloqueada && h.ticks !== null);
+
   return (
-    <div className="relative w-full h-dvh flex flex-col select-none overflow-hidden" style={{ backgroundColor: '#07050a' }}>
+    <div className="fixed inset-0 select-none overflow-hidden overscroll-none" style={{ backgroundColor: '#07050a', touchAction: 'none' }}>
       {abertura && <AberturaDeBatalha aoTerminar={() => setAbertura(false)} />}
-      <style>{`@media (prefers-reduced-motion: no-preference){@keyframes cacadaGolpe{0%{transform:translateX(0);filter:brightness(1)}20%{transform:translateX(-5px);filter:brightness(2.2) saturate(.3)}45%{transform:translateX(5px)}70%{transform:translateX(-2px)}100%{transform:translateX(0);filter:brightness(1)}}.cacada-golpe{animation:cacadaGolpe .35s ease-out}}`}</style>
-      <div className="flex flex-col flex-1 min-h-0 w-full max-w-[480px] mx-auto">
-        {/* Mapa em tela cheia, com a HUD por cima */}
-        <div ref={arenaRef} className="relative flex-1 min-h-[340px] overflow-hidden" style={{ backgroundColor: '#0d1412' }}>
-          {estrela && MAPAS_DA_CACADA[estrela] ? (
-            <MapaDaCacada estrela={estrela} style={{ width: g.imgW, height: g.imgH, left: -g.esq, top: -g.topo }} />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src="/images/landing-bg.webp" alt="" aria-hidden="true" draggable={false}
-              className="absolute max-w-none" style={{ width: g.imgW, height: g.imgH, left: -g.esq, top: -g.topo, filter: 'brightness(0.4)', objectFit: 'cover' }} />
-          )}
-          {/* Monstro */}
-          <div className="absolute -translate-x-1/2" style={{ left: g.monstro.x, top: g.monstro.pes - alturaMonstro, height: alturaMonstro,
-            aspectRatio: spriteMonstro ? String(spriteMonstro.proporcao) : '1', opacity: q.monstro.hp > 0 ? 1 : 0.2, transition: 'opacity 0.6s' }}>
-            <div key={tremor.monstro} className={tremor.monstro > 0 ? 'cacada-golpe w-full h-full' : 'w-full h-full'}>
-              {spriteMonstro ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={spriteMonstro.src} alt={monstro.nome} className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} draggable={false} />
-              ) : (
-                <div role="img" aria-label={monstro.nome} className="w-full h-full rounded-full flex items-center justify-center"
-                  style={{ background: 'radial-gradient(circle at 50% 40%, rgba(25,12,20,0.95), rgba(0,0,0,0.85) 70%)', border: `2px solid ${OURO}55` }}>
-                  <span className="font-cinzel font-black text-2xl" style={{ color: `${OURO}99` }}>?</span>
-                </div>
-              )}
-            </div>
-          </div>
-          {/* Jogador */}
-          <div className="absolute -translate-x-1/2" style={{ left: g.jogador.x, top: g.jogador.pes - alturaJogador, height: alturaJogador,
-            aspectRatio: spriteJogador ? String(spriteJogador.proporcao) : '1', opacity: q.jogador.hp > 0 ? 1 : 0.3, transition: 'opacity 0.6s' }}>
-            <div key={tremor.jogador} className={tremor.jogador > 0 ? 'cacada-golpe w-full h-full' : 'w-full h-full'}>
-              {spriteJogador ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={spriteJogador.src} alt={personagem.nome} className="w-full h-full object-contain" draggable={false} />
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={retrato} alt={personagem.nome} className="w-full h-full object-cover rounded-full border-2" style={{ borderColor: `${OURO}88` }} draggable={false} />
-              )}
-            </div>
-          </div>
+      <style>{`@media (prefers-reduced-motion: no-preference){@keyframes cacadaGolpe{0%{transform:translateX(0);filter:brightness(1)}20%{transform:translateX(-5px);filter:brightness(2.2) saturate(.3)}45%{transform:translateX(5px)}70%{transform:translateX(-2px)}100%{transform:translateX(0);filter:brightness(1)}}.cacada-golpe{animation:cacadaGolpe .35s ease-out}}
+@keyframes cacadaNumero{0%{transform:translate(-50%,0) scale(.7);opacity:0}15%{transform:translate(-50%,-6px) scale(1.15);opacity:1}70%{opacity:1}100%{transform:translate(-50%,-42px) scale(1);opacity:0}}.cacada-numero{animation:cacadaNumero .9s ease-out forwards}`}</style>
 
-          {/* HUD: topo */}
-          <div className="absolute inset-x-1.5 top-1.5 flex items-center gap-1.5 z-20">
-            <div className="shrink-0 px-2 py-0.5 rounded-sm border-2 text-center font-cinzel text-[#F3E6CC] leading-tight" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO }}>
-              <div className="text-[9px]">Turno</div>
-              <div className="text-[13px] font-bold">{q.turno}</div>
-            </div>
-            <div className="flex-1 min-w-0 px-2 py-0.5 rounded-sm border-2 text-center font-cinzel text-[#F3E6CC] leading-tight" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO }}>
-              <div className="text-[12px] font-bold truncate">{titulo}</div>
-              <div className="text-[10px]">1 / 1</div>
-            </div>
-            <button type="button" onClick={() => setRapido((r) => !r)} aria-label={rapido ? 'Velocidade normal' : 'Velocidade dobrada'}
-              className="shrink-0 px-2 py-1.5 rounded-sm border-2 font-cinzel font-bold text-[13px] cursor-pointer active:scale-95" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO, color: rapido ? '#F3C769' : '#BFAF8F' }}>
-              »» ×2
-            </button>
-            <button type="button" onClick={() => setIndice(quadros.length - 1)} aria-label="Pular para o fim"
-              className="shrink-0 p-1.5 rounded-sm border-2 cursor-pointer active:scale-95" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO, color: '#BFAF8F' }}>
-              <SkipForward className="w-4 h-4" />
-            </button>
-          </div>
+      {/* o mapa ocupa a tela inteira, com a HUD por cima */}
+      <div ref={arenaRef} className="absolute inset-0 overflow-hidden" style={{ backgroundColor: '#0d1412' }}>
+        {estrela && MAPAS_DA_CACADA[estrela] ? (
+          <MapaDaCacada estrela={estrela} style={{ width: g.imgW, height: g.imgH, left: -g.esq, top: -g.topo }} />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src="/images/landing-bg.webp" alt="" aria-hidden="true" draggable={false}
+            className="absolute max-w-none" style={{ width: g.imgW, height: g.imgH, left: -g.esq, top: -g.topo, filter: 'brightness(0.4)', objectFit: 'cover' }} />
+        )}
 
-          {/* HUD: monstro, no alto à direita */}
-          <div className="absolute right-1.5 top-[54px] w-[56%] z-20"><Painel painel={q.monstro} /></div>
-
-          {/* HUD: jogador, embaixo à esquerda (deixa uma faixa para os status) */}
-          <div className="absolute left-1.5 bottom-7 w-[68%] z-20"><Painel painel={q.jogador} retrato={retrato} /></div>
-        </div>
-
-        {/* Fora do mapa: só o log e as habilidades */}
-        <div className="flex flex-col gap-1.5 px-1.5 pt-1.5 pb-1.5">
-          <div className="rounded-sm border-2 px-2 py-1 flex flex-col justify-end gap-0.5 h-[112px] max-[720px]:h-[72px] overflow-hidden" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO }} aria-live="polite">
-            {q.linhas.map((l, i) => {
-              const { Icone, cor } = ICONE_LINHA[l.tipo];
-              return (
-                <div key={`${indice}-${i}`} className="flex items-center gap-2 text-[12px] leading-tight text-[#EDE3CF]">
-                  <Icone className="w-3.5 h-3.5 shrink-0" style={{ color: cor }} aria-hidden="true" />
-                  <span className="truncate">{destacarLinha(l.texto)}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="grid grid-cols-5 gap-1.5 rounded-sm border-2 p-1.5" style={{ backgroundColor: FUNDO_PAINEL, borderColor: OURO }}>
-            {q.habilidades.map((h) => (
-              <div key={h.espaco} className="flex flex-col items-center gap-1" title={`${h.nome}: ${h.texto}`}>
-                <div className="relative w-full aspect-square rounded-sm overflow-hidden border-2"
-                  style={{ borderColor: h.ativandoAgora ? '#F3C769' : '#3a3030', boxShadow: h.ativandoAgora ? '0 0 10px #F3C769' : 'none', opacity: h.bloqueada ? 0.4 : 1 }}>
-                  {h.icone ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={h.icone} alt={h.nome} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-[#1a1416]"><Shield className="w-5 h-5 text-[#8a7a5a]" /></div>
-                  )}
-                </div>
-                <div className="w-full h-1.5 rounded-full overflow-hidden bg-[#2b2424]" aria-label={`${h.nome}: ${h.texto}`}>
-                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${Math.round(h.progresso * 100)}%`, backgroundColor: h.ativandoAgora ? '#F3C769' : '#C08A3E' }} />
-                </div>
-                <span className="text-[9px] leading-none font-cinzel text-[#BFAF8F] whitespace-nowrap">{h.texto}</span>
+        {/* Monstro */}
+        <div className="absolute -translate-x-1/2" style={{ left: g.monstro.x, top: g.monstro.pes - alturaMonstro, height: alturaMonstro,
+          aspectRatio: spriteMonstro ? String(spriteMonstro.proporcao) : '1', opacity: q.monstro.hp > 0 ? 1 : 0.2, transition: 'opacity 0.6s' }}>
+          <div key={tremor.monstro} className={tremor.monstro > 0 ? 'cacada-golpe w-full h-full' : 'w-full h-full'}>
+            {spriteMonstro ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={spriteMonstro.src} alt={monstro.nome} className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} draggable={false} />
+            ) : (
+              <div role="img" aria-label={monstro.nome} className="w-full h-full rounded-full flex items-center justify-center"
+                style={{ background: 'radial-gradient(circle at 50% 40%, rgba(25,12,20,0.95), rgba(0,0,0,0.85) 70%)', border: `2px solid ${OURO}55` }}>
+                <span className="font-cinzel font-black text-2xl" style={{ color: `${OURO}99` }}>?</span>
               </div>
-            ))}
+            )}
           </div>
         </div>
+        <NumeroFlutuante chave={`m-${indice}`} valor={numeros.monstro} x={g.monstro.x} y={g.monstro.pes - alturaMonstro} />
+
+        {/* Jogador (de costas, virado para o monstro) */}
+        <div className="absolute -translate-x-1/2" style={{ left: g.jogador.x, top: g.jogador.pes - alturaJogador, height: alturaJogador,
+          aspectRatio: spriteJogador ? String(spriteJogador.proporcao) : '1', opacity: q.jogador.hp > 0 ? 1 : 0.3, transition: 'opacity 0.6s' }}>
+          <div key={tremor.jogador} className={tremor.jogador > 0 ? 'cacada-golpe w-full h-full' : 'w-full h-full'}>
+            {spriteJogador ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={spriteJogador.src} alt={personagem.nome} className="w-full h-full object-contain" style={{ transform: 'scaleX(-1)' }} draggable={false} />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={retrato} alt={personagem.nome} className="w-full h-full object-cover rounded-full border-2" style={{ borderColor: `${OURO}88` }} draggable={false} />
+            )}
+          </div>
+        </div>
+        <NumeroFlutuante chave={`j-${indice}`} valor={numeros.jogador} x={g.jogador.x} y={g.jogador.pes - alturaJogador} />
+      </div>
+
+      {/* o que acontece, só para leitores de tela (a luta não tem mais log na tela) */}
+      <p className="sr-only" aria-live="polite">{ultimaLinha}</p>
+
+      {/* canto de cima à esquerda: o turno e as opções */}
+      <div className="absolute left-2 top-[max(8px,env(safe-area-inset-top))] z-20 flex items-center gap-1.5">
+        <div className="h-10 pl-1.5 pr-3 flex items-center gap-1.5 border-2 font-cinzel font-black text-[18px] text-[#F3E6CC]" style={MOLDURA} aria-label={textoDaFicha(T.turno, { n: q.turno })}>
+          <Hourglass className="w-5 h-5" style={{ color: '#E9B872' }} aria-hidden="true" />
+          {q.turno}
+        </div>
+        <button type="button" onClick={() => setRapido((r) => !r)} aria-pressed={rapido} aria-label={rapido ? T.velocidadeNormal : T.velocidadeDobrada}
+          className="w-10 h-10 flex flex-col items-center justify-center border-2 cursor-pointer active:scale-95" style={{ ...MOLDURA, color: rapido ? '#F3C769' : '#E9DCC8' }}>
+          <FastForward className="w-4 h-4" aria-hidden="true" />
+          <span className="text-[9px] font-black leading-none">2x</span>
+        </button>
+        <button type="button" onClick={() => setIndice(quadros.length - 1)} aria-label={T.pularParaOFim}
+          className="w-10 h-10 flex items-center justify-center border-2 cursor-pointer active:scale-95" style={{ ...MOLDURA, color: '#E9DCC8' }}>
+          <SkipForward className="w-5 h-5" aria-hidden="true" />
+        </button>
+      </div>
+
+      {/* canto de cima à direita: a vida do inimigo */}
+      <div className="absolute right-2 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-20 w-[62%] max-w-[300px]">
+        <BarraDoInimigo painel={q.monstro} />
+      </div>
+
+      {/* embaixo à esquerda: o retrato, a vida e o sobreescudo */}
+      <div className="absolute left-2 bottom-[max(10px,env(safe-area-inset-bottom))] z-20 w-[58%] max-w-[290px]">
+        <PainelDoJogador painel={q.jogador} retrato={retrato} />
+      </div>
+
+      {/* embaixo à direita: as habilidades e quantos ataques (ticks) faltam */}
+      <div className="absolute right-2 bottom-[max(10px,env(safe-area-inset-bottom))] z-20 flex items-end gap-1.5">
+        {comContagem.map((h) => (
+          <div key={h.espaco} className="relative w-12 h-12 border-2 overflow-hidden" title={textoDaFicha(T.habilidade, { nome: h.nome, texto: h.texto })}
+            style={{ ...MOLDURA, borderColor: h.ativandoAgora ? '#F3C769' : MOLDURA.borderColor, boxShadow: h.ativandoAgora ? '0 0 12px #F3C769' : 'none' }}>
+            {h.icone ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={h.icone} alt={h.nome} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-[#1a1416]"><Shield className="w-5 h-5 text-[#8a7a5a]" aria-label={h.nome} /></div>
+            )}
+            <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-0.5 bg-black/70 font-cinzel font-black text-[12px] leading-[15px] text-white"
+              aria-label={textoDaFicha(T.ticksAria, { n: h.ticks ?? 0 })}>
+              <Hourglass className="w-3 h-3" style={{ color: '#E9B872' }} aria-hidden="true" />
+              {h.ticks}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** A moldura escura dos botões e caixas da HUD (vermelho-sangue, como na referência). */
+const MOLDURA: React.CSSProperties = { backgroundColor: 'rgba(20, 8, 10, 0.86)', borderColor: '#6B1F1F', boxShadow: 'inset 0 0 0 1px #2A0A0C, 0 2px 6px rgba(0,0,0,.6)' };
+
+/** Quanto a vida + escudo mudou de um quadro para o outro (negativo = dano, positivo = cura). */
+function variacao(antes: PainelLuta, agora: PainelLuta): number {
+  return Math.round(agora.hp + agora.escudo - (antes.hp + antes.escudo));
+}
+
+/** O número que sobe flutuando: dano em vermelho-amarelado, cura em verde. */
+function NumeroFlutuante({ chave, valor, x, y }: { chave: string; valor: number; x: number; y: number }) {
+  if (!valor) return null;
+  const dano = valor < 0;
+  return (
+    <span key={chave} className="cacada-numero absolute z-10 pointer-events-none font-cinzel font-black text-[22px] leading-none"
+      aria-label={textoDaFicha(dano ? T.dano : T.cura, { n: Math.abs(valor) })}
+      style={{ left: x, top: y - 6, color: dano ? '#FFD45C' : '#7CF07C', textShadow: '2px 2px 0 #3A0606, -1px -1px 0 #3A0606, 1px -1px 0 #3A0606, -1px 1px 0 #3A0606' }}>
+      {dano ? `-${Math.abs(valor)}` : `+${valor}`}
+    </span>
+  );
+}
+
+/** A vida do inimigo: o crânio num losango, a barra (vida e escudo) e os números por cima; os efeitos ficam embaixo. */
+function BarraDoInimigo({ painel }: { painel: PainelLuta }) {
+  return (
+    <div className="flex flex-col items-end gap-1" role="group" aria-label={textoDaFicha(T.inimigo, { nome: painel.nome, n: painel.nivel })}>
+      <div className="flex items-baseline gap-2 font-cinzel text-[#F3E6CC]" style={{ textShadow: '1px 1px 0 #000, -1px -1px 0 #000' }}>
+        <span className="text-[11px] font-bold truncate max-w-[150px]">{painel.nome}</span>
+        <span className="text-[14px] font-black">{painel.escudo > 0 && <span className="text-[#BFE0FF] mr-1">+{Math.round(painel.escudo)}</span>}{Math.round(painel.hp)}/{painel.hpMax}</span>
+      </div>
+      <div className="flex items-center w-full">
+        <span className="relative z-10 -mr-2 w-9 h-9 shrink-0 rotate-45 border-2 flex items-center justify-center" style={MOLDURA}>
+          <Skull className="w-5 h-5 -rotate-45 text-[#F3E6CC]" aria-hidden="true" />
+        </span>
+        <div className="flex-1 border-2 p-[2px]" style={MOLDURA}>
+          <BarraVidaEscudo painel={painel} semTexto />
+        </div>
+      </div>
+      {(painel.enfurecido || painel.status.length > 0) && <Status status={painel.status} enfurecido={painel.enfurecido} />}
+    </div>
+  );
+}
+
+/** O jogador: o retrato, a barra de vida (HP) e a de sobreescudo (com o nível no losango); os efeitos ficam embaixo. */
+function PainelDoJogador({ painel, retrato }: { painel: PainelLuta; retrato: string }) {
+  const { vida } = larguraDasBarras({ ...painel, escudo: 0, escudoMax: 0 });
+  const escudo = painel.escudoMax > 0 ? Math.min(100, (painel.escudo / painel.escudoMax) * 100) : 0;
+  return (
+    <div className="flex items-end gap-2">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={retrato} alt="" aria-hidden="true" className="w-[64px] h-[76px] shrink-0 object-cover border-[3px]" style={{ borderColor: '#C9B79A', boxShadow: '0 0 0 2px #2A1A12, 0 2px 8px rgba(0,0,0,.7)' }} />
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
+        <div className="flex items-end justify-between font-cinzel text-[#F3E6CC] leading-none" style={{ textShadow: '1px 1px 0 #000, -1px -1px 0 #000' }}>
+          <span className="text-[20px] font-black">{T.hp}</span>
+          <span className="text-[13px] font-black">{Math.round(painel.hp)}/{painel.hpMax}</span>
+        </div>
+        <div className="h-3 border-2 overflow-hidden" style={{ ...MOLDURA, backgroundColor: '#2a1214' }} role="meter" aria-valuemin={0} aria-valuemax={painel.hpMax} aria-valuenow={Math.round(painel.hp)} aria-label={textoDaFicha(T.vida, { hp: Math.round(painel.hp), max: painel.hpMax })}>
+          <div className="h-full transition-all duration-200" style={{ width: `${vida}%`, background: 'linear-gradient(180deg,#E5484D,#9B1B22)' }} />
+        </div>
+        <div className="flex items-center">
+          <span className="relative z-10 -mr-1.5 w-6 h-6 shrink-0 rotate-45 border-2 flex items-center justify-center" style={{ ...MOLDURA, backgroundColor: '#1F4F8F', borderColor: '#BFE0FF' }} aria-label={textoDaFicha(T.nivel, { n: painel.nivel })}>
+            <span className="-rotate-45 font-cinzel font-black text-[10px] text-white">{painel.nivel}</span>
+          </span>
+          <div className="flex-1 h-2.5 border-2 overflow-hidden" style={{ ...MOLDURA, backgroundColor: '#101a2a' }} role="meter" aria-valuemin={0} aria-valuemax={painel.escudoMax} aria-valuenow={Math.round(painel.escudo)} aria-label={textoDaFicha(T.escudo, { n: Math.round(painel.escudo), max: painel.escudoMax })}>
+            <div className="h-full transition-all duration-200" style={{ width: `${escudo}%`, background: 'linear-gradient(180deg,#5AA7F0,#1F5FA8)' }} />
+          </div>
+        </div>
+        {(painel.enfurecido || painel.status.length > 0) && <Status status={painel.status} enfurecido={painel.enfurecido} />}
       </div>
     </div>
   );

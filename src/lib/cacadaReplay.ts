@@ -44,6 +44,8 @@ export interface HabilidadeTela {
   progresso: number;
   texto: string;
   ativandoAgora: boolean;
+  /** Quantos ataques (ticks) faltam para a habilidade ativar; null quando ela não conta ataques. */
+  ticks: number | null;
 }
 
 export interface QuadroLuta {
@@ -189,6 +191,7 @@ export function montarQuadros(
       const ativandoAgora = !!acionada && e.nomes.includes(acionada);
       let progresso = 1;
       let texto = 'Pronta';
+      let ticks: number | null = null;
       if (bloqueada) {
         progresso = 0;
         texto = `Nv ${e.nivel}`;
@@ -197,6 +200,7 @@ export function montarQuadros(
         const feitos = ataquesDoJogador % ciclo;
         progresso = ativandoAgora ? 1 : feitos / ciclo;
         texto = ativandoAgora ? 'Ativou!' : `Faltam ${ciclo - feitos}`;
+        ticks = ativandoAgora ? 0 : ciclo - feitos;
       } else if (e.espaco === 'passivaII' && CARGAS_MAXIMAS[personagem.classeId]) {
         const max = CARGAS_MAXIMAS[personagem.classeId];
         progresso = cargas / max;
@@ -207,7 +211,7 @@ export function montarQuadros(
       } else if (e.espaco === 'passivaI' || e.espaco === 'passivaII') {
         texto = 'Ativa';
       }
-      return { espaco: e.espaco, nome: e.nome, icone: e.icone, bloqueada, progresso, texto, ativandoAgora };
+      return { espaco: e.espaco, nome: e.nome, icone: e.icone, bloqueada, progresso, texto, ativandoAgora, ticks };
     });
 
   const empurrar = (turno: number, acionada?: string) => {
