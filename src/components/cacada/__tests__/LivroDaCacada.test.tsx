@@ -30,10 +30,10 @@ describe('LivroDaCacada', () => {
     const h = html(personagem(2));
     expect(h).toContain('Bloqueada: Requer nível');
   });
-  it('a página da direita mostra fraquezas, resistências e drops', () => {
+  it('a página da direita mostra só os drops e o retrato (sem fraquezas e resistências)', () => {
     const h = html(personagem(10));
-    expect(h).toContain('Fraquezas');
-    expect(h).toContain('Resist.');
+    expect(h).not.toContain('Fraquezas');
+    expect(h).not.toContain('Resist.');
     expect(h).toContain('Drops');
   });
   it('as caixas de abas, fitas e virada cabem no livro', () => {

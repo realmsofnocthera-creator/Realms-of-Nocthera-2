@@ -10,6 +10,7 @@ import { FICHA_UI } from '@/assets/personagemUi';
 import { categoriasDoBestiario, paginasDoBestiario, primeiraPaginaDaCategoria } from '@/lib/bestiarioTela';
 import type { MonstroTela } from '@/lib/cacadaTela';
 import { NIVEL_MAXIMO_DO_BESTIARIO, XP_PARA_NIVEL_DO_BESTIARIO, nivelDoBestiario, xpDoBestiario } from '@/rules/bestiario';
+import { ICONES_DAS_TRILHAS_DE_MONSTRO } from '@/assets/maestriasUi';
 import { textoDaFicha } from '@/rules/textosDaFicha';
 import { TEXTOS_DA_CACADA as TC } from '@/rules/textosDaCacada';
 import { TEXTOS_DO_BESTIARIO as T } from '@/rules/textosDoBestiario';
@@ -31,6 +32,12 @@ export interface LugarNoBestiario {
 }
 
 const pixel: React.CSSProperties = { imageRendering: 'pixelated' };
+/** Pinta o glifo branco da classificação com a cor do fundo (máscara). */
+function mascara(src?: string): React.CSSProperties {
+  if (!src) return {};
+  return { WebkitMaskImage: `url(${src})`, maskImage: `url(${src})`, WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat', WebkitMaskPosition: 'center', maskPosition: 'center', WebkitMaskSize: 'contain', maskSize: 'contain', imageRendering: 'pixelated' };
+}
+
 const SOMBRA_CLARA = '0.3cqw 0.3cqw 0 #1A0805';
 
 /** Os quatro quadradinhos do nível do Bestiário de uma criatura. */
@@ -72,7 +79,7 @@ function CriaturaNaLista({ monstro, nivel, escolhida, aoEscolher }: { monstro: M
 
 /**
  * O Bestiário (o livro vermelho do Yuri): todas as criaturas do jogo, por categoria de monstro. A página da esquerda lista
- * as criaturas da categoria (6 por página) e a da direita abre a ficha da escolhida. Cada vitória rende 1 XP de bestiário
+ * as criaturas da classificação (6 por página) e a da direita abre a ficha da escolhida. Cada vitória rende 1 XP de bestiário
  * àquela criatura (nível 0 a 4) e cada nível revela mais da ficha: nível 1, metade dos drops; 2, o restante; 3, as
  * resistências; 4, as fraquezas. O que ainda não foi revelado aparece como "?". As setas viram a página (e passam de uma
  * categoria para a seguinte); a faixa de baixo pula direto para uma categoria.
@@ -218,7 +225,14 @@ export function BestiarioScreen({ personagem }: BestiarioScreenProps) {
                 const atual = c.nome === pagina.categoria;
                 return (
                   <BotaoPixel key={c.nome} compacto destaque={atual} aoClicar={() => irParaCategoria(c.nome)} rotulo={textoDaFicha(T.irParaCategoria, { nome: c.nome })} className="shrink-0 whitespace-nowrap">
-                    <span aria-current={atual ? 'true' : undefined}>{c.nome}</span>
+                    <span aria-current={atual ? 'true' : undefined} className="inline-flex items-center gap-[1cqw]">
+                      <span
+                        aria-hidden="true"
+                        className="inline-block shrink-0"
+                        style={{ width: '3.4cqw', height: '3.4cqw', backgroundColor: atual ? '#FFE9B0' : '#E6C775', ...mascara(ICONES_DAS_TRILHAS_DE_MONSTRO[`monstro:${c.id}`]) }}
+                      />
+                      {c.nome}
+                    </span>
                   </BotaoPixel>
                 );
               })}

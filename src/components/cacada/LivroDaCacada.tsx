@@ -56,11 +56,11 @@ function MonstroNaLista({ monstro, indice, escolhido, aoEscolher }: { monstro: M
       aria-label={textoDaFicha(T.escolher, { nome: monstro.nome })}
       aria-pressed={escolhido}
       data-lado={lado}
-      className={`flex flex-col items-center gap-[0.4cqw] w-[72%] px-[0.6cqw] py-[0.4cqw] text-center cursor-pointer border-[0.4cqw] active:translate-y-px focus-visible:outline focus-visible:outline-[0.6cqw] focus-visible:outline-[#6FE3EE] ${lado === 'dir' ? 'self-end' : 'self-start'}`}
+      className={`flex flex-col items-center gap-[0.4cqw] w-[72%] px-[0.6cqw] py-[0.3cqw] text-center cursor-pointer border-[0.4cqw] active:translate-y-px focus-visible:outline focus-visible:outline-[0.6cqw] focus-visible:outline-[#6FE3EE] ${lado === 'dir' ? 'self-end' : 'self-start'}`}
       style={{ borderColor: escolhido ? '#8E2A1B' : 'transparent', background: escolhido ? 'rgba(142,42,27,0.16)' : 'transparent', transform: `rotate(${lado === 'dir' ? 1 : -1}deg)`, color: TINTA }}
     >
-      <Retrato monstro={monstro} tamanho="5.4cqw" />
-      <span className="font-cinzel font-black text-[2.2cqw] leading-[1.1] flex items-center justify-center gap-[0.5cqw]">
+      <Retrato monstro={monstro} tamanho="7cqw" />
+      <span className="font-cinzel font-black text-[2cqw] leading-[1.1] flex items-center justify-center gap-[0.5cqw]">
         {monstro.chave && <Crown aria-label={T.monstroChave} className="shrink-0" style={{ width: '2.4cqw', height: '2.4cqw', color: '#B8832E' }} />}
         <span className="line-clamp-2 [overflow-wrap:break-word]">{monstro.nome.split(',')[0]}</span>
       </span>
@@ -133,7 +133,7 @@ export function LivroDaCacada({ personagem, lugar, aoMudarLugar, ocupado, aoCaca
     <section
       aria-label={T.livro}
       className={`relative w-full select-none ${className}`}
-      style={{ containerType: 'inline-size', touchAction: 'pan-y' }}
+      style={{ containerType: 'inline-size', touchAction: 'pan-y', width: '102%', marginLeft: '-1%' }}
       onPointerDown={(e) => {
         inicioDoGesto.current = e.clientX;
       }}
@@ -208,6 +208,7 @@ export function LivroDaCacada({ personagem, lugar, aoMudarLugar, ocupado, aoCaca
               <DetalhesDoMonstro
                 monstro={monstro}
                 nivelBestiario={nivelDaCriatura(personagem, monstro.id)}
+                comTracos={false}
                 aoInfo={setInfo}
                 rodape={<BotaoPixel compacto destaque aoClicar={() => aoCacar(lugar)} desligado={!!bloqueio || ocupado || !!virando}>{ocupado ? T.cacando : T.cacar}</BotaoPixel>}
               />

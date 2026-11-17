@@ -7,7 +7,7 @@ export const TEXTOS_DO_BESTIARIO = {
   titulo: 'Bestiário',
   voltar: 'Voltar ao Menu',
   livro: 'Bestiário: as criaturas por categoria à esquerda e a ficha da criatura escolhida à direita',
-  categorias: 'Categorias de monstros',
+  categorias: 'Classificações de monstros',
   irParaCategoria: 'Ir para {nome}',
   nivelDoBestiario: 'Bestiário {n}/{max}',
   nivelDoBestiarioAria: 'Nível {n} de {max} no Bestiário',
