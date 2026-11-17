@@ -4,6 +4,7 @@
  */
 
 import { MAPAS_DA_CACADA } from '@/assets/mapasDaCacada';
+import type { FolhaDeQuadros } from '@/components/cena/SpriteAnimado';
 
 export interface SpriteLuta {
   src: string;
@@ -125,3 +126,34 @@ export const CENARIO_ESTRELA: Readonly<Record<number, string>> = Object.fromEntr
 
 /** Tamanho do monstro sem arte na cena (% da altura da arena): a silhueta. */
 export const ALTURA_MONSTRO_PADRAO = 22;
+
+/** Uma animação do herói: a folha de quadros parado (idle) e a do ataque, e o tamanho de cada quadro. */
+export interface AnimacaoDoHeroi {
+  parado: FolhaDeQuadros;
+  ataque: FolhaDeQuadros;
+  /** largura / altura de cada quadro */
+  proporcao: number;
+}
+
+const IDLE_MS = [220, 220, 220, 220] as const;
+const ATAQUE_MS = [100, 90, 110, 150, 50, 60, 130, 100, 100] as const;
+
+/**
+ * Os heróis animados (pixel art do Yuri, em folhas de quadros): parado e ataque, de costas (na luta: o herói olha para o
+ * monstro) e de frente (para as telas em que ele encara o jogador). O rastro do golpe já vem colado nos quadros do ataque.
+ * Por enquanto só o Bárbaro; as outras classes entram aqui quando a arte chegar.
+ */
+export const ANIMACAO_DO_HEROI: Readonly<Record<string, { costas: AnimacaoDoHeroi; frente: AnimacaoDoHeroi }>> = {
+  barbaro: {
+    costas: {
+      parado: { src: '/images/cacada/herois/barbaro-costas-idle.webp', quadros: 4, ms: IDLE_MS },
+      ataque: { src: '/images/cacada/herois/barbaro-costas-ataque.webp', quadros: 9, ms: ATAQUE_MS },
+      proporcao: 147 / 142,
+    },
+    frente: {
+      parado: { src: '/images/cacada/herois/barbaro-frente-idle.webp', quadros: 4, ms: IDLE_MS },
+      ataque: { src: '/images/cacada/herois/barbaro-frente-ataque.webp', quadros: 9, ms: ATAQUE_MS },
+      proporcao: 149 / 142,
+    },
+  },
+};

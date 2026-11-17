@@ -12,7 +12,8 @@ import { MAPAS_DA_CACADA } from '@/assets/mapasDaCacada';
 import { MapaDaCacada } from './MapaDaCacada';
 import { AberturaDeBatalha } from '@/components/cena/AberturaDeBatalha';
 import { TelaDeFimDeLuta, type TelaDeFimProps } from '@/components/cena/TelaDeFimDeLuta';
-import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
+import { SpriteAnimado } from '@/components/cena/SpriteAnimado';
+import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, ANIMACAO_DO_HEROI, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
 import { larguraDasBarras, montarQuadros, PainelLuta, QuadroLuta } from '@/lib/cacadaReplay';
 import { textoDaFicha } from '@/rules/textosDaFicha';
 import { TEXTOS_DO_COMBATE as T } from '@/rules/textosDoCombate';
@@ -198,11 +199,13 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
     anterior.current = q;
   }, [q]);
 
-  const spriteJogador = SPRITE_CLASSE[personagem.classeId];
+  const animacaoHeroi = ANIMACAO_DO_HEROI[personagem.classeId]?.costas;
+  const spriteJogador = animacaoHeroi ? { src: animacaoHeroi.parado.src, proporcao: animacaoHeroi.proporcao } : SPRITE_CLASSE[personagem.classeId];
   const spriteMonstro = SPRITE_MONSTRO[monstro.id];
   const retrato = resolveAvatarSrc(personagem.avatarId, personagem.classeId);
   const g = geometriaDaCena(caixa.w, caixa.h);
-  const alturaJogador = spriteJogador ? g.jogador.altura : g.jogador.altura * 0.7;
+  // a arte animada vem num quadro com folga em volta do personagem: o quadro é maior para o herói ficar do tamanho de antes
+  const alturaJogador = animacaoHeroi ? g.jogador.altura * 1.45 : spriteJogador ? g.jogador.altura : g.jogador.altura * 0.7;
   // com arte: a altura segue a da arte (as criaturas das estrelas altas são maiores), sem passar de 46% da largura da arena
   const alturaMonstro = spriteMonstro
     ? Math.min(g.monstro.altura * (spriteMonstro.altura / ALTURA_DE_REFERENCIA_DA_ARTE), (caixa.w * 0.46) / spriteMonstro.proporcao)
@@ -275,7 +278,9 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
         <div className="absolute -translate-x-1/2" style={{ left: g.jogador.x, top: g.jogador.pes - alturaJogador, height: alturaJogador,
           aspectRatio: spriteJogador ? String(spriteJogador.proporcao) : '1', opacity: q.jogador.hp > 0 ? 1 : 0.3, transition: 'opacity 0.6s' }}>
           <div key={tremor.jogador} className={tremor.jogador > 0 ? 'cacada-golpe w-full h-full' : 'w-full h-full'}>
-            {spriteJogador ? (
+            {animacaoHeroi ? (
+              <SpriteAnimado parado={animacaoHeroi.parado} ataque={animacaoHeroi.ataque} golpe={q.agiu === 'jogador' ? indice : null} velocidade={rapido ? 2 : cameraLenta && fim ? 0.5 : 1} espelhado rotulo={personagem.nome} />
+            ) : spriteJogador ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={spriteJogador.src} alt={personagem.nome} className="w-full h-full object-contain" style={{ transform: 'scaleX(-1)' }} draggable={false} />
             ) : (

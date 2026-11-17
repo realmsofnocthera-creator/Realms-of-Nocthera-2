@@ -54,6 +54,8 @@ export interface QuadroLuta {
   jogador: PainelLuta;
   monstro: PainelLuta;
   habilidades: HabilidadeTela[];
+  /** Quem agiu neste quadro (atacou ou usou uma habilidade): o herói, o monstro ou ninguém. */
+  agiu: 'jogador' | 'monstro' | null;
 }
 
 /** Ciclo das habilidades de classe: a especial a cada 3 ataques e o ultimate a cada 7 (todas as classes). */
@@ -214,13 +216,14 @@ export function montarQuadros(
       return { espaco: e.espaco, nome: e.nome, icone: e.icone, bloqueada, progresso, texto, ativandoAgora, ticks };
     });
 
-  const empurrar = (turno: number, acionada?: string) => {
+  const empurrar = (turno: number, acionada?: string, agiu: 'jogador' | 'monstro' | null = null) => {
     quadros.push({
       turno,
       linhas: linhas.slice(-maxLinhas),
       jogador: { ...jogador, status: [...jogador.status] },
       monstro: { ...inimigo, status: [...inimigo.status] },
       habilidades: habilidades(acionada),
+      agiu,
     });
   };
 
@@ -245,7 +248,7 @@ export function montarQuadros(
         if (a.instintoSobrevivenciaAtivo !== undefined) passivaIAtiva = a.instintoSobrevivenciaAtivo;
       }
       linhas.push(...textoDoAtaque(a));
-      empurrar(turno.numeroTurno, a.atacante === personagem.nome ? a.habilidadeAcionada : undefined);
+      empurrar(turno.numeroTurno, a.atacante === personagem.nome ? a.habilidadeAcionada : undefined, a.incapacitado || a.distraido ? null : a.atacante === personagem.nome ? 'jogador' : 'monstro');
     }
     for (const texto of turno.eventosMecanica ?? []) linhas.push({ texto, tipo: 'info' });
     const eventos = turno.eventosEfeitos ?? [];
