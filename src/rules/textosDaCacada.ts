@@ -59,6 +59,7 @@ export const TEXTOS_DA_CACADA = {
   chaveVencidaProxima: 'Monstro-chave vencido: a {n}★ está liberada',
   materiais: 'Materiais obtidos',
   cacarDeNovo: 'Caçar de novo',
+  tentarNovamente: 'Tentar novamente',
   voltarAoLivro: 'Voltar ao livro',
   verMochila: 'Ver a Mochila',
 } as const;

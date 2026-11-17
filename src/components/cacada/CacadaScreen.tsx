@@ -5,14 +5,17 @@ import Link from 'next/link';
 import type { CharacterDocument } from '@/server/characterService';
 import type { ResultadoCombate } from '@/game/combat';
 import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
-import { dropsTela } from '@/lib/cacadaTela';
 import { LIVRO_DA_CACADA } from '@/assets/cacadaLivroUi';
 import { LIVRO_DAS_PROVACOES as P } from '@/assets/provacoesLivroUi';
 import { FICHA_UI } from '@/assets/personagemUi';
 import { textoDaFicha } from '@/rules/textosDaFicha';
 import { TEXTOS_DA_CACADA as T } from '@/rules/textosDaCacada';
 import { CombateCacada } from './CombateCacada';
-import { BotaoPixel, JanelaDaCacada, TINTA } from './JanelaDaCacada';
+import { TINTA } from './JanelaDaCacada';
+import { espoliosDaLuta } from './espolios';
+import { ICONE_MONSTRO } from '@/lib/cacadaArte';
+import { resolveAvatarSrc } from '@/assets/avatars';
+import { XP_TABLE } from '@/rules/xpTable';
 import { LivroDaCacada, lugarInicial, type LugarNoLivro } from './LivroDaCacada';
 
 interface CacadaScreenProps {
@@ -31,11 +34,9 @@ interface RespostaCacadaTela {
 
 type Fase =
   | { tipo: 'livro' }
-  | { tipo: 'combate'; lugar: LugarNoLivro; antes: CharacterDocument; resposta: RespostaCacadaTela }
-  | { tipo: 'resultado'; lugar: LugarNoLivro; antes: CharacterDocument; resposta: RespostaCacadaTela };
+  | { tipo: 'combate'; lugar: LugarNoLivro; antes: CharacterDocument; resposta: RespostaCacadaTela; n: number };
 
 const pixel: React.CSSProperties = { imageRendering: 'pixelated' };
-const estrelas = (n: number) => '★'.repeat(n);
 
 /**
  * Provação da Caçada, em forma de livro (arte do Yuri): a mesa de madeira ao fundo e o livro vermelho no centro, com os
@@ -65,9 +66,10 @@ export function CacadaScreen({ character, onCharacterChange, tokenFresco }: Caca
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || T.erroAoIniciar);
         setLugar(onde);
-        setFase({ tipo: 'combate', lugar: onde, antes: character, resposta: data as RespostaCacadaTela });
+        setFase((f) => ({ tipo: 'combate', lugar: onde, antes: character, resposta: data as RespostaCacadaTela, n: (f.tipo === 'combate' ? f.n : 0) + 1 }));
       } catch (e) {
         setErro(e instanceof Error ? e.message : T.erroAoIniciar);
+        setFase({ tipo: 'livro' });
       } finally {
         setOcupado(false);
       }
@@ -75,24 +77,35 @@ export function CacadaScreen({ character, onCharacterChange, tokenFresco }: Caca
     [ocupado, tokenFresco, character]
   );
 
+  // a luta acabou: o personagem já atualiza (XP, ouro, mochila); a tela de vitória/derrota fica na luta, com os botões
   const terminarCombate = useCallback(() => {
-    setFase((f) => {
-      if (f.tipo !== 'combate') return f;
-      onCharacterChange(f.resposta.character);
-      return { ...f, tipo: 'resultado' };
-    });
-  }, [onCharacterChange]);
+    if (fase.tipo === 'combate') onCharacterChange(fase.resposta.character);
+  }, [fase, onCharacterChange]);
 
   if (fase.tipo === 'combate') {
-    const monstro = MONSTROS_CACADA_MAP[fase.resposta.cacada.monstroId];
+    const { resposta, antes, lugar: onde } = fase;
+    const monstro = MONSTROS_CACADA_MAP[resposta.cacada.monstroId];
+    const venceu = resposta.resultado.vencedor === 'personagem';
+    const xpDoNivel = XP_TABLE[resposta.character.nivel];
+    const chave = resposta.cacada.chaveVencida;
     return (
       <CombateCacada
-        resultado={fase.resposta.resultado}
-        personagem={fase.antes}
+        key={fase.n}
+        resultado={resposta.resultado}
+        personagem={antes}
         monstro={monstro}
-        titulo={`${T.titulo} · ${fase.lugar.estrela}★ ${monstro.nome}`}
-        estrela={fase.lugar.estrela}
+        titulo={`${T.titulo} · ${onde.estrela}★ ${monstro.nome}`}
+        estrela={onde.estrela}
         onFim={terminarCombate}
+        telaDeFim={{
+          retrato: venceu ? ICONE_MONSTRO[monstro.id] ?? resolveAvatarSrc(antes.avatarId, antes.classeId) : resolveAvatarSrc(antes.avatarId, antes.classeId),
+          xp: { ganho: resposta.cacada.xpGanho, nivelNovo: resposta.levelUps > 0 ? resposta.character.nivel : undefined, progresso: xpDoNivel ? resposta.character.xpAtual / xpDoNivel : 1 },
+          ouro: resposta.character.ouro - antes.ouro,
+          espolios: venceu ? espoliosDaLuta(resposta.cacada.drops) : [],
+          aviso: chave ? (chave < 9 ? textoDaFicha(T.chaveVencidaProxima, { n: chave + 1 }) : T.chaveVencida) : undefined,
+          voltar: { rotulo: T.voltarAoLivro, acao: () => setFase({ tipo: 'livro' }) },
+          repetir: { rotulo: venceu ? T.cacarDeNovo : T.tentarNovamente, acao: () => void cacar(onde), desligado: ocupado },
+        }}
       />
     );
   }
@@ -132,47 +145,6 @@ export function CacadaScreen({ character, onCharacterChange, tokenFresco }: Caca
         </div>
       </div>
 
-      {fase.tipo === 'resultado' && (() => {
-        const { resposta, antes, lugar: onde } = fase;
-        const venceu = resposta.resultado.vencedor === 'personagem';
-        const monstro = MONSTROS_CACADA_MAP[resposta.cacada.monstroId];
-        const drops = dropsTela(resposta.cacada.drops.map((d) => d.materialId));
-        const ouro = resposta.character.ouro - antes.ouro;
-        return (
-          <>
-            <JanelaDaCacada titulo={venceu ? T.concluida : T.derrotado}>
-              <section aria-label={T.resultado} className="flex flex-col gap-[2cqw] font-cinzel font-bold text-[3.2cqw] text-center">
-                <div>{monstro.nome} · {estrelas(resposta.cacada.estrela)}</div>
-                <div className="flex justify-center gap-[4cqw] font-black">
-                  <span>{resposta.cacada.xpGanho < resposta.cacada.xpBase && venceu ? textoDaFicha(T.xpDe, { n: resposta.cacada.xpGanho, base: resposta.cacada.xpBase }) : textoDaFicha(T.xp, { n: resposta.cacada.xpGanho })}</span>
-                  <span>{textoDaFicha(T.ouro, { n: ouro >= 0 ? `+${ouro}` : ouro })}</span>
-                </div>
-                {resposta.levelUps > 0 && <div className="font-black text-[#2E6B2E]">{textoDaFicha(T.subiuNivel, { n: resposta.character.nivel })}</div>}
-                {resposta.cacada.chaveVencida && (
-                  <div className="font-black text-[#8E5A00]">
-                    {resposta.cacada.chaveVencida < 9 ? textoDaFicha(T.chaveVencidaProxima, { n: resposta.cacada.chaveVencida + 1 }) : T.chaveVencida}
-                  </div>
-                )}
-                {venceu && drops.length > 0 && (
-                  <div className="text-left">
-                    <div className="font-black uppercase text-[2.8cqw] opacity-70">{T.materiais}</div>
-                    <ul>
-                      {drops.map((d) => (
-                        <li key={d.id} className="flex justify-between gap-[2cqw]"><span>{d.nome}</span><span className="opacity-80">{d.raridadeNome}</span></li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <div className="flex justify-center gap-[3cqw] pt-[1cqw]">
-                  <BotaoPixel aoClicar={() => setFase({ tipo: 'livro' })}>{T.voltarAoLivro}</BotaoPixel>
-                  <BotaoPixel destaque desligado={ocupado} aoClicar={() => { setFase({ tipo: 'livro' }); void cacar(onde); }}>{T.cacarDeNovo}</BotaoPixel>
-                </div>
-                <Link href="/mochila" className="underline text-[2.8cqw]">{T.verMochila}</Link>
-              </section>
-            </JanelaDaCacada>
-          </>
-        );
-      })()}
     </main>
   );
 }
