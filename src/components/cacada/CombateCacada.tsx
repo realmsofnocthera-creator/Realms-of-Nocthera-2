@@ -15,6 +15,7 @@ import { TelaDeFimDeLuta, type TelaDeFimProps } from '@/components/cena/TelaDeFi
 import { SpriteAnimado } from '@/components/cena/SpriteAnimado';
 import { EfeitosDeStatus, FaixaDeHabilidade, FxPixelfx, ImpactoDaAcao, ImpactoDeCura } from './EfeitosDeLuta';
 import { temposDoQuadro, tremeATela } from '@/lib/cacadaCoreografia';
+import { tintaDosStatus } from '@/assets/efeitosPixelfx';
 import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, ANIMACAO_DO_HEROI, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
 import { larguraDasBarras, montarQuadros, PainelLuta, QuadroLuta } from '@/lib/cacadaReplay';
 import { textoDaFicha } from '@/rules/textosDaFicha';
@@ -292,7 +293,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
               <div key={`mi-${indice}`} className="w-full h-full cacada-investida" style={acao?.de === 'monstro' ? { animation: `cacadaInvestida ${tempos.duracao}ms ease-in-out both`, ['--lx' as string]: `${investida.monstro.lx}px`, ['--ly' as string]: `${investida.monstro.ly}px` } : undefined}>
                 <div key={`mr-${indice}`} className="w-full h-full" style={reage('monstro') ? reacaoVars('monstro') : undefined}>
                   <div className={`w-full h-full ${mortoMonstro ? 'cacada-morte' : ''}`} style={mortoMonstro ? { animationDuration: lenta ? '1500ms' : '1000ms' } : undefined}>
-                    <div className={`w-full h-full ${vis.monstro.hp > 0 && !acao ? 'cacada-respira' : ''} ${q.monstro.enfurecido && vis.monstro.hp > 0 ? 'cacada-furia' : ''}`}>
+                    <div className={`w-full h-full ${vis.monstro.hp > 0 && !acao ? 'cacada-respira' : ''} ${q.monstro.enfurecido && vis.monstro.hp > 0 ? 'cacada-furia' : ''}`} style={{ filter: tintaDosStatus(vis.monstro.status), transition: 'filter 300ms' }}>
                       {spriteMonstro ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={spriteMonstro.src} alt={monstro.nome} className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} draggable={false} />
@@ -312,7 +313,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
             <div className="absolute -translate-x-1/2" style={{ left: g.jogador.x, top: g.jogador.pes - alturaJogador, height: alturaJogador, aspectRatio: spriteJogador ? String(spriteJogador.proporcao) : '1', zIndex: acao?.de === 'jogador' ? 6 : 5 }}>
               <div key={`ji-${indice}`} className="w-full h-full cacada-investida" style={acao?.de === 'jogador' ? { animation: `cacadaInvestida ${tempos.duracao}ms ease-in-out both`, ['--lx' as string]: `${investida.jogador.lx}px`, ['--ly' as string]: `${investida.jogador.ly}px` } : undefined}>
                 <div key={`jr-${indice}`} className="w-full h-full" style={reage('jogador') ? reacaoVars('jogador') : undefined}>
-                  <div className={`w-full h-full ${mortoJogador ? 'cacada-morte-heroi' : ''}`}>
+                  <div className={`w-full h-full ${mortoJogador ? 'cacada-morte-heroi' : ''}`} style={{ filter: tintaDosStatus(vis.jogador.status), transition: 'filter 300ms' }}>
                     {animacaoHeroi ? (
                       <SpriteAnimado parado={animacaoHeroi.parado} ataque={animacaoHeroi.ataque} golpe={q.agiu === 'jogador' ? indice : null} velocidade={450 / tempos.impacto} espelhado rotulo={personagem.nome} />
                     ) : spriteJogador ? (

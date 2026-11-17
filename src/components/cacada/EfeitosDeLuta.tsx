@@ -3,31 +3,38 @@
 import React, { useState } from 'react';
 import type { AcaoDaLuta } from '@/lib/cacadaReplay';
 import { efeitoDaAcao, tamanhoDoNumero } from '@/lib/cacadaCoreografia';
-import { EFEITO_DO_STATUS, EFEITOS, LAYOUT_DOS_EFEITOS, PASTA_DOS_EFEITOS, type NomeDoEfeito } from '@/assets/efeitosPixelfx';
+import { EFEITO_DO_STATUS, EFEITOS, LAYOUT_DOS_EFEITOS, PASTA_DOS_EFEITOS, type CopiaDoEfeito, type NomeDoEfeito } from '@/assets/efeitosPixelfx';
 import { textoDaFicha } from '@/rules/textosDaFicha';
 import { TEXTOS_DO_IMPACTO as T } from '@/rules/textosDoCombate';
 
 const CONTORNO = '2px 2px 0 #2A0606, -2px -2px 0 #2A0606, 2px -2px 0 #2A0606, -2px 2px 0 #2A0606, 0 3px 0 #2A0606';
 
 /** A caixa (em px) de um efeito sobre um alvo: a largura segue a altura do alvo e o ponto de ancoragem decide onde ele cai. */
-export function caixaDoEfeito(nome: NomeDoEfeito, alvo: { x: number; pes: number; altura: number }): { left: number; top: number; width: number; height: number } {
+export function caixaDoEfeito(nome: NomeDoEfeito, alvo: { x: number; pes: number; altura: number }, copia?: CopiaDoEfeito): { left: number; top: number; width: number; height: number } {
   const info = EFEITOS[nome];
   const lay = LAYOUT_DOS_EFEITOS[nome];
-  const width = alvo.altura * lay.largura;
+  const width = alvo.altura * lay.largura * (copia?.escala ?? 1);
   const height = width * (info.altura / info.largura);
-  const centroY = lay.ancora === 'pes' ? alvo.pes - height / 2 : lay.ancora === 'cabeca' ? alvo.pes - alvo.altura - height * 0.1 : alvo.pes - alvo.altura / 2;
-  return { left: alvo.x - width / 2, top: centroY - height / 2, width, height };
+  const base =
+    lay.ancora === 'pes' ? alvo.pes - height / 2
+    : lay.ancora === 'cabeca' ? alvo.pes - alvo.altura - height * 0.1
+    : lay.ancora === 'chao' ? alvo.pes - height * 0.5 + height * 0.18
+    : lay.ancora === 'topo' ? alvo.pes - alvo.altura * 0.66 - height * 0.5
+    : alvo.pes - alvo.altura / 2;
+  const centroY = base + (copia?.dy ?? 0) * alvo.altura;
+  const centroX = alvo.x + (copia?.dx ?? 0) * alvo.altura;
+  return { left: centroX - width / 2, top: centroY - height / 2, width, height };
 }
 
 /**
  * Um efeito do pixelfx (folha de quadros lado a lado): toca uma vez e some, ou fica em repetição (`laco`, os status).
  * `atraso` e `velocidade` ajustam o começo e o ritmo; `espelhar` vira o efeito para o outro lado.
  */
-export function FxPixelfx({ nome, alvo, atraso = 0, velocidade = 1, espelhar = false, laco, z = 20 }: { nome: NomeDoEfeito; alvo: { x: number; pes: number; altura: number }; atraso?: number; velocidade?: number; espelhar?: boolean; laco?: boolean; z?: number }) {
+export function FxPixelfx({ nome, alvo, atraso = 0, velocidade = 1, espelhar = false, laco, z = 20, copia }: { nome: NomeDoEfeito; alvo: { x: number; pes: number; altura: number }; atraso?: number; velocidade?: number; espelhar?: boolean; laco?: boolean; z?: number; copia?: CopiaDoEfeito }) {
   const info = EFEITOS[nome];
   const [vivo, setVivo] = useState(true);
   const repete = laco ?? info.laco;
-  const caixa = caixaDoEfeito(nome, alvo);
+  const caixa = caixaDoEfeito(nome, alvo, copia);
   if (!vivo) return null;
   const ms = Math.round((info.quadros / info.fps) * 1000 / velocidade);
   return (
@@ -44,21 +51,26 @@ export function FxPixelfx({ nome, alvo, atraso = 0, velocidade = 1, espelhar = f
         backgroundRepeat: 'no-repeat',
         imageRendering: 'pixelated',
         transform: espelhar ? 'scaleX(-1)' : undefined,
-        animation: `cacadaPfx ${ms}ms steps(${info.quadros}, jump-none) ${atraso}ms ${repete ? 'infinite' : '1 both'}`,
+        animation: `cacadaPfx ${ms}ms steps(${info.quadros}, jump-none) ${atraso + (copia?.atraso ?? 0)}ms ${repete ? 'infinite' : '1 both'}`,
         ['--fim' as string]: '100%',
       }}
     />
   );
 }
 
-/** Os efeitos que ficam em repetição sobre quem está sob status (veneno, sangramento, sono...). */
+/**
+ * Os efeitos que ficam em repetição sobre quem está sob status (veneno, sangramento, sono...). As poças e os relâmpagos
+ * ficam atrás do corpo (`z` 3), as chamas e os cristais na frente, em cópias, para não cobrir as pernas.
+ */
 export function EfeitosDeStatus({ status, alvo }: { status: readonly string[]; alvo: { x: number; pes: number; altura: number } }) {
   const nomes = Array.from(new Set(status.map((s) => EFEITO_DO_STATUS[s]).filter(Boolean)));
   return (
     <>
-      {nomes.map((n) => (
-        <FxPixelfx key={n} nome={n} alvo={alvo} laco z={15} />
-      ))}
+      {nomes.flatMap((n) => {
+        const lay = LAYOUT_DOS_EFEITOS[n];
+        const z = lay.camada === 'atras' ? 3 : 15;
+        return (lay.copias ?? [undefined]).map((c, i) => <FxPixelfx key={`${n}-${i}`} nome={n} alvo={alvo} laco z={z} copia={c} />);
+      })}
     </>
   );
 }
