@@ -10,6 +10,7 @@ import { EFEITOS_STATUS } from '@/rules/statusEffects';
 import { resolveAvatarSrc } from '@/assets/avatars';
 import { MAPAS_DA_CACADA } from '@/assets/mapasDaCacada';
 import { MapaDaCacada } from './MapaDaCacada';
+import { AberturaDeBatalha } from '@/components/cena/AberturaDeBatalha';
 import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
 import { larguraDasBarras, montarQuadros, PainelLuta, QuadroLuta, TipoLinha } from '@/lib/cacadaReplay';
 
@@ -161,6 +162,8 @@ export function geometriaDaCena(largura: number, altura: number) {
 export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, hpInicialJogador, onFim }: CombateCacadaProps) {
   const quadros: QuadroLuta[] = useMemo(() => montarQuadros(resultado, personagem, monstro, 5, hpInicialJogador), [resultado, personagem, monstro, hpInicialJogador]);
   const [indice, setIndice] = useState(0);
+  // a abertura de batalha (a cena do Yuri) toca antes de a luta começar
+  const [abertura, setAbertura] = useState(true);
   const [rapido, setRapido] = useState(false);
   const [tremor, setTremor] = useState<{ monstro: number; jogador: number }>({ monstro: 0, jogador: 0 });
   const anterior = useRef<QuadroLuta | null>(null);
@@ -178,13 +181,14 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   }, []);
 
   useEffect(() => {
+    if (abertura) return;
     if (fim) {
       const t = setTimeout(onFim, 1200);
       return () => clearTimeout(t);
     }
     const t = setTimeout(() => setIndice((i) => Math.min(quadros.length - 1, i + 1)), rapido ? 450 : 900);
     return () => clearTimeout(t);
-  }, [indice, fim, rapido, quadros.length, onFim]);
+  }, [abertura, indice, fim, rapido, quadros.length, onFim]);
 
   const q = quadros[indice];
 
@@ -212,6 +216,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
 
   return (
     <div className="relative w-full h-dvh flex flex-col select-none overflow-hidden" style={{ backgroundColor: '#07050a' }}>
+      {abertura && <AberturaDeBatalha aoTerminar={() => setAbertura(false)} />}
       <style>{`@media (prefers-reduced-motion: no-preference){@keyframes cacadaGolpe{0%{transform:translateX(0);filter:brightness(1)}20%{transform:translateX(-5px);filter:brightness(2.2) saturate(.3)}45%{transform:translateX(5px)}70%{transform:translateX(-2px)}100%{transform:translateX(0);filter:brightness(1)}}.cacada-golpe{animation:cacadaGolpe .35s ease-out}}`}</style>
       <div className="flex flex-col flex-1 min-h-0 w-full max-w-[480px] mx-auto">
         {/* Mapa em tela cheia, com a HUD por cima */}

@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { SkipForward } from 'lucide-react';
 import type { ResultadoCombatePvp } from '@/game/combat';
 import { resolveAvatarSrc } from '@/assets/avatars';
+import { AberturaDeBatalha } from '@/components/cena/AberturaDeBatalha';
 import { BarraVidaEscudo } from '@/components/cacada/CombateCacada';
 import { quadrosDaArena } from '@/lib/arenaReplay';
 import { CLASSES_MAP } from '@/rules/classes';
@@ -44,16 +45,19 @@ export function ReplayArena({ combate, lados, titulo, onFim }: { combate: Result
   const { colors } = NOCTHERA_THEME;
   const quadros = useMemo(() => quadrosDaArena(combate, lados.a, lados.b), [combate, lados]);
   const [i, setI] = useState(0);
+  // a abertura de batalha (a cena do Yuri) toca antes de a luta começar
+  const [abertura, setAbertura] = useState(true);
   const fim = i >= quadros.length - 1;
   useEffect(() => {
-    if (fim) return;
+    if (fim || abertura) return;
     const id = window.setTimeout(() => setI((x) => x + 1), PASSO_MS);
     return () => window.clearTimeout(id);
-  }, [i, fim]);
+  }, [i, fim, abertura]);
   const q = quadros[Math.min(i, quadros.length - 1)];
   const resultado = combate.vencedor === 'ninguem' ? 'Empate: os dois perdem' : `${combate.vencedor === 'a' ? lados.a.nome : lados.b.nome} venceu`;
   return (
     <section className="flex flex-col gap-3 rounded-sm border p-3" style={{ borderColor: OURO, backgroundColor: 'rgba(14, 11, 14, 0.9)' }} aria-label="Replay da luta">
+      {abertura && <AberturaDeBatalha aoTerminar={() => setAbertura(false)} />}
       <div className="flex justify-between items-center gap-2">
         <h2 className="text-sm font-cinzel font-bold" style={{ color: '#F5E3B3' }}>{titulo}</h2>
         <span className="text-[11px] font-bold" style={{ color: OURO }}>Rodada {q.rodada}</span>
