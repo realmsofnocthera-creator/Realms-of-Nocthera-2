@@ -8,7 +8,9 @@ import type { MonsterDefinition } from '@/rules/monsters';
 import type { EfeitoStatus } from '@/rules/statusEffects';
 import { EFEITOS_STATUS } from '@/rules/statusEffects';
 import { resolveAvatarSrc } from '@/assets/avatars';
-import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, CENARIO_ESTRELA, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
+import { MAPAS_DA_CACADA } from '@/assets/mapasDaCacada';
+import { MapaDaCacada } from './MapaDaCacada';
+import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
 import { larguraDasBarras, montarQuadros, PainelLuta, QuadroLuta, TipoLinha } from '@/lib/cacadaReplay';
 
 interface CombateCacadaProps {
@@ -136,7 +138,7 @@ function Painel({ painel, retrato }: { painel: PainelLuta; retrato?: string }) {
  * A imagem cobre toda a área do mapa (sem deformar) e as plataformas viram posições em pixels, então nada sai
  * do lugar em telas de tamanhos diferentes. Para caber do monstro aos pés do jogador, o mapa precisa de ~0,93 da largura em altura.
  */
-const CENA = { w: 1024, h: 1536, topo: 0.22, base: 0.84, monstroX: 0.65, monstroPes: 0.385, jogadorX: 0.47, jogadorPes: 0.835, alturaMonstro: 0.13, alturaJogador: 0.33 };
+const CENA = { w: 1024, h: 1536, topo: 0.28, base: 0.94, monstroX: 0.62, monstroPes: 0.55, jogadorX: 0.38, jogadorPes: 0.9, alturaMonstro: 0.15, alturaJogador: 0.28 };
 
 export function geometriaDaCena(largura: number, altura: number) {
   const escala = Math.max(largura / CENA.w, altura / CENA.h);
@@ -198,7 +200,6 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
     anterior.current = q;
   }, [q]);
 
-  const cenario = estrela ? CENARIO_ESTRELA[estrela] : undefined;
   const spriteJogador = SPRITE_CLASSE[personagem.classeId];
   const spriteMonstro = SPRITE_MONSTRO[monstro.id];
   const retrato = resolveAvatarSrc(personagem.avatarId, personagem.classeId);
@@ -215,9 +216,13 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
       <div className="flex flex-col flex-1 min-h-0 w-full max-w-[480px] mx-auto">
         {/* Mapa em tela cheia, com a HUD por cima */}
         <div ref={arenaRef} className="relative flex-1 min-h-[340px] overflow-hidden" style={{ backgroundColor: '#0d1412' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={cenario ?? '/images/landing-bg.webp'} alt="" aria-hidden="true" draggable={false}
-            className="absolute max-w-none" style={{ width: g.imgW, height: g.imgH, left: -g.esq, top: -g.topo, filter: cenario ? 'none' : 'brightness(0.4)', objectFit: 'cover' }} />
+          {estrela && MAPAS_DA_CACADA[estrela] ? (
+            <MapaDaCacada estrela={estrela} style={{ width: g.imgW, height: g.imgH, left: -g.esq, top: -g.topo }} />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/images/landing-bg.webp" alt="" aria-hidden="true" draggable={false}
+              className="absolute max-w-none" style={{ width: g.imgW, height: g.imgH, left: -g.esq, top: -g.topo, filter: 'brightness(0.4)', objectFit: 'cover' }} />
+          )}
           {/* Monstro */}
           <div className="absolute -translate-x-1/2" style={{ left: g.monstro.x, top: g.monstro.pes - alturaMonstro, height: alturaMonstro,
             aspectRatio: spriteMonstro ? String(spriteMonstro.proporcao) : '1', opacity: q.monstro.hp > 0 ? 1 : 0.2, transition: 'opacity 0.6s' }}>

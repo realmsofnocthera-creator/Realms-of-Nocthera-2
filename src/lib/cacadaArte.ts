@@ -3,6 +3,8 @@
  * silhueta do monstro, fundo genérico), então dá para ir adicionando artes aos poucos.
  */
 
+import { MAPAS_DA_CACADA } from '@/assets/mapasDaCacada';
+
 export interface SpriteLuta {
   src: string;
   /** largura / altura da imagem, para dimensionar sem esperar o carregamento */
@@ -118,10 +120,8 @@ export const SPRITE_MONSTRO: Readonly<Record<string, SpriteDaCriatura>> = Object
   Object.entries(TAMANHO_DA_ARTE).map(([id, [l, a]]) => [id, { src: `/images/cacada/retratos/${id}.webp`, proporcao: l / a, altura: a }])
 );
 
-/** Cenário de cada estrela, com a plataforma do monstro em cima à direita e a do jogador embaixo. */
-export const CENARIO_ESTRELA: Readonly<Record<number, string>> = {
-  1: '/images/cacada/cenario-1.webp',
-};
+/** A capa (imagem parada) do mapa de cada estrela; os mapas animados ficam em `mapasDaCacada`. */
+export const CENARIO_ESTRELA: Readonly<Record<number, string>> = Object.fromEntries(Object.entries(MAPAS_DA_CACADA).map(([estrela, m]) => [estrela, m.imagem]));
 
 /** Tamanho do monstro sem arte na cena (% da altura da arena): a silhueta. */
 export const ALTURA_MONSTRO_PADRAO = 22;
