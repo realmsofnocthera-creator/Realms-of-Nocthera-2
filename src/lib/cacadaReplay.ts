@@ -4,6 +4,8 @@ import type { AtaqueLog, ResultadoCombate } from '@/game/combat';
 import type { EventoEfeito } from '@/game/statusEffects';
 import type { MonsterDefinition } from '@/rules/monsters';
 import { EfeitoStatus, EFEITOS_STATUS } from '@/rules/statusEffects';
+import type { Elemento } from '@/rules/elements';
+import type { TipoGolpe } from '@/rules/corposMonstros';
 import { getClassById } from '@/rules/classes';
 import { getClassSkillIcon } from '@/rules/skillIcons';
 import { TEXTOS_SUBCLASSE } from '@/rules/subclasseTextos';
@@ -48,6 +50,28 @@ export interface HabilidadeTela {
   ticks: number | null;
 }
 
+/** O que uma ação (um golpe, uma habilidade) fez, para a tela mostrar o impacto. */
+export interface AcaoDaLuta {
+  /** quem agiu */
+  de: 'jogador' | 'monstro';
+  /** o dano efetivo (já descontados escudo e defesa; 0 = bloqueado ou sem dano) */
+  dano: number;
+  /** o dano de cada golpe da ação (habilidades de vários golpes); um só golpe = lista de um */
+  golpes: number[];
+  /** quantos dos golpes foram críticos */
+  criticos: number;
+  /** o nome da habilidade usada (só quando foi uma habilidade, não o ataque básico) */
+  habilidade?: string;
+  elemento?: Elemento;
+  tipoGolpe?: TipoGolpe;
+  /** o alvo era fraco ou resistente ao golpe (tipo de dano ou elemento) */
+  reacao?: 'fraqueza' | 'resistencia' | 'imune';
+  /** vida recuperada por quem agiu */
+  cura: number;
+  /** o golpe não causou dano */
+  bloqueado: boolean;
+}
+
 export interface QuadroLuta {
   turno: number;
   linhas: LinhaLog[];
@@ -56,6 +80,8 @@ export interface QuadroLuta {
   habilidades: HabilidadeTela[];
   /** Quem agiu neste quadro (atacou ou usou uma habilidade): o herói, o monstro ou ninguém. */
   agiu: 'jogador' | 'monstro' | null;
+  /** O que a ação fez (null nos quadros sem ação: o primeiro e os de efeitos no fim da rodada). */
+  acao: AcaoDaLuta | null;
 }
 
 /** Ciclo das habilidades de classe: a especial a cada 3 ataques e o ultimate a cada 7 (todas as classes). */
@@ -101,6 +127,25 @@ export function espacosDoPersonagem(c: Pick<CharacterDocument, 'classeId' | 'sub
     }
     return { espaco, nomes, nome, icone, nivel: marco.nivel };
   });
+}
+
+/** Transforma o registro de um ataque no que a tela precisa para mostrar o impacto. */
+export function acaoDoAtaque(a: AtaqueLog, de: 'jogador' | 'monstro'): AcaoDaLuta {
+  const golpes = (a.golpes && a.golpes.length > 1 ? a.golpes : [a.danoEfetivo]).map((g) => Math.max(0, Math.round(g)));
+  const dano = Math.max(0, Math.round(a.danoEfetivo));
+  const reacao = a.reacaoElemental ?? (a.reacaoTipoDano === 'fraqueza' ? 'fraqueza' : a.reacaoTipoDano === 'resistência' ? 'resistência' : undefined);
+  return {
+    de,
+    dano,
+    golpes,
+    criticos: a.golpesCriticos ?? 0,
+    ...(a.habilidadeAcionada ? { habilidade: a.habilidadeAcionada } : {}),
+    ...(a.elemento ? { elemento: a.elemento } : {}),
+    ...(a.tipoGolpe ? { tipoGolpe: a.tipoGolpe } : {}),
+    ...(reacao ? { reacao: reacao === 'resistência' ? ('resistencia' as const) : reacao } : {}),
+    cura: Math.max(0, Math.round((a.curaHp ?? 0) + (a.curaHabilidade ?? 0))),
+    bloqueado: dano === 0 || !!a.imortalidadeBreve,
+  };
 }
 
 function textoDoAtaque(a: AtaqueLog): LinhaLog[] {
@@ -216,7 +261,7 @@ export function montarQuadros(
       return { espaco: e.espaco, nome: e.nome, icone: e.icone, bloqueada, progresso, texto, ativandoAgora, ticks };
     });
 
-  const empurrar = (turno: number, acionada?: string, agiu: 'jogador' | 'monstro' | null = null) => {
+  const empurrar = (turno: number, acionada?: string, agiu: 'jogador' | 'monstro' | null = null, acao: AcaoDaLuta | null = null) => {
     quadros.push({
       turno,
       linhas: linhas.slice(-maxLinhas),
@@ -224,6 +269,7 @@ export function montarQuadros(
       monstro: { ...inimigo, status: [...inimigo.status] },
       habilidades: habilidades(acionada),
       agiu,
+      acao,
     });
   };
 
@@ -248,7 +294,8 @@ export function montarQuadros(
         if (a.instintoSobrevivenciaAtivo !== undefined) passivaIAtiva = a.instintoSobrevivenciaAtivo;
       }
       linhas.push(...textoDoAtaque(a));
-      empurrar(turno.numeroTurno, a.atacante === personagem.nome ? a.habilidadeAcionada : undefined, a.incapacitado || a.distraido ? null : a.atacante === personagem.nome ? 'jogador' : 'monstro');
+      const agente = a.incapacitado || a.distraido ? null : a.atacante === personagem.nome ? 'jogador' : 'monstro';
+      empurrar(turno.numeroTurno, a.atacante === personagem.nome ? a.habilidadeAcionada : undefined, agente, agente ? acaoDoAtaque(a, agente) : null);
     }
     for (const texto of turno.eventosMecanica ?? []) linhas.push({ texto, tipo: 'info' });
     const eventos = turno.eventosEfeitos ?? [];

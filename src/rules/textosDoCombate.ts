@@ -30,3 +30,16 @@ export const TEXTOS_DO_FIM_DA_LUTA = {
   semEspolio: 'Sem espólio',
   continuar: 'Continuar',
 } as const;
+
+/** Os avisos que aparecem sobre quem apanhou (e o nome das habilidades vem das regras). */
+export const TEXTOS_DO_IMPACTO = {
+  critico: 'CRÍTICO!',
+  fraqueza: 'FRAQUEZA!',
+  resistencia: 'RESISTIU',
+  imune: 'IMUNE',
+  bloqueado: 'BLOQUEADO',
+  habilidade: '{nome}!',
+  danoAria: 'Dano {n}',
+  danoCriticoAria: 'Dano crítico {n}',
+  curaAria: 'Cura {n}',
+} as const;
