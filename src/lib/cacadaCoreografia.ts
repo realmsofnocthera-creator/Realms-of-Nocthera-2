@@ -1,4 +1,4 @@
-import type { Elemento } from '@/rules/elements';
+import type { NomeDoEfeito } from '@/assets/efeitosPixelfx';
 import type { AcaoDaLuta } from '@/lib/cacadaReplay';
 
 /** Quanto dura cada quadro da luta e em que instante dele o golpe acerta (em ms): normal, ×2 e a câmera lenta do último golpe. */
@@ -7,31 +7,14 @@ export function temposDoQuadro(rapido: boolean, lenta: boolean): { duracao: numb
   return rapido ? { duracao: 640, impacto: 256 } : { duracao: 1300, impacto: 520 };
 }
 
-/** O efeito de golpe (a folha de quadros em `public/images/cacada/fx`) de uma ação. */
-export type EfeitoDeGolpe = 'corte' | 'perfuracao' | 'impacto' | 'magico';
-
-export const QUADROS_DO_EFEITO: Readonly<Record<EfeitoDeGolpe | 'critico' | 'cura' | 'escudo', number>> = {
-  corte: 6, perfuracao: 6, impacto: 6, magico: 7, critico: 8, cura: 7, escudo: 6,
-};
-
-export function efeitoDaAcao(acao: Pick<AcaoDaLuta, 'tipoGolpe' | 'elemento' | 'habilidade'>): EfeitoDeGolpe {
-  if (acao.tipoGolpe === 'magico' || (acao.elemento && acao.tipoGolpe !== 'contusao' && acao.tipoGolpe !== 'perfuracao' && acao.tipoGolpe !== 'corte')) return 'magico';
-  if (acao.tipoGolpe === 'perfuracao') return 'perfuracao';
-  if (acao.tipoGolpe === 'contusao') return 'impacto';
-  return 'corte';
-}
-
-/** O filtro que pinta o efeito (desenhado em laranja) na cor do elemento do golpe. */
-export function filtroDoElemento(elemento?: Elemento): string {
-  switch (elemento) {
-    case 'gelo': return 'hue-rotate(165deg) saturate(1.1) brightness(1.1)';
-    case 'relampago': return 'hue-rotate(22deg) saturate(1.3) brightness(1.25)';
-    case 'terra': return 'hue-rotate(72deg) saturate(.75)';
-    case 'vento': return 'hue-rotate(118deg) saturate(.9) brightness(1.1)';
-    case 'sagrado': return 'saturate(.35) brightness(1.5)';
-    case 'sombrio': return 'hue-rotate(250deg) saturate(1.1) brightness(.85)';
-    default: return 'none';
-  }
+/** O efeito de golpe (do pixelfx) de uma ação: o elemento manda; sem elemento, vale o tipo de golpe; o padrão é o corte (ou a garra, no monstro). */
+export function efeitoDaAcao(acao: Pick<AcaoDaLuta, 'tipoGolpe' | 'elemento'> & { de?: 'jogador' | 'monstro' }): NomeDoEfeito {
+  const fisico = acao.tipoGolpe === 'corte' || acao.tipoGolpe === 'perfuracao' || acao.tipoGolpe === 'contusao';
+  if (acao.elemento && !fisico) return acao.elemento === 'relampago' ? 'golpe-relampago' : (`magia-${acao.elemento}` as NomeDoEfeito);
+  if (acao.tipoGolpe === 'perfuracao') return 'golpe-perfuracao';
+  if (acao.tipoGolpe === 'contusao') return 'golpe-contusao';
+  if (acao.tipoGolpe === 'magico') return 'magia-sagrado';
+  return acao.de === 'monstro' ? 'golpe-garra' : 'golpe-corte';
 }
 
 /** O tamanho (px) do número de dano: cresce com o quanto ele tira da vida do alvo, e o crítico é bem maior. */
@@ -39,12 +22,6 @@ export function tamanhoDoNumero(dano: number, vidaMaxima: number, critico: boole
   const fracao = vidaMaxima > 0 ? Math.min(1, dano / vidaMaxima) : 0;
   const base = 38 + Math.round(fracao * 56);
   return critico ? Math.max(62, Math.round(base * 1.5)) : base;
-}
-
-/** Quantas faíscas saem do impacto. */
-export function faiscasDoImpacto(dano: number, vidaMaxima: number, critico: boolean): number {
-  const fracao = vidaMaxima > 0 ? Math.min(1, dano / vidaMaxima) : 0;
-  return Math.min(22, 6 + Math.round(fracao * 24) + (critico ? 8 : 0));
 }
 
 /** O golpe merece tremer a tela? (crítico, ou tirou mais de 12% da vida do alvo). */

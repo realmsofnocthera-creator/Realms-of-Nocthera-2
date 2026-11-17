@@ -1,0 +1,177 @@
+{
+ "bloqueio": {
+  "quadros": 16,
+  "largura": 99,
+  "altura": 71,
+  "fps": 15,
+  "laco": false
+ },
+ "cura": {
+  "quadros": 43,
+  "largura": 224,
+  "altura": 109,
+  "fps": 15,
+  "laco": false
+ },
+ "dot-congelamento": {
+  "quadros": 36,
+  "largura": 49,
+  "altura": 67,
+  "fps": 12,
+  "laco": true
+ },
+ "dot-loucura": {
+  "quadros": 29,
+  "largura": 46,
+  "altura": 36,
+  "fps": 12,
+  "laco": true
+ },
+ "dot-maldicao": {
+  "quadros": 29,
+  "largura": 74,
+  "altura": 95,
+  "fps": 12,
+  "laco": true
+ },
+ "dot-paralisia": {
+  "quadros": 24,
+  "largura": 91,
+  "altura": 104,
+  "fps": 12,
+  "laco": true
+ },
+ "dot-podridao": {
+  "quadros": 48,
+  "largura": 100,
+  "altura": 53,
+  "fps": 12,
+  "laco": true
+ },
+ "dot-queimadura": {
+  "quadros": 36,
+  "largura": 70,
+  "altura": 93,
+  "fps": 12,
+  "laco": true
+ },
+ "dot-sangramento": {
+  "quadros": 29,
+  "largura": 24,
+  "altura": 40,
+  "fps": 12,
+  "laco": true
+ },
+ "dot-sono": {
+  "quadros": 29,
+  "largura": 44,
+  "altura": 55,
+  "fps": 12,
+  "laco": true
+ },
+ "dot-veneno": {
+  "quadros": 48,
+  "largura": 100,
+  "altura": 52,
+  "fps": 12,
+  "laco": true
+ },
+ "golpe-contusao": {
+  "quadros": 13,
+  "largura": 88,
+  "altura": 71,
+  "fps": 15,
+  "laco": false
+ },
+ "golpe-corte": {
+  "quadros": 9,
+  "largura": 125,
+  "altura": 97,
+  "fps": 15,
+  "laco": false
+ },
+ "golpe-critico": {
+  "quadros": 13,
+  "largura": 159,
+  "altura": 117,
+  "fps": 15,
+  "laco": false
+ },
+ "golpe-garra": {
+  "quadros": 12,
+  "largura": 67,
+  "altura": 55,
+  "fps": 15,
+  "laco": false
+ },
+ "golpe-perfuracao": {
+  "quadros": 10,
+  "largura": 146,
+  "altura": 54,
+  "fps": 15,
+  "laco": false
+ },
+ "golpe-relampago": {
+  "quadros": 14,
+  "largura": 119,
+  "altura": 90,
+  "fps": 15,
+  "laco": false
+ },
+ "golpe-simples": {
+  "quadros": 7,
+  "largura": 110,
+  "altura": 66,
+  "fps": 15,
+  "laco": false
+ },
+ "magia-fogo": {
+  "quadros": 26,
+  "largura": 158,
+  "altura": 142,
+  "fps": 15,
+  "laco": false
+ },
+ "magia-gelo": {
+  "quadros": 26,
+  "largura": 158,
+  "altura": 142,
+  "fps": 15,
+  "laco": false
+ },
+ "magia-sagrado": {
+  "quadros": 26,
+  "largura": 158,
+  "altura": 142,
+  "fps": 15,
+  "laco": false
+ },
+ "magia-sombrio": {
+  "quadros": 26,
+  "largura": 158,
+  "altura": 141,
+  "fps": 15,
+  "laco": false
+ },
+ "magia-terra": {
+  "quadros": 26,
+  "largura": 157,
+  "altura": 141,
+  "fps": 15,
+  "laco": false
+ },
+ "magia-vento": {
+  "quadros": 26,
+  "largura": 158,
+  "altura": 141,
+  "fps": 15,
+  "laco": false
+ },
+ "morte": {
+  "quadros": 21,
+  "largura": 82,
+  "altura": 72,
+  "fps": 15,
+  "laco": false
+ }
+}

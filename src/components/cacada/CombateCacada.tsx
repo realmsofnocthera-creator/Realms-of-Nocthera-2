@@ -13,7 +13,7 @@ import { MapaDaCacada } from './MapaDaCacada';
 import { AberturaDeBatalha } from '@/components/cena/AberturaDeBatalha';
 import { TelaDeFimDeLuta, type TelaDeFimProps } from '@/components/cena/TelaDeFimDeLuta';
 import { SpriteAnimado } from '@/components/cena/SpriteAnimado';
-import { FaixaDeHabilidade, ImpactoDaAcao, ImpactoDeCura } from './EfeitosDeLuta';
+import { EfeitosDeStatus, FaixaDeHabilidade, FxPixelfx, ImpactoDaAcao, ImpactoDeCura } from './EfeitosDeLuta';
 import { temposDoQuadro, tremeATela } from '@/lib/cacadaCoreografia';
 import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, ANIMACAO_DO_HEROI, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
 import { larguraDasBarras, montarQuadros, PainelLuta, QuadroLuta } from '@/lib/cacadaReplay';
@@ -227,8 +227,9 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   const larguraMonstro = alturaMonstro * (spriteMonstro?.proporcao ?? 1);
 
   // o centro de cada um e quanto cada um avança para golpear o outro
-  const centroMonstro = { x: g.monstro.x, y: g.monstro.pes - alturaMonstro * 0.5 };
-  const centroJogador = { x: g.jogador.x, y: g.jogador.pes - alturaJogador * 0.46 };
+  // o alvo dos efeitos: o pé e a altura do corpo (no herói, a arte tem folga em volta, então o corpo é só uma parte do quadro)
+  const alvoMonstro = { x: g.monstro.x, pes: g.monstro.pes, altura: alturaMonstro };
+  const alvoJogador = { x: g.jogador.x, pes: g.jogador.pes - alturaJogador * 0.04, altura: alturaJogador * 0.62 };
   const investida = {
     jogador: { lx: (g.monstro.x - g.jogador.x) * 0.5, ly: (g.monstro.pes - g.jogador.pes) * 0.5 },
     monstro: { lx: (g.jogador.x - g.monstro.x) * 0.52, ly: (g.jogador.pes - g.monstro.pes) * 0.5 },
@@ -332,24 +333,25 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
                 key={`i-${indice}`}
                 acao={acao}
                 alvoVidaMaxima={(alvo === 'monstro' ? q.monstro.hpMax : q.jogador.hpMax) || 1}
-                x={alvo === 'monstro' ? centroMonstro.x : centroJogador.x}
-                y={alvo === 'monstro' ? centroMonstro.y : centroJogador.y}
+                alvo={alvo === 'monstro' ? alvoMonstro : alvoJogador}
                 topo={alvo === 'monstro' ? g.monstro.pes - alturaMonstro : g.jogador.pes - alturaJogador * 0.92}
-                escala={(alvo === 'monstro' ? alturaMonstro : alturaJogador) * 1.5}
                 indice={indice}
-                ms={critico ? 560 : 440}
+                velocidade={lenta ? 0.5 : rapido ? 1.8 : 1}
               />
             )}
             {cura && (
               <ImpactoDeCura
                 key={`c-${indice}`}
                 valor={cura.cura}
-                x={cura.de === 'monstro' ? centroMonstro.x : centroJogador.x}
-                y={cura.de === 'monstro' ? centroMonstro.y : centroJogador.y}
+                alvo={cura.de === 'monstro' ? alvoMonstro : alvoJogador}
                 topo={(cura.de === 'monstro' ? g.monstro.pes - alturaMonstro : g.jogador.pes - alturaJogador * 0.92) - 28}
-                escala={(cura.de === 'monstro' ? alturaMonstro : alturaJogador) * 1.3}
               />
             )}
+            {/* os efeitos que ficam sobre quem está sob status (veneno, sangramento, sono...) */}
+            {!mortoMonstro && <EfeitosDeStatus status={vis.monstro.status} alvo={alvoMonstro} />}
+            {!mortoJogador && <EfeitosDeStatus status={vis.jogador.status} alvo={alvoJogador} />}
+            {/* a criatura se desfaz numa nuvem */}
+            {mortoMonstro && <FxPixelfx key="morte" nome="morte" alvo={alvoMonstro} atraso={lenta ? 700 : 450} velocidade={lenta ? 0.6 : 1} z={25} />}
             <NumeroFlutuante chave={`m-${indice}`} valor={numerosSemAcao.monstro} x={g.monstro.x} y={g.monstro.pes - alturaMonstro} />
             <NumeroFlutuante chave={`j-${indice}`} valor={numerosSemAcao.jogador} x={g.jogador.x} y={g.jogador.pes - alturaJogador} />
           </div>
@@ -420,9 +422,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
 
 /** As animações da luta. Os movimentos (investida, reação, tremor) respeitam "reduzir movimento"; os números e efeitos, não. */
 const ESTILOS_DA_LUTA = `
-@keyframes cacadaFx{from{background-position:0% 0}to{background-position:100% 0}}
-@keyframes cacadaFaisca{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--fx),var(--fy)) scale(.3);opacity:0}}
-.cacada-faisca{animation:cacadaFaisca 560ms cubic-bezier(.1,.7,.3,1) both}
+@keyframes cacadaPfx{from{background-position:0% 0}to{background-position:100% 0}}
 @keyframes cacadaNumG{0%{transform:translate(-50%,12px) scale(.4);opacity:0}10%{transform:translate(-50%,-4px) scale(1.4);opacity:1}24%{transform:translate(-50%,-10px) scale(1)}72%{transform:translate(-50%,-34px) scale(1);opacity:1}100%{transform:translate(-50%,-70px) scale(.95);opacity:0}}
 .cacada-numero-grande{animation:cacadaNumG 1.15s ease-out both}
 @keyframes cacadaNumC{0%{transform:translate(-50%,10px) scale(.3) rotate(-10deg);opacity:0}8%{transform:translate(-50%,-6px) scale(2.1) rotate(5deg);opacity:1}18%{transform:translate(-50%,-10px) scale(1.3) rotate(-4deg)}28%{transform:translate(-48%,-12px) scale(1.5) rotate(3deg)}38%{transform:translate(-52%,-14px) scale(1.35) rotate(-2deg)}70%{transform:translate(-50%,-34px) scale(1.4) rotate(0);opacity:1}100%{transform:translate(-50%,-80px) scale(1.2);opacity:0}}

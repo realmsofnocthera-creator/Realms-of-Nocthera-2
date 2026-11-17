@@ -1,79 +1,85 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { AcaoDaLuta } from '@/lib/cacadaReplay';
-import { efeitoDaAcao, faiscasDoImpacto, filtroDoElemento, QUADROS_DO_EFEITO, sorteioEstavel, tamanhoDoNumero, type EfeitoDeGolpe } from '@/lib/cacadaCoreografia';
+import { efeitoDaAcao, tamanhoDoNumero } from '@/lib/cacadaCoreografia';
+import { EFEITO_DO_STATUS, EFEITOS, LAYOUT_DOS_EFEITOS, PASTA_DOS_EFEITOS, type NomeDoEfeito } from '@/assets/efeitosPixelfx';
 import { textoDaFicha } from '@/rules/textosDaFicha';
 import { TEXTOS_DO_IMPACTO as T } from '@/rules/textosDoCombate';
 
-const pasta = '/images/cacada/fx/';
 const CONTORNO = '2px 2px 0 #2A0606, -2px -2px 0 #2A0606, 2px -2px 0 #2A0606, -2px 2px 0 #2A0606, 0 3px 0 #2A0606';
 
-/** Um efeito em folha de quadros (um ao lado do outro): toca uma vez, no tamanho e no lugar dados, e some. */
-export function FxDeFolha({ efeito, x, y, tamanho, ms, atraso = 0, giro = 0, espelhar = false, filtro = 'none' }: { efeito: EfeitoDeGolpe | 'critico' | 'cura' | 'escudo'; x: number; y: number; tamanho: number; ms: number; atraso?: number; giro?: number; espelhar?: boolean; filtro?: string }) {
-  const n = QUADROS_DO_EFEITO[efeito];
+/** A caixa (em px) de um efeito sobre um alvo: a largura segue a altura do alvo e o ponto de ancoragem decide onde ele cai. */
+export function caixaDoEfeito(nome: NomeDoEfeito, alvo: { x: number; pes: number; altura: number }): { left: number; top: number; width: number; height: number } {
+  const info = EFEITOS[nome];
+  const lay = LAYOUT_DOS_EFEITOS[nome];
+  const width = alvo.altura * lay.largura;
+  const height = width * (info.altura / info.largura);
+  const centroY = lay.ancora === 'pes' ? alvo.pes - height / 2 : lay.ancora === 'cabeca' ? alvo.pes - alvo.altura - height * 0.1 : alvo.pes - alvo.altura / 2;
+  return { left: alvo.x - width / 2, top: centroY - height / 2, width, height };
+}
+
+/**
+ * Um efeito do pixelfx (folha de quadros lado a lado): toca uma vez e some, ou fica em repetição (`laco`, os status).
+ * `atraso` e `velocidade` ajustam o começo e o ritmo; `espelhar` vira o efeito para o outro lado.
+ */
+export function FxPixelfx({ nome, alvo, atraso = 0, velocidade = 1, espelhar = false, laco, z = 20 }: { nome: NomeDoEfeito; alvo: { x: number; pes: number; altura: number }; atraso?: number; velocidade?: number; espelhar?: boolean; laco?: boolean; z?: number }) {
+  const info = EFEITOS[nome];
+  const [vivo, setVivo] = useState(true);
+  const repete = laco ?? info.laco;
+  const caixa = caixaDoEfeito(nome, alvo);
+  if (!vivo) return null;
+  const ms = Math.round((info.quadros / info.fps) * 1000 / velocidade);
   return (
     <span
       aria-hidden="true"
-      className="cacada-fx absolute pointer-events-none"
+      data-efeito={nome}
+      className="absolute pointer-events-none"
+      onAnimationEnd={() => !repete && setVivo(false)}
       style={{
-        left: x - tamanho / 2,
-        top: y - tamanho / 2,
-        width: tamanho,
-        height: tamanho,
-        backgroundImage: `url(${pasta}${efeito}.webp)`,
-        backgroundSize: `${n * 100}% 100%`,
+        ...caixa,
+        zIndex: z,
+        backgroundImage: `url(${PASTA_DOS_EFEITOS}${nome}.webp)`,
+        backgroundSize: `${info.quadros * 100}% 100%`,
         backgroundRepeat: 'no-repeat',
         imageRendering: 'pixelated',
-        filter: filtro,
-        transform: `rotate(${giro}deg) scaleX(${espelhar ? -1 : 1})`,
-        animation: `cacadaFx ${ms}ms steps(${n - 1}, end) ${atraso}ms both`,
+        transform: espelhar ? 'scaleX(-1)' : undefined,
+        animation: `cacadaPfx ${ms}ms steps(${info.quadros}, jump-none) ${atraso}ms ${repete ? 'infinite' : '1 both'}`,
         ['--fim' as string]: '100%',
       }}
     />
   );
 }
 
-/** Faíscas que saem do ponto de impacto em todas as direções. */
-export function Faiscas({ x, y, quantidade, cor, semente }: { x: number; y: number; quantidade: number; cor: string; semente: number }) {
+/** Os efeitos que ficam em repetição sobre quem está sob status (veneno, sangramento, sono...). */
+export function EfeitosDeStatus({ status, alvo }: { status: readonly string[]; alvo: { x: number; pes: number; altura: number } }) {
+  const nomes = Array.from(new Set(status.map((s) => EFEITO_DO_STATUS[s]).filter(Boolean)));
   return (
     <>
-      {Array.from({ length: quantidade }, (_, i) => {
-        const ang = ((i / quantidade) * 360 + sorteioEstavel(semente + i) * 40) * (Math.PI / 180);
-        const dist = 38 + sorteioEstavel(semente * 3 + i) * 58;
-        const lado = 3 + Math.round(sorteioEstavel(semente * 5 + i) * 4);
-        return (
-          <span
-            key={i}
-            aria-hidden="true"
-            className="cacada-faisca absolute pointer-events-none"
-            style={{ left: x, top: y, width: lado, height: lado, background: i % 3 === 0 ? '#FFF6D8' : cor, ['--fx' as string]: `${Math.cos(ang) * dist}px`, ['--fy' as string]: `${Math.sin(ang) * dist - 10}px`, animationDelay: `${Math.round(sorteioEstavel(semente + i * 7) * 60)}ms` }}
-          />
-        );
-      })}
+      {nomes.map((n) => (
+        <FxPixelfx key={n} nome={n} alvo={alvo} laco z={15} />
+      ))}
     </>
   );
 }
 
 /**
- * O que aparece quando o golpe acerta: o efeito de golpe e, no crítico, a estrela, as faíscas, os números (um por golpe,
- * um depois do outro), o aviso de crítico/fraqueza/resistência e o nome da habilidade. `x` e `y` são o centro do alvo e
- * `topo` é onde fica a cabeça dele (os números sobem dali).
+ * O que aparece quando o golpe acerta: o efeito de golpe do pixelfx (e, no crítico, o grande por cima), os números (um por
+ * golpe, um depois do outro), o aviso de crítico/fraqueza/resistência. O alvo é dado em pixels: centro (`x`), pés e altura.
  */
-export function ImpactoDaAcao({ acao, alvoVidaMaxima, x, y, topo, escala, indice, ms }: { acao: AcaoDaLuta; alvoVidaMaxima: number; x: number; y: number; topo: number; escala: number; indice: number; ms: number }) {
+export function ImpactoDaAcao({ acao, alvoVidaMaxima, alvo, topo, indice, velocidade }: { acao: AcaoDaLuta; alvoVidaMaxima: number; alvo: { x: number; pes: number; altura: number }; topo: number; indice: number; velocidade: number }) {
+  void indice;
   const critico = acao.criticos > 0;
-  const efeito = efeitoDaAcao(acao);
-  const filtro = filtroDoElemento(acao.elemento);
-  const tamFx = Math.min(escala * 1.3, 320) * (critico ? 1.25 : 1);
-  const corFaisca = acao.elemento ? '#FFD45C' : '#FFB347';
-  const giro = acao.de === 'jogador' ? -24 : 22;
+  const x = alvo.x;
   const golpes = acao.golpes.length > 1 ? acao.golpes.slice(0, 7) : [acao.dano];
   return (
     <>
-      {!acao.bloqueado && <FxDeFolha efeito={efeito} x={x} y={y} tamanho={tamFx} ms={ms} giro={giro} espelhar={acao.de === 'monstro'} filtro={filtro} />}
-      {acao.bloqueado && <FxDeFolha efeito="escudo" x={x} y={y} tamanho={tamFx * 0.8} ms={ms} />}
-      {critico && <FxDeFolha efeito="critico" x={x} y={y} tamanho={tamFx * 1.15} ms={ms + 120} filtro={filtro} />}
-      {!acao.bloqueado && <Faiscas x={x} y={y} quantidade={faiscasDoImpacto(acao.dano, alvoVidaMaxima, critico)} cor={corFaisca} semente={indice + 1} />}
+      {acao.bloqueado ? (
+        <FxPixelfx nome="bloqueio" alvo={alvo} velocidade={velocidade} />
+      ) : (
+        <FxPixelfx nome={efeitoDaAcao(acao)} alvo={alvo} velocidade={velocidade} espelhar={acao.de === 'jogador'} />
+      )}
+      {critico && !acao.bloqueado && <FxPixelfx nome="golpe-critico" alvo={alvo} velocidade={velocidade} atraso={90} z={22} />}
 
       {acao.bloqueado ? (
         <Rotulo x={x} y={topo} cor="#BFE0FF" tamanho={22} texto={T.bloqueado} />
@@ -117,12 +123,12 @@ function Rotulo({ x, y, cor, tamanho, texto, tremer = false, atraso = 0 }: { x: 
   );
 }
 
-/** O número verde da cura, com as cruzes subindo. */
-export function ImpactoDeCura({ valor, x, y, topo, escala }: { valor: number; x: number; y: number; topo: number; escala: number }) {
+/** A cura: o efeito do pixelfx nos pés de quem curou e o número verde. */
+export function ImpactoDeCura({ valor, alvo, topo }: { valor: number; alvo: { x: number; pes: number; altura: number }; topo: number }) {
   return (
     <>
-      <FxDeFolha efeito="cura" x={x} y={y} tamanho={Math.min(escala, 220)} ms={760} />
-      <span aria-label={textoDaFicha(T.curaAria, { n: valor })} className="cacada-numero-grande absolute z-30 pointer-events-none font-cinzel font-black leading-none" style={{ left: x, top: topo, fontSize: 30, color: '#8CF08C', textShadow: CONTORNO }}>+{valor}</span>
+      <FxPixelfx nome="cura" alvo={alvo} />
+      <span aria-label={textoDaFicha(T.curaAria, { n: valor })} className="cacada-numero-grande absolute z-30 pointer-events-none font-cinzel font-black leading-none" style={{ left: alvo.x, top: topo, fontSize: 30, color: '#8CF08C', textShadow: CONTORNO }}>+{valor}</span>
     </>
   );
 }
