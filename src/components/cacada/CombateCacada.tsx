@@ -13,6 +13,8 @@ import { MapaDaCacada } from './MapaDaCacada';
 import { AberturaDeBatalha } from '@/components/cena/AberturaDeBatalha';
 import { TelaDeFimDeLuta, type TelaDeFimProps } from '@/components/cena/TelaDeFimDeLuta';
 import { SpriteAnimado } from '@/components/cena/SpriteAnimado';
+import { UltimateCinematica } from '@/components/cena/UltimateCinematica';
+import { idDaUltimate, MODO_DA_ULTIMATE } from '@/assets/ultimates';
 import { EfeitosDeStatus, FaixaDeHabilidade, FxPixelfx, ImpactoDaAcao, ImpactoDeCura } from './EfeitosDeLuta';
 import { temposDoQuadro, tremeATela } from '@/lib/cacadaCoreografia';
 import { tintaDosStatus } from '@/assets/efeitosPixelfx';
@@ -153,6 +155,8 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   const [rapido, setRapido] = useState(false);
   // o quadro cujo golpe já acertou (a vida só desce, e os efeitos só aparecem, na hora do impacto)
   const [acertou, setAcertou] = useState(-1);
+  // os quadros cuja cena da ultimate já tocou
+  const [ultimatesTocadas, setUltimatesTocadas] = useState<number[]>([]);
   const fim = indice >= quadros.length - 1;
   const [caixa, setCaixa] = useState({ w: 390, h: 380 });
   const arenaRef = useRef<HTMLDivElement | null>(null);
@@ -172,6 +176,10 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   const acao = q.acao;
   // o último golpe do herói é em câmera lenta
   const lenta = venceu && fim && acao?.de === 'jogador';
+  // a ultimate do herói: a cena dela (vídeo do Yuri) toca antes do golpe, e a luta espera
+  const ultimateAgora = acao?.de === 'jogador' ? q.habilidades.find((h) => h.ativandoAgora && h.espaco === 'ultimate') : undefined;
+  const idUltimate = ultimateAgora ? idDaUltimate(ultimateAgora.nome) : undefined;
+  const aguardandoUltimate = !!idUltimate && !ultimatesTocadas.includes(indice);
   const animacaoHeroi = animacaoDoHeroi(personagem.classeId, personagem.subclasseAtualId)?.costas;
   const base = temposDoQuadro(rapido, lenta);
   // o golpe do herói acerta no momento do impacto da animação dele, e o quadro dura até ela terminar
@@ -192,7 +200,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   }, [onFim]);
 
   useEffect(() => {
-    if (abertura || telaFinal) return;
+    if (abertura || telaFinal || aguardandoUltimate) return;
     const timers: number[] = [];
     if (acao) timers.push(window.setTimeout(() => setAcertou(indice), tempos.impacto));
     if (fim) {
@@ -204,7 +212,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
       timers.push(window.setTimeout(() => setIndice((i) => Math.min(quadros.length - 1, i + 1)), acao ? tempos.duracao : tempos.duracao * 0.5));
     }
     return () => timers.forEach((t) => window.clearTimeout(t));
-  }, [abertura, telaFinal, indice, fim, rapido, lenta, acao, tempos.impacto, tempos.duracao, quadros.length, venceu, telaDeFim, avisarFim]);
+  }, [abertura, telaFinal, aguardandoUltimate, indice, fim, rapido, lenta, acao, tempos.impacto, tempos.duracao, quadros.length, venceu, telaDeFim, avisarFim]);
 
   // a tela não rola durante a luta (nem para cima nem para baixo)
   useEffect(() => {
@@ -268,6 +276,9 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   return (
     <div className="fixed inset-0 select-none overflow-hidden overscroll-none" style={{ backgroundColor: '#07050a', touchAction: 'none' }}>
       {abertura && <AberturaDeBatalha aoTerminar={() => setAbertura(false)} />}
+      {aguardandoUltimate && !abertura && !telaFinal && idUltimate && (
+        <UltimateCinematica key={`u-${indice}`} id={idUltimate} modo={MODO_DA_ULTIMATE} rapido={rapido} aoTerminar={() => setUltimatesTocadas((t) => [...t, indice])} />
+      )}
       {telaFinal && (
         <TelaDeFimDeLuta
           tipo={venceu ? 'vitoria' : 'derrota'}
@@ -323,7 +334,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
                 <div key={`jr-${indice}`} className="w-full h-full" style={reage('jogador') ? reacaoVars('jogador') : undefined}>
                   <div className={`w-full h-full ${mortoJogador ? 'cacada-morte-heroi' : ''}`} style={{ filter: tintaDosStatus(vis.jogador.status), transition: 'filter 300ms' }}>
                     {animacaoHeroi ? (
-                      <SpriteAnimado parado={animacaoHeroi.parado} ataque={animacaoHeroi.ataque} golpe={q.agiu === 'jogador' ? indice : null} velocidade={velocidadeHeroi} espelhado rotulo={personagem.nome} />
+                      <SpriteAnimado parado={animacaoHeroi.parado} ataque={animacaoHeroi.ataque} golpe={q.agiu === 'jogador' && !aguardandoUltimate ? indice : null} velocidade={velocidadeHeroi} espelhado rotulo={personagem.nome} />
                     ) : spriteJogador ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={spriteJogador.src} alt={personagem.nome} className="w-full h-full object-contain" style={{ transform: 'scaleX(-1)' }} draggable={false} />
@@ -373,7 +384,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
         {/* o crítico dá um clarão curto */}
         {critico && impactou && <div key={`f-${indice}`} aria-hidden="true" className="absolute inset-0 pointer-events-none bg-white" style={{ animation: 'cacadaClarao 260ms ease-out both' }} />}
         {/* o nome da habilidade, no começo da ação */}
-        {faixa && !abertura && !telaFinal && <FaixaDeHabilidade key={`h-${indice}`} nome={faixa.nome} icone={faixa.icone} heroi={acao?.de === 'jogador'} duracao={Math.round(tempos.duracao * 0.8)} />}
+        {faixa && !abertura && !telaFinal && !aguardandoUltimate && <FaixaDeHabilidade key={`h-${indice}`} nome={faixa.nome} icone={faixa.icone} heroi={acao?.de === 'jogador'} duracao={Math.round(tempos.duracao * 0.8)} />}
       </div>
 
       {/* o que acontece, só para leitores de tela (a luta não tem mais log na tela) */}

@@ -43,3 +43,9 @@ export const TEXTOS_DO_IMPACTO = {
   danoCriticoAria: 'Dano crítico {n}',
   curaAria: 'Cura {n}',
 } as const;
+
+/** Os textos da cena da ultimate. */
+export const TEXTOS_DA_ULTIMATE = {
+  aria: 'Ultimate',
+  pular: 'Toque para pular',
+} as const;
