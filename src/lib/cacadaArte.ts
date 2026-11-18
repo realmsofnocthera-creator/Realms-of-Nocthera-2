@@ -5,6 +5,7 @@
 
 import { MAPAS_DA_CACADA } from '@/assets/mapasDaCacada';
 import type { FolhaDeQuadros } from '@/components/cena/SpriteAnimado';
+import heroisManifesto from '@/assets/heroisManifesto.json';
 
 export interface SpriteLuta {
   src: string;
@@ -127,33 +128,44 @@ export const CENARIO_ESTRELA: Readonly<Record<number, string>> = Object.fromEntr
 /** Tamanho do monstro sem arte na cena (% da altura da arena): a silhueta. */
 export const ALTURA_MONSTRO_PADRAO = 22;
 
-/** Uma animação do herói: a folha de quadros parado (idle) e a do ataque, e o tamanho de cada quadro. */
+/** Uma animação do herói (de costas ou de frente): a folha do parado (idle) e a do ataque, e o tamanho de cada quadro. */
 export interface AnimacaoDoHeroi {
   parado: FolhaDeQuadros;
   ataque: FolhaDeQuadros;
+  /** o tamanho de cada quadro, em pixels da arte */
+  largura: number;
+  altura: number;
   /** largura / altura de cada quadro */
   proporcao: number;
+  /** o instante (ms desde o começo do ataque) em que o golpe acerta */
+  impacto: number;
 }
 
-const IDLE_MS = [220, 220, 220, 220] as const;
-const ATAQUE_MS = [100, 90, 110, 150, 50, 60, 130, 100, 100] as const;
+type Lado = 'costas' | 'frente';
+
+function montarAnimacao(id: string, lado: Lado): AnimacaoDoHeroi {
+  const m = (heroisManifesto as unknown as Record<string, Record<Lado, { idle: { quadros: number; largura: number; altura: number; ms: number[] }; ataque: { quadros: number; ms: number[]; impacto: number } }>>)[id][lado];
+  return {
+    parado: { src: `/images/cacada/herois/${id}-${lado}-idle.webp`, quadros: m.idle.quadros, ms: m.idle.ms },
+    ataque: { src: `/images/cacada/herois/${id}-${lado}-ataque.webp`, quadros: m.ataque.quadros, ms: m.ataque.ms },
+    largura: m.idle.largura,
+    altura: m.idle.altura,
+    proporcao: m.idle.largura / m.idle.altura,
+    impacto: m.ataque.impacto,
+  };
+}
 
 /**
  * Os heróis animados (pixel art do Yuri, em folhas de quadros): parado e ataque, de costas (na luta: o herói olha para o
- * monstro) e de frente (para as telas em que ele encara o jogador). O rastro do golpe já vem colado nos quadros do ataque.
- * Por enquanto só o Bárbaro; as outras classes entram aqui quando a arte chegar.
+ * monstro) e de frente (para as telas em que ele encara o jogador). Uma entrada por classe (barbaro, cavaleiro, feiticeiro,
+ * bandido, profeta, samurai) e por subclasse (berserker, colosso, vanguarda, bastiao, arquimago, sabio_arcano, duelista,
+ * assassino, inquisidor, sacerdote, kensei, ronin). Gerado de `heroisManifesto.json` (`scripts/herois/empacotar.py`).
  */
-export const ANIMACAO_DO_HEROI: Readonly<Record<string, { costas: AnimacaoDoHeroi; frente: AnimacaoDoHeroi }>> = {
-  barbaro: {
-    costas: {
-      parado: { src: '/images/cacada/herois/barbaro-costas-idle.webp', quadros: 4, ms: IDLE_MS },
-      ataque: { src: '/images/cacada/herois/barbaro-costas-ataque.webp', quadros: 9, ms: ATAQUE_MS },
-      proporcao: 147 / 142,
-    },
-    frente: {
-      parado: { src: '/images/cacada/herois/barbaro-frente-idle.webp', quadros: 4, ms: IDLE_MS },
-      ataque: { src: '/images/cacada/herois/barbaro-frente-ataque.webp', quadros: 9, ms: ATAQUE_MS },
-      proporcao: 149 / 142,
-    },
-  },
-};
+export const ANIMACAO_DO_HEROI: Readonly<Record<string, { costas: AnimacaoDoHeroi; frente: AnimacaoDoHeroi }>> = Object.fromEntries(
+  Object.keys(heroisManifesto).map((id) => [id, { costas: montarAnimacao(id, 'costas'), frente: montarAnimacao(id, 'frente') }])
+);
+
+/** A animação do herói: a da subclasse que ele usa, ou a da classe quando não tem subclasse. */
+export function animacaoDoHeroi(classeId: string, subclasseId?: string | null): { costas: AnimacaoDoHeroi; frente: AnimacaoDoHeroi } | undefined {
+  return (subclasseId ? ANIMACAO_DO_HEROI[subclasseId] : undefined) ?? ANIMACAO_DO_HEROI[classeId];
+}

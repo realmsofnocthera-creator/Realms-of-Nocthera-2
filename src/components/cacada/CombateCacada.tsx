@@ -16,7 +16,7 @@ import { SpriteAnimado } from '@/components/cena/SpriteAnimado';
 import { EfeitosDeStatus, FaixaDeHabilidade, FxPixelfx, ImpactoDaAcao, ImpactoDeCura } from './EfeitosDeLuta';
 import { temposDoQuadro, tremeATela } from '@/lib/cacadaCoreografia';
 import { tintaDosStatus } from '@/assets/efeitosPixelfx';
-import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, ANIMACAO_DO_HEROI, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
+import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, animacaoDoHeroi, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
 import { larguraDasBarras, montarQuadros, PainelLuta, QuadroLuta } from '@/lib/cacadaReplay';
 import { textoDaFicha } from '@/rules/textosDaFicha';
 import { TEXTOS_DO_COMBATE as T } from '@/rules/textosDoCombate';
@@ -172,7 +172,12 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   const acao = q.acao;
   // o último golpe do herói é em câmera lenta
   const lenta = venceu && fim && acao?.de === 'jogador';
-  const tempos = temposDoQuadro(rapido, lenta);
+  const animacaoHeroi = animacaoDoHeroi(personagem.classeId, personagem.subclasseAtualId)?.costas;
+  const base = temposDoQuadro(rapido, lenta);
+  // o golpe do herói acerta no momento do impacto da animação dele, e o quadro dura até ela terminar
+  const velocidadeHeroi = animacaoHeroi ? animacaoHeroi.impacto / base.impacto : 1;
+  const duracaoDoAtaque = animacaoHeroi ? Math.ceil(animacaoHeroi.ataque.ms.reduce((a, b) => a + b, 0) / velocidadeHeroi) + 90 : 0;
+  const tempos = { impacto: base.impacto, duracao: acao?.de === 'jogador' ? Math.max(base.duracao, duracaoDoAtaque) : base.duracao };
   const impactou = !acao || acertou === indice;
   // até o impacto, as barras ainda mostram a vida de antes do golpe
   const vis = impactou || !ant ? q : ant;
@@ -213,27 +218,30 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
     };
   }, []);
 
-  const animacaoHeroi = ANIMACAO_DO_HEROI[personagem.classeId]?.costas;
   const spriteJogador = animacaoHeroi ? { src: animacaoHeroi.parado.src, proporcao: animacaoHeroi.proporcao } : SPRITE_CLASSE[personagem.classeId];
   const spriteMonstro = SPRITE_MONSTRO[monstro.id];
   const retrato = resolveAvatarSrc(personagem.avatarId, personagem.classeId);
   const g = geometriaDaCena(caixa.w, caixa.h);
-  // a arte animada vem num quadro com folga em volta do personagem: o quadro é maior para o herói ficar do tamanho de antes
-  const alturaJogador = animacaoHeroi ? g.jogador.altura * 1.45 : spriteJogador ? g.jogador.altura : g.jogador.altura * 0.7;
+  // a arte animada tem a mesma escala de pixel em todos os heróis: o tamanho na tela é o da arte vezes um fator (limitado para
+  // o quadro, com a arma estendida, nunca passar de 80% da largura da tela)
+  const pixelDoHeroi = animacaoHeroi ? Math.min((g.jogador.altura * 0.0102), (caixa.w * 0.8) / animacaoHeroi.largura) : 0;
+  const alturaJogador = animacaoHeroi ? animacaoHeroi.altura * pixelDoHeroi : spriteJogador ? g.jogador.altura : g.jogador.altura * 0.7;
   // com arte: a altura segue a da arte (as criaturas das estrelas altas são maiores), sem passar de 46% da largura da arena
   const alturaMonstro = spriteMonstro
     ? Math.min(g.monstro.altura * (spriteMonstro.altura / ALTURA_DE_REFERENCIA_DA_ARTE), (caixa.w * 0.46) / spriteMonstro.proporcao)
     : g.monstro.altura * (ALTURA_MONSTRO_PADRAO / 22);
   const larguraJogador = alturaJogador * (spriteJogador?.proporcao ?? 1);
   const larguraMonstro = alturaMonstro * (spriteMonstro?.proporcao ?? 1);
+  // o herói de quadro largo (arma estendida) se afasta da borda direita para não sair da tela
+  const xJogador = Math.min(g.jogador.x, Math.max(larguraJogador / 2 + 4, caixa.w - larguraJogador / 2 - 4));
 
   // o centro de cada um e quanto cada um avança para golpear o outro
   // o alvo dos efeitos: o pé e a altura do corpo (no herói, a arte tem folga em volta, então o corpo é só uma parte do quadro)
   const alvoMonstro = { x: g.monstro.x, pes: g.monstro.pes, altura: alturaMonstro };
-  const alvoJogador = { x: g.jogador.x, pes: g.jogador.pes - alturaJogador * 0.04, altura: alturaJogador * 0.62 };
+  const alvoJogador = { x: xJogador, pes: g.jogador.pes, altura: alturaJogador * (animacaoHeroi ? 0.8 : 0.62) };
   const investida = {
-    jogador: { lx: (g.monstro.x - g.jogador.x) * 0.5, ly: (g.monstro.pes - g.jogador.pes) * 0.5 },
-    monstro: { lx: (g.jogador.x - g.monstro.x) * 0.52, ly: (g.jogador.pes - g.monstro.pes) * 0.5 },
+    jogador: { lx: (g.monstro.x - xJogador) * 0.5, ly: (g.monstro.pes - g.jogador.pes) * 0.5 },
+    monstro: { lx: (xJogador - g.monstro.x) * 0.52, ly: (g.jogador.pes - g.monstro.pes) * 0.5 },
   };
   const critico = !!acao && acao.criticos > 0;
   const alvo = acao ? (acao.de === 'jogador' ? 'monstro' : 'jogador') : null;
@@ -286,7 +294,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
 
             {/* sombras no chão */}
             <Sombra x={g.monstro.x} y={g.monstro.pes} largura={larguraMonstro * 0.8} apagada={mortoMonstro} />
-            <Sombra x={g.jogador.x} y={g.jogador.pes} largura={larguraJogador * 0.55} apagada={mortoJogador} />
+            <Sombra x={xJogador} y={g.jogador.pes} largura={larguraJogador * 0.55} apagada={mortoJogador} />
 
             {/* Monstro */}
             <div className="absolute -translate-x-1/2" style={{ left: g.monstro.x, top: g.monstro.pes - alturaMonstro, height: alturaMonstro, aspectRatio: spriteMonstro ? String(spriteMonstro.proporcao) : '1', zIndex: acao?.de === 'monstro' ? 6 : 4 }}>
@@ -310,12 +318,12 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
             </div>
 
             {/* Jogador (de costas, virado para o monstro) */}
-            <div className="absolute -translate-x-1/2" style={{ left: g.jogador.x, top: g.jogador.pes - alturaJogador, height: alturaJogador, aspectRatio: spriteJogador ? String(spriteJogador.proporcao) : '1', zIndex: acao?.de === 'jogador' ? 6 : 5 }}>
+            <div className="absolute -translate-x-1/2" style={{ left: xJogador, top: g.jogador.pes - alturaJogador, height: alturaJogador, aspectRatio: spriteJogador ? String(spriteJogador.proporcao) : '1', zIndex: acao?.de === 'jogador' ? 6 : 5 }}>
               <div key={`ji-${indice}`} className="w-full h-full cacada-investida" style={acao?.de === 'jogador' ? { animation: `cacadaInvestida ${tempos.duracao}ms ease-in-out both`, ['--lx' as string]: `${investida.jogador.lx}px`, ['--ly' as string]: `${investida.jogador.ly}px` } : undefined}>
                 <div key={`jr-${indice}`} className="w-full h-full" style={reage('jogador') ? reacaoVars('jogador') : undefined}>
                   <div className={`w-full h-full ${mortoJogador ? 'cacada-morte-heroi' : ''}`} style={{ filter: tintaDosStatus(vis.jogador.status), transition: 'filter 300ms' }}>
                     {animacaoHeroi ? (
-                      <SpriteAnimado parado={animacaoHeroi.parado} ataque={animacaoHeroi.ataque} golpe={q.agiu === 'jogador' ? indice : null} velocidade={450 / tempos.impacto} espelhado rotulo={personagem.nome} />
+                      <SpriteAnimado parado={animacaoHeroi.parado} ataque={animacaoHeroi.ataque} golpe={q.agiu === 'jogador' ? indice : null} velocidade={velocidadeHeroi} espelhado rotulo={personagem.nome} />
                     ) : spriteJogador ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={spriteJogador.src} alt={personagem.nome} className="w-full h-full object-contain" style={{ transform: 'scaleX(-1)' }} draggable={false} />
@@ -354,7 +362,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
             {/* a criatura se desfaz numa nuvem */}
             {mortoMonstro && <FxPixelfx key="morte" nome="morte" alvo={alvoMonstro} atraso={lenta ? 700 : 450} velocidade={lenta ? 0.6 : 1} z={25} />}
             <NumeroFlutuante chave={`m-${indice}`} valor={numerosSemAcao.monstro} x={g.monstro.x} y={g.monstro.pes - alturaMonstro} />
-            <NumeroFlutuante chave={`j-${indice}`} valor={numerosSemAcao.jogador} x={g.jogador.x} y={g.jogador.pes - alturaJogador} />
+            <NumeroFlutuante chave={`j-${indice}`} valor={numerosSemAcao.jogador} x={xJogador} y={g.jogador.pes - alturaJogador} />
           </div>
         </div>
 

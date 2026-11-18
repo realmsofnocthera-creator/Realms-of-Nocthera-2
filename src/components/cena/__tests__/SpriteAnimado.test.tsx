@@ -5,7 +5,9 @@ import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { posicaoDoQuadroNaFolha, SpriteAnimado } from '../SpriteAnimado';
-import { ANIMACAO_DO_HEROI } from '@/lib/cacadaArte';
+import { ANIMACAO_DO_HEROI, animacaoDoHeroi } from '@/lib/cacadaArte';
+import { CLASSES } from '@/rules/classes';
+import { SUBCLASSES } from '@/rules/subclasses';
 
 describe('SpriteAnimado', () => {
   it('a posição do quadro na folha vai de 0% a 100%', () => {
@@ -23,20 +25,39 @@ describe('SpriteAnimado', () => {
   });
 });
 
-describe('animação do Bárbaro', () => {
-  it('cada folha existe, é leve e tem o tamanho de quadros certo (de frente e de costas)', async () => {
-    for (const lado of ['frente', 'costas'] as const) {
-      const a = ANIMACAO_DO_HEROI.barbaro[lado];
-      expect(a.parado.ms).toHaveLength(a.parado.quadros);
-      expect(a.ataque.ms).toHaveLength(a.ataque.quadros);
-      for (const f of [a.parado, a.ataque]) {
-        const arquivo = join(process.cwd(), 'public', f.src);
-        expect(existsSync(arquivo), f.src).toBe(true);
-        expect(statSync(arquivo).size, f.src).toBeLessThanOrEqual(350 * 1024);
-        const meta = await sharp(arquivo).metadata();
-        expect(meta.hasAlpha, f.src).toBe(true);
-        expect((meta.width ?? 0) / f.quadros, f.src).toBeCloseTo(a.proporcao * (meta.height ?? 0), 5);
+describe('animações dos heróis', () => {
+  it('toda classe e toda subclasse do jogo tem a animação, de frente e de costas', () => {
+    const ids = [...CLASSES.map((c) => c.id), ...SUBCLASSES.map((x) => x.id)];
+    expect(ids.length).toBeGreaterThanOrEqual(18);
+    for (const id of ids) {
+      expect(ANIMACAO_DO_HEROI[id], id).toBeDefined();
+      expect(ANIMACAO_DO_HEROI[id].costas).toBeDefined();
+      expect(ANIMACAO_DO_HEROI[id].frente).toBeDefined();
+    }
+  });
+  it('cada folha existe, é leve, tem transparência, o tamanho certo e um tempo por quadro', async () => {
+    for (const [id, par] of Object.entries(ANIMACAO_DO_HEROI)) {
+      for (const lado of ['frente', 'costas'] as const) {
+        const a = par[lado];
+        expect(a.parado.ms, `${id} ${lado} idle`).toHaveLength(a.parado.quadros);
+        expect(a.ataque.ms, `${id} ${lado} ataque`).toHaveLength(a.ataque.quadros);
+        expect(a.impacto, `${id} ${lado} impacto`).toBeGreaterThan(0);
+        expect(a.impacto, `${id} ${lado} impacto`).toBeLessThan(a.ataque.ms.reduce((x, y) => x + y, 0));
+        for (const f of [a.parado, a.ataque]) {
+          const arquivo = join(process.cwd(), 'public', f.src);
+          expect(existsSync(arquivo), f.src).toBe(true);
+          expect(statSync(arquivo).size, f.src).toBeLessThanOrEqual(350 * 1024);
+          const meta = await sharp(arquivo).metadata();
+          expect(meta.hasAlpha, f.src).toBe(true);
+          expect([meta.width, meta.height], f.src).toEqual([a.largura * f.quadros, a.altura]);
+        }
       }
     }
+  });
+  it('a subclasse vale mais que a classe, e sem subclasse vale a classe', () => {
+    expect(animacaoDoHeroi('barbaro', 'berserker')).toBe(ANIMACAO_DO_HEROI.berserker);
+    expect(animacaoDoHeroi('barbaro', null)).toBe(ANIMACAO_DO_HEROI.barbaro);
+    expect(animacaoDoHeroi('barbaro', 'subclasse-que-nao-existe')).toBe(ANIMACAO_DO_HEROI.barbaro);
+    expect(animacaoDoHeroi('classe-que-nao-existe')).toBeUndefined();
   });
 });
