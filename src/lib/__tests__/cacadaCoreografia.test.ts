@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { efeitoDaAcao, sorteioEstavel, tamanhoDoNumero, temposDoQuadro, tremeATela } from '../cacadaCoreografia';
-import { EFEITOS, EFEITO_DO_STATUS, LAYOUT_DOS_EFEITOS, PASTA_DOS_EFEITOS } from '@/assets/efeitosPixelfx';
+import { EFEITOS, EFEITO_DO_STATUS, layoutDoEfeito, PASTA_DOS_EFEITOS } from '@/assets/efeitosPixelfx';
 import { EFEITOS_STATUS } from '@/rules/statusEffects';
 import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -36,7 +36,7 @@ describe('coreografia da luta', () => {
       const arq = join(process.cwd(), 'public', PASTA_DOS_EFEITOS, `${nome}.webp`);
       expect(existsSync(arq), nome).toBe(true);
       expect(statSync(arq).size, nome).toBeLessThanOrEqual(350 * 1024);
-      expect(LAYOUT_DOS_EFEITOS[nome as keyof typeof LAYOUT_DOS_EFEITOS], nome).toBeDefined();
+      expect(layoutDoEfeito(nome as keyof typeof EFEITOS).largura, nome).toBeGreaterThan(0);
       expect(info.quadros).toBeGreaterThan(0);
     }
     for (const status of Object.keys(EFEITOS_STATUS)) expect(EFEITO_DO_STATUS[status], status).toBeDefined();

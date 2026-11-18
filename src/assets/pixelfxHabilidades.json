@@ -1,0 +1,306 @@
+{
+ "hab-barbaro_golpe_barbaro": {
+  "quadros": 12,
+  "largura": 147,
+  "altura": 96,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-barbaro_furia_selvagem": {
+  "quadros": 18,
+  "largura": 144,
+  "altura": 90,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-cavaleiro_golpe_do_guardiao": {
+  "quadros": 12,
+  "largura": 123,
+  "altura": 97,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-cavaleiro_postura_do_guardiao-si": {
+  "quadros": 18,
+  "largura": 70,
+  "altura": 71,
+  "fps": 15,
+  "laco": false,
+  "alvo": "si"
+ },
+ "hab-feiticeiro_faisca_arcana": {
+  "quadros": 12,
+  "largura": 118,
+  "altura": 88,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-feiticeiro_explosao_arcana": {
+  "quadros": 18,
+  "largura": 199,
+  "altura": 186,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-bandido_golpe_rapido": {
+  "quadros": 12,
+  "largura": 107,
+  "altura": 92,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-bandido_rajada_de_golpes": {
+  "quadros": 18,
+  "largura": 102,
+  "altura": 79,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-profeta_luz_sagrada": {
+  "quadros": 12,
+  "largura": 96,
+  "altura": 92,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-profeta_bencao_divina-si": {
+  "quadros": 18,
+  "largura": 45,
+  "altura": 121,
+  "fps": 15,
+  "laco": false,
+  "alvo": "si"
+ },
+ "hab-samurai_corte_preciso": {
+  "quadros": 12,
+  "largura": 123,
+  "altura": 97,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-samurai_iaijutsu": {
+  "quadros": 18,
+  "largura": 178,
+  "altura": 87,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-berserker_golpe_desenfreado": {
+  "quadros": 12,
+  "largura": 66,
+  "altura": 54,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-berserker_investida_sangrenta": {
+  "quadros": 18,
+  "largura": 147,
+  "altura": 96,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-colosso_golpe_esmagador": {
+  "quadros": 12,
+  "largura": 87,
+  "altura": 71,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-colosso_impacto_sismico": {
+  "quadros": 18,
+  "largura": 232,
+  "altura": 142,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-vanguarda_estocada_da_vanguarda": {
+  "quadros": 12,
+  "largura": 146,
+  "altura": 63,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-vanguarda_carga_esmagadora": {
+  "quadros": 18,
+  "largura": 144,
+  "altura": 90,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-bastiao_golpe_de_escudo": {
+  "quadros": 12,
+  "largura": 87,
+  "altura": 71,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-bastiao_muralha_inabalavel": {
+  "quadros": 18,
+  "largura": 169,
+  "altura": 86,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-bastiao_muralha_inabalavel-si": {
+  "quadros": 18,
+  "largura": 70,
+  "altura": 71,
+  "fps": 15,
+  "laco": false,
+  "alvo": "si"
+ },
+ "hab-kensei_corte_perfeito": {
+  "quadros": 12,
+  "largura": 123,
+  "altura": 97,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-kensei_lamina_desembainhada": {
+  "quadros": 18,
+  "largura": 113,
+  "altura": 95,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-ronin_corte_relampago": {
+  "quadros": 12,
+  "largura": 109,
+  "altura": 92,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-ronin_danca_da_lamina_solitaria": {
+  "quadros": 18,
+  "largura": 102,
+  "altura": 80,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-assassino_estocada_furtiva": {
+  "quadros": 12,
+  "largura": 146,
+  "altura": 63,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-assassino_golpe_nas_sombras": {
+  "quadros": 18,
+  "largura": 134,
+  "altura": 94,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-duelista_estocada_dupla": {
+  "quadros": 12,
+  "largura": 146,
+  "altura": 63,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-duelista_finta": {
+  "quadros": 18,
+  "largura": 102,
+  "altura": 78,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-sacerdote_toque_sagrado": {
+  "quadros": 12,
+  "largura": 131,
+  "altura": 117,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-sacerdote_prece_de_cura": {
+  "quadros": 18,
+  "largura": 169,
+  "altura": 88,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-sacerdote_prece_de_cura-si": {
+  "quadros": 18,
+  "largura": 45,
+  "altura": 121,
+  "fps": 15,
+  "laco": false,
+  "alvo": "si"
+ },
+ "hab-inquisidor_sentenca": {
+  "quadros": 12,
+  "largura": 178,
+  "altura": 175,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-inquisidor_fogo_sagrado": {
+  "quadros": 18,
+  "largura": 202,
+  "altura": 105,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-arquimago_bola_de_fogo": {
+  "quadros": 12,
+  "largura": 194,
+  "altura": 184,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-arquimago_tempestade_de_raios": {
+  "quadros": 18,
+  "largura": 226,
+  "altura": 260,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-sabio_arcano_lanca_de_gelo": {
+  "quadros": 12,
+  "largura": 161,
+  "altura": 94,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ },
+ "hab-sabio_arcano_feitico_do_torpor": {
+  "quadros": 18,
+  "largura": 105,
+  "altura": 109,
+  "fps": 15,
+  "laco": false,
+  "alvo": "inimigo"
+ }
+}

@@ -35,3 +35,13 @@ python3 scripts/pixelfx/empacotar.py                       # corta, empacota em 
 
 Para trocar um efeito, mude o id na lista de `construir.mjs`. Para as paletas dos elementos, mude `PAL`. Cada imagem fica
 abaixo de 350 KB (o empacotador baixa a qualidade se precisar) e os testes conferem.
+
+## Efeitos das habilidades (ataque básico e especial)
+
+Cada classe e subclasse tem efeito próprio no ataque básico e na habilidade especial (36 habilidades, 38 folhas `hab-*`; as
+que protegem ou curam também têm o efeito `-si`, que cai em quem usou). A lista (efeito do pixelfx, paleta e trecho usado)
+está em `scripts/pixelfx/habilidades.py`; o manifesto é `src/assets/pixelfxHabilidades.json`. Para gerar de novo:
+
+```
+PIXELFX_DIR=../pixelfx python3 scripts/pixelfx/habilidades.py
+```

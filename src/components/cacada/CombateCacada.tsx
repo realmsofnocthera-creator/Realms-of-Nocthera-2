@@ -17,7 +17,7 @@ import { UltimateCinematica } from '@/components/cena/UltimateCinematica';
 import { idDaUltimate, MODO_DA_ULTIMATE } from '@/assets/ultimates';
 import { EfeitosDeStatus, FaixaDeHabilidade, FxPixelfx, ImpactoDaAcao, ImpactoDeCura } from './EfeitosDeLuta';
 import { temposDoQuadro, tremeATela } from '@/lib/cacadaCoreografia';
-import { tintaDosStatus } from '@/assets/efeitosPixelfx';
+import { efeitosDaHabilidade, tintaDosStatus } from '@/assets/efeitosPixelfx';
 import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, animacaoDoHeroi, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
 import { larguraDasBarras, montarQuadros, PainelLuta, QuadroLuta } from '@/lib/cacadaReplay';
 import { textoDaFicha } from '@/rules/textosDaFicha';
@@ -354,6 +354,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
                 acao={acao}
                 alvoVidaMaxima={(alvo === 'monstro' ? q.monstro.hpMax : q.jogador.hpMax) || 1}
                 alvo={alvo === 'monstro' ? alvoMonstro : alvoJogador}
+                alvoSi={acao.de === 'jogador' ? alvoJogador : alvoMonstro}
                 topo={alvo === 'monstro' ? g.monstro.pes - alturaMonstro : g.jogador.pes - alturaJogador * 0.92}
                 indice={indice}
                 velocidade={lenta ? 0.5 : rapido ? 1.8 : 1}
@@ -364,6 +365,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
                 key={`c-${indice}`}
                 valor={cura.cura}
                 alvo={cura.de === 'monstro' ? alvoMonstro : alvoJogador}
+                semEfeito={cura.de === 'jogador' && !!cura.habilidade && !!efeitosDaHabilidade(cura.habilidade)?.si}
                 topo={(cura.de === 'monstro' ? g.monstro.pes - alturaMonstro : g.jogador.pes - alturaJogador * 0.92) - 28}
               />
             )}
