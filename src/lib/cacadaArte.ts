@@ -6,6 +6,7 @@
 import { MAPAS_DA_CACADA } from '@/assets/mapasDaCacada';
 import type { FolhaDeQuadros } from '@/components/cena/SpriteAnimado';
 import heroisManifesto from '@/assets/heroisManifesto.json';
+import monstrosManifesto from '@/assets/monstrosManifesto.json';
 
 export interface SpriteLuta {
   src: string;
@@ -169,3 +170,29 @@ export const ANIMACAO_DO_HEROI: Readonly<Record<string, { costas: AnimacaoDoHero
 export function animacaoDoHeroi(classeId: string, subclasseId?: string | null): { costas: AnimacaoDoHeroi; frente: AnimacaoDoHeroi } | undefined {
   return (subclasseId ? ANIMACAO_DO_HEROI[subclasseId] : undefined) ?? ANIMACAO_DO_HEROI[classeId];
 }
+
+/** A animação de um monstro: a folha do parado (idle) e a do ataque, o tamanho de cada quadro e o instante do golpe. */
+export type AnimacaoDoMonstro = AnimacaoDoHeroi;
+
+type FolhaDoManifesto = { quadros: number; largura: number; altura: number; ms: number[] };
+
+function montarAnimacaoDoMonstro(id: string): AnimacaoDoMonstro {
+  const m = (monstrosManifesto as unknown as Record<string, { idle: FolhaDoManifesto; ataque: FolhaDoManifesto & { impacto: number } }>)[id];
+  return {
+    parado: { src: `/images/cacada/monstros/${id}-idle.webp`, quadros: m.idle.quadros, ms: m.idle.ms },
+    ataque: { src: `/images/cacada/monstros/${id}-ataque.webp`, quadros: m.ataque.quadros, ms: m.ataque.ms },
+    largura: m.idle.largura,
+    altura: m.idle.altura,
+    proporcao: m.idle.largura / m.idle.altura,
+    impacto: m.ataque.impacto,
+  };
+}
+
+/**
+ * Os monstros animados (pixel art do Yuri, em folhas de quadros): parado e ataque, virados para a esquerda (para o herói).
+ * Gerado de `monstrosManifesto.json` (`scripts/monstros/empacotar.py`). Os monstros de 9★ ainda não têm animação: seguem com
+ * o retrato parado.
+ */
+export const ANIMACAO_DO_MONSTRO: Readonly<Record<string, AnimacaoDoMonstro>> = Object.fromEntries(
+  Object.keys(monstrosManifesto).map((id) => [id, montarAnimacaoDoMonstro(id)])
+);

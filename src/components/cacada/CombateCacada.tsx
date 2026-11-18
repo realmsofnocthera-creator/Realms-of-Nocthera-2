@@ -18,7 +18,7 @@ import { idDaUltimate, MODO_DA_ULTIMATE } from '@/assets/ultimates';
 import { EfeitosDeStatus, FaixaDeHabilidade, FxPixelfx, ImpactoDaAcao, ImpactoDeCura } from './EfeitosDeLuta';
 import { temposDoQuadro, tremeATela } from '@/lib/cacadaCoreografia';
 import { efeitosDaHabilidade, tintaDosStatus } from '@/assets/efeitosPixelfx';
-import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, animacaoDoHeroi, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
+import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, ANIMACAO_DO_MONSTRO, animacaoDoHeroi, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
 import { larguraDasBarras, montarQuadros, PainelLuta, QuadroLuta } from '@/lib/cacadaReplay';
 import { textoDaFicha } from '@/rules/textosDaFicha';
 import { TEXTOS_DO_COMBATE as T } from '@/rules/textosDoCombate';
@@ -185,7 +185,13 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   // o golpe do herói acerta no momento do impacto da animação dele, e o quadro dura até ela terminar
   const velocidadeHeroi = animacaoHeroi ? animacaoHeroi.impacto / base.impacto : 1;
   const duracaoDoAtaque = animacaoHeroi ? Math.ceil(animacaoHeroi.ataque.ms.reduce((a, b) => a + b, 0) / velocidadeHeroi) + 90 : 0;
-  const tempos = { impacto: base.impacto, duracao: acao?.de === 'jogador' ? Math.max(base.duracao, duracaoDoAtaque) : base.duracao };
+  const animacaoMonstro = ANIMACAO_DO_MONSTRO[monstro.id];
+  const velocidadeMonstro = animacaoMonstro ? animacaoMonstro.impacto / base.impacto : 1;
+  const duracaoDoAtaqueMonstro = animacaoMonstro ? Math.ceil(animacaoMonstro.ataque.ms.reduce((a, b) => a + b, 0) / velocidadeMonstro) + 90 : 0;
+  const tempos = {
+    impacto: base.impacto,
+    duracao: acao?.de === 'jogador' ? Math.max(base.duracao, duracaoDoAtaque) : acao?.de === 'monstro' ? Math.max(base.duracao, duracaoDoAtaqueMonstro) : base.duracao,
+  };
   const impactou = !acao || acertou === indice;
   // até o impacto, as barras ainda mostram a vida de antes do golpe
   const vis = impactou || !ant ? q : ant;
@@ -235,11 +241,15 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   const pixelDoHeroi = animacaoHeroi ? Math.min((g.jogador.altura * 0.0102), (caixa.w * 0.8) / animacaoHeroi.largura) : 0;
   const alturaJogador = animacaoHeroi ? animacaoHeroi.altura * pixelDoHeroi : spriteJogador ? g.jogador.altura : g.jogador.altura * 0.7;
   // com arte: a altura segue a da arte (as criaturas das estrelas altas são maiores), sem passar de 46% da largura da arena
-  const alturaMonstro = spriteMonstro
+  const alturaDoRetrato = spriteMonstro
     ? Math.min(g.monstro.altura * (spriteMonstro.altura / ALTURA_DE_REFERENCIA_DA_ARTE), (caixa.w * 0.46) / spriteMonstro.proporcao)
     : g.monstro.altura * (ALTURA_MONSTRO_PADRAO / 22);
+  // animado: a mesma escala de pixel do retrato, e o quadro (com o golpe estendido) nunca passa de 46% da largura da arena
+  const alturaMonstro = animacaoMonstro && spriteMonstro
+    ? Math.min(alturaDoRetrato * (animacaoMonstro.altura / spriteMonstro.altura), (caixa.w * 0.46) / animacaoMonstro.proporcao)
+    : alturaDoRetrato;
   const larguraJogador = alturaJogador * (spriteJogador?.proporcao ?? 1);
-  const larguraMonstro = alturaMonstro * (spriteMonstro?.proporcao ?? 1);
+  const larguraMonstro = alturaMonstro * (animacaoMonstro?.proporcao ?? spriteMonstro?.proporcao ?? 1);
   // o herói de quadro largo (arma estendida) se afasta da borda direita para não sair da tela
   const xJogador = Math.min(g.jogador.x, Math.max(larguraJogador / 2 + 4, caixa.w - larguraJogador / 2 - 4));
 
@@ -308,12 +318,14 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
             <Sombra x={xJogador} y={g.jogador.pes} largura={larguraJogador * 0.55} apagada={mortoJogador} />
 
             {/* Monstro */}
-            <div className="absolute -translate-x-1/2" style={{ left: g.monstro.x, top: g.monstro.pes - alturaMonstro, height: alturaMonstro, aspectRatio: spriteMonstro ? String(spriteMonstro.proporcao) : '1', zIndex: acao?.de === 'monstro' ? 6 : 4 }}>
+            <div className="absolute -translate-x-1/2" style={{ left: g.monstro.x, top: g.monstro.pes - alturaMonstro, height: alturaMonstro, aspectRatio: animacaoMonstro ? String(animacaoMonstro.proporcao) : spriteMonstro ? String(spriteMonstro.proporcao) : '1', zIndex: acao?.de === 'monstro' ? 6 : 4 }}>
               <div key={`mi-${indice}`} className="w-full h-full cacada-investida" style={acao?.de === 'monstro' ? { animation: `cacadaInvestida ${tempos.duracao}ms ease-in-out both`, ['--lx' as string]: `${investida.monstro.lx}px`, ['--ly' as string]: `${investida.monstro.ly}px` } : undefined}>
                 <div key={`mr-${indice}`} className="w-full h-full" style={reage('monstro') ? reacaoVars('monstro') : undefined}>
                   <div className={`w-full h-full ${mortoMonstro ? 'cacada-morte' : ''}`} style={mortoMonstro ? { animationDuration: lenta ? '1500ms' : '1000ms' } : undefined}>
-                    <div className={`w-full h-full ${vis.monstro.hp > 0 && !acao ? 'cacada-respira' : ''} ${q.monstro.enfurecido && vis.monstro.hp > 0 ? 'cacada-furia' : ''}`} style={{ filter: tintaDosStatus(vis.monstro.status), transition: 'filter 300ms' }}>
-                      {spriteMonstro ? (
+                    <div className={`w-full h-full ${vis.monstro.hp > 0 && !acao && !animacaoMonstro ? 'cacada-respira' : ''} ${q.monstro.enfurecido && vis.monstro.hp > 0 ? 'cacada-furia' : ''}`} style={{ filter: tintaDosStatus(vis.monstro.status), transition: 'filter 300ms' }}>
+                      {animacaoMonstro ? (
+                        <SpriteAnimado parado={animacaoMonstro.parado} ataque={animacaoMonstro.ataque} golpe={q.agiu === 'monstro' ? indice : null} velocidade={velocidadeMonstro} rotulo={monstro.nome} />
+                      ) : spriteMonstro ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={spriteMonstro.src} alt={monstro.nome} className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} draggable={false} />
                       ) : (
