@@ -190,8 +190,7 @@ function montarAnimacaoDoMonstro(id: string): AnimacaoDoMonstro {
 
 /**
  * Os monstros animados (pixel art do Yuri, em folhas de quadros): parado e ataque, virados para a esquerda (para o herói).
- * Gerado de `monstrosManifesto.json` (`scripts/monstros/empacotar.py`). Os monstros de 9★ ainda não têm animação: seguem com
- * o retrato parado.
+ * Gerado de `monstrosManifesto.json` (`scripts/monstros/empacotar.py`). Um monstro sem entrada aqui segue com o retrato parado.
  */
 export const ANIMACAO_DO_MONSTRO: Readonly<Record<string, AnimacaoDoMonstro>> = Object.fromEntries(
   Object.keys(monstrosManifesto).map((id) => [id, montarAnimacaoDoMonstro(id)])
