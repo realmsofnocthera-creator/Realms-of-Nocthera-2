@@ -1,0 +1,21 @@
+/** Os textos da tela da Provação do Guerreiro, num só lugar (para a tradução). */
+export const TEXTOS_DO_GUERREIRO = {
+  titulo: 'Provação do Guerreiro',
+  voltar: 'Provações',
+  dificuldade: (romano: string) => `Dificuldade ${romano}`,
+  enfrentar: 'Enfrentar',
+  enfrentando: '...',
+  escolha: 'Escolha uma carta',
+  trancada: 'Carta trancada',
+  vencida: 'Já vencido',
+  descricaoDaMesa: 'Luta única contra um chefe de mecânica própria, uma tentativa por dia por chefe.',
+  regras: (emblemas: number) => `Cada vitória dá ${emblemas} emblemas; quanto maior a dificuldade, mais raros eles são.`,
+  seusEmblemas: 'Seus emblemas:',
+  nenhum: 'nenhum',
+  chanceDosEmblemas: 'Chance de cada emblema',
+  mecanica: 'Mecânica',
+  pularIntro: 'Toque para pular',
+  sessaoExpirada: 'Sessão expirada. Faça login de novo.',
+  falhaAoEnfrentar: 'Não foi possível enfrentar o chefe.',
+  erroAoEnfrentar: 'Erro ao enfrentar o chefe.',
+} as const;

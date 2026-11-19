@@ -5,6 +5,7 @@ import { createCharacter, getCharacterByUid, updateCharacter } from '@/server/ch
 import { resetCharacterStore } from '@/test/repositorioMemoria';
 import { dificuldadesDoGuerreiro, emblemasDoPersonagem } from '@/lib/guerreiroTela';
 import { diaDeBrasilia } from '@/game/batalhaSangrenta';
+import { MesaDoGuerreiro } from '@/components/guerreiro/MesaDoGuerreiro';
 import { GuerreiroScreen } from '@/components/guerreiro/GuerreiroScreen';
 
 const HOJE = new Date('2026-10-14T15:00:00Z');
@@ -54,7 +55,7 @@ describe('Provação do Guerreiro (tela)', () => {
     expect(emblemasDoPersonagem(itens).map((e) => [e.nome, e.quantidade])).toEqual([['Épico', 1], ['Comum', 3]]);
   });
 
-  it('a tela renderiza os 10 chefes, as mecânicas, as chances e os emblemas', async () => {
+  it('a tela renderiza a mesa com as 10 cartas e os emblemas', async () => {
     await createCharacter('u-gue', {
       nome: 'Yuri',
       racaId: 'elfo',
@@ -68,10 +69,28 @@ describe('Provação do Guerreiro (tela)', () => {
     for (const nome of ['Astaroth, o Louco', 'Zephyron, o Mago', 'Thundrak, o Carro', 'Gorvath, a Força', 'Veredar, a Justiça', 'Selvara, a Roda da Fortuna', 'Nekrath, a Morte', 'Belzareth, o Diabo', 'Kolossar, a Torre', 'Aetherion, o Mundo']) {
       expect(html).toContain(nome);
     }
-    expect(html).toContain('Caos Imprevisível');
-    expect(html).toContain('Enfrentar');
-    expect(html).toContain('Comum 100%');
-    expect(html).toContain('Mítico 5%');
     expect(html).toContain('Comum</b> x4');
+    // sem carta escolhida não há painel de detalhe
+    expect(html).not.toContain('Enfrentar');
+  });
+
+  it('a carta escolhida mostra o chefe, a mecânica, as chances e o botão', async () => {
+    await createCharacter('u-gue2', {
+      nome: 'Yuri',
+      racaId: 'elfo',
+      classeId: 'cavaleiro',
+      pontos: { vigor: 5, sorte: 0, forca: 5, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 0 },
+    });
+    await updateCharacter('u-gue2', { nivel: 12, guerreiroVencidas: [1, 2, 3, 4, 5, 6, 7, 8, 9] });
+    const c = (await getCharacterByUid('u-gue2'))!;
+    const dificuldades = dificuldadesDoGuerreiro(c);
+    const html = renderToStaticMarkup(React.createElement(MesaDoGuerreiro, { dificuldades, selecionada: 10, onSelecionar: () => {}, onEnfrentar: () => {}, ocupado: false }));
+    expect(html).toContain('Dificuldade X');
+    expect(html).toContain('Aetherion, o Mundo');
+    expect(html).toContain('Ciclo da Existência');
+    expect(html).toContain('Enfrentar');
+    expect(html).toContain('40%');
+    expect(html).toContain('5%');
+    expect(dificuldades.find((d) => d.dificuldade === 1)?.mecanicaNome).toBe('Caos Imprevisível');
   });
 });
