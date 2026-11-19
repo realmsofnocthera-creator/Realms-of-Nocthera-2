@@ -13,6 +13,8 @@ import { ICONES_DE_SALDO } from '@/assets/mochilaUi';
 import { TEXTOS_DA_TORRE as T } from '@/rules/textosDaTorre';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { CombateCacada } from '@/components/cacada/CombateCacada';
+import { SpriteAnimado } from '@/components/cena/SpriteAnimado';
+import { ANIMACAO_DO_MONSTRO } from '@/lib/cacadaArte';
 
 interface TorreCelestialScreenProps {
   character: CharacterDocument;
@@ -181,6 +183,11 @@ export function TorreCelestialScreen({ character, onCharacterChange, tokenFresco
           {etapa.tipo === 'torre' && !torre.completa && torre.andar !== null && (
             <section aria-label="Andar atual" className="flex gap-2">
               <div className="relative shrink-0 w-[34%] self-start" style={{ aspectRatio: '300 / 228', backgroundImage: `url(${CENARIOS_DA_TORRE[cenarioDoAndar(torre.andar)]})`, backgroundSize: '100% 100%', ...pixel }}>
+                {torre.chefe && torre.monstroId && ANIMACAO_DO_MONSTRO[torre.monstroId] && (
+                  <div className="absolute bottom-[8%] left-1/2 -translate-x-1/2" style={{ height: '62%', aspectRatio: String(ANIMACAO_DO_MONSTRO[torre.monstroId].proporcao) }}>
+                    <SpriteAnimado parado={ANIMACAO_DO_MONSTRO[torre.monstroId].parado} ataque={ANIMACAO_DO_MONSTRO[torre.monstroId].ataque} golpe={null} rotulo={torre.nome ?? ''} />
+                  </div>
+                )}
                 <span className="absolute left-1 bottom-1 inline-flex items-center gap-0.5 text-[11px] font-cinzel font-black leading-none px-1.5 py-1 rounded-sm" style={{ backgroundColor: '#000000b8', color: torre.chefe ? '#F3C769' : '#F5E3B3' }}>
                   {torre.chefe && <Crown className="w-3 h-3" aria-label={T.chefe} />}{T.andar(torre.andar)}
                 </span>

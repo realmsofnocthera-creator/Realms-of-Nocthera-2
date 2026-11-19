@@ -244,9 +244,10 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   const alturaDoRetrato = spriteMonstro
     ? Math.min(g.monstro.altura * (spriteMonstro.altura / ALTURA_DE_REFERENCIA_DA_ARTE), (caixa.w * 0.46) / spriteMonstro.proporcao)
     : g.monstro.altura * (ALTURA_MONSTRO_PADRAO / 22);
+  // sem retrato (os chefes da Torre): só a animação, na mesma escala de pixel dos monstros
   // animado: a mesma escala de pixel do retrato, e o quadro (com o golpe estendido) nunca passa de 46% da largura da arena
-  const alturaMonstro = animacaoMonstro && spriteMonstro
-    ? Math.min(alturaDoRetrato * (animacaoMonstro.altura / spriteMonstro.altura), (caixa.w * 0.46) / animacaoMonstro.proporcao)
+  const alturaMonstro = animacaoMonstro
+    ? Math.min(spriteMonstro ? alturaDoRetrato * (animacaoMonstro.altura / spriteMonstro.altura) : g.monstro.altura * (animacaoMonstro.altura / ALTURA_DE_REFERENCIA_DA_ARTE), (caixa.w * 0.46) / animacaoMonstro.proporcao)
     : alturaDoRetrato;
   const larguraJogador = alturaJogador * (spriteJogador?.proporcao ?? 1);
   const larguraMonstro = alturaMonstro * (animacaoMonstro?.proporcao ?? spriteMonstro?.proporcao ?? 1);

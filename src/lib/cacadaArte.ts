@@ -7,6 +7,7 @@ import { MAPAS_DA_CACADA } from '@/assets/mapasDaCacada';
 import type { FolhaDeQuadros } from '@/components/cena/SpriteAnimado';
 import heroisManifesto from '@/assets/heroisManifesto.json';
 import monstrosManifesto from '@/assets/monstrosManifesto.json';
+import chefesManifesto from '@/assets/chefesManifesto.json';
 
 export interface SpriteLuta {
   src: string;
@@ -176,11 +177,13 @@ export type AnimacaoDoMonstro = AnimacaoDoHeroi;
 
 type FolhaDoManifesto = { quadros: number; largura: number; altura: number; ms: number[] };
 
-function montarAnimacaoDoMonstro(id: string): AnimacaoDoMonstro {
-  const m = (monstrosManifesto as unknown as Record<string, { idle: FolhaDoManifesto; ataque: FolhaDoManifesto & { impacto: number } }>)[id];
+type EntradaDoManifesto = { idle: FolhaDoManifesto; ataque: FolhaDoManifesto & { impacto: number } };
+
+function montarAnimacaoDoMonstro(id: string, manifesto: Record<string, EntradaDoManifesto>, pasta: string): AnimacaoDoMonstro {
+  const m = manifesto[id];
   return {
-    parado: { src: `/images/cacada/monstros/${id}-idle.webp`, quadros: m.idle.quadros, ms: m.idle.ms },
-    ataque: { src: `/images/cacada/monstros/${id}-ataque.webp`, quadros: m.ataque.quadros, ms: m.ataque.ms },
+    parado: { src: `${pasta}/${id}-idle.webp`, quadros: m.idle.quadros, ms: m.idle.ms },
+    ataque: { src: `${pasta}/${id}-ataque.webp`, quadros: m.ataque.quadros, ms: m.ataque.ms },
     largura: m.idle.largura,
     altura: m.idle.altura,
     proporcao: m.idle.largura / m.idle.altura,
@@ -192,6 +195,8 @@ function montarAnimacaoDoMonstro(id: string): AnimacaoDoMonstro {
  * Os monstros animados (pixel art do Yuri, em folhas de quadros): parado e ataque, virados para a esquerda (para o herói).
  * Gerado de `monstrosManifesto.json` (`scripts/monstros/empacotar.py`). Um monstro sem entrada aqui segue com o retrato parado.
  */
-export const ANIMACAO_DO_MONSTRO: Readonly<Record<string, AnimacaoDoMonstro>> = Object.fromEntries(
-  Object.keys(monstrosManifesto).map((id) => [id, montarAnimacaoDoMonstro(id)])
-);
+export const ANIMACAO_DO_MONSTRO: Readonly<Record<string, AnimacaoDoMonstro>> = Object.fromEntries([
+  ...Object.keys(monstrosManifesto).map((id) => [id, montarAnimacaoDoMonstro(id, monstrosManifesto as unknown as Record<string, EntradaDoManifesto>, '/images/cacada/monstros')]),
+  // os 30 chefes da Torre Celestial (`chefesManifesto.json`, `scripts/torre/empacotarChefes.py`)
+  ...Object.keys(chefesManifesto).map((id) => [id, montarAnimacaoDoMonstro(id, chefesManifesto as unknown as Record<string, EntradaDoManifesto>, '/images/torre/chefes')]),
+]);

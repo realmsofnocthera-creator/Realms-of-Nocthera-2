@@ -26,6 +26,8 @@ export interface TorreTela {
   completa: boolean;
   bloqueio: string | null;
   nome: string | null;
+  /** O id do monstro ou chefe do andar (para a arte). */
+  monstroId: string | null;
   chefe: boolean;
   efeitos: string | null;
   estrela: number | null;
@@ -47,7 +49,7 @@ export function torreDoPersonagem(c: Personagem): TorreTela {
   const vencidos = Math.min(TORRE.andares, c.torreAndar ?? 0);
   const entrada = conferirEntradaTorre(c.nivel, c.torreAndar);
   if (!entrada.ok && entrada.motivo === 'torreCompleta') {
-    return { andar: null, vencidos, completa: true, bloqueio: null, nome: null, chefe: false, efeitos: null, estrela: null, recompensas: [], proximoChefe: null };
+    return { andar: null, vencidos, completa: true, bloqueio: null, nome: null, monstroId: null, chefe: false, efeitos: null, estrela: null, recompensas: [], proximoChefe: null };
   }
   const andar = andarAtual(c.torreAndar);
   const id = identidadeDoAndar(andar);
@@ -58,6 +60,7 @@ export function torreDoPersonagem(c: Personagem): TorreTela {
     completa: false,
     bloqueio: entrada.ok ? null : `Requer nível ${NIVEL_TORRE}`,
     nome: id.nome,
+    monstroId: id.monstroId,
     chefe: id.chefe,
     efeitos: id.efeitos ?? null,
     estrela: estrelaDoAndar(andar),
