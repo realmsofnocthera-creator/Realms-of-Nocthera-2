@@ -9,6 +9,8 @@ import type { EfeitoStatus } from '@/rules/statusEffects';
 import { EFEITOS_STATUS } from '@/rules/statusEffects';
 import { resolveAvatarSrc } from '@/assets/avatars';
 import { MAPAS_DA_CACADA } from '@/assets/mapasDaCacada';
+import { MAPAS_DA_TORRE } from '@/assets/mapasDaTorre';
+import type { CenaDoMapaDaTorre } from '@/assets/mapasDaTorre';
 import { MapaDaCacada } from './MapaDaCacada';
 import { AberturaDeBatalha } from '@/components/cena/AberturaDeBatalha';
 import { TelaDeFimDeLuta, type TelaDeFimProps } from '@/components/cena/TelaDeFimDeLuta';
@@ -30,6 +32,8 @@ interface CombateCacadaProps {
   titulo: string;
   /** estrela do monstro, para escolher o cenário */
   estrela?: number;
+  /** O mapa da Torre Celestial (1 a 30) deste andar: no lugar do mapa da estrela, com as plataformas dele. */
+  mapaDaTorre?: number;
   /** HP com que o personagem entra na luta (Batalha Sangrenta). */
   hpInicialJogador?: number;
   /**
@@ -122,17 +126,22 @@ export function destacarLinha(texto: string): React.ReactNode[] {
  */
 const CENA = { w: 1024, h: 1536, topo: 0.28, base: 0.94, monstroX: 0.4, monstroPes: 0.5, jogadorX: 0.64, jogadorPes: 0.8, alturaMonstro: 0.15, alturaJogador: 0.26 };
 
-export function geometriaDaCena(largura: number, altura: number) {
-  const escala = Math.max(largura / CENA.w, altura / CENA.h);
-  const imgW = CENA.w * escala;
-  const imgH = CENA.h * escala;
-  const esq = (imgW - largura) / 2;
-  const meio = ((CENA.topo + CENA.base) / 2) * imgH;
+/** Nos mapas da Torre o monstro fica na plataforma do alto (à direita) e o herói na de baixo; a janela de corte é mais alta. */
+const CENA_DA_TORRE = { topo: 0.15, base: 0.85, alturaMonstro: 0.12, alturaJogador: 0.24 };
+
+export function geometriaDaCena(largura: number, altura: number, torre?: CenaDoMapaDaTorre) {
+  const cena = torre ? { ...CENA, ...CENA_DA_TORRE, ...torre } : CENA;
+  const escala = Math.max(largura / cena.w, altura / cena.h);
+  const imgW = cena.w * escala;
+  const imgH = cena.h * escala;
+  // na Torre a janela acompanha as duas plataformas (a do monstro fica na ponta direita do mapa); nos outros, fica no centro
+  const esq = torre ? Math.min(Math.max(((torre.monstroX + torre.jogadorX) / 2) * imgW - largura / 2, 0), Math.max(0, imgW - largura)) : (imgW - largura) / 2;
+  const meio = ((cena.topo + cena.base) / 2) * imgH;
   const topo = Math.min(Math.max(meio - altura / 2, 0), imgH - altura);
   return {
     imgW, imgH, esq, topo,
-    monstro: { x: CENA.monstroX * imgW - esq, pes: CENA.monstroPes * imgH - topo, altura: CENA.alturaMonstro * imgH },
-    jogador: { x: CENA.jogadorX * imgW - esq, pes: CENA.jogadorPes * imgH - topo, altura: CENA.alturaJogador * imgH },
+    monstro: { x: cena.monstroX * imgW - esq, pes: cena.monstroPes * imgH - topo, altura: cena.alturaMonstro * imgH },
+    jogador: { x: cena.jogadorX * imgW - esq, pes: cena.jogadorPes * imgH - topo, altura: cena.alturaJogador * imgH },
   };
 }
 
@@ -147,7 +156,7 @@ export function geometriaDaCena(largura: number, altura: number) {
  * (um por golpe) e, no crítico, a estrela, o aviso e o tremor da tela. A barra de vida desce na hora do impacto e deixa um
  * rastro claro. No último golpe tudo vai em câmera lenta e a criatura se desfaz.
  */
-export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, hpInicialJogador, onFim, telaDeFim }: CombateCacadaProps) {
+export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, hpInicialJogador, onFim, telaDeFim, mapaDaTorre }: CombateCacadaProps) {
   const quadros: QuadroLuta[] = useMemo(() => montarQuadros(resultado, personagem, monstro, 5, hpInicialJogador), [resultado, personagem, monstro, hpInicialJogador]);
   const [indice, setIndice] = useState(0);
   // a abertura de batalha (a cena do Yuri) toca antes de a luta começar
@@ -235,7 +244,8 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   const spriteJogador = animacaoHeroi ? { src: animacaoHeroi.parado.src, proporcao: animacaoHeroi.proporcao } : SPRITE_CLASSE[personagem.classeId];
   const spriteMonstro = SPRITE_MONSTRO[monstro.id];
   const retrato = resolveAvatarSrc(personagem.avatarId, personagem.classeId);
-  const g = geometriaDaCena(caixa.w, caixa.h);
+  const mapaTorre = mapaDaTorre ? MAPAS_DA_TORRE[mapaDaTorre] : undefined;
+  const g = geometriaDaCena(caixa.w, caixa.h, mapaTorre?.cena);
   // a arte animada tem a mesma escala de pixel em todos os heróis: o tamanho na tela é o da arte vezes um fator (limitado para
   // o quadro, com a arma estendida, nunca passar de 80% da largura da tela)
   const pixelDoHeroi = animacaoHeroi ? Math.min((g.jogador.altura * 0.0102), (caixa.w * 0.8) / animacaoHeroi.largura) : 0;
@@ -306,7 +316,9 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
         <div className="absolute inset-0" style={{ transform: cameraLenta ? 'scale(1.12)' : 'scale(1)', transformOrigin: `${g.monstro.x}px ${g.monstro.pes - alturaMonstro / 2}px`, transition: 'transform 900ms ease-in-out' }}>
           {/* o tremor da tela nos golpes fortes */}
           <div key={`t-${indice}`} className="absolute inset-0" style={tremer ? { animation: `cacadaTremer ${critico ? 480 : 340}ms ease-out both`, ['--t' as string]: critico ? '9px' : '5px' } : undefined}>
-            {estrela && MAPAS_DA_CACADA[estrela] ? (
+            {mapaTorre ? (
+              <MapaDaCacada estrela={0} mapa={mapaTorre} style={{ width: g.imgW, height: g.imgH, left: -g.esq, top: -g.topo }} />
+            ) : estrela && MAPAS_DA_CACADA[estrela] ? (
               <MapaDaCacada estrela={estrela} style={{ width: g.imgW, height: g.imgH, left: -g.esq, top: -g.topo }} />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element

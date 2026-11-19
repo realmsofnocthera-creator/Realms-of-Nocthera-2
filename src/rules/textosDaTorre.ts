@@ -23,5 +23,6 @@ export const TEXTOS_DA_TORRE = {
   sessaoExpirada: 'Sessão expirada. Faça login de novo.',
   falhaAoSubir: 'Não foi possível subir a Torre.',
   erroAoSubir: 'Erro ao subir a Torre.',
+  nomeDoMapa: (de: number, ate: number) => `Torre Celestial, andares ${de} a ${ate}`,
   carregando: 'Carregando a Torre Celestial...',
 } as const;

@@ -20,3 +20,25 @@ describe('HUD da luta', () => {
     expect(g.monstro.pes - g.monstro.altura).toBeGreaterThan(110);
   });
 });
+
+describe('geometria da cena nos mapas da Torre', () => {
+  const cena = { monstroX: 0.84, monstroPes: 0.27, jogadorX: 0.5, jogadorPes: 0.62 };
+
+  it('acompanha as duas plataformas: o monstro e o herói ficam dentro da tela', () => {
+    for (const [w, h] of [[390, 844], [360, 740], [430, 932]]) {
+      const g = geometriaDaCena(w, h, cena);
+      expect(g.monstro.x).toBeGreaterThan(0);
+      expect(g.monstro.x).toBeLessThan(w);
+      expect(g.jogador.x).toBeGreaterThan(0);
+      expect(g.jogador.x).toBeLessThan(w);
+      expect(g.monstro.pes).toBeLessThan(g.jogador.pes);
+    }
+  });
+
+  it('sem mapa da Torre a cena continua a da Caçada', () => {
+    const a = geometriaDaCena(390, 844);
+    const b = geometriaDaCena(390, 844, undefined);
+    expect(b).toEqual(a);
+    expect(a.esq).toBeCloseTo((a.imgW - 390) / 2);
+  });
+});

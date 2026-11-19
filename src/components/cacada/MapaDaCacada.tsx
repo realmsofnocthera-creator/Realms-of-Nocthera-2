@@ -2,13 +2,14 @@
 
 import React, { useEffect, useRef } from 'react';
 import { MAPAS_DA_CACADA, TIPO_AV1, TIPO_H264 } from '@/assets/mapasDaCacada';
+import type { MapaDaCacada as MapaAnimado } from '@/assets/mapasDaCacada';
 
 /**
  * O mapa animado de uma estrela da Caçada: o vídeo em repetição, sem som, por cima da capa (a imagem parada). Com
  * "reduzir movimento" ligado, o vídeo fica parado na capa. `style` posiciona e dimensiona o mapa (a luta o encaixa na arena).
  */
-export function MapaDaCacada({ estrela, style }: { estrela: number; style?: React.CSSProperties }) {
-  const mapa = MAPAS_DA_CACADA[estrela];
+export function MapaDaCacada({ estrela, mapa: mapaDado, style }: { estrela: number; mapa?: MapaAnimado; style?: React.CSSProperties }) {
+  const mapa = mapaDado ?? MAPAS_DA_CACADA[estrela];
   const video = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -23,12 +24,12 @@ export function MapaDaCacada({ estrela, style }: { estrela: number; style?: Reac
     ajustar();
     reduzir?.addEventListener?.('change', ajustar);
     return () => reduzir?.removeEventListener?.('change', ajustar);
-  }, [estrela]);
+  }, [estrela, mapa]);
 
   if (!mapa) return null;
   return (
     <video
-      key={estrela}
+      key={mapa.imagem}
       ref={video}
       role="img"
       aria-label={mapa.nome}
