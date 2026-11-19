@@ -10,7 +10,6 @@ import cenario3 from './images/torre/cenario-3.webp';
 import cenario4 from './images/torre/cenario-4.webp';
 import cenario5 from './images/torre/cenario-5.webp';
 import cenario6 from './images/torre/cenario-6.webp';
-import iconeBau from './images/torre/icone-bau.webp';
 import iconeCasa from './images/torre/icone-casa.webp';
 import iconeCadeado from './images/torre/icone-cadeado.webp';
 import iconeTorre from './images/torre/icone-torre.webp';
@@ -32,7 +31,6 @@ export const CENARIOS_DA_TORRE: readonly string[] = [cenario1, cenario2, cenario
 /** Peças de interface da Torre (folha do Yuri, fatiada por `scripts/torre/fatiar.py`). Ouro e cristais vêm do HUD e da Mochila. */
 export const TORRE_UI = {
   pergaminho: srcDaImagem(pergaminho),
-  iconeBau: srcDaImagem(iconeBau),
   iconeCasa: srcDaImagem(iconeCasa),
   iconeCadeado: srcDaImagem(iconeCadeado),
   iconeTorre: srcDaImagem(iconeTorre),

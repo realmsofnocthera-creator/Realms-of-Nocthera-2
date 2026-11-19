@@ -53,13 +53,13 @@ for s in ndi.find_objects(lab):
 caixas.sort()
 NOMES = (
     [f'cenario-{i}' for i in range(1, 7)]
-    + ['icone-bau', 'icone-casa', 'icone-cadeado', None, None, 'icone-torre', None, 'icone-sigilo']
+    + [None, 'icone-casa', 'icone-cadeado', None, None, 'icone-torre', None, 'icone-sigilo']
     + ['botao-vermelho', 'botao-vermelho-escuro', 'botao-cinza']
     + ['barra-titulo', 'moldura-vazia', 'moldura-destaque', 'moldura-pequena']
 )
 assert len(caixas) == len(NOMES), (len(caixas), len(NOMES))
 for (_, x0, y0, y1, x1), nome in zip(caixas, NOMES):
-    if nome is None:  # cristais e moeda: o jogo já tem os seus
+    if nome is None:  # baú, cristais e moeda: o jogo já tem os seus ou não usa
         continue
     peca = A.crop((x0, y0, x1, y1))
     peca = peca if nome.startswith('cenario') else tirar_fundo(peca, BG)

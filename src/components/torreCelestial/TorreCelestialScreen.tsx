@@ -46,7 +46,7 @@ function Pergaminho({ children, className = '', style }: { children: React.React
 }
 
 /** Os ícones das recompensas de um andar: um quadro pequeno com o ícone e o valor. */
-function Recompensas({ lista, chefe, tamanho = 38 }: { lista: RecompensaTela[]; chefe: boolean; tamanho?: number }) {
+function Recompensas({ lista, tamanho = 38 }: { lista: RecompensaTela[]; tamanho?: number }) {
   const itens = lista.filter((r) => ICONE_DA_RECOMPENSA[r.rotulo]);
   return (
     <>
@@ -57,12 +57,6 @@ function Recompensas({ lista, chefe, tamanho = 38 }: { lista: RecompensaTela[]; 
           <span className="absolute -bottom-1 right-0 text-[9px] font-black leading-none px-0.5 rounded-sm" style={{ backgroundColor: '#000000cc', color: '#F5E3B3' }}>{r.valor}</span>
         </div>
       ))}
-      {chefe && (
-        <div className="shrink-0 flex items-center justify-center" style={{ width: tamanho, height: tamanho, backgroundImage: `url(${TORRE_UI.molduraPequena})`, backgroundSize: '100% 100%', ...pixel }} title={T.chefe}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={TORRE_UI.iconeBau} alt={T.chefe} className="w-[70%] h-[70%] object-contain" draggable={false} />
-        </div>
-      )}
     </>
   );
 }
@@ -173,7 +167,7 @@ export function TorreCelestialScreen({ character, onCharacterChange, tokenFresco
                       </span>
                     </div>
                     <div className="shrink-0 flex flex-col gap-1.5 items-center w-[38px]" data-linha={i}>
-                      <Recompensas lista={a.recompensas.slice(-1)} chefe={a.chefe} />
+                      <Recompensas lista={a.recompensas.slice(-1)} />
                     </div>
                   </li>
                 ))}
@@ -211,7 +205,7 @@ export function TorreCelestialScreen({ character, onCharacterChange, tokenFresco
               <span className="text-[11px] font-cinzel font-black uppercase shrink-0">{T.recompensas}</span>
               <div className="flex gap-1.5 flex-1 min-w-0 flex-wrap">
                 {torre.recompensas.length === 0 && <b className="text-[11px]">{T.nenhumaRecompensa}</b>}
-                <Recompensas lista={torre.recompensas.filter((r) => r.rotulo !== 'XP')} chefe={torre.chefe} />
+                <Recompensas lista={torre.recompensas.filter((r) => r.rotulo !== 'XP')} />
                 {torre.recompensas.filter((r) => r.rotulo === 'XP').map((r) => <b key="xp" className="self-center text-[11px]">XP +{r.valor}</b>)}
               </div>
               {torre.bloqueio ? (
@@ -255,7 +249,7 @@ export function TorreCelestialScreen({ character, onCharacterChange, tokenFresco
                 </div>
                 {t.venceu ? (
                   <div className="flex flex-wrap justify-center items-center gap-1.5">
-                    <Recompensas lista={ganhos.filter((g) => g.rotulo !== 'XP')} chefe={false} tamanho={42} />
+                    <Recompensas lista={ganhos.filter((g) => g.rotulo !== 'XP')} tamanho={42} />
                     {ganhos.filter((g) => g.rotulo === 'XP').map((g) => <b key="xp" className="text-sm font-cinzel">XP +{g.valor}</b>)}
                   </div>
                 ) : (
