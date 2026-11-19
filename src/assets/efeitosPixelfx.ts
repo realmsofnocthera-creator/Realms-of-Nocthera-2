@@ -118,6 +118,23 @@ export const EFEITO_DO_STATUS: Readonly<Record<string, NomeDoEfeito>> = {
   queimadura: 'dot-queimadura',
 };
 
+/**
+ * O golpe de cada chefe da Torre que não ataca com garras (pela arma ou pelo corpo, a partir do nome e da aparência: proposta,
+ * a confirmar). Os chefes de elemento mostram a magia do elemento; os outros, a garra.
+ */
+export const GOLPE_DO_MONSTRO: Readonly<Record<string, NomeDoEfeito>> = {
+  'rikk-rato-carniceiro': 'golpe-corte', // faca de açougueiro
+  'sylra-aranha-venenosa': 'golpe-perfuracao', // presas
+  'ghorum-goblin-esmagador': 'golpe-contusao', // clava
+  'drogath-orc-renegado': 'golpe-contusao', // martelo de guerra
+  'grulmok-troll-deformado': 'golpe-contusao', // braços e punhos
+  'skorvak-escorpiao-abissal': 'golpe-perfuracao', // ferrão
+  'brakkor-minotauro-carmesim': 'golpe-corte', // machado
+  'kaelgor-berserker-imortal': 'golpe-corte', // dois machados
+  'sanghra-matriarca-escarlate': 'golpe-perfuracao', // patas afiadas
+  'kragmor-behemoth-de-ferro': 'golpe-contusao', // investida de ferro
+};
+
 /** Os efeitos de habilidade que precisam de outro tamanho ou lugar (os demais usam o padrão de golpe ou de quem usou). */
 const LAYOUT_DAS_HABILIDADES: Readonly<Partial<Record<NomeDoEfeitoDeHabilidade, LayoutDoEfeito>>> = {
   'hab-cavaleiro_postura_do_guardiao-si': { largura: 1.25, ancora: 'centro' },

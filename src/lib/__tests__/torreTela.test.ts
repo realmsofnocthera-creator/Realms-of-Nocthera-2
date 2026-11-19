@@ -55,3 +55,14 @@ describe('Torre Celestial (tela)', () => {
     expect(html).toContain('9 / 300');
   });
 });
+
+describe('subida da torre', () => {
+  it('as fases da subida vêm em ordem', async () => {
+    const { TEMPOS_DA_SUBIDA } = await import('@/components/torreCelestial/TorreCelestialScreen');
+    const t = TEMPOS_DA_SUBIDA;
+    expect(t.selo).toBeLessThan(t.treme);
+    expect(t.treme).toBeLessThan(t.quebra);
+    expect(t.quebra).toBeLessThan(t.desliza);
+    expect(t.desliza).toBeLessThan(t.fim);
+  });
+});

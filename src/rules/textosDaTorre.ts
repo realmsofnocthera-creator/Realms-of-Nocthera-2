@@ -24,5 +24,7 @@ export const TEXTOS_DA_TORRE = {
   falhaAoSubir: 'Não foi possível subir a Torre.',
   erroAoSubir: 'Erro ao subir a Torre.',
   nomeDoMapa: (de: number, ate: number) => `Torre Celestial, andares ${de} a ${ate}`,
+  seloVencido: 'Andar vencido',
+  subindoPara: (andar: number) => `Subindo para o andar ${andar}`,
   carregando: 'Carregando a Torre Celestial...',
 } as const;

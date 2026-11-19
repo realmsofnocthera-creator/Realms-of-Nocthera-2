@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Crown, Skull } from 'lucide-react';
+import { Check, Crown, Skull } from 'lucide-react';
 import type { CharacterDocument, RespostaTorre } from '@/server/characterService';
 import { estrelaDoAndar, montarMonstroDaTorre, TORRE } from '@/game/torreCelestial';
 import { andaresDaLista, cenarioDoAndar, fundoDaTorre, recompensasEmTexto, torreDoPersonagem } from '@/lib/torreTela';
@@ -21,9 +21,11 @@ interface TorreCelestialScreenProps {
   character: CharacterDocument;
   onCharacterChange: (c: CharacterDocument) => void;
   tokenFresco: () => Promise<string | null>;
+  /** Começa numa etapa (para os testes e a pré-visualização); sem ela, começa na torre. */
+  etapaInicial?: Etapa;
 }
 
-type Etapa =
+export type Etapa =
   | { tipo: 'torre' }
   | { tipo: 'combate'; antes: CharacterDocument; resposta: RespostaTorre }
   | { tipo: 'resultado'; antes: CharacterDocument; resposta: RespostaTorre };
@@ -65,12 +67,111 @@ function Recompensas({ lista, tamanho = 38 }: { lista: RecompensaTela[]; tamanho
 }
 
 /**
+ * A subida depois de vencer um andar (em ms desde a volta à torre): o andar vencido ganha o selo, o cadeado do próximo
+ * treme e quebra, e a lista sobe uma linha (a torre desce no fundo, com um feixe de luz subindo).
+ */
+export const TEMPOS_DA_SUBIDA = { selo: 350, treme: 900, quebra: 1350, desliza: 1800, fim: 2700 } as const;
+
+type FaseDaSubida = 'parada' | 'selo' | 'treme' | 'quebra' | 'desliza' | 'fim';
+
+function useFaseDaSubida(subidaDe: number | null): FaseDaSubida {
+  // a fase vale só para a subida em que foi marcada: uma subida nova começa parada, sem passar pelo fim da anterior
+  const [estado, setEstado] = useState<{ de: number | null; fase: FaseDaSubida }>({ de: null, fase: 'fim' });
+  useEffect(() => {
+    if (subidaDe === null) return;
+    const reduzir = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduzir) {
+      setEstado({ de: subidaDe, fase: 'fim' });
+      return;
+    }
+    const timers = (['selo', 'treme', 'quebra', 'desliza', 'fim'] as const).map((f) => window.setTimeout(() => setEstado({ de: subidaDe, fase: f }), TEMPOS_DA_SUBIDA[f]));
+    return () => timers.forEach((t) => window.clearTimeout(t));
+  }, [subidaDe]);
+  if (subidaDe === null) return 'fim';
+  return estado.de === subidaDe ? estado.fase : 'parada';
+}
+
+const ORDEM_DAS_FASES: readonly FaseDaSubida[] = ['parada', 'selo', 'treme', 'quebra', 'desliza', 'fim'];
+const chegou = (fase: FaseDaSubida, alvo: FaseDaSubida) => ORDEM_DAS_FASES.indexOf(fase) >= ORDEM_DAS_FASES.indexOf(alvo);
+
+/**
+ * A lista dos andares (o atual e os 4 seguintes). Com `subidaDe` (o andar que acabou de ser vencido), ela começa nele e
+ * anima a subida até o próximo.
+ */
+function ListaDeAndares({ andar, nivel, subidaDe, fase }: { andar: number; nivel: number; subidaDe: number | null; fase: FaseDaSubida }) {
+  const subindo = subidaDe !== null;
+  const lista = andaresDaLista(subindo ? subidaDe : andar, nivel, subindo ? 6 : 5);
+  const primeira = useRef<HTMLLIElement>(null);
+  const [passo, setPasso] = useState(0);
+  useLayoutEffect(() => {
+    if (primeira.current) setPasso(primeira.current.offsetHeight + 8);
+  }, [subindo]);
+  const deslizou = subindo && chegou(fase, 'desliza');
+  const atualAgora = subindo ? (chegou(fase, 'quebra') ? subidaDe + 1 : subidaDe) : andar;
+  return (
+    <div className="relative overflow-hidden" style={subindo && passo ? { height: passo * 5 - 8 } : undefined}>
+      <ol aria-label="Andares" className="relative flex flex-col gap-2" style={{ transform: deslizou ? `translateY(-${passo}px)` : 'none', transition: 'transform 800ms cubic-bezier(.45,0,.2,1)' }}>
+        <span aria-hidden className="absolute top-3 bottom-3 w-0.5" style={{ left: 5, backgroundColor: '#6b4a2a' }} />
+        {lista.map((a, i) => {
+          const vencido = subindo && a.andar === subidaDe;
+          const atual = a.andar === atualAgora;
+          const trancado = !vencido && !atual;
+          const quebrando = subindo && a.andar === subidaDe + 1;
+          return (
+            <li key={a.andar} ref={i === 0 ? primeira : undefined} className="flex items-center gap-1.5" style={vencido && deslizou ? { opacity: 0, transition: 'opacity 600ms' } : undefined}>
+              <span className={`shrink-0 w-3 h-3 rotate-45 border ${atual && subindo ? 'torre-no-acende' : ''}`} style={{ backgroundColor: atual || vencido ? '#F3C769' : '#6b4a2a', borderColor: '#2b1a0c' }} aria-hidden />
+              <div className="relative flex-1 min-w-0" style={{ aspectRatio: '300 / 228', backgroundImage: `url(${CENARIOS_DA_TORRE[cenarioDoAndar(a.andar)]})`, backgroundSize: '100% 100%', filter: atual ? 'drop-shadow(0 0 5px #F3C769)' : vencido ? 'brightness(0.9)' : 'brightness(0.55) saturate(0.7)', transition: 'filter 500ms', ...pixel }}>
+                {(trancado || (quebrando && chegou(fase, 'quebra') && !chegou(fase, 'fim'))) && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={TORRE_UI.iconeCadeado} alt={trancado ? T.bloqueado : ''} draggable={false}
+                    className={`absolute inset-0 m-auto w-[44%] ${quebrando && fase === 'treme' ? 'torre-cadeado-treme' : ''} ${quebrando && chegou(fase, 'quebra') ? 'torre-cadeado-quebra' : ''}`} style={pixel} />
+                )}
+                {quebrando && chegou(fase, 'quebra') && !chegou(fase, 'fim') && <span aria-hidden className="torre-clarao absolute inset-0" />}
+                {vencido && chegou(fase, 'selo') && (
+                  <span className="torre-selo absolute inset-0 m-auto flex items-center justify-center w-9 h-9 rounded-full border-2" style={{ backgroundColor: '#1f6a29e6', borderColor: '#F3C769' }} role="img" aria-label={T.seloVencido}>
+                    <Check className="w-6 h-6" style={{ color: '#F5E3B3' }} strokeWidth={3.5} />
+                  </span>
+                )}
+                <span className="absolute left-1 bottom-0.5 inline-flex items-center gap-0.5 text-[10px] font-cinzel font-black leading-none px-1 py-0.5 rounded-sm" style={{ backgroundColor: '#000000b0', color: a.chefe ? '#F3C769' : '#F5E3B3' }}>
+                  {a.chefe && <Crown className="w-2.5 h-2.5" aria-label={T.chefe} />}{a.andar}
+                </span>
+              </div>
+              <div className="shrink-0 flex flex-col gap-1.5 items-center w-[38px]">
+                <Recompensas lista={a.recompensas.slice(-1)} />
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+const CSS_DA_SUBIDA = `
+@keyframes torreSelo{0%{transform:scale(2.4);opacity:0}60%{transform:scale(.9);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes torreTreme{0%,100%{transform:translateX(0) rotate(0)}20%{transform:translateX(-3px) rotate(-8deg)}40%{transform:translateX(3px) rotate(8deg)}60%{transform:translateX(-2px) rotate(-5deg)}80%{transform:translateX(2px) rotate(5deg)}}
+@keyframes torreQuebra{0%{transform:scale(1);opacity:1;filter:brightness(1)}40%{transform:scale(1.25);opacity:1;filter:brightness(2.2)}100%{transform:scale(1.9) rotate(12deg);opacity:0;filter:brightness(3)}}
+@keyframes torreClarao{0%{opacity:0}30%{opacity:.85}100%{opacity:0}}
+@keyframes torreNo{0%{box-shadow:0 0 0 0 #F3C769}50%{box-shadow:0 0 10px 4px #F3C769}100%{box-shadow:0 0 0 0 #F3C769}}
+@keyframes torreFundoSobe{0%{transform:translateY(0) scale(1.06)}55%{transform:translateY(3.5%) scale(1.06)}100%{transform:translateY(0) scale(1.06)}}
+@keyframes torreFeixe{0%{transform:translateY(110%);opacity:0}20%{opacity:.9}100%{transform:translateY(-110%);opacity:0}}
+.torre-selo{animation:torreSelo 450ms cubic-bezier(.2,1.4,.4,1) both}
+.torre-cadeado-treme{animation:torreTreme 420ms ease-in-out infinite}
+.torre-cadeado-quebra{animation:torreQuebra 500ms ease-out both}
+.torre-clarao{animation:torreClarao 600ms ease-out both;background:radial-gradient(circle,rgba(255,236,170,.95),rgba(243,199,105,.35) 55%,transparent 75%)}
+.torre-no-acende{animation:torreNo 900ms ease-out 2}
+.torre-fundo-sobe{animation:torreFundoSobe 1100ms cubic-bezier(.45,0,.2,1) both}
+.torre-feixe{animation:torreFeixe 1100ms ease-in-out both;background:linear-gradient(to top,transparent,rgba(255,226,150,.0) 20%,rgba(255,226,150,.45) 50%,rgba(255,226,150,0) 80%,transparent)}
+@media (prefers-reduced-motion: reduce){.torre-selo,.torre-cadeado-treme,.torre-cadeado-quebra,.torre-clarao,.torre-no-acende,.torre-fundo-sobe,.torre-feixe{animation:none}}
+`;
+
+/**
  * Provação da Torre Celestial: o andar atual, o que ele dá, o próximo chefe e a luta (com o replay da Caçada).
  * Toda regra (nível, andar e recompensas) é conferida no servidor; a tela só mostra. Não dá para voltar andares.
  */
-export function TorreCelestialScreen({ character, onCharacterChange, tokenFresco }: TorreCelestialScreenProps) {
+export function TorreCelestialScreen({ character, onCharacterChange, tokenFresco, etapaInicial }: TorreCelestialScreenProps) {
   const { colors } = NOCTHERA_THEME;
-  const [etapa, setEtapa] = useState<Etapa>({ tipo: 'torre' });
+  const [etapa, setEtapa] = useState<Etapa>(etapaInicial ?? { tipo: 'torre' });
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -96,6 +197,10 @@ export function TorreCelestialScreen({ character, onCharacterChange, tokenFresco
       setOcupado(false);
     }
   };
+
+  // a volta à torre depois de vencer um andar (que não seja o último): a animação de subida
+  const subidaDe = etapa.tipo === 'resultado' && etapa.resposta.torre.venceu && etapa.resposta.torre.andar < TORRE.andares ? etapa.resposta.torre.andar : null;
+  const fase = useFaseDaSubida(subidaDe);
 
   const terminarCombate = useCallback(() => {
     setEtapa((e) => {
@@ -124,11 +229,16 @@ export function TorreCelestialScreen({ character, onCharacterChange, tokenFresco
   const torre = torreDoPersonagem(character);
   const andarMostrado = torre.andar ?? TORRE.andares;
   const fundo = FUNDOS_DA_TORRE[fundoDaTorre(andarMostrado)];
-  const lista = torre.andar !== null ? andaresDaLista(torre.andar, character.nivel) : [];
 
   return (
     <main className="min-h-dvh w-full flex justify-center select-none" style={{ backgroundColor: '#0b0a14', color: colors.text.primary }}>
-      <div className="relative w-full max-w-[480px] h-dvh overflow-hidden flex flex-col" style={{ backgroundImage: `url(${fundo})`, backgroundSize: 'cover', backgroundPosition: 'right top', ...pixel }}>
+      <div className="relative w-full max-w-[480px] h-dvh overflow-hidden flex flex-col">
+        <style>{CSS_DA_SUBIDA}</style>
+        <div aria-hidden className={`absolute inset-0 ${subidaDe !== null && chegou(fase, 'desliza') ? 'torre-fundo-sobe' : ''}`} style={{ backgroundImage: `url(${fundo})`, backgroundSize: 'cover', backgroundPosition: 'right top', ...pixel }} />
+        {subidaDe !== null && chegou(fase, 'desliza') && <div aria-hidden className="torre-feixe absolute inset-y-0 left-[18%] w-[34%] pointer-events-none" />}
+        {subidaDe !== null && (
+          <div role="status" className="sr-only">{chegou(fase, 'desliza') ? T.subindoPara(subidaDe + 1) : ''}</div>
+        )}
         {/* topo: o emblema, o título com o progresso e a volta */}
         <header className="relative z-10 flex items-center gap-1 px-2 pt-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -154,28 +264,9 @@ export function TorreCelestialScreen({ character, onCharacterChange, tokenFresco
               <div className="font-cinzel font-black text-center text-sm" role="status">{T.topo}</div>
             </Pergaminho>
           )}
-          {etapa.tipo === 'torre' && !torre.completa && (
-            <Pergaminho className="w-[56%] max-h-full overflow-y-auto" style={{ color: TINTA }}>
-              <ol aria-label="Andares" className="relative flex flex-col gap-2">
-                <span aria-hidden className="absolute top-3 bottom-3 w-0.5" style={{ left: 5, backgroundColor: '#6b4a2a' }} />
-                {lista.map((a, i) => (
-                  <li key={a.andar} className="flex items-center gap-1.5">
-                    <span className="shrink-0 w-3 h-3 rotate-45 border" style={{ backgroundColor: a.atual ? '#F3C769' : '#6b4a2a', borderColor: '#2b1a0c' }} aria-hidden />
-                    <div className="relative flex-1 min-w-0" style={{ aspectRatio: '300 / 228', backgroundImage: `url(${CENARIOS_DA_TORRE[cenarioDoAndar(a.andar)]})`, backgroundSize: '100% 100%', filter: a.atual ? 'drop-shadow(0 0 5px #F3C769)' : 'brightness(0.55) saturate(0.7)', ...pixel }}>
-                      {!a.atual && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={TORRE_UI.iconeCadeado} alt={T.bloqueado} className="absolute inset-0 m-auto w-[44%]" style={pixel} draggable={false} />
-                      )}
-                      <span className="absolute left-1 bottom-0.5 inline-flex items-center gap-0.5 text-[10px] font-cinzel font-black leading-none px-1 py-0.5 rounded-sm" style={{ backgroundColor: '#000000b0', color: a.chefe ? '#F3C769' : '#F5E3B3' }}>
-                        {a.chefe && <Crown className="w-2.5 h-2.5" aria-label={T.chefe} />}{a.andar}
-                      </span>
-                    </div>
-                    <div className="shrink-0 flex flex-col gap-1.5 items-center w-[38px]" data-linha={i}>
-                      <Recompensas lista={a.recompensas.slice(-1)} />
-                    </div>
-                  </li>
-                ))}
-              </ol>
+          {((etapa.tipo === 'torre' && !torre.completa && torre.andar !== null) || subidaDe !== null) && (
+            <Pergaminho className={`w-[56%] max-h-full ${subidaDe !== null ? 'overflow-hidden' : 'overflow-y-auto'}`} style={{ color: TINTA }}>
+              <ListaDeAndares andar={torre.andar ?? TORRE.andares} nivel={character.nivel} subidaDe={subidaDe} fase={fase} />
             </Pergaminho>
           )}
         </div>

@@ -47,3 +47,14 @@ describe('chefes da Torre animados', () => {
     }
   });
 });
+
+describe('golpe dos chefes', () => {
+  it('cada golpe próprio é de um chefe da Torre e é um efeito que existe', async () => {
+    const { GOLPE_DO_MONSTRO, EFEITOS } = await import('../efeitosPixelfx');
+    const ids = new Set(CHEFES_TORRE.map((c) => c.id));
+    for (const [id, efeito] of Object.entries(GOLPE_DO_MONSTRO)) {
+      expect(ids.has(id), id).toBe(true);
+      expect(EFEITOS[efeito], efeito).toBeDefined();
+    }
+  });
+});

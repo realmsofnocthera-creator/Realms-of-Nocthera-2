@@ -8,13 +8,17 @@ export function temposDoQuadro(rapido: boolean, lenta: boolean): { duracao: numb
 }
 
 /** O efeito de golpe (do pixelfx) de uma ação: o elemento manda; sem elemento, vale o tipo de golpe; o padrão é o corte (ou a garra, no monstro). */
-export function efeitoDaAcao(acao: Pick<AcaoDaLuta, 'tipoGolpe' | 'elemento'> & { de?: 'jogador' | 'monstro' }): NomeDoEfeito {
+/**
+ * O efeito do golpe: o elemento (se o golpe não for físico), o tipo do golpe, ou o golpe próprio do monstro (`golpeDoMonstro`,
+ * a arma ou o jeito de atacar dele); sem nada disso, garra no monstro e corte no herói.
+ */
+export function efeitoDaAcao(acao: Pick<AcaoDaLuta, 'tipoGolpe' | 'elemento'> & { de?: 'jogador' | 'monstro' }, golpeDoMonstro?: NomeDoEfeito): NomeDoEfeito {
   const fisico = acao.tipoGolpe === 'corte' || acao.tipoGolpe === 'perfuracao' || acao.tipoGolpe === 'contusao';
   if (acao.elemento && !fisico) return acao.elemento === 'relampago' ? 'golpe-relampago' : (`magia-${acao.elemento}` as NomeDoEfeito);
   if (acao.tipoGolpe === 'perfuracao') return 'golpe-perfuracao';
   if (acao.tipoGolpe === 'contusao') return 'golpe-contusao';
   if (acao.tipoGolpe === 'magico') return 'magia-sagrado';
-  return acao.de === 'monstro' ? 'golpe-garra' : 'golpe-corte';
+  return acao.de === 'monstro' ? golpeDoMonstro ?? 'golpe-garra' : 'golpe-corte';
 }
 
 /** O tamanho (px) do número de dano: cresce com o quanto ele tira da vida do alvo, e o crítico é bem maior. */

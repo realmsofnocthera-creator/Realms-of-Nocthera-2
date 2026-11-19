@@ -25,6 +25,10 @@ describe('coreografia da luta', () => {
   it('a escolha do efeito segue o elemento e o tipo de golpe', () => {
     expect(efeitoDaAcao({})).toBe('golpe-corte');
     expect(efeitoDaAcao({ de: 'monstro' })).toBe('golpe-garra');
+    // o golpe próprio do monstro (a arma dele) vale no lugar da garra, mas não passa por cima do elemento
+    expect(efeitoDaAcao({ de: 'monstro' }, 'golpe-contusao')).toBe('golpe-contusao');
+    expect(efeitoDaAcao({ de: 'monstro', elemento: 'fogo' }, 'golpe-contusao')).toBe('magia-fogo');
+    expect(efeitoDaAcao({ de: 'jogador' }, 'golpe-contusao')).toBe('golpe-corte');
     expect(efeitoDaAcao({ tipoGolpe: 'perfuracao' })).toBe('golpe-perfuracao');
     expect(efeitoDaAcao({ tipoGolpe: 'contusao' })).toBe('golpe-contusao');
     expect(efeitoDaAcao({ elemento: 'fogo' })).toBe('magia-fogo');

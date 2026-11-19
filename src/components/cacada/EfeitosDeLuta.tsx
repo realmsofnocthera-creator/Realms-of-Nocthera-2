@@ -79,7 +79,7 @@ export function EfeitosDeStatus({ status, alvo }: { status: readonly string[]; a
  * O que aparece quando o golpe acerta: o efeito de golpe do pixelfx (e, no crítico, o grande por cima), os números (um por
  * golpe, um depois do outro), o aviso de crítico/fraqueza/resistência. O alvo é dado em pixels: centro (`x`), pés e altura.
  */
-export function ImpactoDaAcao({ acao, alvoVidaMaxima, alvo, alvoSi, topo, indice, velocidade }: { acao: AcaoDaLuta; alvoVidaMaxima: number; alvo: { x: number; pes: number; altura: number }; alvoSi?: { x: number; pes: number; altura: number }; topo: number; indice: number; velocidade: number }) {
+export function ImpactoDaAcao({ acao, alvoVidaMaxima, alvo, alvoSi, topo, indice, velocidade, golpeDoMonstro }: { acao: AcaoDaLuta; alvoVidaMaxima: number; alvo: { x: number; pes: number; altura: number }; alvoSi?: { x: number; pes: number; altura: number }; topo: number; indice: number; velocidade: number; golpeDoMonstro?: NomeDoEfeito }) {
   void indice;
   const critico = acao.criticos > 0;
   const x = alvo.x;
@@ -95,7 +95,7 @@ export function ImpactoDaAcao({ acao, alvoVidaMaxima, alvo, alvoSi, topo, indice
       {acao.bloqueado ? (
         <FxPixelfx nome="bloqueio" alvo={alvo} velocidade={velocidade} />
       ) : (
-        <FxPixelfx nome={hab?.inimigo ?? efeitoDaAcao(acao)} alvo={alvo} velocidade={velocidade} espelhar={acao.de === 'jogador'} />
+        <FxPixelfx nome={hab?.inimigo ?? efeitoDaAcao(acao, golpeDoMonstro)} alvo={alvo} velocidade={velocidade} espelhar={acao.de === 'jogador'} />
       )}
       {hab?.si && alvoSi && <FxPixelfx nome={hab.si} alvo={alvoSi} velocidade={velocidade} z={22} />}
       {critico && !acao.bloqueado && <FxPixelfx nome="golpe-critico" alvo={alvo} velocidade={velocidade} atraso={90} z={22} />}

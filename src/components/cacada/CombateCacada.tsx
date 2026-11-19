@@ -19,7 +19,7 @@ import { UltimateCinematica } from '@/components/cena/UltimateCinematica';
 import { idDaUltimate, MODO_DA_ULTIMATE } from '@/assets/ultimates';
 import { EfeitosDeStatus, FaixaDeHabilidade, FxPixelfx, ImpactoDaAcao, ImpactoDeCura } from './EfeitosDeLuta';
 import { temposDoQuadro, tremeATela } from '@/lib/cacadaCoreografia';
-import { efeitosDaHabilidade, tintaDosStatus } from '@/assets/efeitosPixelfx';
+import { efeitosDaHabilidade, GOLPE_DO_MONSTRO, tintaDosStatus } from '@/assets/efeitosPixelfx';
 import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, ANIMACAO_DO_MONSTRO, animacaoDoHeroi, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
 import { larguraDasBarras, montarQuadros, PainelLuta, QuadroLuta } from '@/lib/cacadaReplay';
 import { textoDaFicha } from '@/rules/textosDaFicha';
@@ -377,6 +377,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
               <ImpactoDaAcao
                 key={`i-${indice}`}
                 acao={acao}
+                golpeDoMonstro={GOLPE_DO_MONSTRO[monstro.id]}
                 alvoVidaMaxima={(alvo === 'monstro' ? q.monstro.hpMax : q.jogador.hpMax) || 1}
                 alvo={alvo === 'monstro' ? alvoMonstro : alvoJogador}
                 alvoSi={acao.de === 'jogador' ? alvoJogador : alvoMonstro}
