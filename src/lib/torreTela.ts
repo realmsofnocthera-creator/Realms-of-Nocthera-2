@@ -65,3 +65,33 @@ export function torreDoPersonagem(c: Personagem): TorreTela {
     proximoChefe: chefe ? { andar: chefe.andar, nome: chefe.nome, efeitos: chefe.efeitos, faltam: chefe.andar - andar } : null,
   };
 }
+
+/** O fundo da torre (0 a 3) para um andar: o céu muda a cada quarto dos 300 andares. */
+export function fundoDaTorre(andar: number): number {
+  const a = Math.min(TORRE.andares, Math.max(1, andar));
+  return Math.min(3, Math.floor(((a - 1) * 4) / TORRE.andares));
+}
+
+/** A miniatura de cenário (0 a 5) de um andar: uma a cada 50 andares. */
+export function cenarioDoAndar(andar: number): number {
+  const a = Math.min(TORRE.andares, Math.max(1, andar));
+  return Math.min(5, Math.floor((a - 1) / 50));
+}
+
+export interface AndarDaLista {
+  andar: number;
+  chefe: boolean;
+  nome: string;
+  atual: boolean;
+  recompensas: RecompensaTela[];
+}
+
+/** Os andares da lista lateral: o atual e os seguintes (até `quantos`), com o que cada um dá. */
+export function andaresDaLista(andarAtualDoPersonagem: number, nivel: number, quantos = 5): AndarDaLista[] {
+  const lista: AndarDaLista[] = [];
+  for (let a = andarAtualDoPersonagem; a <= TORRE.andares && lista.length < quantos; a++) {
+    const id = identidadeDoAndar(a);
+    lista.push({ andar: a, chefe: id.chefe, nome: id.nome, atual: a === andarAtualDoPersonagem, recompensas: recompensasEmTexto(a, nivel) });
+  }
+  return lista;
+}
