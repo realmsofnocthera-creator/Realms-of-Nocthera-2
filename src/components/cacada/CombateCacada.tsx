@@ -10,7 +10,6 @@ import { EFEITOS_STATUS } from '@/rules/statusEffects';
 import { resolveAvatarSrc } from '@/assets/avatars';
 import { MAPAS_DA_CACADA } from '@/assets/mapasDaCacada';
 import { MAPAS_DA_TORRE } from '@/assets/mapasDaTorre';
-import type { CenaDoMapaDaTorre } from '@/assets/mapasDaTorre';
 import { MapaDaCacada } from './MapaDaCacada';
 import { AberturaDeBatalha } from '@/components/cena/AberturaDeBatalha';
 import { TelaDeFimDeLuta, type TelaDeFimProps } from '@/components/cena/TelaDeFimDeLuta';
@@ -126,16 +125,12 @@ export function destacarLinha(texto: string): React.ReactNode[] {
  */
 const CENA = { w: 1024, h: 1536, topo: 0.28, base: 0.94, monstroX: 0.4, monstroPes: 0.5, jogadorX: 0.64, jogadorPes: 0.8, alturaMonstro: 0.15, alturaJogador: 0.26 };
 
-/** Nos mapas da Torre o monstro fica na plataforma do alto (à direita) e o herói na de baixo; a janela de corte é mais alta. */
-const CENA_DA_TORRE = { topo: 0.15, base: 0.85, alturaMonstro: 0.12, alturaJogador: 0.24 };
-
-export function geometriaDaCena(largura: number, altura: number, torre?: CenaDoMapaDaTorre) {
-  const cena = torre ? { ...CENA, ...CENA_DA_TORRE, ...torre } : CENA;
+export function geometriaDaCena(largura: number, altura: number) {
+  const cena = CENA;
   const escala = Math.max(largura / cena.w, altura / cena.h);
   const imgW = cena.w * escala;
   const imgH = cena.h * escala;
-  // na Torre a janela acompanha as duas plataformas (a do monstro fica na ponta direita do mapa); nos outros, fica no centro
-  const esq = torre ? Math.min(Math.max(((torre.monstroX + torre.jogadorX) / 2) * imgW - largura / 2, 0), Math.max(0, imgW - largura)) : (imgW - largura) / 2;
+  const esq = (imgW - largura) / 2;
   const meio = ((cena.topo + cena.base) / 2) * imgH;
   const topo = Math.min(Math.max(meio - altura / 2, 0), imgH - altura);
   return {
@@ -245,7 +240,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   const spriteMonstro = SPRITE_MONSTRO[monstro.id];
   const retrato = resolveAvatarSrc(personagem.avatarId, personagem.classeId);
   const mapaTorre = mapaDaTorre ? MAPAS_DA_TORRE[mapaDaTorre] : undefined;
-  const g = geometriaDaCena(caixa.w, caixa.h, mapaTorre?.cena);
+  const g = geometriaDaCena(caixa.w, caixa.h);
   // a arte animada tem a mesma escala de pixel em todos os heróis: o tamanho na tela é o da arte vezes um fator (limitado para
   // o quadro, com a arma estendida, nunca passar de 80% da largura da tela)
   const pixelDoHeroi = animacaoHeroi ? Math.min((g.jogador.altura * 0.0102), (caixa.w * 0.8) / animacaoHeroi.largura) : 0;
