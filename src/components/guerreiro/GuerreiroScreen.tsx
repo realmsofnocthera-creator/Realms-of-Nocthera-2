@@ -10,6 +10,7 @@ import { EMBLEMA_RARIDADE_MAP, EmblemaRaridade } from '@/rules/emblemas';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { CombateCacada } from '@/components/cacada/CombateCacada';
 import { MesaDoGuerreiro } from './MesaDoGuerreiro';
+import { IconeDoEmblema } from '@/components/ficha/IconeDoEmblema';
 import { TEXTOS_DO_GUERREIRO as T } from '@/rules/textosDoGuerreiro';
 
 interface GuerreiroScreenProps {
@@ -153,7 +154,7 @@ export function GuerreiroScreen({ character, onCharacterChange, tokenFresco }: G
                 <div className="text-sm" style={{ color: colors.text.secondary }}>{g.nome} · {g.mecanicaNome}</div>
                 {g.venceu ? (
                   <div className="flex flex-wrap justify-center gap-x-4 gap-y-0.5 text-sm font-cinzel font-bold mt-1" aria-label="Emblemas ganhos">
-                    {ganhos.map((e, i) => <span key={`${e.tipoId}-${i}`} style={{ color: EMBLEMA_RARIDADE_MAP[e.raridade as EmblemaRaridade]?.cor }}>Emblema {e.nome} ({EMBLEMA_RARIDADE_MAP[e.raridade as EmblemaRaridade]?.nome})</span>)}
+                    {ganhos.map((e, i) => <span key={`${e.tipoId}-${i}`} className="inline-flex items-center gap-1" style={{ color: EMBLEMA_RARIDADE_MAP[e.raridade as EmblemaRaridade]?.cor }}><IconeDoEmblema tipo={e.tipoId} tamanho={32} className="w-8 h-8" />Emblema {e.nome} ({EMBLEMA_RARIDADE_MAP[e.raridade as EmblemaRaridade]?.nome})</span>)}
                   </div>
                 ) : (
                   <div className="text-sm mt-1" style={{ color: '#FF8A80' }}>Sem emblemas desta vez. Tente de novo amanhã.</div>

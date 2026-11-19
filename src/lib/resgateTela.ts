@@ -1,4 +1,6 @@
 import { BAU_DE_EMBLEMAS, BAU_DOURADO, BRASAO_DE_EMBLEMA, ICONES_DAS_ABAS_DO_RESGATE } from '@/assets/resgateUi';
+import { iconeDoEmblema } from '@/assets/emblemasArte';
+import { TIPO_EMBLEMA_MAP } from '@/rules/emblemasCatalogo';
 import { ICONES_DE_SALDO } from '@/assets/mochilaUi';
 import { ICONES_DAS_MOEDAS } from '@/assets/colecaoUi';
 import { ICONES_DOS_SELOS } from '@/assets/buscarUi';
@@ -33,7 +35,7 @@ export function iconeDoProduto(p: Pick<ProdutoDaLoja, 'tipo' | 'id' | 'aba'>): I
     case 'carta':
       return { tipo: 'imagem', src: arteDaCarta(p.id) ?? ICONES_DAS_ABAS_DO_RESGATE.cartas };
     case 'emblema':
-      return { tipo: 'imagem', src: BRASAO_DE_EMBLEMA };
+      return { tipo: 'imagem', src: TIPO_EMBLEMA_MAP[p.id] ? iconeDoEmblema(p.id, 64) : BRASAO_DE_EMBLEMA };
     case 'escolhaCarta':
       return { tipo: 'imagem', src: BAU_DOURADO };
     case 'escolhaEmblema':

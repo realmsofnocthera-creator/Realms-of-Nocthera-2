@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import type { CharacterDocument } from '@/server/characterService';
 import { resolveAvatarSrc } from '@/assets/avatars';
 import { EMBLEMAS_UI, ESPACOS_DO_CIRCULO } from '@/assets/emblemasUi';
-import { BRASAO_DE_EMBLEMA } from '@/assets/resgateUi';
+import { IconeDoEmblema } from './IconeDoEmblema';
 import { ATTRIBUTE_DISPLAY_NAMES } from '@/rules/attributeInfo';
 import { SLOTS_EMBLEMA } from '@/game/emblemas';
 import { textoDaFicha, TEXTOS_DA_FICHA } from '@/rules/textosDaFicha';
@@ -64,9 +64,12 @@ function InventarioDeEmblemas({ character, aoFechar, onEmblemaAcao, onFundirEmbl
             ) : (
               grupos.map((g) => (
                 <div key={g.tipo.id} className="flex flex-col gap-[1.2cqw] p-[2cqw] border bg-[#080C16]/80" style={{ borderColor: `${g.cor}99` }}>
-                  <div>
-                    <div className="font-cinzel font-extrabold text-[2.9cqw] leading-tight" style={{ color: g.cor, textShadow: CONTORNO }}>Emblema {g.nome}</div>
-                    <div className="font-cinzel text-[2.1cqw] text-[#9CC4E0]">{g.raridadeNome}</div>
+                  <div className="flex items-center gap-[2cqw]">
+                    <IconeDoEmblema tipo={g.tipo.id} estrelas={Math.max(1, ...g.porEstrela.map((e) => e.estrelas))} className="w-[12cqw] h-[12cqw] shrink-0" />
+                    <div>
+                      <div className="font-cinzel font-extrabold text-[2.9cqw] leading-tight" style={{ color: g.cor, textShadow: CONTORNO }}>Emblema {g.nome}</div>
+                      <div className="font-cinzel text-[2.1cqw] text-[#9CC4E0]">{g.raridadeNome}</div>
+                    </div>
                   </div>
                   <p className="font-cinzel text-[2.1cqw] text-[#C9D6EA]">Atributos: {g.tipo.atributos.map((a) => ATTRIBUTE_DISPLAY_NAMES[a]).join(', ')}</p>
                   <ul className="flex flex-col gap-[0.6cqw]">
@@ -105,7 +108,7 @@ function InventarioDeEmblemas({ character, aoFechar, onEmblemaAcao, onFundirEmbl
 /**
  * A aba Emblemas da ficha em pixel (molduras do Yuri): o personagem à esquerda e, à direita, o círculo com os 4 espaços
  * de emblema; embaixo, as habilidades que os emblemas dão e o botão do inventário. Tocar num espaço abre o inventário.
- * Os emblemas ainda não têm arte própria: usam o brasão do Yuri, com a cor da raridade na moldura e as estrelas.
+ * Cada emblema tem a arte própria (os Míticos são animados); a cor da raridade brilha em volta e as estrelas ficam embaixo.
  */
 export function FichaEmblemasPixel({ character, onEmblemaAcao, onFundirEmblemas, className = '' }: FichaEmblemasPixelProps) {
   const t = TEXTOS_DA_FICHA.emblemas;
@@ -132,7 +135,7 @@ export function FichaEmblemasPixel({ character, onEmblemaAcao, onFundirEmblemas,
                 {s.emblema ? (
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={BRASAO_DE_EMBLEMA} alt="" aria-hidden="true" draggable={false} className="w-[78%] h-[78%] object-contain" style={{ ...pixel, filter: `drop-shadow(0 0 1.6cqw ${s.emblema.cor})` }} />
+                    <IconeDoEmblema tipo={s.emblema.tipo} estrelas={s.emblema.estrelas} className="w-[88%] h-[88%] object-contain" style={{ ...pixel, filter: `drop-shadow(0 0 1.6cqw ${s.emblema.cor})` }} />
                     <Estrelas n={s.emblema.estrelas} className="absolute -bottom-[0.6cqw] text-[2.6cqw] leading-none [text-shadow:0_0_2px_#05070D,0_0_2px_#05070D]" />
                   </>
                 ) : (
