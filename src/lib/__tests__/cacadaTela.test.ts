@@ -5,9 +5,9 @@ import { createCharacter, executarCacada, getCharacterByUid, updateCharacter } f
 import { resetCharacterStore } from '@/test/repositorioMemoria';
 import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
 import { dropsTela, estrelaDoMonstro, estrelasDoRanque, monstrosDaEstrela, ranquesDaCacada } from '@/lib/cacadaTela';
-import { CICLO_ESPECIAL, espacosDoPersonagem, larguraDasBarras, montarQuadros } from '@/lib/cacadaReplay';
+import { CICLO_ESPECIAL, danoCausadoAoChefe, espacosDoPersonagem, larguraDasBarras, montarQuadros } from '@/lib/cacadaReplay';
 import { MochilaScreen } from '@/components/mochila/MochilaScreen';
-import { BarraVidaEscudo, destacarLinha, geometriaDaCena } from '@/components/cacada/CombateCacada';
+import { BarraDoInimigo, BarraVidaEscudo, destacarLinha, geometriaDaCena } from '@/components/cacada/CombateCacada';
 import { CENARIO_ESTRELA, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
 import fs from 'node:fs';
 
@@ -113,5 +113,29 @@ describe('Caçada (telas)', () => {
     expect(html).toContain('<b style="color:#F3C769">22</b>');
     expect(html).toContain('Sangramento</b>');
     expect(renderToStaticMarkup(React.createElement('p', null, destacarLinha('Yuri usou Golpe.')))).toBe('<p>Yuri usou Golpe.</p>');
+  });
+});
+
+describe('barra do chefe mundial: dano causado na partida', () => {
+  const painel = { nome: 'Chefe', nivel: 25, hp: 1_000_000_000, hpMax: 1_000_000_000, escudo: 500, escudoMax: 500, status: [], enfurecido: false };
+
+  it('é o que a vida e o Sobreescudo já perderam desde o começo da luta', () => {
+    expect(danoCausadoAoChefe(painel)).toBe(0);
+    expect(danoCausadoAoChefe({ ...painel, escudo: 120 })).toBe(380);
+    expect(danoCausadoAoChefe({ ...painel, escudo: 0, hp: 1_000_000_000 - 7_000 })).toBe(7_500);
+    expect(danoCausadoAoChefe({ ...painel, hp: 999_999_000, escudo: 0 })).toBe(1_500);
+  });
+
+  it('nunca fica negativo (cura do chefe)', () => {
+    expect(danoCausadoAoChefe({ ...painel, escudo: 800 })).toBe(0);
+  });
+
+  it('a barra mostra o dano e a meta (o melhor do dia), não a vida do chefe', () => {
+    const html = renderToStaticMarkup(React.createElement(BarraDoInimigo, { painel: { ...painel, escudo: 0, hp: 1_000_000_000 - 4_500 }, modoDano: { melhor: 9_000 } }));
+    expect(html).toContain('Dano causado');
+    expect(html).toContain('5.000');
+    expect(html).toContain('Melhor de hoje: 9.000');
+    expect(html).not.toContain('1000000000');
+    expect(html).not.toContain('1.000.000.000');
   });
 });

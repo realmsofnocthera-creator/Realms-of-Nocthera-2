@@ -336,6 +336,14 @@ export function montarQuadros(
 }
 
 /** Barra única de vida e escudo: largura da vida (vermelha) e do escudo azul por cima, em %. */
+/**
+ * O dano que o chefe mundial já levou na partida: o que a vida e o Sobreescudo dele perderam desde o começo da luta (a vida dele
+ * é "sem fim", então o que importa é quanto dano foi causado, não quanto falta).
+ */
+export function danoCausadoAoChefe(p: Pick<PainelLuta, 'hp' | 'hpMax' | 'escudo' | 'escudoMax'>): number {
+  return Math.max(0, Math.round(p.hpMax + p.escudoMax - (p.hp + p.escudo)));
+}
+
 export function larguraDasBarras(p: Pick<PainelLuta, 'hp' | 'hpMax' | 'escudo' | 'escudoMax'>): { vida: number; escudo: number } {
   const vida = p.hpMax > 0 ? Math.max(0, Math.min(100, (p.hp / p.hpMax) * 100)) : 0;
   const escudo = p.escudoMax > 0 ? Math.max(0, Math.min(100, (p.escudo / p.escudoMax) * 100)) : 0;

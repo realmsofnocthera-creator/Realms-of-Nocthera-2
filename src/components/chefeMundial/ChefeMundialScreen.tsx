@@ -103,6 +103,7 @@ export function ChefeMundialScreen({ tokenFresco, personagem }: { tokenFresco: T
         monstro={montarChefeMundial(luta.dia)}
         titulo={`Chefe Mundial · ${chefe.nome}`}
         cena={ARTE_DOS_CHEFES_MUNDIAIS[chefe.id]}
+        melhorDoDia={luta.melhor}
         onFim={() => undefined}
         telaDeFim={{
           retrato: resolveAvatarSrc(luta.antes.avatarId, luta.antes.classeId),
