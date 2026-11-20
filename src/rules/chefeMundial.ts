@@ -10,8 +10,8 @@ import type { PresenteDoCorreio } from './correio';
  * Provação de Chefe Mundial (decidida pelo Yuri em 22/10/2026): um chefe por dia, o mesmo para todos os jogadores,
  * a partir do nível 18. Cada um luta sozinho quantas vezes quiser; vale o MAIOR dano do dia. O ranking fecha à
  * meia-noite de Brasília e a recompensa da faixa chega pelo Correio: ouro, Diamantes, selos de busca e Essência de
- * Soberano (a moeda da loja). Faixas iguais às do Chefe de guildas. Os 7 chefes são PROVISÓRIOS (um por dia da
- * semana, a confirmar: o Yuri passa nomes, mecânicas e visual depois); as quantidades e a força são proposta.
+ * Soberano (a moeda da loja). Faixas iguais às do Chefe de guildas. Os 7 chefes (um por dia da semana) já têm
+ * nome, escolhido pelo Yuri; a aparência e a mecânica virão depois, e as quantidades e a força são proposta.
  */
 
 export const NIVEL_DO_CHEFE_MUNDIAL = 18;
@@ -28,15 +28,15 @@ export interface ChefeMundial {
   tipoDano: 'fisico' | 'magico';
 }
 
-/** Um chefe PROVISÓRIO para cada dia da semana (domingo a sábado). */
+/** Um chefe para cada dia da semana (domingo a sábado). Os nomes são do Yuri (opção A, 20/11/2026); a aparência e a mecânica ainda estão por definir. */
 export const CHEFES_MUNDIAIS: readonly ChefeMundial[] = [
-  { id: 'chefe-mundial-1', nome: 'Chefe Mundial I (a confirmar)', categoriaCorporal: 'eterio', elementoAtaque: 'sagrado', tipoDano: 'magico' },
-  { id: 'chefe-mundial-2', nome: 'Chefe Mundial II (a confirmar)', categoriaCorporal: 'escamoso', elementoAtaque: 'fogo', tipoDano: 'fisico' },
-  { id: 'chefe-mundial-3', nome: 'Chefe Mundial III (a confirmar)', categoriaCorporal: 'cristalino', elementoAtaque: 'gelo', tipoDano: 'magico' },
-  { id: 'chefe-mundial-4', nome: 'Chefe Mundial IV (a confirmar)', categoriaCorporal: 'rochoso', elementoAtaque: 'terra', tipoDano: 'fisico' },
-  { id: 'chefe-mundial-5', nome: 'Chefe Mundial V (a confirmar)', categoriaCorporal: 'sombrio', elementoAtaque: 'sombrio', tipoDano: 'magico' },
-  { id: 'chefe-mundial-6', nome: 'Chefe Mundial VI (a confirmar)', categoriaCorporal: 'feral', elementoAtaque: 'vento', tipoDano: 'fisico' },
-  { id: 'chefe-mundial-7', nome: 'Chefe Mundial VII (a confirmar)', categoriaCorporal: 'aberrante', elementoAtaque: 'relampago', tipoDano: 'magico' },
+  { id: 'chefe-mundial-1', nome: 'Solvaris, o Arauto do Último Amanhecer', categoriaCorporal: 'eterio', elementoAtaque: 'sagrado', tipoDano: 'magico' },
+  { id: 'chefe-mundial-2', nome: 'Pyrathon, o Rei das Brasas', categoriaCorporal: 'escamoso', elementoAtaque: 'fogo', tipoDano: 'fisico' },
+  { id: 'chefe-mundial-3', nome: 'Cryonax, o Inverno Eterno', categoriaCorporal: 'cristalino', elementoAtaque: 'gelo', tipoDano: 'magico' },
+  { id: 'chefe-mundial-4', nome: 'Orvakar, o Colosso Que Parte Montanhas', categoriaCorporal: 'rochoso', elementoAtaque: 'terra', tipoDano: 'fisico' },
+  { id: 'chefe-mundial-5', nome: 'Nyxoloth, a Noite Que Respira', categoriaCorporal: 'sombrio', elementoAtaque: 'sombrio', tipoDano: 'magico' },
+  { id: 'chefe-mundial-6', nome: 'Zephyrak, a Fúria Sem Rédeas', categoriaCorporal: 'feral', elementoAtaque: 'vento', tipoDano: 'fisico' },
+  { id: 'chefe-mundial-7', nome: 'Xerothul, o Fim Que Ruge Entre Raios', categoriaCorporal: 'aberrante', elementoAtaque: 'relampago', tipoDano: 'magico' },
 ];
 
 /** O dia seguinte (AAAA-MM-DD). */
