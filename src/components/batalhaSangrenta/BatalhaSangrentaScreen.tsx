@@ -6,7 +6,8 @@ import type { CharacterDocument, RespostaBatalhaSangrenta } from '@/server/chara
 import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
 import { CHEFES_ESPECIAIS_MAP } from '@/rules/chefesEspeciais';
 import { dificuldadesDaBatalha, nomeDaSubclasse, REGRAS_RESUMO, tentativasDeHoje, tentativasPorDia } from '@/lib/batalhaSangrentaTela';
-import { BATALHA_SANGRENTA } from '@/game/batalhaSangrenta';
+import { BATALHA_SANGRENTA, type DificuldadeBatalha } from '@/game/batalhaSangrenta';
+import { ARENAS_DA_BATALHA } from '@/assets/arenasDaBatalha';
 import { CombateCacada } from '@/components/cacada/CombateCacada';
 import { PalcoPixel, Peca, Texto, u, pixel, SOMBRA_DO_TEXTO } from '@/components/pixel/GradePixel';
 import { BATALHA_UI, FIM_DAS_MOLDURAS, POSICAO, QUADROS, RETRATO_DO_SEGUNDO_CHEFE } from '@/assets/batalhaSangrentaUi';
@@ -78,6 +79,9 @@ export function BatalhaSangrentaScreen({ character, onCharacterChange, tokenFres
       return (
         <CombateCacada
           key={etapa.indice}
+          // a abertura "A Batalha começa" toca só antes da primeira luta; nas outras a luta já começa
+          semAbertura={etapa.indice > 0}
+          mapa={ARENAS_DA_BATALHA[etapa.resposta.dificuldade as DificuldadeBatalha]}
           resultado={onda.resultado}
           personagem={etapa.antes}
           monstro={monstro}

@@ -19,8 +19,8 @@ export function posicaoDoQuadroNaFolha(i: number, quadros: number): number {
  * número novo, toca a de ataque uma vez e volta ao parado. `velocidade` acelera (2 = o dobro) ou desacelera (0,5 = câmera
  * lenta). Com "reduzir movimento" ligado, fica no primeiro quadro do parado e o ataque não toca.
  */
-export function SpriteAnimado({ parado, ataque, golpe, velocidade = 1, espelhado = false, rotulo }: { parado: FolhaDeQuadros; ataque: FolhaDeQuadros; golpe: number | null; velocidade?: number; espelhado?: boolean; rotulo: string }) {
-  const [folha, setFolha] = useState<'parado' | 'ataque'>('parado');
+export function SpriteAnimado({ parado, ataque, golpe, velocidade = 1, espelhado = false, rotulo, reacao, reagir = null }: { parado: FolhaDeQuadros; ataque: FolhaDeQuadros; golpe: number | null; velocidade?: number; espelhado?: boolean; rotulo: string; /** a animação de quem leva um golpe (opcional) */ reacao?: FolhaDeQuadros; /** muda para um número novo a cada golpe levado, e toca a `reacao` uma vez */ reagir?: number | null }) {
+  const [folha, setFolha] = useState<'parado' | 'ataque' | 'reacao'>('parado');
   const [quadro, setQuadro] = useState(0);
   const velocidadeAtual = useRef(velocidade);
   velocidadeAtual.current = velocidade;
@@ -69,7 +69,27 @@ export function SpriteAnimado({ parado, ataque, golpe, velocidade = 1, espelhado
     return () => window.clearTimeout(t);
   }, [golpe, ataque]);
 
-  const atual = folha === 'ataque' ? ataque : parado;
+  // a reação ao golpe: toca uma vez e volta ao parado (não interrompe um ataque que está tocando)
+  const folhaAgora = useRef(folha);
+  folhaAgora.current = folha;
+  useEffect(() => {
+    if (reagir === null || !reacao || reduzir.current || folhaAgora.current === 'ataque') return;
+    setFolha('reacao');
+    let i = 0;
+    let t: number;
+    const passo = () => {
+      setQuadro(i);
+      t = window.setTimeout(() => {
+        i += 1;
+        if (i >= reacao.quadros) setFolha((f) => (f === 'reacao' ? 'parado' : f));
+        else passo();
+      }, reacao.ms[i] / velocidadeAtual.current);
+    };
+    passo();
+    return () => window.clearTimeout(t);
+  }, [reagir, reacao]);
+
+  const atual = folha === 'ataque' ? ataque : folha === 'reacao' && reacao ? reacao : parado;
   return (
     <div
       role="img"

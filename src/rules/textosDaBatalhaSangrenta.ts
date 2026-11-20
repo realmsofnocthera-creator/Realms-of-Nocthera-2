@@ -18,6 +18,7 @@ export const TEXTOS_DA_BATALHA_SANGRENTA = {
   sessaoExpirada: 'Sessão expirada. Faça login de novo.',
   falhaAoIniciar: 'Não foi possível iniciar a Batalha Sangrenta.',
   erroAoIniciar: 'Erro ao iniciar a Batalha Sangrenta.',
+  nomeDaArena: (nome: string) => `Arena da Batalha Sangrenta: ${nome}`,
   verResultado: 'Ver resultado',
   luta: (n: number, total: number, chefe: boolean, nome: string) => `Batalha Sangrenta · ${n}/${total} ${chefe ? 'Chefe · ' : ''}${nome}`,
   // resultado

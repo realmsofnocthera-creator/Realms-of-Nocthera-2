@@ -19,7 +19,7 @@ describe('arte da Batalha Sangrenta', () => {
       expect(existsSync(join(publico, f)), f).toBe(true);
       expect(statSync(join(publico, f)).size, f).toBeLessThanOrEqual(350 * 1024);
     }
-    for (const f of readdirSync(join(publico, 'images/batalha-sangrenta'))) expect(usados.has(`/images/batalha-sangrenta/${f}`), f).toBe(true);
+    for (const f of readdirSync(join(publico, 'images/batalha-sangrenta')).filter((x) => x.includes('.'))) expect(usados.has(`/images/batalha-sangrenta/${f}`), f).toBe(true);
   });
 
   it('as molduras cabem na grade de 360 x 540, uma abaixo da outra sem se sobrepor', () => {

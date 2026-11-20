@@ -8,6 +8,7 @@ import type { FolhaDeQuadros } from '@/components/cena/SpriteAnimado';
 import heroisManifesto from '@/assets/heroisManifesto.json';
 import monstrosManifesto from '@/assets/monstrosManifesto.json';
 import chefesManifesto from '@/assets/chefesManifesto.json';
+import batalhaChefesManifesto from '@/assets/batalhaChefesManifesto.json';
 import guerreiroChefesManifesto from '@/assets/guerreiroChefesManifesto.json';
 
 export interface SpriteLuta {
@@ -174,11 +175,14 @@ export function animacaoDoHeroi(classeId: string, subclasseId?: string | null): 
 }
 
 /** A animação de um monstro: a folha do parado (idle) e a do ataque, o tamanho de cada quadro e o instante do golpe. */
-export type AnimacaoDoMonstro = AnimacaoDoHeroi;
+export type AnimacaoDoMonstro = AnimacaoDoHeroi & {
+  /** A animação de quando ele leva um golpe (só alguns chefes têm). */
+  reacao?: FolhaDeQuadros;
+};
 
 type FolhaDoManifesto = { quadros: number; largura: number; altura: number; ms: number[] };
 
-type EntradaDoManifesto = { idle: FolhaDoManifesto; ataque: FolhaDoManifesto & { impacto: number } };
+type EntradaDoManifesto = { idle: FolhaDoManifesto; ataque: FolhaDoManifesto & { impacto: number }; golpe?: FolhaDoManifesto };
 
 function montarAnimacaoDoMonstro(id: string, manifesto: Record<string, EntradaDoManifesto>, pasta: string): AnimacaoDoMonstro {
   const m = manifesto[id];
@@ -189,6 +193,7 @@ function montarAnimacaoDoMonstro(id: string, manifesto: Record<string, EntradaDo
     altura: m.idle.altura,
     proporcao: m.idle.largura / m.idle.altura,
     impacto: m.ataque.impacto,
+    ...(m.golpe ? { reacao: { src: `${pasta}/${id}-golpe.webp`, quadros: m.golpe.quadros, ms: m.golpe.ms } } : {}),
   };
 }
 
@@ -197,6 +202,8 @@ function montarAnimacaoDoMonstro(id: string, manifesto: Record<string, EntradaDo
  * Gerado de `monstrosManifesto.json` (`scripts/monstros/empacotar.py`). Um monstro sem entrada aqui segue com o retrato parado.
  */
 export const ANIMACAO_DO_MONSTRO: Readonly<Record<string, AnimacaoDoMonstro>> = Object.fromEntries([
+  // os 6 chefes da Batalha Sangrenta (`batalhaChefesManifesto.json`, `scripts/batalha-sangrenta/chefes.py`), com a animação de levar um golpe
+  ...Object.keys(batalhaChefesManifesto).map((id) => [id, montarAnimacaoDoMonstro(id, batalhaChefesManifesto as unknown as Record<string, EntradaDoManifesto>, '/images/batalha-sangrenta/chefes')]),
   ...Object.keys(monstrosManifesto).map((id) => [id, montarAnimacaoDoMonstro(id, monstrosManifesto as unknown as Record<string, EntradaDoManifesto>, '/images/cacada/monstros')]),
   // os 30 chefes da Torre Celestial (`chefesManifesto.json`, `scripts/torre/empacotarChefes.py`)
   ...Object.keys(chefesManifesto).map((id) => [id, montarAnimacaoDoMonstro(id, chefesManifesto as unknown as Record<string, EntradaDoManifesto>, '/images/torre/chefes')]),
