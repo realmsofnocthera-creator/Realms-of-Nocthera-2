@@ -10,6 +10,7 @@ import { EMBLEMA_RARIDADE_MAP, EmblemaRaridade } from '@/rules/emblemas';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { CombateCacada } from '@/components/cacada/CombateCacada';
 import { MesaDoGuerreiro } from './MesaDoGuerreiro';
+import { ARENAS_DO_GUERREIRO } from '@/assets/arenasDoGuerreiro';
 import { IconeDoEmblema } from '@/components/ficha/IconeDoEmblema';
 import { TEXTOS_DO_GUERREIRO as T } from '@/rules/textosDoGuerreiro';
 
@@ -79,6 +80,7 @@ export function GuerreiroScreen({ character, onCharacterChange, tokenFresco }: G
         monstro={montarChefeGuerreiro(g.dificuldade)}
         titulo={`Guerreiro · ${romano[g.dificuldade - 1]} · ${g.nome}`}
         estrela={Math.min(9, g.dificuldade)}
+        mapa={ARENAS_DO_GUERREIRO[g.dificuldade]}
         onFim={terminarCombate}
       />
     );

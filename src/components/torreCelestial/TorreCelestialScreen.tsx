@@ -8,7 +8,7 @@ import { estrelaDoAndar, montarMonstroDaTorre, TORRE } from '@/game/torreCelesti
 import { andaresDaLista, cenarioDoAndar, fundoDaTorre, recompensasEmTexto, torreDoPersonagem } from '@/lib/torreTela';
 import type { RecompensaTela } from '@/lib/torreTela';
 import { CENARIOS_DA_TORRE, FUNDOS_DA_TORRE, TORRE_UI } from '@/assets/torreUi';
-import { mapaDoAndar } from '@/assets/mapasDaTorre';
+import { mapaDoAndar, MAPAS_DA_TORRE } from '@/assets/mapasDaTorre';
 import { HUD_ICONS } from '@/assets/hud';
 import { ICONES_DE_SALDO } from '@/assets/mochilaUi';
 import { TEXTOS_DA_TORRE as T } from '@/rules/textosDaTorre';
@@ -220,7 +220,7 @@ export function TorreCelestialScreen({ character, onCharacterChange, tokenFresco
         monstro={monstro}
         titulo={`Torre Celestial · Andar ${resposta.torre.andar} · ${resposta.torre.nome}`}
         estrela={estrelaDoAndar(resposta.torre.andar)}
-        mapaDaTorre={mapaDoAndar(resposta.torre.andar)}
+        mapa={MAPAS_DA_TORRE[mapaDoAndar(resposta.torre.andar)]}
         onFim={terminarCombate}
       />
     );

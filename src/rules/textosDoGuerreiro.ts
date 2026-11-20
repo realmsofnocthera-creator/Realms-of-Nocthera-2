@@ -14,6 +14,7 @@ export const TEXTOS_DO_GUERREIRO = {
   nenhum: 'nenhum',
   chanceDosEmblemas: 'Chance de cada emblema',
   mecanica: 'Mecânica',
+  nomeDaArena: (nome: string) => `Arena da Provação do Guerreiro: ${nome}`,
   pularIntro: 'Toque para pular',
   sessaoExpirada: 'Sessão expirada. Faça login de novo.',
   falhaAoEnfrentar: 'Não foi possível enfrentar o chefe.',
