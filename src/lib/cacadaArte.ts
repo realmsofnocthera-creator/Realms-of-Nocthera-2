@@ -8,6 +8,7 @@ import type { FolhaDeQuadros } from '@/components/cena/SpriteAnimado';
 import heroisManifesto from '@/assets/heroisManifesto.json';
 import monstrosManifesto from '@/assets/monstrosManifesto.json';
 import chefesManifesto from '@/assets/chefesManifesto.json';
+import guerreiroChefesManifesto from '@/assets/guerreiroChefesManifesto.json';
 
 export interface SpriteLuta {
   src: string;
@@ -199,4 +200,6 @@ export const ANIMACAO_DO_MONSTRO: Readonly<Record<string, AnimacaoDoMonstro>> = 
   ...Object.keys(monstrosManifesto).map((id) => [id, montarAnimacaoDoMonstro(id, monstrosManifesto as unknown as Record<string, EntradaDoManifesto>, '/images/cacada/monstros')]),
   // os 30 chefes da Torre Celestial (`chefesManifesto.json`, `scripts/torre/empacotarChefes.py`)
   ...Object.keys(chefesManifesto).map((id) => [id, montarAnimacaoDoMonstro(id, chefesManifesto as unknown as Record<string, EntradaDoManifesto>, '/images/torre/chefes')]),
+  // os 10 chefes da Provação do Guerreiro (`guerreiroChefesManifesto.json`, `scripts/guerreiro/empacotarChefes.py`)
+  ...Object.keys(guerreiroChefesManifesto).map((id) => [id, montarAnimacaoDoMonstro(id, guerreiroChefesManifesto as unknown as Record<string, EntradaDoManifesto>, '/images/guerreiro/chefes')]),
 ]);

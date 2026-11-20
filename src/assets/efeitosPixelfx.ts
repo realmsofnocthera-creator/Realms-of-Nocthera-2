@@ -119,7 +119,7 @@ export const EFEITO_DO_STATUS: Readonly<Record<string, NomeDoEfeito>> = {
 };
 
 /**
- * O golpe de cada chefe da Torre que não ataca com garras (pela arma ou pelo corpo, a partir do nome e da aparência: proposta,
+ * O golpe de cada chefe (Torre e Guerreiro) que não ataca com garras (pela arma ou pelo corpo, a partir do nome e da aparência: proposta,
  * a confirmar). Os chefes de elemento mostram a magia do elemento; os outros, a garra.
  */
 export const GOLPE_DO_MONSTRO: Readonly<Record<string, NomeDoEfeito>> = {
@@ -133,6 +133,11 @@ export const GOLPE_DO_MONSTRO: Readonly<Record<string, NomeDoEfeito>> = {
   'kaelgor-berserker-imortal': 'golpe-corte', // dois machados
   'sanghra-matriarca-escarlate': 'golpe-perfuracao', // patas afiadas
   'kragmor-behemoth-de-ferro': 'golpe-contusao', // investida de ferro
+  // chefes da Provação do Guerreiro (proposta, a confirmar); os de elemento mostram a magia dele e os demais a garra
+  'astaroth-louco': 'golpe-perfuracao', // adagas
+  'thundrak-carro': 'golpe-contusao', // investida da carruagem
+  'veredar-justica': 'golpe-corte', // espada
+  'kolossar-torre': 'golpe-contusao', // punhos de pedra
 };
 
 /** Os efeitos de habilidade que precisam de outro tamanho ou lugar (os demais usam o padrão de golpe ou de quem usou). */
