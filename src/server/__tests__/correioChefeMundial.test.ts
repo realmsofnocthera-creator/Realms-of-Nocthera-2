@@ -56,13 +56,15 @@ describe('Correio e Chefe Mundial: servidor', () => {
     expect(await erro(lutarChefeMundial('u3', 1, HOJE))).toBeInstanceOf(ErroDoChefeMundial);
     const a = await lutarChefeMundial('u1', 11, HOJE);
     expect(a.dano).toBeGreaterThan(0);
+    // a luta inteira volta para a tela mostrar o replay (já calculada aqui, sem leitura nem gravação nova)
+    expect(a.resultado.logTurnos.length).toBeGreaterThan(0);
     await lutarChefeMundial('u1', 12, HOJE);
     const entrada = (await repositorio.lerEntradaChefeMundial('2026-10-22', 'u1'))!;
     expect(entrada.dano).toBeGreaterThanOrEqual(a.dano);
     await updateCharacter('u2', { atributos: { ...FORTE, forca: 30 } });
     await lutarChefeMundial('u2', 13, HOJE);
     const e = await estadoDoChefeMundial('u2', HOJE);
-    expect(e).toMatchObject({ dia: '2026-10-22', nivelNecessario: 18, minhaPosicao: 2 });
+    expect(e).toMatchObject({ dia: '2026-10-22', chefeId: expect.any(String), nivelNecessario: 18, minhaPosicao: 2 });
     expect(e.ranking.map((r) => r.nome)).toEqual(['Aragorn', 'Boromir']);
     expect(e.fechaEm).toBe('2026-10-23T03:00:00.000Z');
     expect((await getCharacterByUid('u1'))!.chefeMundial).toEqual([{ dia: '2026-10-22' }]);

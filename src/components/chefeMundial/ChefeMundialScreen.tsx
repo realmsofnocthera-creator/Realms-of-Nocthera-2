@@ -3,7 +3,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { presenteDaFaixa } from '@/rules/chefeMundial';
+import { chefeDoDia, montarChefeMundial, presenteDaFaixa } from '@/rules/chefeMundial';
+import { ARTE_DOS_CHEFES_MUNDIAIS } from '@/assets/chefesMundiaisArte';
+import { resolveAvatarSrc } from '@/assets/avatars';
+import { CombateCacada } from '@/components/cacada/CombateCacada';
+import type { ResultadoCombate } from '@/game/combat';
+import type { CharacterDocument } from '@/server/characterService';
 import { textoDoPresente } from '@/rules/correio';
 import type { EstadoDoChefeMundial } from '@/server/chefeMundial';
 import { NOCTHERA_THEME } from '@/theme/theme';
@@ -43,13 +48,15 @@ function Cartao({ titulo, children }: { titulo: string; children: React.ReactNod
 }
 
 /** Provação de Chefe Mundial: um chefe por dia; lutas ilimitadas; vale o maior dano; a recompensa chega pelo Correio. */
-export function ChefeMundialScreen({ tokenFresco }: { tokenFresco: Token }) {
+export function ChefeMundialScreen({ tokenFresco, personagem }: { tokenFresco: Token; personagem?: CharacterDocument }) {
   const { colors } = NOCTHERA_THEME;
   const [estado, setEstado] = useState<EstadoDoChefeMundial | null>(null);
   const [erroAoCarregar, setErroAoCarregar] = useState(false);
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [agora, setAgora] = useState(() => Date.now());
+  /** A luta que está passando (o replay animado), com o dano dela. */
+  const [luta, setLuta] = useState<{ resultado: ResultadoCombate; dano: number; melhor: number; dia: string; antes: CharacterDocument } | null>(null);
 
   const carregar = useCallback(async () => {
     const r = await chamar(tokenFresco);
@@ -76,10 +83,36 @@ export function ChefeMundialScreen({ tokenFresco }: { tokenFresco: Token }) {
       return;
     }
     setAviso({ texto: String(r.dados.mensagem ?? 'Feito.'), erro: false });
-    setEstado(r.dados.estado as EstadoDoChefeMundial);
+    const novo = r.dados.estado as EstadoDoChefeMundial;
+    setEstado(novo);
+    const resultado = r.dados.resultado as ResultadoCombate | undefined;
+    // com o personagem e a arte do chefe, mostra a luta animada; senão fica só a mensagem
+    if (personagem && resultado && ARTE_DOS_CHEFES_MUNDIAIS[novo.chefeId]) {
+      setLuta({ resultado, dano: Number(r.dados.dano ?? 0), melhor: Number(r.dados.melhor ?? 0), dia: novo.dia, antes: personagem });
+    }
   }
 
   const bloqueado = !!estado && estado.meuNivel < estado.nivelNecessario;
+
+  if (luta) {
+    const chefe = chefeDoDia(luta.dia);
+    return (
+      <CombateCacada
+        resultado={luta.resultado}
+        personagem={luta.antes}
+        monstro={montarChefeMundial(luta.dia)}
+        titulo={`Chefe Mundial · ${chefe.nome}`}
+        cena={ARTE_DOS_CHEFES_MUNDIAIS[chefe.id]}
+        onFim={() => undefined}
+        telaDeFim={{
+          retrato: resolveAvatarSrc(luta.antes.avatarId, luta.antes.classeId),
+          aviso: `Você causou ${numero(luta.dano)} de dano. Seu melhor de hoje: ${numero(luta.melhor)}.`,
+          voltar: { rotulo: 'Voltar', acao: () => setLuta(null) },
+          repetir: { rotulo: 'Lutar de novo', acao: () => { setLuta(null); void lutar(); } },
+        }}
+      />
+    );
+  }
 
   return (
     <main className="min-h-dvh w-full flex flex-col items-center px-2.5 sm:px-5 py-3 sm:py-6" style={{ backgroundColor: colors.background.primary, color: colors.text.primary }}>
@@ -101,6 +134,10 @@ export function ChefeMundialScreen({ tokenFresco }: { tokenFresco: Token }) {
           <>
             {bloqueado && <p className="text-sm font-semibold" style={{ color: VERMELHO }}>O Chefe Mundial abre no nível {estado.nivelNecessario} (agora: {estado.meuNivel}).</p>}
             <Cartao titulo={`Hoje: ${estado.chefe}`}>
+              {ARTE_DOS_CHEFES_MUNDIAIS[estado.chefeId] && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={ARTE_DOS_CHEFES_MUNDIAIS[estado.chefeId].camada} alt={estado.chefe} draggable={false} className="self-center" style={{ width: 113, height: 150, imageRendering: 'pixelated' }} />
+              )}
               <p className="text-sm">
                 Seu melhor: <strong>{numero(estado.meuMelhor)}</strong> de dano{estado.minhaPosicao ? <> · posição <strong>{estado.minhaPosicao}º</strong></> : ' · ainda não lutou hoje'}
               </p>

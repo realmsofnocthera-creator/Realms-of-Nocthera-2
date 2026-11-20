@@ -28,15 +28,19 @@ export interface ChefeMundial {
   tipoDano: 'fisico' | 'magico';
 }
 
-/** Um chefe para cada dia da semana (domingo a sábado). Os nomes são do Yuri (opção A, 20/11/2026); a aparência e a mecânica ainda estão por definir. */
+/**
+ * Um chefe para cada dia da semana, do mais fraco ao mais devastador: de segunda (Solvaris) a domingo (Orvakar), na ordem da arte
+ * do Yuri. Os nomes são dele; o corpo, o elemento e o tipo de dano são propostas a confirmar (a arte do Orvakar, por exemplo, é um
+ * soberano de tentáculos e caveiras, que talvez pedisse outro elemento que terra). A lista segue o `getUTCDay` (0 = domingo).
+ */
 export const CHEFES_MUNDIAIS: readonly ChefeMundial[] = [
-  { id: 'chefe-mundial-1', nome: 'Solvaris, o Arauto do Último Amanhecer', categoriaCorporal: 'eterio', elementoAtaque: 'sagrado', tipoDano: 'magico' },
-  { id: 'chefe-mundial-2', nome: 'Pyrathon, o Rei das Brasas', categoriaCorporal: 'escamoso', elementoAtaque: 'fogo', tipoDano: 'fisico' },
-  { id: 'chefe-mundial-3', nome: 'Cryonax, o Inverno Eterno', categoriaCorporal: 'cristalino', elementoAtaque: 'gelo', tipoDano: 'magico' },
-  { id: 'chefe-mundial-4', nome: 'Orvakar, o Colosso Que Parte Montanhas', categoriaCorporal: 'rochoso', elementoAtaque: 'terra', tipoDano: 'fisico' },
-  { id: 'chefe-mundial-5', nome: 'Nyxoloth, a Noite Que Respira', categoriaCorporal: 'sombrio', elementoAtaque: 'sombrio', tipoDano: 'magico' },
-  { id: 'chefe-mundial-6', nome: 'Zephyrak, a Fúria Sem Rédeas', categoriaCorporal: 'feral', elementoAtaque: 'vento', tipoDano: 'fisico' },
-  { id: 'chefe-mundial-7', nome: 'Xerothul, o Fim Que Ruge Entre Raios', categoriaCorporal: 'aberrante', elementoAtaque: 'relampago', tipoDano: 'magico' },
+  { id: 'orvakar', nome: 'Orvakar, o Colosso Que Parte Montanhas', categoriaCorporal: 'rochoso', elementoAtaque: 'terra', tipoDano: 'fisico' },
+  { id: 'solvaris', nome: 'Solvaris, o Arauto do Último Amanhecer', categoriaCorporal: 'eterio', elementoAtaque: 'sagrado', tipoDano: 'magico' },
+  { id: 'pyrathon', nome: 'Pyrathon, o Rei das Brasas', categoriaCorporal: 'escamoso', elementoAtaque: 'fogo', tipoDano: 'fisico' },
+  { id: 'cryonax', nome: 'Cryonax, o Inverno Eterno', categoriaCorporal: 'cristalino', elementoAtaque: 'gelo', tipoDano: 'magico' },
+  { id: 'zephyrak', nome: 'Zephyrak, a Fúria Sem Rédeas', categoriaCorporal: 'feral', elementoAtaque: 'vento', tipoDano: 'fisico' },
+  { id: 'nyxoloth', nome: 'Nyxoloth, a Noite Que Respira', categoriaCorporal: 'sombrio', elementoAtaque: 'sombrio', tipoDano: 'magico' },
+  { id: 'xerothul', nome: 'Xerothul, o Fim Que Ruge Entre Raios', categoriaCorporal: 'aberrante', elementoAtaque: 'relampago', tipoDano: 'magico' },
 ];
 
 /** O dia seguinte (AAAA-MM-DD). */

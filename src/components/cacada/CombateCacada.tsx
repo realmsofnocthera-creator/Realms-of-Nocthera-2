@@ -11,6 +11,8 @@ import { resolveAvatarSrc } from '@/assets/avatars';
 import { MAPAS_DA_CACADA } from '@/assets/mapasDaCacada';
 import type { MapaDaCacada as MapaAnimado } from '@/assets/mapasDaCacada';
 import { MapaDaCacada } from './MapaDaCacada';
+import { CenaDoChefe, type EventoDoChefe } from './CenaDoChefe';
+import { DURACAO_DO_CLIPE_MS, IMPACTO_DO_ATAQUE_DO_CHEFE_MS, type ArteDoChefeMundial, type AlvoDoChefe } from '@/assets/chefesMundiaisArte';
 import { AberturaDeBatalha } from '@/components/cena/AberturaDeBatalha';
 import { TelaDeFimDeLuta, type TelaDeFimProps } from '@/components/cena/TelaDeFimDeLuta';
 import { SpriteAnimado } from '@/components/cena/SpriteAnimado';
@@ -33,6 +35,8 @@ interface CombateCacadaProps {
   estrela?: number;
   /** Um mapa próprio (o da Torre Celestial, a arena de um chefe do Guerreiro): no lugar do mapa da estrela. */
   mapa?: MapaAnimado;
+  /** A cena de um chefe mundial (a arena com o chefe desenhado, em vídeo): no lugar do mapa e do sprite do monstro. */
+  cena?: ArteDoChefeMundial;
   /** HP com que o personagem entra na luta (Batalha Sangrenta). */
   hpInicialJogador?: number;
   /**
@@ -125,8 +129,9 @@ export function destacarLinha(texto: string): React.ReactNode[] {
  */
 const CENA = { w: 1024, h: 1536, topo: 0.28, base: 0.94, monstroX: 0.4, monstroPes: 0.5, jogadorX: 0.64, jogadorPes: 0.8, alturaMonstro: 0.15, alturaJogador: 0.26 };
 
-export function geometriaDaCena(largura: number, altura: number) {
-  const cena = CENA;
+/** Na cena de um chefe mundial o chefe fica no alto (onde a arte o desenhou) e o herói embaixo, no centro; a janela mostra a cena toda. */
+export function geometriaDaCena(largura: number, altura: number, alvoDoChefe?: AlvoDoChefe) {
+  const cena = alvoDoChefe ? { ...CENA, topo: 0, base: 1, monstroX: alvoDoChefe.x, monstroPes: alvoDoChefe.pes, alturaMonstro: alvoDoChefe.altura, jogadorX: 0.5, jogadorPes: 0.88 } : CENA;
   const escala = Math.max(largura / cena.w, altura / cena.h);
   const imgW = cena.w * escala;
   const imgH = cena.h * escala;
@@ -151,7 +156,7 @@ export function geometriaDaCena(largura: number, altura: number) {
  * (um por golpe) e, no crítico, a estrela, o aviso e o tremor da tela. A barra de vida desce na hora do impacto e deixa um
  * rastro claro. No último golpe tudo vai em câmera lenta e a criatura se desfaz.
  */
-export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, hpInicialJogador, onFim, telaDeFim, mapa }: CombateCacadaProps) {
+export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, hpInicialJogador, onFim, telaDeFim, mapa, cena }: CombateCacadaProps) {
   const quadros: QuadroLuta[] = useMemo(() => montarQuadros(resultado, personagem, monstro, 5, hpInicialJogador), [resultado, personagem, monstro, hpInicialJogador]);
   const [indice, setIndice] = useState(0);
   // a abertura de batalha (a cena do Yuri) toca antes de a luta começar
@@ -192,14 +197,27 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   const animacaoMonstro = ANIMACAO_DO_MONSTRO[monstro.id];
   const velocidadeMonstro = animacaoMonstro ? animacaoMonstro.impacto / base.impacto : 1;
   const duracaoDoAtaqueMonstro = animacaoMonstro ? Math.ceil(animacaoMonstro.ataque.ms.reduce((a, b) => a + b, 0) / velocidadeMonstro) + 90 : 0;
+  // a cena do chefe mundial: o ataque dele acerta no impacto do clipe, e o golpe que ele leva acompanha o ritmo da luta
+  const taxaDoAtaqueDoChefe = IMPACTO_DO_ATAQUE_DO_CHEFE_MS / base.impacto;
+  const taxaDoGolpeDoChefe = 1300 / base.duracao;
+  const duracaoDoAtaqueDoChefe = cena ? Math.ceil(DURACAO_DO_CLIPE_MS.ataque / taxaDoAtaqueDoChefe) + 90 : 0;
   const tempos = {
     impacto: base.impacto,
-    duracao: acao?.de === 'jogador' ? Math.max(base.duracao, duracaoDoAtaque) : acao?.de === 'monstro' ? Math.max(base.duracao, duracaoDoAtaqueMonstro) : base.duracao,
+    duracao: acao?.de === 'jogador' ? Math.max(base.duracao, duracaoDoAtaque) : acao?.de === 'monstro' ? Math.max(base.duracao, cena ? duracaoDoAtaqueDoChefe : duracaoDoAtaqueMonstro) : base.duracao,
   };
   const impactou = !acao || acertou === indice;
   // até o impacto, as barras ainda mostram a vida de antes do golpe
   const vis = impactou || !ant ? q : ant;
   const cameraLenta = lenta;
+  const eventoDoChefe: EventoDoChefe | null = cena && !abertura
+    ? q.agiu === 'monstro'
+      ? { tipo: 'ataque', id: `a-${indice}` }
+      : acao?.de === 'jogador' && impactou && acao.dano > 0
+        ? { tipo: 'golpe', id: `g-${indice}` }
+        : null
+    : null;
+  // o chefe se enfurece quando o Sobreescudo dele quebra (ou quando o combate já o marca como Enfurecido)
+  const furiaDoChefe = !!cena && (vis.monstro.enfurecido || (vis.monstro.escudoMax > 0 && vis.monstro.escudo <= 0));
 
   const [telaFinal, setTelaFinal] = useState(false);
   const avisouFim = useRef(false);
@@ -239,7 +257,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   const spriteJogador = animacaoHeroi ? { src: animacaoHeroi.parado.src, proporcao: animacaoHeroi.proporcao } : SPRITE_CLASSE[personagem.classeId];
   const spriteMonstro = SPRITE_MONSTRO[monstro.id];
   const retrato = resolveAvatarSrc(personagem.avatarId, personagem.classeId);
-  const g = geometriaDaCena(caixa.w, caixa.h);
+  const g = geometriaDaCena(caixa.w, caixa.h, cena?.alvo);
   // a arte animada tem a mesma escala de pixel em todos os heróis: o tamanho na tela é o da arte vezes um fator (limitado para
   // o quadro, com a arma estendida, nunca passar de 80% da largura da tela)
   const pixelDoHeroi = animacaoHeroi ? Math.min((g.jogador.altura * 0.0102), (caixa.w * 0.8) / animacaoHeroi.largura) : 0;
@@ -250,7 +268,9 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
     : g.monstro.altura * (ALTURA_MONSTRO_PADRAO / 22);
   // sem retrato (os chefes da Torre): só a animação, na mesma escala de pixel dos monstros
   // animado: a mesma escala de pixel do retrato, e o quadro (com o golpe estendido) nunca passa de 46% da largura da arena
-  const alturaMonstro = animacaoMonstro
+  const alturaMonstro = cena
+    ? g.monstro.altura
+    : animacaoMonstro
     ? Math.min(spriteMonstro ? alturaDoRetrato * (animacaoMonstro.altura / spriteMonstro.altura) : g.monstro.altura * (animacaoMonstro.altura / ALTURA_DE_REFERENCIA_DA_ARTE), (caixa.w * 0.46) / animacaoMonstro.proporcao)
     : alturaDoRetrato;
   const larguraJogador = alturaJogador * (spriteJogador?.proporcao ?? 1);
@@ -310,7 +330,9 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
         <div className="absolute inset-0" style={{ transform: cameraLenta ? 'scale(1.12)' : 'scale(1)', transformOrigin: `${g.monstro.x}px ${g.monstro.pes - alturaMonstro / 2}px`, transition: 'transform 900ms ease-in-out' }}>
           {/* o tremor da tela nos golpes fortes */}
           <div key={`t-${indice}`} className="absolute inset-0" style={tremer ? { animation: `cacadaTremer ${critico ? 480 : 340}ms ease-out both`, ['--t' as string]: critico ? '9px' : '5px' } : undefined}>
-            {mapa ? (
+            {cena ? (
+              <CenaDoChefe arte={cena} evento={eventoDoChefe} furia={furiaDoChefe} taxaDoAtaque={taxaDoAtaqueDoChefe} taxaDoGolpe={taxaDoGolpeDoChefe} nome={monstro.nome} style={{ width: g.imgW, height: g.imgH, left: -g.esq, top: -g.topo }} />
+            ) : mapa ? (
               <MapaDaCacada estrela={0} mapa={mapa} style={{ width: g.imgW, height: g.imgH, left: -g.esq, top: -g.topo }} />
             ) : estrela && MAPAS_DA_CACADA[estrela] ? (
               <MapaDaCacada estrela={estrela} style={{ width: g.imgW, height: g.imgH, left: -g.esq, top: -g.topo }} />
@@ -321,31 +343,33 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
             )}
 
             {/* sombras no chão */}
-            <Sombra x={g.monstro.x} y={g.monstro.pes} largura={larguraMonstro * 0.8} apagada={mortoMonstro} />
+            {!cena && <Sombra x={g.monstro.x} y={g.monstro.pes} largura={larguraMonstro * 0.8} apagada={mortoMonstro} />}
             <Sombra x={xJogador} y={g.jogador.pes} largura={larguraJogador * 0.55} apagada={mortoJogador} />
 
-            {/* Monstro */}
+            {/* Monstro (na cena de um chefe mundial ele já está desenhado no fundo) */}
+            {!cena && (
             <div className="absolute -translate-x-1/2" style={{ left: g.monstro.x, top: g.monstro.pes - alturaMonstro, height: alturaMonstro, aspectRatio: animacaoMonstro ? String(animacaoMonstro.proporcao) : spriteMonstro ? String(spriteMonstro.proporcao) : '1', zIndex: acao?.de === 'monstro' ? 6 : 4 }}>
-              <div key={`mi-${indice}`} className="w-full h-full cacada-investida" style={acao?.de === 'monstro' ? { animation: `cacadaInvestida ${tempos.duracao}ms ease-in-out both`, ['--lx' as string]: `${investida.monstro.lx}px`, ['--ly' as string]: `${investida.monstro.ly}px` } : undefined}>
-                <div key={`mr-${indice}`} className="w-full h-full" style={reage('monstro') ? reacaoVars('monstro') : undefined}>
-                  <div className={`w-full h-full ${mortoMonstro ? 'cacada-morte' : ''}`} style={mortoMonstro ? { animationDuration: lenta ? '1500ms' : '1000ms' } : undefined}>
-                    <div className={`w-full h-full ${vis.monstro.hp > 0 && !acao && !animacaoMonstro ? 'cacada-respira' : ''} ${q.monstro.enfurecido && vis.monstro.hp > 0 ? 'cacada-furia' : ''}`} style={{ filter: tintaDosStatus(vis.monstro.status), transition: 'filter 300ms' }}>
-                      {animacaoMonstro ? (
-                        <SpriteAnimado parado={animacaoMonstro.parado} ataque={animacaoMonstro.ataque} golpe={q.agiu === 'monstro' ? indice : null} velocidade={velocidadeMonstro} espelhado rotulo={monstro.nome} />
-                      ) : spriteMonstro ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={spriteMonstro.src} alt={monstro.nome} className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} draggable={false} />
-                      ) : (
-                        <div role="img" aria-label={monstro.nome} className="w-full h-full rounded-full flex items-center justify-center"
-                          style={{ background: 'radial-gradient(circle at 50% 40%, rgba(25,12,20,0.95), rgba(0,0,0,0.85) 70%)', border: `2px solid ${OURO}55` }}>
-                          <span className="font-cinzel font-black text-2xl" style={{ color: `${OURO}99` }}>?</span>
-                        </div>
-                      )}
+                <div key={`mi-${indice}`} className="w-full h-full cacada-investida" style={acao?.de === 'monstro' ? { animation: `cacadaInvestida ${tempos.duracao}ms ease-in-out both`, ['--lx' as string]: `${investida.monstro.lx}px`, ['--ly' as string]: `${investida.monstro.ly}px` } : undefined}>
+                  <div key={`mr-${indice}`} className="w-full h-full" style={reage('monstro') ? reacaoVars('monstro') : undefined}>
+                    <div className={`w-full h-full ${mortoMonstro ? 'cacada-morte' : ''}`} style={mortoMonstro ? { animationDuration: lenta ? '1500ms' : '1000ms' } : undefined}>
+                      <div className={`w-full h-full ${vis.monstro.hp > 0 && !acao && !animacaoMonstro ? 'cacada-respira' : ''} ${q.monstro.enfurecido && vis.monstro.hp > 0 ? 'cacada-furia' : ''}`} style={{ filter: tintaDosStatus(vis.monstro.status), transition: 'filter 300ms' }}>
+                        {animacaoMonstro ? (
+                          <SpriteAnimado parado={animacaoMonstro.parado} ataque={animacaoMonstro.ataque} golpe={q.agiu === 'monstro' ? indice : null} velocidade={velocidadeMonstro} espelhado rotulo={monstro.nome} />
+                        ) : spriteMonstro ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={spriteMonstro.src} alt={monstro.nome} className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} draggable={false} />
+                        ) : (
+                          <div role="img" aria-label={monstro.nome} className="w-full h-full rounded-full flex items-center justify-center"
+                            style={{ background: 'radial-gradient(circle at 50% 40%, rgba(25,12,20,0.95), rgba(0,0,0,0.85) 70%)', border: `2px solid ${OURO}55` }}>
+                            <span className="font-cinzel font-black text-2xl" style={{ color: `${OURO}99` }}>?</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Jogador (de costas, virado para o monstro) */}
             <div className="absolute -translate-x-1/2" style={{ left: xJogador, top: g.jogador.pes - alturaJogador, height: alturaJogador, aspectRatio: spriteJogador ? String(spriteJogador.proporcao) : '1', zIndex: acao?.de === 'jogador' ? 6 : 5 }}>
