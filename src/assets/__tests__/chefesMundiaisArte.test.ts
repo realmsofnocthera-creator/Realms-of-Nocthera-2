@@ -24,7 +24,7 @@ describe('arte dos chefes mundiais', () => {
   it('as imagens ficam até 350 KB e não sobra arquivo sem uso', () => {
     const usados = new Set(Object.values(ARTE_DOS_CHEFES_MUNDIAIS).flatMap((a) => [a.arena, a.camada, ...ESTADOS_DO_CHEFE_MUNDIAL.flatMap((e) => [a.clipes[e].av1, a.clipes[e].h264])]).map((f) => f.split('/').pop()));
     for (const dir of ['images/chefe-mundial', 'videos/chefe-mundial']) {
-      for (const f of readdirSync(join(publico, dir))) {
+      for (const f of readdirSync(join(publico, dir)).filter((x) => x.includes('.'))) { // as peças da tela ficam na subpasta `tela`, conferida no teste dela
         expect(usados.has(f), f).toBe(true);
         if (dir.startsWith('images')) expect(statSync(join(publico, dir, f)).size, f).toBeLessThanOrEqual(350 * 1024);
       }

@@ -41,6 +41,8 @@ export interface EstadoDoChefeMundial {
   chefe: string;
   /** O id do chefe do dia (para a tela achar a arte dele). */
   chefeId: string;
+  /** A hora do servidor (ISO), para a tela acertar a contagem regressiva com o relógio dele. */
+  agora: string;
   /** Quando o dia fecha (meia-noite de Brasília, ISO). */
   fechaEm: string;
   meuMelhor: number;
@@ -87,6 +89,7 @@ export async function estadoDoChefeMundial(uid: string, agora = new Date()): Pro
     dia,
     chefe: chefeDoDia(dia).nome,
     chefeId: chefeDoDia(dia).id,
+    agora: agora.toISOString(),
     fechaEm: fimDoDia(dia),
     meuMelhor: minha?.dano ?? 0,
     minhaPosicao,
