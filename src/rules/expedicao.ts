@@ -4,7 +4,8 @@ import type { RaridadeMaterial } from './raridades';
 /**
  * Expedição (decidida pelo Yuri em 22/10/2026, no lugar da Provação de Dungeons): o jogador paga ouro e manda uma
  * expedição de 2, 6, 8 ou 12 horas, em até 3 vagas ao mesmo tempo. Ela nunca falha: ao fim do tempo, a recompensa (fixa
- * por turno) fica pronta para coletar. O item Avanço de expedição tira 1 hora de uma expedição já enviada; vem de
+ * por turno) fica pronta para coletar. O item Avanço de expedição tira 1 hora de uma expedição já enviada; o jogador
+ * escolhe quantos usar de uma vez (de 1 hora até o que falta para terminar, ou os que tem); vem de
  * eventos e, no futuro, de lojas VIP. Abre no nível 15. Os custos e as recompensas foram aprovados pelo Yuri em
  * 22/10/2026 (o ouro 30% menor que a proposta).
  */

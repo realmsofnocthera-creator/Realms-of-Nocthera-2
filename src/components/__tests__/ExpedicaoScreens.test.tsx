@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { ExpedicaoScreen, textoDaRecompensa } from '@/components/expedicao/ExpedicaoScreen';
+import { ExpedicaoScreen, PainelDeAvanco, textoDaRecompensa } from '@/components/expedicao/ExpedicaoScreen';
 import { ProvacoesScreen } from '@/components/provacoes/ProvacoesScreen';
 import { TURNOS_DE_EXPEDICAO } from '@/rules/expedicao';
 import type { CharacterDocument } from '@/server/characterService';
@@ -28,5 +28,28 @@ describe('Expedição: telas', () => {
     expect(html).not.toContain('Dungeons');
     const baixo = renderToStaticMarkup(<ProvacoesScreen personagem={{ nome: 'Aragorn', nivel: 14 } as CharacterDocument} />);
     expect(baixo).toContain('Expedição - Requer Nível 15');
+  });
+});
+
+describe('Expedição: acelerar com a barra de horas', () => {
+  const horas = 3600_000;
+
+  it('a barra vai de 1 h até o que falta, limitada pelos Avanços que o jogador tem', () => {
+    const html = renderToStaticMarkup(<PainelDeAvanco faltaMs={4.2 * horas} avancos={7} ocupado={false} aoUsar={() => {}} aoCancelar={() => {}} />);
+    expect(html).toContain('Quantas horas adiantar?');
+    expect(html).toContain('type="range"');
+    expect(html).toContain('min="1"');
+    expect(html).toContain('max="5"');
+    expect(html).toContain('Máx. (5 h)');
+    expect(html).toContain('Usa 1 Avanço (você tem 7).');
+    const pouco = renderToStaticMarkup(<PainelDeAvanco faltaMs={12 * horas} avancos={3} ocupado={false} aoUsar={() => {}} aoCancelar={() => {}} />);
+    expect(pouco).toContain('max="3"');
+  });
+
+  it('sem Avanços avisa e trava o botão de usar', () => {
+    const html = renderToStaticMarkup(<PainelDeAvanco faltaMs={2 * horas} avancos={0} ocupado={false} aoUsar={() => {}} aoCancelar={() => {}} />);
+    expect(html).toContain('Você não tem Avanços de expedição.');
+    expect(html).not.toContain('type="range"');
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>[\s\S]*Usar/);
   });
 });
