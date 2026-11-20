@@ -331,7 +331,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
                   <div className={`w-full h-full ${mortoMonstro ? 'cacada-morte' : ''}`} style={mortoMonstro ? { animationDuration: lenta ? '1500ms' : '1000ms' } : undefined}>
                     <div className={`w-full h-full ${vis.monstro.hp > 0 && !acao && !animacaoMonstro ? 'cacada-respira' : ''} ${q.monstro.enfurecido && vis.monstro.hp > 0 ? 'cacada-furia' : ''}`} style={{ filter: tintaDosStatus(vis.monstro.status), transition: 'filter 300ms' }}>
                       {animacaoMonstro ? (
-                        <SpriteAnimado parado={animacaoMonstro.parado} ataque={animacaoMonstro.ataque} golpe={q.agiu === 'monstro' ? indice : null} velocidade={velocidadeMonstro} rotulo={monstro.nome} />
+                        <SpriteAnimado parado={animacaoMonstro.parado} ataque={animacaoMonstro.ataque} golpe={q.agiu === 'monstro' ? indice : null} velocidade={velocidadeMonstro} espelhado rotulo={monstro.nome} />
                       ) : spriteMonstro ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={spriteMonstro.src} alt={monstro.nome} className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} draggable={false} />

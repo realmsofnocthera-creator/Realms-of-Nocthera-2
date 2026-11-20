@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Empacota as animações dos 10 chefes da Provação do Guerreiro (pastas do Yuri: guerreiro-<ROMANO>-<nome>/{idle,ataque}/*.png + tempos.json,
-virados para a esquerda) em folhas de quadros WebP em public/images/guerreiro/chefes/ e escreve `src/assets/guerreiroChefesManifesto.json`.
+desenhados olhando para a esquerda; o jogo espelha na luta) em folhas de quadros WebP em public/images/guerreiro/chefes/ e escreve `src/assets/guerreiroChefesManifesto.json`.
 O id de cada chefe é o do jogo (src/rules/guerreiroChefes.ts), achado pelo número romano da pasta.
 
 Uso: python3 -I scripts/guerreiro/empacotarChefes.py <pasta que contém as pastas guerreiro-*>

@@ -42,4 +42,9 @@ describe('AberturaDeBatalha', () => {
     expect(TEMPOS_DA_ABERTURA.fimDaFaixa).toBeLessThan(4.25);
     expect(VIDEO_DA_ABERTURA.altura / VIDEO_DA_ABERTURA.largura).toBeCloseTo(1.5, 5);
   });
+  it('esconde a arena atrás de um fundo escuro até o vídeo acabar', () => {
+    const html = renderToStaticMarkup(React.createElement(AberturaDeBatalha, { aoTerminar: () => {} }));
+    expect(html).toContain('background-color:#07050a');
+    expect(html).toContain('fixed inset-0');
+  });
 });

@@ -37,11 +37,17 @@ export function tirarOVerde(dados: Uint8ClampedArray): number {
   return soma / (dados.length / 4);
 }
 
+/** A cor do fundo da abertura (a mesma do combate escuro): a arena só aparece depois que o vídeo termina. */
+const FUNDO_DA_ABERTURA = '#07050a';
+/** Quanto dura a saída da abertura (ms): o vídeo some e a arena aparece. */
+export const SAIDA_DA_ABERTURA_MS = 350;
+
 /**
- * A abertura de TODO combate: a cena do Yuri (a tela escura estilhaça e aparece "BATALHA! — o confronto começa —") por
- * cima da luta, em tela cheia (o vídeo é vertical e preenche a tela, cortando um pouco as laterais em celulares mais
- * estreitos), que só começa quando a abertura acaba (`aoTerminar`). O vídeo tem fundo verde: cada quadro passa por um
- * canvas que apaga o verde, então o que está por baixo aparece pelos estilhaços. Os clarões brancos que piscam rápido
+ * A abertura de TODO combate: a cena do Yuri (a tela escura estilhaça e aparece "BATALHA! — o confronto começa —") em
+ * tela cheia (o vídeo é vertical e preenche a tela, cortando um pouco as laterais em celulares mais estreitos), ANTES da
+ * luta: a arena e o resto do combate ficam escondidos atrás de um fundo escuro e só aparecem quando a abertura acaba
+ * (`aoTerminar`). O vídeo tem fundo verde: cada quadro passa por um canvas que apaga o verde, então os estilhaços
+ * mostram o fundo escuro. Os clarões brancos que piscam rápido
  * viram um único clarão suave (segurança para quem é sensível a luz), e quem pede "reduzir movimento" pula a abertura.
  * Tocar na tela pula. Se o vídeo não carregar ou não tocar, a luta começa na hora.
  */
@@ -56,7 +62,7 @@ export function AberturaDeBatalha({ aoTerminar }: { aoTerminar: () => void }) {
     if (acabou.current) return;
     acabou.current = true;
     setSaindo(true);
-    window.setTimeout(aoTerminar, 160);
+    window.setTimeout(aoTerminar, SAIDA_DA_ABERTURA_MS);
   }, [aoTerminar]);
 
   useEffect(() => {
@@ -114,7 +120,7 @@ export function AberturaDeBatalha({ aoTerminar }: { aoTerminar: () => void }) {
       aria-label={T.anuncio}
       onClick={terminar}
       className="fixed inset-0 z-[100] overflow-hidden cursor-pointer select-none"
-      style={{ opacity: saindo ? 0 : 1, transition: 'opacity 160ms ease-out', touchAction: 'manipulation' }}
+      style={{ backgroundColor: FUNDO_DA_ABERTURA, opacity: saindo ? 0 : 1, transition: `opacity ${SAIDA_DA_ABERTURA_MS}ms ease-out`, touchAction: 'manipulation' }}
     >
       <video ref={video} muted playsInline preload="auto" aria-hidden="true" className="hidden" onEnded={terminar} onError={terminar}>
         <source src={VIDEO_DA_ABERTURA.src} type="video/mp4" />

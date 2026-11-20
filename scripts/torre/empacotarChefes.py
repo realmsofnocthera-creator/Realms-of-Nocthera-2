@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Empacota as animações dos 30 chefes da Torre Celestial (pastas do Yuri: andarNNN-<id>/{idle,ataque}/*.png + tempos.json,
-virados para a esquerda) em folhas de quadros WebP em public/images/torre/chefes/ e escreve `src/assets/chefesManifesto.json`.
+desenhados olhando para a esquerda; o jogo espelha na luta) em folhas de quadros WebP em public/images/torre/chefes/ e escreve `src/assets/chefesManifesto.json`.
 
 Uso: python3 -I scripts/torre/empacotarChefes.py <pasta que contém as pastas chefes_torre_andares_*>
 """

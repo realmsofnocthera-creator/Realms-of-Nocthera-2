@@ -193,7 +193,7 @@ function montarAnimacaoDoMonstro(id: string, manifesto: Record<string, EntradaDo
 }
 
 /**
- * Os monstros animados (pixel art do Yuri, em folhas de quadros): parado e ataque, virados para a esquerda (para o herói).
+ * Os monstros animados (pixel art do Yuri, em folhas de quadros): parado e ataque, desenhados olhando para a ESQUERDA (oeste): na luta o monstro fica à esquerda do herói, então o jogo espelha a arte (`espelhado`) para ele olhar para a direita, para o herói.
  * Gerado de `monstrosManifesto.json` (`scripts/monstros/empacotar.py`). Um monstro sem entrada aqui segue com o retrato parado.
  */
 export const ANIMACAO_DO_MONSTRO: Readonly<Record<string, AnimacaoDoMonstro>> = Object.fromEntries([
