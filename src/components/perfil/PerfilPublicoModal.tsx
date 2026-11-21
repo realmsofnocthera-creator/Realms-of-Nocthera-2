@@ -21,14 +21,13 @@ import { auth } from '@/lib/firebase';
 import { calcularPoderTotal } from '@/game';
 import { getRaceById } from '@/rules/races';
 import { getClassById } from '@/rules/classes';
-import { MOLDURAS_DISPONIVEIS } from '@/rules/molduras';
 import { TITULO_MAP } from '@/rules/titulos';
 import { conquistasEmDestaque, DEGRAUS } from '@/rules/conquistas';
 import { CharacterDocument, PublicCharacterProfile } from '@/server/characterService';
 import { getAvatarFaceStyle, resolveAvatarSrc } from '@/assets/avatars';
 import { HUD_IMAGES } from '@/assets/hud';
 import { PERFIL_IMAGES } from '@/assets/perfil';
-import { AvatarPicker } from '@/components/AvatarPicker';
+import { PersonalizarPerfil } from '@/components/perfil/PersonalizarPerfil';
 import { PerfilEquipamentos } from '@/components/perfil/PerfilEquipamentos';
 import { equipamentosDoPerfil, itensEquipados } from '@/lib/perfilEquipamentos';
 
@@ -106,35 +105,11 @@ export function PerfilPublicoModal({
   const [localOwnAvatarId, setLocalOwnAvatarId] = useState<string | null>(null);
   /** Título escolhido nesta abertura (undefined = o do personagem; '' = sem título). */
   const [localTituloId, setLocalTituloId] = useState<string | undefined>(undefined);
-  const [salvandoTitulo, setSalvandoTitulo] = useState(false);
-  const [tituloError, setTituloError] = useState<string | null>(null);
 
   const effectiveOwnCharacter: CharacterDocument = {
     ...ownCharacter,
     ...(localOwnAvatarId !== null ? { avatarId: localOwnAvatarId } : {}),
     ...(localTituloId !== undefined ? { tituloId: localTituloId || undefined } : {}),
-  };
-  const meusTitulos = (ownCharacter.titulos ?? []).filter((id) => TITULO_MAP[id]);
-
-  const escolherTitulo = async (id: string) => {
-    setSalvandoTitulo(true);
-    setTituloError(null);
-    try {
-      const token = await resolveCurrentToken();
-      const res = await fetch('/api/conquistas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}` },
-        body: JSON.stringify({ acao: 'titulo', titulo: id }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Não foi possível trocar o título.');
-      setLocalTituloId(id);
-      setTrocaStep('closed');
-    } catch (err) {
-      setTituloError(err instanceof Error ? err.message : 'Não foi possível trocar o título.');
-    } finally {
-      setSalvandoTitulo(false);
-    }
   };
 
   const ownPublicProfile = characterToPublicProfile(effectiveOwnCharacter);
@@ -416,7 +391,7 @@ export function PerfilPublicoModal({
                   <button
                     type="button"
                     onClick={() =>
-                      setTrocaStep((prev) => (prev === 'closed' ? 'menu' : 'closed'))
+                      setTrocaStep('menu')
                     }
                     aria-label="Trocar Avatar, Moldura ou Título"
                     title="Personalizar Avatar, Moldura ou Título"
@@ -427,206 +402,17 @@ export function PerfilPublicoModal({
                 )}
               </div>
 
-              {/* Popover / Menu de Troca (Avatar / Moldura / Título) — SOMENTE no próprio perfil */}
+              {/* Personalizar (avatar, título e moldura), em tela cheia de pixel art — SOMENTE no próprio perfil */}
               {isOwnProfile && trocaStep !== 'closed' && (
-                <div
-                  role="menu"
-                  aria-label="Opções de Personalização"
-                  className="absolute left-0 top-14 sm:top-17 z-30 w-full max-w-[290px] sm:max-w-[320px] rounded-lg bg-[#16120E] border-2 border-[#D4AF37] p-2.5 text-[#F5F3E0] shadow-[0_14px_34px_rgba(0,0,0,0.92)]"
-                >
-                  {trocaStep === 'menu' && (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between border-b border-[#C8A656]/35 pb-1">
-                        <span className="font-cinzel font-bold text-[10px] sm:text-xs uppercase tracking-wider text-[#ED8A0C]">
-                          Personalizar Perfil
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setTrocaStep('closed')}
-                          aria-label="Fechar menu de troca"
-                          className="text-[#D5C7A4] hover:text-[#F5F3E0] cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => setTrocaStep('avatar')}
-                          className="w-full flex items-center justify-between px-2.5 py-1.5 rounded bg-[#221C16] hover:bg-[#2E251D] border border-[#C8A656]/40 hover:border-[#ED8A0C] text-left transition-colors cursor-pointer"
-                        >
-                          <span className="inline-flex items-center gap-2 text-xs font-cinzel font-semibold text-[#F5F3E0]">
-                            <UserCircle2 className="w-3.5 h-3.5 text-[#ED8A0C]" />
-                            Avatar
-                          </span>
-                          <span className="text-[10px] text-[#D5C7A4]">Trocar →</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => setTrocaStep('moldura')}
-                          className="w-full flex items-center justify-between px-2.5 py-1.5 rounded bg-[#221C16] hover:bg-[#2E251D] border border-[#C8A656]/40 hover:border-[#ED8A0C] text-left transition-colors cursor-pointer"
-                        >
-                          <span className="inline-flex items-center gap-2 text-xs font-cinzel font-semibold text-[#F5F3E0]">
-                            <Frame className="w-3.5 h-3.5 text-[#ED8A0C]" />
-                            Moldura
-                          </span>
-                          <span className="text-[10px] text-[#D5C7A4]">Ver →</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => setTrocaStep('titulo')}
-                          className="w-full flex items-center justify-between px-2.5 py-1.5 rounded bg-[#221C16] hover:bg-[#2E251D] border border-[#C8A656]/40 hover:border-[#ED8A0C] text-left transition-colors cursor-pointer"
-                        >
-                          <span className="inline-flex items-center gap-2 text-xs font-cinzel font-semibold text-[#F5F3E0]">
-                            <Crown className="w-3.5 h-3.5 text-[#ED8A0C]" />
-                            Título
-                          </span>
-                          <span className="text-[10px] text-[#D5C7A4]">Trocar →</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {trocaStep === 'avatar' && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between border-b border-[#C8A656]/35 pb-1">
-                        <button
-                          type="button"
-                          onClick={() => setTrocaStep('menu')}
-                          className="inline-flex items-center gap-1 text-[10px] font-cinzel uppercase tracking-wider text-[#D5C7A4] hover:text-[#ED8A0C] cursor-pointer"
-                        >
-                          <ArrowLeft className="w-3 h-3" />
-                          Voltar
-                        </button>
-                        <span className="font-cinzel font-bold text-[10px] sm:text-xs uppercase tracking-wider text-[#ED8A0C]">
-                          Escolher Avatar
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setTrocaStep('closed')}
-                          aria-label="Fechar seletor de avatar"
-                          className="text-[#D5C7A4] hover:text-[#F5F3E0] cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      <AvatarPicker
-                        selectedAvatarId={viewedProfile.avatarId}
-                        personagem={ownCharacter}
-                        onSelect={(novoAvatarId) => {
-                          setLocalOwnAvatarId(novoAvatarId);
-                          onAvatarUpdated?.(novoAvatarId);
-                          setTrocaStep('closed');
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {trocaStep === 'moldura' && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between border-b border-[#C8A656]/35 pb-1">
-                        <button
-                          type="button"
-                          onClick={() => setTrocaStep('menu')}
-                          className="inline-flex items-center gap-1 text-[10px] font-cinzel uppercase tracking-wider text-[#D5C7A4] hover:text-[#ED8A0C] cursor-pointer"
-                        >
-                          <ArrowLeft className="w-3 h-3" />
-                          Voltar
-                        </button>
-                        <span className="font-cinzel font-bold text-[10px] sm:text-xs uppercase tracking-wider text-[#ED8A0C]">
-                          Moldura
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setTrocaStep('closed')}
-                          aria-label="Fechar seletor de moldura"
-                          className="text-[#D5C7A4] hover:text-[#F5F3E0] cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      {MOLDURAS_DISPONIVEIS.length === 0 ? (
-                        <p className="py-4 text-center text-xs text-[#D5C7A4] italic">
-                          Nenhuma moldura disponível ainda
-                        </p>
-                      ) : (
-                        <div className="grid grid-cols-3 gap-2">
-                          {MOLDURAS_DISPONIVEIS.map((moldura) => (
-                            <div
-                              key={moldura.id}
-                              className="p-2 rounded border border-[#C8A656]/40 text-center text-xs"
-                            >
-                              {moldura.nome}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {trocaStep === 'titulo' && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between border-b border-[#C8A656]/35 pb-1">
-                        <button
-                          type="button"
-                          onClick={() => setTrocaStep('menu')}
-                          className="inline-flex items-center gap-1 text-[10px] font-cinzel uppercase tracking-wider text-[#D5C7A4] hover:text-[#ED8A0C] cursor-pointer"
-                        >
-                          <ArrowLeft className="w-3 h-3" />
-                          Voltar
-                        </button>
-                        <span className="font-cinzel font-bold text-[10px] sm:text-xs uppercase tracking-wider text-[#ED8A0C]">
-                          Título
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setTrocaStep('closed')}
-                          aria-label="Fechar seletor de título"
-                          className="text-[#D5C7A4] hover:text-[#F5F3E0] cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      {tituloError && <p role="alert" className="text-[10px] text-[#F87171]">{tituloError}</p>}
-                      {meusTitulos.length === 0 ? (
-                        <p className="py-4 text-center text-xs text-[#D5C7A4] italic">
-                          Nenhum título ainda. Eles vêm das Conquistas, do ranking e dos eventos.
-                        </p>
-                      ) : (
-                        <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto">
-                          {[{ id: '', nome: 'Sem título', origem: 'Não mostrar título no perfil' }, ...meusTitulos.map((id) => TITULO_MAP[id])].map((titulo) => {
-                            const ativo = (effectiveOwnCharacter.tituloId ?? '') === titulo.id;
-                            return (
-                              <button
-                                key={titulo.id || 'nenhum'}
-                                type="button"
-                                disabled={salvandoTitulo}
-                                onClick={() => void escolherTitulo(titulo.id)}
-                                aria-pressed={ativo}
-                                className={`px-2.5 py-1.5 rounded border text-left text-xs cursor-pointer disabled:opacity-50 ${ativo ? 'border-[#ED8A0C] bg-[#2E251D]' : 'border-[#C8A656]/40 bg-[#221C16] hover:border-[#ED8A0C]'}`}
-                              >
-                                <span className="flex items-center justify-between gap-2 font-cinzel font-semibold text-[#F5F3E0]">
-                                  {titulo.nome}
-                                  {ativo && <Check className="w-3 h-3 text-[#ED8A0C]" />}
-                                </span>
-                                <span className="block text-[9px] text-[#D5C7A4]">{titulo.origem}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <PersonalizarPerfil
+                  personagem={effectiveOwnCharacter}
+                  aoFechar={() => setTrocaStep('closed')}
+                  aoTrocarAvatar={(novoAvatarId) => {
+                    setLocalOwnAvatarId(novoAvatarId);
+                    onAvatarUpdated?.(novoAvatarId);
+                  }}
+                  aoTrocarTitulo={(id) => setLocalTituloId(id)}
+                />
               )}
 
               <div className="min-w-0 flex-1 space-y-1">

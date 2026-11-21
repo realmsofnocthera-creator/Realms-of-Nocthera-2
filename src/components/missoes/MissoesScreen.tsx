@@ -1,20 +1,18 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, Check, Gift } from 'lucide-react';
+import { ARENA_UI } from '@/assets/arenaUi';
+import { TELAS_UI } from '@/assets/telasSociaisUi';
+import { BotaoDeArte, Janela } from '@/components/arena/PecasDaArena';
+import { PalcoPixel, Texto } from '@/components/pixel/GradePixel';
+import { Abas, AreaQueRola, AvisoDaTela, Cabecalho, CREME, DOURADO, FaixaDeArte, Icone, Recado, Rotulo, SUB, u, pixel } from '@/components/pixel/PecasDeTela';
+import { TEXTOS_DAS_TELAS as TT } from '@/rules/textosDasTelasSociais';
 import type { BauNaTela, EstadoDoDiario, MissaoNaTela } from '@/server/diario';
-import { NOCTHERA_THEME } from '@/theme/theme';
 
 type Token = () => Promise<string | null>;
-const OURO = '#C8A656';
-const VERMELHO = '#E5484D';
-const VERDE = '#7BC47F';
+const T = TT.missoes;
 type Aba = 'diarias' | 'semanais';
-const ABAS: readonly { id: Aba; nome: string }[] = [
-  { id: 'diarias', nome: 'Diárias' },
-  { id: 'semanais', nome: 'Semanais' },
-];
+const BOTAO = { normal: ARENA_UI.botao, off: ARENA_UI.botaoOff, press: ARENA_UI.botaoPress };
 
 async function chamar(tokenFresco: Token, corpo?: unknown): Promise<{ ok: boolean; dados: Record<string, unknown> }> {
   try {
@@ -26,14 +24,13 @@ async function chamar(tokenFresco: Token, corpo?: unknown): Promise<{ ok: boolea
     });
     return { ok: res.ok, dados: (await res.json().catch(() => ({}))) as Record<string, unknown> };
   } catch {
-    return { ok: false, dados: { error: 'Sem conexão. Tente de novo.' } };
+    return { ok: false, dados: { error: TT.semConexao } };
   }
 }
 
 function abaInicial(): Aba {
   if (typeof window === 'undefined') return 'diarias';
-  const aba = new URLSearchParams(window.location.search).get('aba');
-  return aba === 'semanais' ? aba : 'diarias';
+  return new URLSearchParams(window.location.search).get('aba') === 'semanais' ? 'semanais' : 'diarias';
 }
 
 function tempoAte(iso: string, agora: number): string {
@@ -44,69 +41,71 @@ function tempoAte(iso: string, agora: number): string {
   return d ? `${d} d ${h} h` : h ? `${h} h ${String(m).padStart(2, '0')} min` : `${m} min`;
 }
 
-function Botao({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
+/** Os degraus do baú: cada um numa moldura da Coleção (dourada quando está pronto, azul depois de resgatado, cinza enquanto não abre), com o baú do Check-in. */
+function Bau({ degraus, y }: { degraus: BauNaTela[]; y: number }) {
+  const l = 62;
+  const passo = 70;
+  const x0 = (360 - (degraus.length - 1) * passo - l) / 2;
   return (
-    <button type="button" onClick={onClick} disabled={disabled} className="rounded-sm border px-3 py-1.5 text-xs font-bold disabled:opacity-50" style={{ borderColor: OURO, backgroundColor: '#3A2F18', color: '#F5E3B3' }}>
-      {children}
-    </button>
+    <>
+      {degraus.map((d, i) => {
+        const x = x0 + i * passo;
+        const moldura = d.resgatado ? TELAS_UI.molduraAzul : d.aberto ? TELAS_UI.molduraDourada : TELAS_UI.molduraCinza;
+        return (
+          <div key={d.missoes} className="absolute" style={{ left: u(x), top: u(y), width: u(l), height: u(l + 22) }} aria-label={`${T.nMissoes(d.missoes)}, ${d.diamantes} Diamantes, ${d.resgatado ? T.resgatado : d.aberto ? T.pronto : T.bloqueado}`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={moldura} alt="" aria-hidden draggable={false} className="absolute" style={{ left: 0, top: 0, width: u(l), height: u(l), ...pixel }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={d.aberto ? TELAS_UI.bauAberto : TELAS_UI.bauFechado} alt="" aria-hidden draggable={false} className="absolute" style={{ left: u(13), top: u(11), width: u(36), height: u(36), filter: d.aberto || d.resgatado ? undefined : 'grayscale(.6) brightness(.7)', opacity: d.resgatado ? 0.55 : 1, ...pixel }} />
+            {d.resgatado && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={TELAS_UI.feito} alt="" aria-hidden draggable={false} className="absolute" style={{ left: u(36), top: u(36), width: u(20), height: u(20), ...pixel }} />
+            )}
+            <span className="absolute w-full text-center font-cinzel font-black leading-none" style={{ top: u(l + 3), fontSize: u(6), color: CREME, textShadow: '0 1px 0 #000' }}>{T.nMissoes(d.missoes)}</span>
+            <span className="absolute w-full flex items-center justify-center font-cinzel font-black leading-none" style={{ top: u(l + 12), fontSize: u(6.6), color: d.aberto && !d.resgatado ? DOURADO : SUB, gap: u(2), textShadow: '0 1px 0 #000' }}>
+              {d.diamantes}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={ARENA_UI.diamante} alt="Diamantes" draggable={false} style={{ width: u(9), height: u(7), ...pixel }} />
+            </span>
+          </div>
+        );
+      })}
+    </>
   );
 }
 
-function ListaDeMissoes({ missoes }: { missoes: MissaoNaTela[] }) {
-  const { colors } = NOCTHERA_THEME;
+/** Uma missão: o cartão prateado com a barra de progresso; a concluída fica na faixa verde, com o selo de feito. */
+function Missao({ m }: { m: MissaoNaTela }) {
+  const pct = Math.min(1, m.progresso / Math.max(1, m.meta));
   return (
-    <ul className="flex flex-col gap-1.5">
-      {missoes.map((m) => (
-        <li key={m.id} className="rounded-sm border px-2.5 py-1.5 flex flex-col gap-1" style={{ borderColor: m.completa ? VERDE : '#4A3F2A', backgroundColor: colors.background.secondary }}>
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold">{m.nome}</span>
-            {m.completa ? <Check className="w-4 h-4 shrink-0" style={{ color: VERDE }} aria-label="Concluída" /> : <span className="text-[11px] shrink-0" style={{ color: colors.text.secondary }}>{m.progresso.toLocaleString('pt-BR')}/{m.meta.toLocaleString('pt-BR')}</span>}
-          </div>
-          <div role="progressbar" aria-valuemin={0} aria-valuemax={m.meta} aria-valuenow={m.progresso} aria-label={m.nome} className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#4A3F2A' }}>
-            <div className="h-full rounded-full" style={{ width: `${(m.progresso / m.meta) * 100}%`, backgroundColor: m.completa ? VERDE : OURO }} />
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function Bau({ titulo, degraus, completas, ocupado, onResgatar }: { titulo: string; degraus: BauNaTela[]; completas: number; ocupado: boolean; onResgatar: () => void }) {
-  const { colors } = NOCTHERA_THEME;
-  const prontos = degraus.filter((d) => d.aberto && !d.resgatado).length;
-  return (
-    <section aria-label={titulo} className="rounded-sm border-2 p-2.5 flex flex-col gap-2" style={{ borderColor: prontos ? OURO : '#4A3F2A', backgroundColor: colors.background.secondary }}>
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="font-cinzel font-bold text-sm flex items-center gap-1.5"><Gift className="w-4 h-4" style={{ color: OURO }} /> {titulo}</h2>
-        <span className="text-[11px]" style={{ color: colors.text.secondary }}>{completas} concluídas</span>
-      </div>
-      <ul className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${degraus.length}, minmax(0, 1fr))` }}>
-        {degraus.map((d) => (
-          <li key={d.missoes} className="rounded-sm border px-1 py-1.5 text-center flex flex-col" style={{ borderColor: d.resgatado ? '#4A3F2A' : d.aberto ? OURO : '#4A3F2A', opacity: d.resgatado ? 0.55 : 1 }}>
-            <span className="text-[10px]" style={{ color: colors.text.secondary }}>{d.missoes} missões</span>
-            <span className="text-sm font-bold">{d.diamantes} 💎</span>
-            <span className="text-[10px]" style={{ color: d.resgatado ? colors.text.secondary : d.aberto ? VERDE : colors.text.secondary }}>{d.resgatado ? 'Resgatado' : d.aberto ? 'Pronto' : 'Bloqueado'}</span>
-          </li>
-        ))}
-      </ul>
-      {prontos > 0 && (
-        <div>
-          <Botao disabled={ocupado} onClick={onResgatar}>Resgatar baú{prontos > 1 ? ` (${prontos} degraus)` : ''}</Botao>
-        </div>
+    <FaixaDeArte src={m.completa ? ARENA_UI.linhaVitoria : ARENA_UI.card.neutro} a={m.completa ? 36 : 44} esq={m.completa ? 46 : 85} dir={22}>
+      {m.completa
+        ? <Icone src={TELAS_UI.feito} x={13} y={8} l={20} a={20} alt={T.concluida} />
+        : <Rotulo x={28} y={22} tamanho={6} largura={36} alinhar="center" cor={DOURADO}>{`${Math.floor(pct * 100)}%`}</Rotulo>}
+      <Rotulo x={m.completa ? 50 : 56} y={m.completa ? 18 : 18} tamanho={7} largura={200}>{m.nome}</Rotulo>
+      {m.completa ? (
+        <Rotulo x={34} y={18} tamanho={5.6} largura={80} alinhar="right" cor="#B8F0B0">{T.concluida}</Rotulo>
+      ) : (
+        <>
+          <span className="absolute" role="progressbar" aria-valuemin={0} aria-valuemax={m.meta} aria-valuenow={m.progresso} aria-label={m.nome} style={{ left: u(56), top: u(26), width: u(180), height: u(5), backgroundColor: '#1b140c', border: `${u(0.6)} solid #5a4630` }}>
+            <span className="absolute inset-y-0 left-0" style={{ width: `${pct * 100}%`, background: 'linear-gradient(180deg,#F3C769,#C8962E)' }} />
+          </span>
+          <Rotulo x={34} y={29} tamanho={5.4} largura={60} alinhar="right" cor="#D9CBB0" negrito={false}>{`${m.progresso.toLocaleString('pt-BR')}/${m.meta.toLocaleString('pt-BR')}`}</Rotulo>
+        </>
       )}
-    </section>
+    </FaixaDeArte>
   );
 }
 
-/** Missões diárias e semanais, os baús de progresso e o Check-in de 30 dias. */
+/** Missões diárias e semanais, com os baús de progresso, no painel da Mochila. */
 export function MissoesScreen({ tokenFresco }: { tokenFresco: Token }) {
-  const { colors } = NOCTHERA_THEME;
   const [estado, setEstado] = useState<EstadoDoDiario | null>(null);
   const [erroAoCarregar, setErroAoCarregar] = useState(false);
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [aba, setAba] = useState<Aba>(abaInicial);
   const [agora] = useState(() => Date.now());
+  const [regras, setRegras] = useState(false);
 
   const carregar = useCallback(async () => {
     const r = await chamar(tokenFresco);
@@ -124,64 +123,37 @@ export function MissoesScreen({ tokenFresco }: { tokenFresco: Token }) {
     const r = await chamar(tokenFresco, corpo);
     setOcupado(false);
     if (!r.ok) {
-      setAviso({ texto: String(r.dados.error ?? 'Não foi possível agora.'), erro: true });
+      setAviso({ texto: String(r.dados.error ?? TT.naoFoiPossivel), erro: true });
       return;
     }
-    setAviso({ texto: String(r.dados.mensagem ?? 'Feito.'), erro: false });
+    setAviso({ texto: String(r.dados.mensagem ?? TT.feito), erro: false });
     setEstado(r.dados.estado as EstadoDoDiario);
   }
 
-  const pontoDaAba = (a: Aba) =>
-    !estado ? false : (a === 'diarias' ? estado.bauDiario : estado.bauSemanal).some((d) => d.aberto && !d.resgatado);
+  const degraus = estado ? (aba === 'diarias' ? estado.bauDiario : estado.bauSemanal) : [];
+  const missoes = estado ? (aba === 'diarias' ? estado.diarias : estado.semanais) : [];
+  const prontos = degraus.filter((d) => d.aberto && !d.resgatado).length;
+  const ponto = (a: Aba) => !!estado && (a === 'diarias' ? estado.bauDiario : estado.bauSemanal).some((d) => d.aberto && !d.resgatado);
 
   return (
-    <main className="min-h-dvh w-full flex flex-col items-center px-2.5 sm:px-5 py-3 sm:py-6" style={{ backgroundColor: colors.background.primary, color: colors.text.primary }}>
-      <div className="w-full max-w-[480px] flex flex-col gap-3">
-        <header className="flex items-center gap-2">
-          <Link href="/hub" aria-label="Voltar ao Hub" className="p-1"><ArrowLeft className="w-5 h-5" /></Link>
-          <h1 className="text-2xl font-cinzel font-extrabold italic tracking-widest uppercase" style={{ color: '#F5E3B3' }}>Missões</h1>
-        </header>
-        {aviso && <p role={aviso.erro ? 'alert' : 'status'} className="text-sm font-semibold" style={{ color: aviso.erro ? VERMELHO : VERDE }}>{aviso.texto}</p>}
-        {erroAoCarregar ? (
-          <p role="alert" className="text-sm" style={{ color: VERMELHO }}>Não foi possível carregar agora. Tente de novo em instantes.</p>
-        ) : !estado ? (
-          <p className="text-sm" style={{ color: colors.text.secondary }}>Carregando...</p>
-        ) : (
+    <PalcoPixel fundo={TELAS_UI.fundoMissoes}>
+      <Cabecalho titulo={T.titulo} voltar="/hub" aoAbrirLivro={() => setRegras(true)} rotuloVoltar={TT.voltarAoHub} rotuloLivro={TT.comoFunciona} />
+      <AvisoDaTela aviso={aviso} y={66} />
+      {erroAoCarregar ? <Recado erro>{TT.erroAoCarregar}</Recado>
+        : !estado ? <Recado>{TT.carregando}</Recado>
+        : (
           <>
-            <div role="tablist" aria-label="Missões" className="flex gap-1.5">
-              {ABAS.map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={aba === a.id}
-                  onClick={() => setAba(a.id)}
-                  className="rounded-sm border px-2.5 py-1 text-xs font-bold font-cinzel"
-                  style={{ borderColor: OURO, backgroundColor: aba === a.id ? OURO : '#221C16', color: aba === a.id ? '#1A140E' : '#F5E3B3' }}
-                >
-                  {a.nome}{pontoDaAba(a.id) ? ' •' : ''}
-                </button>
-              ))}
-            </div>
-
-            {aba === 'diarias' && (
-              <>
-                <p className="text-[11px]" style={{ color: colors.text.secondary }}>Reiniciam à meia-noite (Brasília), em {tempoAte(estado.fechaDiaEm, agora)}.</p>
-                <Bau titulo="Baú diário" degraus={estado.bauDiario} completas={estado.diarias.filter((m) => m.completa).length} ocupado={ocupado} onResgatar={() => void agir({ acao: 'bau', tipo: 'diario' })} />
-                <ListaDeMissoes missoes={estado.diarias} />
-              </>
-            )}
-
-            {aba === 'semanais' && (
-              <>
-                <p className="text-[11px]" style={{ color: colors.text.secondary }}>Reiniciam na segunda-feira, em {tempoAte(estado.fechaSemanaEm, agora)}.</p>
-                <Bau titulo="Baú semanal" degraus={estado.bauSemanal} completas={estado.semanais.filter((m) => m.completa).length} ocupado={ocupado} onResgatar={() => void agir({ acao: 'bau', tipo: 'semanal' })} />
-                <ListaDeMissoes missoes={estado.semanais} />
-              </>
-            )}
+            <Abas rotulo={T.titulo} y={70} ativa={aba} aoMudar={setAba} abas={[{ id: 'diarias', nome: T.diarias, ponto: ponto('diarias') }, { id: 'semanais', nome: T.semanais, ponto: ponto('semanais') }]} />
+            <Texto x={180} y={118} tamanho={5.4} caixaAlta largura={320} cor={SUB} negrito={false}>{aba === 'diarias' ? T.reiniciaDia(tempoAte(estado.fechaDiaEm, agora)) : T.reiniciaSemana(tempoAte(estado.fechaSemanaEm, agora))}</Texto>
+            <Texto x={180} y={131} tamanho={7.6} caixaAlta largura={300} cor={DOURADO}>{`${aba === 'diarias' ? T.bauDiario : T.bauSemanal} · ${T.concluidas(missoes.filter((m) => m.completa).length)}`}</Texto>
+            <Bau degraus={degraus} y={140} />
+            {prontos > 0 && <BotaoDeArte x={105} y={230} l={150} a={27} src={BOTAO} desligado={ocupado} onClick={() => void agir({ acao: 'bau', tipo: aba === 'diarias' ? 'diario' : 'semanal' })} tamanho={7.6}>{T.resgatarBau(prontos)}</BotaoDeArte>}
+            <AreaQueRola topo={prontos > 0 ? 262 : 236} base={528} rotulo={aba === 'diarias' ? T.diarias : T.semanais}>
+              {missoes.map((m) => <Missao key={m.id} m={m} />)}
+            </AreaQueRola>
           </>
         )}
-      </div>
-    </main>
+      {regras && <Janela titulo={T.titulo} aoFechar={() => setRegras(false)} fechar={TT.fechar}><p>{T.regras}</p></Janela>}
+    </PalcoPixel>
   );
 }

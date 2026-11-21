@@ -1,25 +1,37 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ARENA_UI } from '@/assets/arenaUi';
+import { TELAS_UI } from '@/assets/telasSociaisUi';
+import { PalcoPixel } from '@/components/pixel/GradePixel';
+import { AreaQueRola, Cabecalho, FaixaDeArte, Icone, PergaminhoAberto, Recado, Rotulo, u } from '@/components/pixel/PecasDeTela';
 import { NOME_DO_TIPO_DE_ANUNCIO, validarAnuncio, type AnuncioDados, type TipoDeAnuncio } from '@/rules/anuncio';
+import { TEXTOS_DAS_TELAS as TT } from '@/rules/textosDasTelasSociais';
 import { descreverJanela } from '@/lib/anunciosTela';
 import { marcarAnunciosComoVistos } from '@/lib/useAnunciosNovos';
-import { NOCTHERA_THEME } from '@/theme/theme';
 
+const T = TT.anuncios;
 const COR_DO_TIPO: Readonly<Record<TipoDeAnuncio, string>> = { novidade: '#7BC47F', aviso: '#E6C775', manutencao: '#E5484D', evento: '#5AA7F0' };
+/** Manutenção e avisos ficam no cartão dourado; novidades e eventos, no prateado. */
+const CARTAO_DO_TIPO: Readonly<Record<TipoDeAnuncio, string>> = { novidade: ARENA_UI.card.neutro, aviso: ARENA_UI.card.forte, manutencao: ARENA_UI.card.forte, evento: ARENA_UI.card.neutro };
 
 interface Item {
   id: string;
   dados: AnuncioDados;
 }
 
-/** Anúncios do Menu (3.5.3.4): o que o painel publicou e está valendo agora. */
+/** A etiqueta colorida do tipo do anúncio (Novidade, Aviso, Manutenção, Evento). */
+function Etiqueta({ tipo, x, y }: { tipo: TipoDeAnuncio; x: number; y: number }) {
+  return (
+    <span className="absolute font-cinzel font-black uppercase" style={{ left: u(x), top: u(y), fontSize: u(4.8), lineHeight: 1, padding: `${u(1.4)} ${u(3)}`, color: '#0D0D0D', backgroundColor: COR_DO_TIPO[tipo], border: `${u(0.6)} solid rgba(0,0,0,.6)` }}>{NOME_DO_TIPO_DE_ANUNCIO[tipo]}</span>
+  );
+}
+
+/** Anúncios do Menu (3.5.3.4), sobre a Torre: o que o painel publicou e está valendo agora; tocar num anúncio abre o pergaminho com o texto inteiro. */
 export function AnunciosScreen({ tokenFresco }: { tokenFresco: () => Promise<string | null> }) {
-  const { colors } = NOCTHERA_THEME;
   const [itens, setItens] = useState<Item[] | null>(null);
   const [erro, setErro] = useState(false);
+  const [aberto, setAberto] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -47,32 +59,33 @@ export function AnunciosScreen({ tokenFresco }: { tokenFresco: () => Promise<str
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const item = itens?.find((i) => i.id === aberto);
+
   return (
-    <main className="min-h-dvh w-full flex flex-col items-center px-2.5 sm:px-5 py-3 sm:py-6" style={{ backgroundColor: colors.background.primary, color: colors.text.primary }}>
-      <div className="w-full max-w-[480px] flex flex-col gap-3">
-        <header className="flex items-center gap-2">
-          <Link href="/menu" aria-label="Voltar ao Menu" className="p-1"><ArrowLeft className="w-5 h-5" /></Link>
-          <h1 className="text-2xl font-cinzel font-extrabold italic tracking-widest uppercase" style={{ color: '#F5E3B3' }}>Anúncios</h1>
-        </header>
-        {erro ? (
-          <p role="alert" className="text-sm" style={{ color: '#E5484D' }}>Não foi possível carregar os anúncios agora. Tente de novo em instantes.</p>
-        ) : itens === null ? (
-          <p className="text-sm" style={{ color: colors.text.secondary }}>Carregando...</p>
-        ) : itens.length === 0 ? (
-          <p className="text-sm" style={{ color: colors.text.secondary }}>Nenhum anúncio por enquanto.</p>
-        ) : (
-          <ul className="flex flex-col gap-2.5">
+    <PalcoPixel fundo={TELAS_UI.fundoAnuncios}>
+      <Cabecalho titulo={T.titulo} voltar="/menu" rotuloVoltar={TT.voltarAoMenu} />
+      {erro ? <Recado erro>{T.erro}</Recado>
+        : itens === null ? <Recado>{TT.carregando}</Recado>
+        : itens.length === 0 ? <Recado>{T.nenhum}</Recado>
+        : (
+          <AreaQueRola topo={80} base={532}>
             {itens.map(({ id, dados }) => (
-              <li key={id} className="rounded-sm border-2 p-3 flex flex-col gap-1.5" style={{ borderColor: '#C8A656', backgroundColor: colors.background.secondary }}>
-                <span className="self-start text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm" style={{ color: '#0D0D0D', backgroundColor: COR_DO_TIPO[dados.tipo] }}>{NOME_DO_TIPO_DE_ANUNCIO[dados.tipo]}</span>
-                <h2 className="font-cinzel font-bold text-base">{dados.titulo}</h2>
-                <p className="text-sm whitespace-pre-wrap">{dados.texto}</p>
-                {(dados.inicio || dados.fim) && <p className="text-[11px]" style={{ color: colors.text.secondary }}>{descreverJanela(dados)}</p>}
-              </li>
+              <FaixaDeArte key={id} src={CARTAO_DO_TIPO[dados.tipo]} a={50} esq={85} dir={22} onClick={() => setAberto(id)} rotulo={T.abrir(dados.titulo)}>
+                <Icone src={TELAS_UI.sigilo} x={10} y={10} l={30} a={30} />
+                <Etiqueta tipo={dados.tipo} x={60} y={13} />
+                <Rotulo x={60} y={28} tamanho={7.6} largura={230}>{dados.titulo}</Rotulo>
+                <Rotulo x={60} y={37.5} tamanho={5} largura={230} cor="#D9CBB0" negrito={false}>{dados.inicio || dados.fim ? descreverJanela(dados) : dados.texto.split('\n')[0]}</Rotulo>
+              </FaixaDeArte>
             ))}
-          </ul>
+          </AreaQueRola>
         )}
-      </div>
-    </main>
+      {item && (
+        <PergaminhoAberto src={TELAS_UI.pergaminho} titulo={item.dados.titulo} aoFechar={() => setAberto(null)} rotuloFechar={TT.fechar}>
+          <p style={{ fontWeight: 800, color: '#7a3a10', marginBottom: '0.5em' }}>{NOME_DO_TIPO_DE_ANUNCIO[item.dados.tipo]}</p>
+          <p className="whitespace-pre-wrap">{item.dados.texto}</p>
+          {(item.dados.inicio || item.dados.fim) && <p style={{ marginTop: '0.8em', fontSize: '0.85em', opacity: 0.85 }}>{descreverJanela(item.dados)}</p>}
+        </PergaminhoAberto>
+      )}
+    </PalcoPixel>
   );
 }
