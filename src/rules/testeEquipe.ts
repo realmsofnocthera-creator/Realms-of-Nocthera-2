@@ -4,6 +4,7 @@ import { MULT_CHAVE, PERFIS, pontosDeReferencia } from './cacada';
 import type { CategoriaCorporal } from './corposMonstros';
 import type { Elemento } from './elements';
 import type { EmblemaRaridade } from './emblemas';
+import type { TurnoDoAliadoNoGrupo } from '@/game/combat';
 import type { MonsterDefinition } from './monsters';
 
 /**
@@ -198,6 +199,38 @@ export interface ResultadoDaParty {
   rodadas: number;
   em: string;
   aliados: { nome: string; dano: number; caiuNaRodada: number | null }[];
+}
+
+/** Um aliado no replay da luta (o que a tela precisa para desenhar o herói e as barras). */
+export interface AliadoDoReplay {
+  /** O nome na luta (nomes repetidos viram "Nome (2)"). */
+  nome: string;
+  nivel: number;
+  classeId: string;
+  subclasseAtualId?: string;
+  avatarId?: string;
+  hpMax: number;
+  sobreescudoMax: number;
+}
+
+/**
+ * Tudo para reproduzir a luta em grupo na tela: o chefe, os aliados e os turnos de cada um (na ordem de `aliados`). Vai só na resposta
+ * de "iniciar"; não é gravado em lugar nenhum.
+ */
+export interface ReplayDoTeste {
+  categoria: CategoriaDoTeste;
+  chefe: { id: string; nome: string; nivel: number; hp: number };
+  aliados: AliadoDoReplay[];
+  turnos: TurnoDoAliadoNoGrupo[][];
+  venceu: boolean;
+}
+
+/** Uma carta que o jogador ganhou na vitória. */
+export interface CartaGanha {
+  tipo: string;
+  nome: string;
+  raridade: EmblemaRaridade;
+  nova: boolean;
 }
 
 /** Convites que uma party pode ter esperando resposta ao mesmo tempo. */

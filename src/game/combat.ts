@@ -4609,7 +4609,7 @@ export function* motorDeCombate(
   seed: number = 42,
   opcoes?: OpcoesResolverCombate,
   compartilhado?: AlvoCompartilhado
-): Generator<void, ResultadoCombate, void> {
+): Generator<TurnoLog, ResultadoCombate, void> {
   // Clona instâncias para manter função 100% pura
   const p = clonarPersonagemParaLuta(personagem);
 
@@ -4943,7 +4943,7 @@ export function* motorDeCombate(
 
     turno++;
     if (compartilhado) compartilhado.efeitosMonstroStatus = efeitosMonstroStatus;
-    yield;
+    yield logTurnos[logTurnos.length - 1];
   }
 
   // 1.11.1: empate e limite de rodadas (PvE: o jogador perde no empate; ganha quem tiver mais HP no limite)
@@ -5030,6 +5030,13 @@ export interface AliadoNoResultado {
   caiuNaRodada: number | null;
 }
 
+/** O registro de um aliado na luta em grupo: a rodada de cada turno dele, para a tela reproduzir. */
+export interface TurnoDoAliadoNoGrupo {
+  /** A rodada do grupo (todos os aliados de pé jogam uma vez por rodada). */
+  rodada: number;
+  turno: TurnoLog;
+}
+
 export interface ResultadoCombateEmGrupo {
   vencedor: 'grupo' | 'monstro';
   motivoFim: 'derrota' | 'limite_rodadas';
@@ -5037,6 +5044,8 @@ export interface ResultadoCombateEmGrupo {
   aliados: AliadoNoResultado[];
   chefeFinal: { hp: number; hpMax: number };
   mensagens: string[];
+  /** Para o replay: os turnos de cada aliado (na ordem de `aliados`), com o chefe compartilhado. Não é gravado em lugar nenhum. */
+  replay: TurnoDoAliadoNoGrupo[][];
 }
 
 /**
@@ -5046,12 +5055,20 @@ export interface ResultadoCombateEmGrupo {
  * Termina quando o chefe cai (vitória), quando todos caem ou no limite de 100 rodadas (derrota).
  * O chefe da luta em grupo não deve ter mecânica única (ela iniciaria uma vez por aliado).
  */
-export function resolverCombateEmGrupo(aliados: readonly Combatente[], monstro: MonsterDefinition, seed: number): ResultadoCombateEmGrupo {
+export function resolverCombateEmGrupo(aliadosPedidos: readonly Combatente[], monstro: MonsterDefinition, seed: number): ResultadoCombateEmGrupo {
+  // dois aliados com o mesmo nome viram "Nome (2)": o registro da luta (e o replay) distingue quem agiu pelo nome
+  const vistos = new Map<string, number>();
+  const aliados = aliadosPedidos.map((a) => {
+    const n = (vistos.get(a.nome) ?? 0) + 1;
+    vistos.set(a.nome, n);
+    return n === 1 ? a : { ...a, nome: `${a.nome} (${n})` };
+  });
   const compartilhado: AlvoCompartilhado = { m: montarCombatenteDoMonstro(monstro), efeitosMonstroStatus: new Map() };
   const m = compartilhado.m;
   const motores = aliados.map((a, i) => motorDeCombate(a, monstro, seed + i * 7919, undefined, compartilhado));
   const estado = aliados.map((a) => ({ nome: a.nome, dano: 0, caiuNaRodada: null as number | null, ativo: true }));
   const mensagens: string[] = [];
+  const replay: TurnoDoAliadoNoGrupo[][] = aliados.map(() => []);
   let rodada = 0;
   while (m.hp > 0 && estado.some((e) => e.ativo) && rodada < 100) {
     rodada++;
@@ -5061,6 +5078,7 @@ export function resolverCombateEmGrupo(aliados: readonly Combatente[], monstro: 
       const antes = m.hp + m.sobreescudo;
       const passo = motor.next();
       e.dano += Math.max(0, antes - (m.hp + m.sobreescudo));
+      if (!passo.done) replay[i].push({ rodada, turno: passo.value });
       if (passo.done) {
         e.ativo = false;
         if (passo.value.vencedor === 'monstro' && m.hp > 0) {
@@ -5079,6 +5097,7 @@ export function resolverCombateEmGrupo(aliados: readonly Combatente[], monstro: 
     aliados: estado.map(({ nome, dano, caiuNaRodada }) => ({ nome, dano, caiuNaRodada })),
     chefeFinal: { hp: Math.max(0, m.hp), hpMax: m.hpMax },
     mensagens,
+    replay,
   };
 }
 

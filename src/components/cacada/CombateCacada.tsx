@@ -85,7 +85,7 @@ export function BarraVidaEscudo({ painel, semTexto }: { painel: PainelLuta; /** 
   );
 }
 
-function Status({ status, enfurecido }: { status: EfeitoStatus[]; enfurecido?: boolean }) {
+export function Status({ status, enfurecido }: { status: EfeitoStatus[]; enfurecido?: boolean }) {
   return (
     <div className="flex items-center gap-1 flex-wrap">
       {enfurecido && (
@@ -491,7 +491,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
 }
 
 /** As animações da luta. Os movimentos (investida, reação, tremor) respeitam "reduzir movimento"; os números e efeitos, não. */
-const ESTILOS_DA_LUTA = `
+export const ESTILOS_DA_LUTA = `
 @keyframes cacadaPfx{from{background-position:0% 0}to{background-position:100% 0}}
 @keyframes cacadaNumG{0%{transform:translate(-50%,12px) scale(.4);opacity:0}10%{transform:translate(-50%,-4px) scale(1.4);opacity:1}24%{transform:translate(-50%,-10px) scale(1)}72%{transform:translate(-50%,-34px) scale(1);opacity:1}100%{transform:translate(-50%,-70px) scale(.95);opacity:0}}
 .cacada-numero-grande{animation:cacadaNumG 1.15s ease-out both}
@@ -524,7 +524,7 @@ const ESTILOS_DA_LUTA = `
 }`;
 
 /** A sombra no chão, embaixo de quem luta. */
-function Sombra({ x, y, largura, apagada }: { x: number; y: number; largura: number; apagada: boolean }) {
+export function Sombra({ x, y, largura, apagada }: { x: number; y: number; largura: number; apagada: boolean }) {
   return (
     <span aria-hidden="true" className="absolute pointer-events-none rounded-[50%]"
       style={{ left: x - largura / 2, top: y - largura * 0.09, width: largura, height: largura * 0.2, background: 'radial-gradient(ellipse at center, rgba(0,0,0,.55), rgba(0,0,0,0) 70%)', opacity: apagada ? 0 : 1, transition: 'opacity 600ms', zIndex: 3 }} />
@@ -532,15 +532,15 @@ function Sombra({ x, y, largura, apagada }: { x: number; y: number; largura: num
 }
 
 /** A moldura escura dos botões e caixas da HUD (vermelho-sangue, como na referência). */
-const MOLDURA: React.CSSProperties = { backgroundColor: 'rgba(20, 8, 10, 0.86)', borderColor: '#6B1F1F', boxShadow: 'inset 0 0 0 1px #2A0A0C, 0 2px 6px rgba(0,0,0,.6)' };
+export const MOLDURA: React.CSSProperties = { backgroundColor: 'rgba(20, 8, 10, 0.86)', borderColor: '#6B1F1F', boxShadow: 'inset 0 0 0 1px #2A0A0C, 0 2px 6px rgba(0,0,0,.6)' };
 
 /** Quanto a vida + escudo mudou de um quadro para o outro (negativo = dano, positivo = cura). */
-function variacao(antes: PainelLuta, agora: PainelLuta): number {
+export function variacao(antes: PainelLuta, agora: PainelLuta): number {
   return Math.round(agora.hp + agora.escudo - (antes.hp + antes.escudo));
 }
 
 /** O número pequeno de efeitos sem golpe (veneno, sangramento, cura no fim da rodada): dano em amarelo, cura em verde. */
-function NumeroFlutuante({ chave, valor, x, y }: { chave: string; valor: number; x: number; y: number }) {
+export function NumeroFlutuante({ chave, valor, x, y }: { chave: string; valor: number; x: number; y: number }) {
   if (!valor) return null;
   const dano = valor < 0;
   return (
@@ -553,7 +553,7 @@ function NumeroFlutuante({ chave, valor, x, y }: { chave: string; valor: number;
 }
 
 /** A barra de vida com o rastro claro: quando a vida cai, o rastro desce devagar e mostra o quanto foi tirado. */
-function BarraComRastro({ vida, escudo, altura, trilha = true }: { vida: number; escudo?: number; altura: number; trilha?: boolean }) {
+export function BarraComRastro({ vida, escudo, altura, trilha = true }: { vida: number; escudo?: number; altura: number; trilha?: boolean }) {
   return (
     <div className="relative overflow-hidden" style={{ height: altura, backgroundColor: '#2a1214' }}>
       {trilha && <div className="absolute inset-y-0 left-0" style={{ width: `${vida}%`, background: '#F3D58A', transition: 'width 750ms ease-out 420ms' }} />}

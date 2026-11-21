@@ -62,4 +62,25 @@ describe('Luta em grupo (Teste de Equipe)', () => {
     expect(montarChefeDoTeste('alma', 1, 3).hp).toBe(montarChefeDoTeste('alma', 1, 1).hp * 3);
     expect(montarChefeDoTeste('corpo', 6, 2).hp).toBeGreaterThan(montarChefeDoTeste('corpo', 1, 2).hp);
   });
+
+  it('o replay traz os turnos de cada aliado, na ordem das rodadas, com o chefe compartilhado', () => {
+    const r = resolverCombateEmGrupo([aliado('A', 60, 120), aliado('B', 60, 120), aliado('C', 60, 120)], chefe(12000, 120), 5);
+    expect(r.replay).toHaveLength(3);
+    for (const turnos of r.replay) {
+      expect(turnos.length).toBeGreaterThan(0);
+      const rodadas = turnos.map((t) => t.rodada);
+      expect(rodadas).toEqual([...rodadas].sort((a, b) => a - b));
+      expect(turnos[0].turno.ataques.length).toBeGreaterThan(0);
+    }
+    // a vida do chefe nos golpes só desce (é a mesma para todos) e termina em zero na vitória
+    const golpes = r.replay.flatMap((turnos, i) => turnos.flatMap((t) => t.turno.ataques.filter((a) => a.defensor === 'Chefe de Teste').map((a) => ({ rodada: t.rodada, i, hp: a.hpRestante }))));
+    golpes.sort((a, b) => a.rodada - b.rodada || a.i - b.i);
+    for (let k = 1; k < golpes.length; k++) expect(golpes[k].hp).toBeLessThanOrEqual(golpes[k - 1].hp);
+    expect(golpes[golpes.length - 1].hp).toBe(0);
+  });
+
+  it('nomes repetidos viram "Nome (2)", para o replay saber quem agiu', () => {
+    const r = resolverCombateEmGrupo([aliado('Igual', 60, 120), aliado('Igual', 60, 120), aliado('Outro', 60, 120)], chefe(8000, 80), 5);
+    expect(r.aliados.map((a) => a.nome)).toEqual(['Igual', 'Igual (2)', 'Outro']);
+  });
 });
