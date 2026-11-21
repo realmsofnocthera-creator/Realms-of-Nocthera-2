@@ -31,13 +31,13 @@ describe('Correio: regras', () => {
 });
 
 describe('Chefe Mundial: regras', () => {
-  it('nível 18, um chefe provisório por dia da semana', () => {
+  it('nível 18, um chefe por dia da semana (de segunda a domingo, do mais fraco ao mais devastador)', () => {
     expect(NIVEL_DO_CHEFE_MUNDIAL).toBe(18);
     expect(CHEFES_MUNDIAIS).toHaveLength(7);
     // 2026-10-25 é domingo; 2026-10-26, segunda
-    expect(chefeDoDia('2026-10-25').id).toBe('chefe-mundial-1');
-    expect(chefeDoDia('2026-10-26').id).toBe('chefe-mundial-2');
-    expect(chefeDoDia('2026-11-01').id).toBe('chefe-mundial-1');
+    expect(chefeDoDia('2026-10-25').id).toBe('orvakar');
+    expect(chefeDoDia('2026-10-26').id).toBe('solvaris');
+    expect(chefeDoDia('2026-11-01').id).toBe('orvakar');
     expect(diaSeguinte('2026-10-31')).toBe('2026-11-01');
   });
 

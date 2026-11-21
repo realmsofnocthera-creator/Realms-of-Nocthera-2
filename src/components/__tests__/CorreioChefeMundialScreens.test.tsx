@@ -16,7 +16,7 @@ describe('Correio e Chefe Mundial: telas', () => {
 
   it('Chefe Mundial abre com a explicação, a volta às Provações e o link do Correio', () => {
     const html = renderToStaticMarkup(<ChefeMundialScreen tokenFresco={async () => 't'} />);
-    expect(html).toContain('Chefe Mundial');
+    expect(html.toLowerCase()).toContain('chefe mundial');
     expect(html).toContain('href="/provacoes"');
     expect(html).toContain('href="/correio"');
   });

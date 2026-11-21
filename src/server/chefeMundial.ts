@@ -1,4 +1,4 @@
-import { resolverCombate } from '@/game/combat';
+import { resolverCombate, type ResultadoCombate } from '@/game/combat';
 import { diaDeBrasilia } from '@/game/batalhaSangrenta';
 import {
   chefeDoDia,
@@ -39,6 +39,10 @@ export interface EstadoDoChefeMundial {
   meuNivel: number;
   dia: string;
   chefe: string;
+  /** O id do chefe do dia (para a tela achar a arte dele). */
+  chefeId: string;
+  /** A hora do servidor (ISO), para a tela acertar a contagem regressiva com o relógio dele. */
+  agora: string;
   /** Quando o dia fecha (meia-noite de Brasília, ISO). */
   fechaEm: string;
   meuMelhor: number;
@@ -84,6 +88,8 @@ export async function estadoDoChefeMundial(uid: string, agora = new Date()): Pro
     meuNivel: char.nivel,
     dia,
     chefe: chefeDoDia(dia).nome,
+    chefeId: chefeDoDia(dia).id,
+    agora: agora.toISOString(),
     fechaEm: fimDoDia(dia),
     meuMelhor: minha?.dano ?? 0,
     minhaPosicao,
@@ -93,7 +99,7 @@ export async function estadoDoChefeMundial(uid: string, agora = new Date()): Pro
 }
 
 /** Uma luta contra o chefe do dia: guarda o dano se for o melhor do jogador hoje. */
-export async function lutarChefeMundial(uid: string, semente = gerarSementeCombate(), agora = new Date()): Promise<{ mensagem: string; dano: number; melhor: number }> {
+export async function lutarChefeMundial(uid: string, semente = gerarSementeCombate(), agora = new Date()): Promise<{ mensagem: string; dano: number; melhor: number; resultado: ResultadoCombate }> {
   await exigirSistemaLigado(uid, 'chefeMundial');
   const dia = diaDeBrasilia(agora);
   const oculto = await comLimiteSilencioso(uid);
@@ -124,6 +130,8 @@ export async function lutarChefeMundial(uid: string, semente = gerarSementeComba
           : `Você causou ${dano.toLocaleString('pt-BR')} de dano em ${chefe.nome}. Seu melhor de hoje continua ${anterior.toLocaleString('pt-BR')}.`,
       dano,
       melhor,
+      // a luta inteira, para a tela mostrar o replay (já era calculada aqui; nada novo é lido nem gravado)
+      resultado,
     };
   });
 }

@@ -15,5 +15,5 @@ export default function ChefeMundialPage() {
       </main>
     );
   }
-  return <ChefeMundialScreen tokenFresco={tokenFresco} />;
+  return <ChefeMundialScreen tokenFresco={tokenFresco} personagem={character} />;
 }
