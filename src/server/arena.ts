@@ -181,6 +181,8 @@ async function montarLista(uid: string, cfg: ConfigDoModo, semana: string, ponto
 
 export interface EstadoDaArena {
   modo: ModoDaArena;
+  /** Quem pediu (para o retrato e o nome no painel). */
+  eu: { nome: string; classeId: string; avatarId: string };
   nivelNecessario: number;
   podeLutar: boolean;
   semana: string;
@@ -237,6 +239,7 @@ export async function estadoDaArena(uid: string, agora = new Date(), modo: ModoD
   let pos = 0;
   return {
     modo: cfg.modo,
+    eu: { nome: char.nome, classeId: char.classeId, avatarId: char.avatarId },
     nivelNecessario: NIVEL_DA_ARENA,
     podeLutar,
     semana,
@@ -312,6 +315,8 @@ export interface LadoNaTela {
   nome: string;
   nivel: number;
   classeId: string;
+  /** A subclasse (muda o desenho do herói na luta). */
+  subclasseId?: string;
   avatarId: string;
   hpMax: number;
   sobreescudo: number;
@@ -320,6 +325,7 @@ export const ladoNaTela = (ficha: Combatente, avatarId: string, nome = ficha.nom
   nome,
   nivel: ficha.nivel ?? 1,
   classeId: ficha.classeId ?? '',
+  ...(ficha.subclasseAtualId ? { subclasseId: ficha.subclasseAtualId } : {}),
   avatarId,
   hpMax: ficha.hpMax,
   sobreescudo: ficha.sobreescudo,

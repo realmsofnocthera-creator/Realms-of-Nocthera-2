@@ -1,6 +1,6 @@
 import type { ResultadoCombatePvp } from '@/game/combat';
 import type { EfeitoStatus } from '@/rules/statusEffects';
-import type { PainelLuta } from '@/lib/cacadaReplay';
+import { acaoDoAtaque, type AcaoDaLuta, type PainelLuta } from '@/lib/cacadaReplay';
 
 /** Um lado da luta como a tela mostra (vida e escudo do começo). */
 export interface LadoDoReplay {
@@ -16,6 +16,10 @@ export interface QuadroDaArena {
   b: PainelLuta;
   /** As últimas linhas do log (a mais nova por último). */
   linhas: string[];
+  /** Quem agiu neste quadro (um golpe ou uma habilidade); null nos quadros de efeitos e de cura. */
+  agiu: 'a' | 'b' | null;
+  /** O que a ação fez (para os efeitos e os números na tela). */
+  acao: AcaoDaLuta | null;
 }
 
 const painel = (l: LadoDoReplay): PainelLuta => ({ nome: l.nome, nivel: l.nivel, hp: l.hpMax, hpMax: l.hpMax, escudo: l.sobreescudo, escudoMax: Math.max(1, l.sobreescudo), status: [], enfurecido: false });
@@ -35,10 +39,10 @@ export function quadrosDaArena(resultado: ResultadoCombatePvp, ladoA: LadoDoRepl
   ]);
   const linhas: string[] = [...resultado.mensagens.slice(0, 1)];
   const quadros: QuadroDaArena[] = [];
-  const foto = (rodada: number) => {
+  const foto = (rodada: number, agiu: 'a' | 'b' | null = null, acao: AcaoDaLuta | null = null) => {
     a.status = [...status.get(a)!];
     b.status = [...status.get(b)!];
-    quadros.push({ rodada, a: { ...a }, b: { ...b }, linhas: linhas.slice(-maxLinhas) });
+    quadros.push({ rodada, a: { ...a }, b: { ...b }, linhas: linhas.slice(-maxLinhas), agiu, acao });
   };
   foto(0);
   for (const t of resultado.logTurnos) {
@@ -49,7 +53,8 @@ export function quadrosDaArena(resultado: ResultadoCombatePvp, ladoA: LadoDoRepl
         alvo.escudo = Math.max(0, atk.sobreescudoRestante);
       }
       linhas.push(atk.mensagem);
-      foto(t.numeroTurno);
+      const quem = atk.incapacitado || atk.distraido ? null : atk.atacante === a.nome ? 'a' : atk.atacante === b.nome ? 'b' : null;
+      foto(t.numeroTurno, quem, quem ? acaoDoAtaque(atk, 'jogador') : null);
     }
     let mudou = false;
     for (const e of t.eventosEfeitos) {

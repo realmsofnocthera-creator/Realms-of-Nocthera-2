@@ -29,4 +29,15 @@ describe('Replay da Arena (quadros)', () => {
     expect(q.some((x) => x.a.status.includes('veneno'))).toBe(true);
     expect(ultimo.linhas.at(-1)).toMatch(/venceu|Empate/);
   });
+
+  it('cada golpe diz quem agiu e o que fez; os quadros de efeitos não têm ação', () => {
+    const r = resolverCombatePvp(jogador('Aldric'), jogador('Borin'), 4);
+    const q = quadrosDaArena(r, { nome: 'Aldric', nivel: 20, hpMax: 3000, sobreescudo: 400 }, { nome: 'Borin', nivel: 20, hpMax: 3000, sobreescudo: 400 });
+    const comAcao = q.filter((x) => x.agiu !== null);
+    expect(comAcao.length).toBeGreaterThan(0);
+    for (const x of comAcao) expect(x.acao).not.toBeNull();
+    for (const x of q.filter((y) => y.agiu === null)) expect(x.acao).toBeNull();
+    // os dois lados atacam
+    expect(new Set(comAcao.map((x) => x.agiu))).toEqual(new Set(['a', 'b']));
+  });
 });
