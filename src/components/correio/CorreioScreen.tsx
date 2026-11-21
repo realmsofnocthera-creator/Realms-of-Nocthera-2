@@ -1,17 +1,19 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ARENA_UI } from '@/assets/arenaUi';
+import { TELAS_UI } from '@/assets/telasSociaisUi';
+import { BotaoDeArte, Janela } from '@/components/arena/PecasDaArena';
+import { PalcoPixel, Texto } from '@/components/pixel/GradePixel';
+import { AreaQueRola, AvisoDaTela, BotaoLargo, Cabecalho, FaixaDeArte, Icone, PergaminhoAberto, Recado, Rotulo, SUB } from '@/components/pixel/PecasDeTela';
 import { textoDoPresente } from '@/rules/correio';
-import type { EstadoDoCorreio } from '@/server/correio';
-import { NOCTHERA_THEME } from '@/theme/theme';
+import { TEXTOS_DAS_TELAS as TT } from '@/rules/textosDasTelasSociais';
+import type { EstadoDoCorreio, MensagemNaTela } from '@/server/correio';
 
 type Token = () => Promise<string | null>;
-const OURO = '#C8A656';
-const VERMELHO = '#E5484D';
-const VERDE = '#7BC47F';
+const T = TT.correio;
 const DIA_MS = 86_400_000;
+const BOTAO = { normal: ARENA_UI.botao, off: ARENA_UI.botaoOff, press: ARENA_UI.botaoPress };
 
 async function chamar(tokenFresco: Token, corpo?: unknown): Promise<{ ok: boolean; dados: Record<string, unknown> }> {
   try {
@@ -23,27 +25,25 @@ async function chamar(tokenFresco: Token, corpo?: unknown): Promise<{ ok: boolea
     });
     return { ok: res.ok, dados: (await res.json().catch(() => ({}))) as Record<string, unknown> };
   } catch {
-    return { ok: false, dados: { error: 'Sem conexão. Tente de novo.' } };
+    return { ok: false, dados: { error: TT.semConexao } };
   }
 }
 
 const data = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+const diasAte = (iso: string) => Math.max(0, Math.ceil((Date.parse(iso) - Date.now()) / DIA_MS));
 
-function Botao({ children, onClick, disabled, perigo }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; perigo?: boolean }) {
-  return (
-    <button type="button" onClick={onClick} disabled={disabled} className="rounded-sm border px-2 py-1 text-xs font-bold disabled:opacity-50" style={{ borderColor: perigo ? VERMELHO : OURO, backgroundColor: '#3A2F18', color: perigo ? VERMELHO : '#F5E3B3' }}>
-      {children}
-    </button>
-  );
-}
-
-/** Correio: as mensagens com presentes (recompensas do Chefe Mundial e mensagens do Mestre). Cada uma fica 30 dias. */
+/**
+ * Correio, na mesa de madeira da Caçada: as cartas (com o sigilo, ou o presente quando trazem recompensa) e, ao abrir uma, o pergaminho com o
+ * texto, o presente e os botões Resgatar e Apagar. As recompensas do Chefe Mundial, da Arena, do Campeonato e as mensagens do Mestre chegam aqui;
+ * cada mensagem fica 30 dias.
+ */
 export function CorreioScreen({ tokenFresco }: { tokenFresco: Token }) {
-  const { colors } = NOCTHERA_THEME;
   const [estado, setEstado] = useState<EstadoDoCorreio | null>(null);
   const [erroAoCarregar, setErroAoCarregar] = useState(false);
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [aberta, setAberta] = useState<string | null>(null);
+  const [regras, setRegras] = useState(false);
 
   const carregar = useCallback(async () => {
     const r = await chamar(tokenFresco);
@@ -61,64 +61,64 @@ export function CorreioScreen({ tokenFresco }: { tokenFresco: Token }) {
     const r = await chamar(tokenFresco, { acao, id });
     setOcupado(false);
     if (!r.ok) {
-      setAviso({ texto: String(r.dados.error ?? 'Não foi possível agora.'), erro: true });
+      setAviso({ texto: String(r.dados.error ?? TT.naoFoiPossivel), erro: true });
       return;
     }
-    setAviso({ texto: String(r.dados.mensagem ?? 'Feito.'), erro: false });
+    setAviso({ texto: String(r.dados.mensagem ?? TT.feito), erro: false });
     setEstado(r.dados.estado as EstadoDoCorreio);
+    if (acao === 'apagar') setAberta(null);
   }
 
+  const carta: MensagemNaTela | undefined = estado?.mensagens.find((m) => m.id === aberta);
+  const comBotao = !!estado && estado.naoResgatadas > 1;
+
   return (
-    <main className="min-h-dvh w-full flex flex-col items-center px-2.5 sm:px-5 py-3 sm:py-6" style={{ backgroundColor: colors.background.primary, color: colors.text.primary }}>
-      <div className="w-full max-w-[480px] flex flex-col gap-3">
-        <header className="flex items-center gap-2">
-          <Link href="/hub" aria-label="Voltar ao Hub" className="p-1"><ArrowLeft className="w-5 h-5" /></Link>
-          <h1 className="text-2xl font-cinzel font-extrabold italic tracking-widest uppercase" style={{ color: '#F5E3B3' }}>Correio</h1>
-        </header>
-        <p className="text-xs" style={{ color: colors.text.secondary }}>As recompensas do Chefe Mundial e as mensagens do Mestre chegam aqui. Cada mensagem fica 30 dias: resgate os presentes antes que ela suma.</p>
-        {aviso && <p role={aviso.erro ? 'alert' : 'status'} className="text-sm font-semibold" style={{ color: aviso.erro ? VERMELHO : VERDE }}>{aviso.texto}</p>}
-        {erroAoCarregar ? (
-          <p role="alert" className="text-sm" style={{ color: VERMELHO }}>Não foi possível carregar agora. Tente de novo em instantes.</p>
-        ) : !estado ? (
-          <p className="text-sm" style={{ color: colors.text.secondary }}>Carregando...</p>
-        ) : estado.mensagens.length === 0 ? (
-          <p className="text-sm" style={{ color: colors.text.secondary }}>Nenhuma mensagem por enquanto.</p>
-        ) : (
-          <>
-            {estado.naoResgatadas > 1 && (
-              <div>
-                <Botao disabled={ocupado} onClick={() => void agir('resgatarTudo')}>Resgatar tudo ({estado.naoResgatadas})</Botao>
-              </div>
-            )}
-            <ul className="flex flex-col gap-2">
-              {estado.mensagens.map((m) => {
-                const pendente = !!m.presente && !m.resgatada;
-                const dias = Math.max(0, Math.ceil((Date.parse(m.expiraEm) - Date.now()) / DIA_MS));
-                return (
-                  <li key={m.id} className="rounded-sm border-2 p-2.5 flex flex-col gap-1" style={{ borderColor: pendente ? OURO : '#4A3F2A', backgroundColor: colors.background.secondary }}>
-                    <div className="flex justify-between gap-2">
-                      <span className="font-cinzel font-bold text-sm">{m.titulo}</span>
-                      <span className="text-[11px] shrink-0" style={{ color: colors.text.secondary }}>{data(m.criadaEm)}</span>
-                    </div>
-                    <span className="text-[11px]" style={{ color: colors.text.secondary }}>De: {m.de}{m.paraTodos ? ' · para todos' : ''} · some em {dias} {dias === 1 ? 'dia' : 'dias'}</span>
-                    <p className="text-xs whitespace-pre-line">{m.texto}</p>
-                    {m.presente && (
-                      <ul className="text-xs flex flex-col" style={{ color: m.resgatada ? colors.text.secondary : '#F5E3B3' }}>
-                        {textoDoPresente(m.presente).map((l) => <li key={l}>• {l}</li>)}
-                      </ul>
-                    )}
-                    <div className="flex flex-wrap gap-1.5 items-center">
-                      {pendente && <Botao disabled={ocupado} onClick={() => void agir('resgatar', m.id)}>Resgatar</Botao>}
-                      {m.presente && m.resgatada && <span className="text-xs" style={{ color: VERDE }}>Resgatado</span>}
-                      {!pendente && <Botao perigo disabled={ocupado} onClick={() => void agir('apagar', m.id)}>Apagar</Botao>}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </>
+    <PalcoPixel fundo={TELAS_UI.fundoCorreio}>
+      <Cabecalho titulo={T.titulo} voltar="/hub" aoAbrirLivro={() => setRegras(true)} rotuloVoltar={TT.voltarAoHub} rotuloLivro={TT.comoFunciona} />
+      <Texto x={180} y={79} tamanho={6.4} caixaAlta largura={300} cor={SUB} negrito={false}>{T.sub}</Texto>
+      <AvisoDaTela aviso={aviso} y={86} />
+
+      {erroAoCarregar ? <Recado erro>{TT.erroAoCarregar}</Recado>
+        : !estado ? <Recado>{TT.carregando}</Recado>
+        : estado.mensagens.length === 0 ? <Recado>{T.nenhuma}</Recado>
+        : (
+          <AreaQueRola topo={92} base={comBotao ? 490 : 532}>
+            {estado.mensagens.map((m) => {
+              const pendente = !!m.presente && !m.resgatada;
+              return (
+                <FaixaDeArte key={m.id} src={pendente ? ARENA_UI.card.forte : ARENA_UI.card.neutro} a={50} esq={85} dir={22} onClick={() => setAberta(m.id)} rotulo={T.abrir(m.titulo)}>
+                  <Icone src={m.presente ? TELAS_UI.presente : TELAS_UI.sigilo} x={10} y={10} l={30} a={30} />
+                  <Rotulo x={60} y={22} tamanho={8} largura={190}>{m.titulo}</Rotulo>
+                  <Rotulo x={60} y={34} tamanho={5.6} largura={220} cor="#D9CBB0" negrito={false}>{`${T.de(m.de, !!m.paraTodos)} · ${T.some(diasAte(m.expiraEm))}`}</Rotulo>
+                  <Rotulo x={30} y={22} tamanho={5} largura={56} alinhar="right" cor={SUB} negrito={false}>{data(m.criadaEm)}</Rotulo>
+                  {m.presente && <Icone src={m.resgatada ? TELAS_UI.feito : ARENA_UI.sobe} x={306} y={28} l={12} a={12} alt={m.resgatada ? T.resgatado : T.comPresente} />}
+                </FaixaDeArte>
+              );
+            })}
+          </AreaQueRola>
         )}
-      </div>
-    </main>
+
+      {comBotao && <BotaoDeArte x={95} y={498} l={170} a={31} src={BOTAO} desligado={ocupado} onClick={() => void agir('resgatarTudo')} tamanho={8}>{T.resgatarTudo(estado!.naoResgatadas)}</BotaoDeArte>}
+
+      {carta && (
+        <PergaminhoAberto src={TELAS_UI.pergaminho} titulo={carta.titulo} aoFechar={() => setAberta(null)} rotuloFechar={TT.fechar}
+          rodape={
+            <>
+              {carta.presente && !carta.resgatada && <BotaoLargo onClick={() => void agir('resgatar', carta.id)} desligado={ocupado} largura={140}>{T.resgatar}</BotaoLargo>}
+              {(!carta.presente || carta.resgatada) && <BotaoLargo onClick={() => void agir('apagar', carta.id)} desligado={ocupado} largura={140} perigo>{T.apagar}</BotaoLargo>}
+            </>
+          }>
+          <p style={{ fontSize: '0.82em', opacity: 0.85, marginBottom: '0.6em' }}>{T.de(carta.de, !!carta.paraTodos)} · {data(carta.criadaEm)} · {T.some(diasAte(carta.expiraEm))}</p>
+          <p className="whitespace-pre-line" style={{ marginBottom: '0.8em' }}>{carta.texto}</p>
+          {carta.presente && (
+            <div style={{ borderTop: '1px solid rgba(90,42,20,.35)', paddingTop: '0.5em' }}>
+              <p style={{ fontWeight: 800, color: carta.resgatada ? '#5f6b3a' : '#7a3a10' }}>{carta.resgatada ? `${T.presente} · ${T.resgatado}` : T.presente}</p>
+              <ul>{textoDoPresente(carta.presente).map((l) => <li key={l}>• {l}</li>)}</ul>
+            </div>
+          )}
+        </PergaminhoAberto>
+      )}
+      {regras && <Janela titulo={T.titulo} aoFechar={() => setRegras(false)} fechar={TT.fechar}><p>{T.regras}</p></Janela>}
+    </PalcoPixel>
   );
 }

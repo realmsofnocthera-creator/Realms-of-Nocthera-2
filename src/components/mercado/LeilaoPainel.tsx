@@ -4,12 +4,13 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
 import { NOME_DA_CATEGORIA, type MoedaDoMercado } from '@/rules/mercado';
 import type { EstadoDoLeilao, ItemDoLeilaoNaTela } from '@/server/leilao';
-import { NOCTHERA_THEME } from '@/theme/theme';
+import { ARENA_UI } from '@/assets/arenaUi';
+import { GEMA_DA_RARIDADE } from '@/assets/telasSociaisUi';
+import { BotaoPequeno, CREME, DOURADO, FaixaDeArte, Icone, Rotulo, SOMBRA_DO_TEXTO, SUB, u } from '@/components/pixel/PecasDeTela';
+import { TEXTOS_DAS_TELAS as TT } from '@/rules/textosDasTelasSociais';
 
 type Token = () => Promise<string | null>;
-const OURO = '#C8A656';
-const VERMELHO = '#E5484D';
-const VERDE = '#7BC47F';
+const L = TT.mercado.leilao;
 /** Com item aberto, a tela atualiza a cada 3 segundos (só com a aba visível); fora disso, a cada 30 segundos. */
 const ATUALIZAR_ABERTO_MS = 3_000;
 const ATUALIZAR_FECHADO_MS = 30_000;
@@ -35,7 +36,7 @@ async function chamar(tokenFresco: Token, corpo?: unknown): Promise<{ ok: boolea
     });
     return { ok: res.ok, dados: (await res.json().catch(() => ({}))) as Record<string, unknown> };
   } catch {
-    return { ok: false, dados: { error: 'Sem conexão. Tente de novo.' } };
+    return { ok: false, dados: { error: TT.semConexao } };
   }
 }
 
@@ -45,7 +46,6 @@ async function chamar(tokenFresco: Token, corpo?: unknown): Promise<{ ok: boolea
  * pelo Correio.
  */
 export function LeilaoPainel({ tokenFresco }: { tokenFresco: Token }) {
-  const { colors } = NOCTHERA_THEME;
   const [estado, setEstado] = useState<EstadoDoLeilao | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
@@ -57,7 +57,7 @@ export function LeilaoPainel({ tokenFresco }: { tokenFresco: Token }) {
   const carregar = useCallback(async () => {
     const r = await chamar(tokenFresco);
     if (!r.ok) {
-      setErro(String(r.dados.error ?? 'Não foi possível carregar o leilão.'));
+      setErro(String(r.dados.error ?? L.erro));
       return;
     }
     const e = r.dados as unknown as EstadoDoLeilao;
@@ -88,65 +88,37 @@ export function LeilaoPainel({ tokenFresco }: { tokenFresco: Token }) {
     setAviso(null);
     const r = await chamar(tokenFresco, { indice: i.indice, valor: i.proximo });
     setOcupado(false);
-    setAviso({ texto: String(r.dados.mensagem ?? r.dados.error ?? (r.ok ? 'Lance dado.' : 'Não foi possível agora.')), erro: !r.ok });
+    setAviso({ texto: String(r.dados.mensagem ?? r.dados.error ?? (r.ok ? L.lanceDado : TT.naoFoiPossivel)), erro: !r.ok });
     await carregar();
   }
 
-  if (erro) return <p role="alert" className="text-sm" style={{ color: VERMELHO }}>{erro}</p>;
-  if (!estado) return <p className="text-sm" style={{ color: colors.text.secondary }}>Carregando...</p>;
+  const texto = (t: string, cor = CREME, tamanho = 7) => <p className="font-cinzel font-bold text-center shrink-0" style={{ fontSize: u(tamanho), lineHeight: 1.4, color: cor, textShadow: SOMBRA_DO_TEXTO, padding: `${u(2)} ${u(6)}` }}>{t}</p>;
+  if (erro) return texto(erro, '#FF9A8F');
+  if (!estado) return texto(TT.carregando);
   const dataDoProximo = new Date(estado.comecaEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
   return (
-    <section className="flex flex-col gap-2" aria-label="Leilão">
-      {aviso && <p role={aviso.erro ? 'alert' : 'status'} className="text-sm font-semibold" style={{ color: aviso.erro ? VERMELHO : VERDE }}>{aviso.texto}</p>}
-      <p className="text-[11px]" style={{ color: colors.text.secondary }}>
-        Segunda, quarta, sexta, sábado e domingo, das 19h às 20h. Cada item fica 5 minutos; lance nos últimos 15 segundos estende o tempo. O valor do lance fica reservado e volta se alguém cobrir. O item ganho chega pelo Correio.
-      </p>
-      {!estado.podeDarLance && <p className="text-xs font-semibold" style={{ color: '#E6C775' }}>O leilão abre no nível {estado.nivelNecessario}.</p>}
-      {!estado.hoje ? (
-        <p className="text-sm">Hoje não tem leilão. O próximo é {dataDoProximo}.</p>
-      ) : (
-        <ul className="flex flex-col gap-1.5">
-          {estado.itens.map((i) => {
-            const restante = Date.parse(i.fim) - agora;
-            const paraAbrir = Date.parse(i.inicio) - agora;
-            return (
-              <li key={i.indice} className="rounded-sm border px-2.5 py-2 flex flex-col gap-1" style={{ borderColor: i.situacao === 'aberto' ? OURO : '#4A3F2A', backgroundColor: colors.background.secondary, opacity: i.situacao === 'encerrado' ? 0.75 : 1 }}>
-                <div className="flex justify-between gap-2">
-                  <span className="text-xs font-semibold truncate" style={{ color: corDaRaridade(i.raridade) }}>
-                    {i.quantidade > 1 ? `${i.quantidade}× ` : ''}
-                    {i.nome}
-                  </span>
-                  <span className="text-[11px] shrink-0 font-bold" style={{ color: i.situacao === 'aberto' ? OURO : colors.text.secondary }}>
-                    {i.situacao === 'aberto' ? relogio(restante) : i.situacao === 'aguardando' ? `abre em ${relogio(paraAbrir)}` : 'encerrado'}
-                  </span>
-                </div>
-                <span className="text-[11px]" style={{ color: colors.text.secondary }}>{[NOME_DA_CATEGORIA[i.categoria], i.nomeDaRaridade, i.detalhe].filter(Boolean).join(' · ')}</span>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px]">
-                    {i.lance
-                      ? `${i.situacao === 'encerrado' ? 'Vencedor' : 'Maior lance'}: ${i.meu ? 'você' : i.lance.nome} · ${valor(i.moeda, i.lance.valor)}`
-                      : i.situacao === 'encerrado'
-                        ? 'Sem lances'
-                        : `Lance mínimo: ${valor(i.moeda, i.proximo)}`}
-                  </span>
-                  {i.situacao === 'aberto' && !i.meu && (
-                    <button
-                      type="button"
-                      onClick={() => void lance(i)}
-                      disabled={ocupado || !estado.podeDarLance}
-                      className="rounded-sm border px-3 py-1.5 text-xs font-bold disabled:opacity-50 shrink-0"
-                      style={{ borderColor: OURO, backgroundColor: '#3A2F18', color: '#F5E3B3' }}
-                    >
-                      Lance de {valor(i.moeda, i.proximo)}
-                    </button>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
+    <>
+      {aviso && texto(aviso.texto, aviso.erro ? '#FF9A8F' : '#B8F0B0')}
+      {texto(L.regras, SUB, 5.8)}
+      {!estado.podeDarLance && texto(L.abreNoNivel(estado.nivelNecessario), '#E6C775', 6.4)}
+      {!estado.hoje ? texto(L.hojeNao(dataDoProximo)) : estado.itens.map((i) => {
+        const restante = Date.parse(i.fim) - agora;
+        const paraAbrir = Date.parse(i.inicio) - agora;
+        const aberto = i.situacao === 'aberto';
+        return (
+          <FaixaDeArte key={i.indice} src={aberto ? ARENA_UI.card.forte : i.situacao === 'encerrado' ? ARENA_UI.card.fraco : ARENA_UI.card.neutro} a={50} esq={85} dir={22} style={{ opacity: i.situacao === 'encerrado' ? 0.8 : 1 }}>
+            <Icone src={GEMA_DA_RARIDADE[i.raridade] ?? GEMA_DA_RARIDADE.comum} x={13} y={13} l={24} a={24} alt={i.nomeDaRaridade} />
+            <Rotulo x={56} y={19} tamanho={7} largura={170} cor={corDaRaridade(i.raridade)}>{`${i.quantidade > 1 ? `${i.quantidade}× ` : ''}${i.nome}`}</Rotulo>
+            <Rotulo x={56} y={28.5} tamanho={5} largura={180} cor="#D9CBB0" negrito={false}>{[NOME_DA_CATEGORIA[i.categoria], i.nomeDaRaridade, i.detalhe].filter(Boolean).join(' · ')}</Rotulo>
+            <Rotulo x={56} y={36.5} tamanho={5} largura={170} cor={SUB} negrito={false}>
+              {i.lance ? `${i.situacao === 'encerrado' ? L.vencedor : L.maiorLance}: ${i.meu ? L.voce : i.lance.nome} · ${valor(i.moeda, i.lance.valor)}` : i.situacao === 'encerrado' ? L.semLances : L.lanceMinimo(valor(i.moeda, i.proximo))}
+            </Rotulo>
+            <Rotulo x={30} y={17} tamanho={6.4} largura={80} alinhar="right" cor={aberto ? DOURADO : SUB}>{aberto ? relogio(restante) : i.situacao === 'aguardando' ? L.abreEm(relogio(paraAbrir)) : L.encerrado}</Rotulo>
+            {aberto && !i.meu && <BotaoPequeno direita={26} y={26} largura={84} desligado={ocupado || !estado.podeDarLance} onClick={() => void lance(i)} rotulo={L.lance(valor(i.moeda, i.proximo))}>{L.lance(i.proximo.toLocaleString('pt-BR'))}</BotaoPequeno>}
+          </FaixaDeArte>
+        );
+      })}
+    </>
   );
 }
