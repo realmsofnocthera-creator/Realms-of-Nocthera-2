@@ -125,7 +125,7 @@ export function CampeonatoTela({ tokenFresco, abrirReplay, irPara, aviso, setAvi
     if (!r.ok) return setAviso({ texto: String(r.dados.error ?? T.naoFoiPossivel), erro: true });
     const d = r.dados as unknown as { combate: ResultadoCombatePvp; lados: { a: LadoNaTela; b: LadoNaTela } };
     setDialogo(null);
-    abrirReplay({ combate: d.combate, lados: d.lados, titulo: `${T.abas.campeonato} · ${nomeDaRodada}` });
+    abrirReplay({ combate: d.combate, lados: d.lados, modo: 'campeonato', titulo: `${T.abas.campeonato} · ${nomeDaRodada}` });
   }
   async function abrirBau(bau: string) {
     setOcupado(true);

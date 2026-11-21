@@ -42,6 +42,7 @@ export function ArenaScreen({ tokenFresco }: { tokenFresco: Token }) {
             combate={replay.combate}
             lados={replay.lados}
             titulo={replay.titulo}
+            modo={replay.modo}
             onFim={() => {
               if (replay.aviso) setAviso({ texto: replay.aviso, erro: false });
               setReplay(null);

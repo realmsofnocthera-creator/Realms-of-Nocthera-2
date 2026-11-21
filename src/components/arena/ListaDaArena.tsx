@@ -15,7 +15,7 @@ import { BotaoDeArte, CREME, DOURADO, Fatiada, Janela, Medalhao, SUB, TINTA } fr
 
 type Token = () => Promise<string | null>;
 export type Aviso = { texto: string; erro: boolean } | null;
-export type ReplayPedido = { combate: ResultadoCombatePvp; lados: { a: LadoNaTela; b: LadoNaTela }; titulo: string; aviso?: string };
+export type ReplayPedido = { combate: ResultadoCombatePvp; lados: { a: LadoNaTela; b: LadoNaTela }; titulo: string; modo?: 'arena' | 'ranqueada' | 'campeonato'; aviso?: string };
 
 async function chamar(tokenFresco: Token, modo: ModoDaArena, corpo?: Record<string, unknown>): Promise<{ ok: boolean; dados: Record<string, unknown> }> {
   try {
@@ -76,13 +76,13 @@ export function ListaDaArena({ modo, tokenFresco, abrirReplay, irPara, aviso, se
   }
   async function lutar(uid: string, nome: string) {
     const d = (await agir({ acao: 'lutar', alvo: uid })) as unknown as ResultadoDaLuta | null;
-    if (d) abrirReplay({ combate: d.combate, lados: d.lados, titulo: `${ranqueada ? T.abas.ranqueada : T.abas.arena} · ${T.contra(nome)}`, aviso: d.mensagem });
+    if (d) abrirReplay({ combate: d.combate, lados: d.lados, modo, titulo: `${ranqueada ? T.abas.ranqueada : T.abas.arena} · ${T.contra(nome)}`, aviso: d.mensagem });
   }
   async function assistir(lutaId: string, titulo: string) {
     const d = (await agir({ acao: 'replay', luta: lutaId })) as { combate: ResultadoCombatePvp; lados: { a: LadoNaTela; b: LadoNaTela } } | null;
     if (d) {
       setDialogo(null);
-      abrirReplay({ combate: d.combate, lados: d.lados, titulo });
+      abrirReplay({ combate: d.combate, lados: d.lados, modo, titulo });
     }
   }
   async function simples(corpo: Record<string, unknown>) {

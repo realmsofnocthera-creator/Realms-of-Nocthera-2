@@ -315,6 +315,8 @@ export interface LadoNaTela {
   nome: string;
   nivel: number;
   classeId: string;
+  /** A subclasse (muda o desenho do herói na luta). */
+  subclasseId?: string;
   avatarId: string;
   hpMax: number;
   sobreescudo: number;
@@ -323,6 +325,7 @@ export const ladoNaTela = (ficha: Combatente, avatarId: string, nome = ficha.nom
   nome,
   nivel: ficha.nivel ?? 1,
   classeId: ficha.classeId ?? '',
+  ...(ficha.subclasseAtualId ? { subclasseId: ficha.subclasseAtualId } : {}),
   avatarId,
   hpMax: ficha.hpMax,
   sobreescudo: ficha.sobreescudo,
