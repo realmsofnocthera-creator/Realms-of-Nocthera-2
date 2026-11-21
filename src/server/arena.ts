@@ -181,6 +181,8 @@ async function montarLista(uid: string, cfg: ConfigDoModo, semana: string, ponto
 
 export interface EstadoDaArena {
   modo: ModoDaArena;
+  /** Quem pediu (para o retrato e o nome no painel). */
+  eu: { nome: string; classeId: string; avatarId: string };
   nivelNecessario: number;
   podeLutar: boolean;
   semana: string;
@@ -237,6 +239,7 @@ export async function estadoDaArena(uid: string, agora = new Date(), modo: ModoD
   let pos = 0;
   return {
     modo: cfg.modo,
+    eu: { nome: char.nome, classeId: char.classeId, avatarId: char.avatarId },
     nivelNecessario: NIVEL_DA_ARENA,
     podeLutar,
     semana,
