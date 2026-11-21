@@ -98,6 +98,8 @@ export interface TesteNaTela {
 }
 
 export interface EstadoDoTeste {
+  /** O uid do próprio jogador (a tela usa para achar o altar dele na party). */
+  meuUid: string;
   nivelNecessario: number;
   meuNivel: number;
   minhaParty: (PartyDocumento & { souLider: boolean }) | null;
@@ -149,6 +151,7 @@ export async function estadoDoTeste(uid: string): Promise<EstadoDoTeste> {
     return p && c ? [{ partyId: p.id, de: c.por }] : [];
   });
   return {
+    meuUid: uid,
     nivelNecessario: NIVEL_DO_TESTE_DE_EQUIPE,
     meuNivel: char.nivel,
     minhaParty: minha ? { ...minha, souLider: minha.liderUid === uid } : null,
