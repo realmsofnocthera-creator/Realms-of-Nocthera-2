@@ -112,6 +112,13 @@ describe('Party e Teste de Equipe (7.4)', () => {
     const antes = (await getCharacterByUid('u2'))!;
     const r = await iniciarTeste('u1', 'corpo', 1, 42);
     expect(r.resultado).toMatchObject({ categoria: 'corpo', dificuldade: 1, venceu: true });
+    // o replay da luta vai só na resposta (não é gravado) e as cartas ganhas são as de quem iniciou
+    expect(r.replay).toMatchObject({ categoria: 'corpo', venceu: true, chefe: { id: 'teste-corpo' } });
+    expect(r.replay.aliados).toHaveLength(2);
+    expect(r.replay.turnos).toHaveLength(2);
+    expect(r.replay.turnos[0].length).toBeGreaterThan(0);
+    expect(r.cartasGanhas).toHaveLength(3);
+    for (const c of r.cartasGanhas) expect(TIPO_DE_CARTA_MAP[c.tipo]).toMatchObject({ categoria: 'corpo', raridade: 'comum' });
     const depois = (await getCharacterByUid('u2'))!;
     expect(depois.ouro).toBe(antes.ouro);
     expect(depois.xpAtual).toBe(antes.xpAtual);

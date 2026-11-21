@@ -148,7 +148,7 @@ export function acaoDoAtaque(a: AtaqueLog, de: 'jogador' | 'monstro'): AcaoDaLut
   };
 }
 
-function textoDoAtaque(a: AtaqueLog): LinhaLog[] {
+export function textoDoAtaque(a: AtaqueLog): LinhaLog[] {
   if (a.incapacitado || a.distraido) {
     return [{ texto: `${a.atacante} perdeu a ação (${a.incapacitado ?? 'distração'}).`, tipo: 'info' }];
   }
@@ -170,7 +170,7 @@ function textoDoAtaque(a: AtaqueLog): LinhaLog[] {
   return linhas;
 }
 
-function textoDoEvento(e: EventoEfeito, nomeJogador: string): LinhaLog | null {
+export function textoDoEvento(e: EventoEfeito, nomeJogador: string): LinhaLog | null {
   const alvo = e.alvo ?? nomeJogador;
   const n = nomeStatus(e.efeito);
   switch (e.tipo) {

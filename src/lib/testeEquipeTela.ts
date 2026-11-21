@@ -5,6 +5,9 @@ import type { MembroDaParty } from '@/rules/testeEquipe';
 
 const ORDEM_DAS_RARIDADES: readonly EmblemaRaridade[] = ['comum', 'raro', 'muitoRaro', 'epico', 'lendario', 'mitico'];
 
+/** O índice (0 a 5) de uma raridade (comum a mítica). */
+export const indiceDaRaridade = (r: EmblemaRaridade): number => Math.max(0, ORDEM_DAS_RARIDADES.indexOf(r));
+
 /** O índice (0 a 5) da raridade mais alta que a dificuldade pode dar: 0 = só comuns, 5 = até míticas. */
 export function maiorRaridadeDaDificuldade(raridades: readonly { raridade: EmblemaRaridade }[]): number {
   return raridades.reduce((m, r) => Math.max(m, ORDEM_DAS_RARIDADES.indexOf(r.raridade)), 0);

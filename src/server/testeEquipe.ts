@@ -33,6 +33,8 @@ import {
   TAMANHO_MINIMO_DO_TESTE,
   type CategoriaDoTeste,
   type PartyDocumento,
+  type CartaGanha,
+  type ReplayDoTeste,
   type ResultadoDaParty,
 } from '@/rules/testeEquipe';
 import { alterarSaldoEm, carregarPersonagem, combatenteDoPersonagem, contarNoPatch, progressoDasVitorias, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
@@ -182,7 +184,7 @@ export interface PedidoDoTeste {
   dificuldade?: unknown;
 }
 
-export async function agirNoTeste(uid: string, acao: unknown, pedido: PedidoDoTeste): Promise<{ mensagem: string; resultado?: ResultadoDaParty }> {
+export async function agirNoTeste(uid: string, acao: unknown, pedido: PedidoDoTeste): Promise<{ mensagem: string; resultado?: ResultadoDaParty; replay?: ReplayDoTeste; cartasGanhas?: CartaGanha[] }> {
   if (typeof acao !== 'string' || !(ACOES_DO_TESTE as readonly string[]).includes(acao)) throw new ErroDeParty('Ação desconhecida.');
   await exigirSistemaLigado(uid, 'testeEquipe');
   const em = agora().toISOString();
@@ -282,7 +284,7 @@ export async function agirNoTeste(uid: string, acao: unknown, pedido: PedidoDoTe
  * O líder inicia: confere todos (nível, a dificuldade anterior concluída e a chave ou o selo), gasta a chave (ou o
  * selo) de cada um, roda a luta em grupo e aplica as recompensas de todos na mesma transação.
  */
-export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificuldadePedida: unknown, semente: number): Promise<{ mensagem: string; resultado: ResultadoDaParty }> {
+export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificuldadePedida: unknown, semente: number): Promise<{ mensagem: string; resultado: ResultadoDaParty; replay: ReplayDoTeste; cartasGanhas: CartaGanha[] }> {
   if (!ehCategoriaDoTeste(categoriaPedida)) throw new ErroDeParty('Escolha o teste (Alma, Corpo ou Mente).');
   const categoria = categoriaPedida;
   const dificuldade = typeof dificuldadePedida === 'number' && Number.isInteger(dificuldadePedida) ? dificuldadePedida : 0;
@@ -312,6 +314,7 @@ export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificu
     const r = resolverCombateEmGrupo(docs.map(combatenteDoPersonagem), chefe, semente);
     const venceu = r.vencedor === 'grupo';
     let selosGanhos = 0;
+    let cartasGanhas: CartaGanha[] = [];
     for (const [indice, d] of docs.entries()) {
       let doc = d;
       // A entrada: 1 chave (as grátis do dia primeiro) ou 1 selo, ganhe ou perca
@@ -329,6 +332,7 @@ export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificu
       const sorteio = sorteadorDaSemente(semente + indice * 104729);
       const tipos = Array.from({ length: CARTAS_POR_VITORIA }, () => sortearTipoDaRaridade(sortearRaridadePorPesos(regra.pesos, sorteio), sorteio, categoria));
       const carta = entregarCartas(doc, tipos, semente + indice);
+      if (d.uid === uid) cartasGanhas = carta.criadas.map((c) => ({ tipo: c.tipo, nome: c.nome, raridade: c.raridade, nova: c.nova }));
       const ganhouSelo = dificuldade === DIFICULDADE_QUE_DA_SELO && sorteio() < CHANCE_DO_SELO;
       if (ganhouSelo) selosGanhos++;
       const selos = selosDepoisDaEntrada + (ganhouSelo ? 1 : 0);
@@ -350,7 +354,16 @@ export async function iniciarTeste(uid: string, categoriaPedida: unknown, dificu
     ctx.gravarParty({ ...p, membros: p.membros.map((m) => ({ ...m, pronto: false })), atualizadaEm: resultado.em, ultimoResultado: resultado });
     const titulo = `${NOME_DO_TESTE[categoria]} (${regra.nome})`;
     const extras = [regra.poeira ? `${regra.poeira} de poeira de alma` : '', selosGanhos ? `${selosGanhos} selo(s) do abismo na party` : ''].filter(Boolean);
+    const replay: ReplayDoTeste = {
+      categoria,
+      chefe: { id: chefe.id, nome: chefe.nome, nivel: chefe.nivel, hp: chefe.hp },
+      aliados: docs.map((d, i) => ({ nome: r.aliados[i].nome, nivel: d.nivel, classeId: d.classeId, subclasseAtualId: d.subclasseAtualId ?? undefined, avatarId: d.avatarId, hpMax: d.hpMax, sobreescudoMax: d.sobreescudoMax })),
+      turnos: r.replay,
+      venceu,
+    };
     return {
+      replay,
+      cartasGanhas,
       mensagem: venceu
         ? `Vitória no ${titulo}! ${chefe.nome} caiu em ${r.rodadas} rodadas. Cada um recebeu ${regra.cacos} cacos de alma e ${CARTAS_POR_VITORIA} cartas${extras.length ? `, além de ${extras.join(' e ')}` : ''} (e diamantes na primeira conclusão).`
         : `Derrota no ${titulo} diante de ${chefe.nome}. ${pedeSelo ? 'O selo' : 'A chave'} de cada um foi gast${pedeSelo ? 'o' : 'a'}.`,

@@ -3,10 +3,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PalcoPixel, Peca, Texto, u, pixel, SOMBRA_DO_TEXTO } from '@/components/pixel/GradePixel';
-import { DORSO, PILAR, POSICAO, SELO_DA_DIFICULDADE, TESTE_UI, topoDaDificuldade } from '@/assets/testeEquipeUi';
-import { CATEGORIAS_DO_TESTE, NOMES_DAS_DIFICULDADES, TAMANHO_MAXIMO_DA_PARTY, TAMANHO_MINIMO_DO_TESTE, type CategoriaDoTeste, type ResultadoDaParty } from '@/rules/testeEquipe';
+import { DORSO, MOLDURA_DA_CARTA, PILAR, POSICAO, SELO_DA_DIFICULDADE, TESTE_UI, topoDaDificuldade } from '@/assets/testeEquipeUi';
+import { ARENAS_DO_TESTE } from '@/assets/arenasDoTeste';
+import { ArteDaCarta } from '@/components/alma/ArteDaCarta';
+import { CombateEmGrupo } from './CombateEmGrupo';
+import { CATEGORIAS_DO_TESTE, NOMES_DAS_DIFICULDADES, TAMANHO_MAXIMO_DA_PARTY, TAMANHO_MINIMO_DO_TESTE, type CartaGanha, type CategoriaDoTeste, type ReplayDoTeste, type ResultadoDaParty } from '@/rules/testeEquipe';
 import { TEXTOS_DO_TESTE_EQUIPE as T } from '@/rules/textosDoTesteEquipe';
-import { maiorRaridadeDaDificuldade, podeIniciar, segmentosDoFeixe } from '@/lib/testeEquipeTela';
+import { indiceDaRaridade, maiorRaridadeDaDificuldade, podeIniciar, segmentosDoFeixe } from '@/lib/testeEquipeTela';
 import type { EstadoDoTeste } from '@/server/testeEquipe';
 
 type Token = () => Promise<string | null>;
@@ -60,7 +63,9 @@ export function TesteEquipeScreen({ tokenFresco }: { tokenFresco: Token }) {
   const [dificuldade, setDificuldade] = useState(1);
   const [convidado, setConvidado] = useState('');
   const [regras, setRegras] = useState(false);
-  const [desfecho, setDesfecho] = useState<{ resultado: ResultadoDaParty; cacos: number; poeira: number; diamantes: number } | null>(null);
+  const [desfecho, setDesfecho] = useState<{ resultado: ResultadoDaParty; cacos: number; poeira: number; diamantes: number; cartas: CartaGanha[] } | null>(null);
+  // a luta em grupo, reproduzida antes da tela de recompensas
+  const [luta, setLuta] = useState<ReplayDoTeste | null>(null);
 
   const carregar = useCallback(async () => {
     const r = await chamar(tokenFresco);
@@ -109,8 +114,12 @@ export function TesteEquipeScreen({ tokenFresco }: { tokenFresco: Token }) {
     const dados = await agir('iniciar', { categoria, dificuldade });
     if (dados && regra) {
       const resultado = dados.resultado as ResultadoDaParty;
-      setDesfecho({ resultado, cacos: regra.cacos, poeira: regra.poeira, diamantes: regra.diamantes });
-      setVista('recompensas');
+      setDesfecho({ resultado, cacos: regra.cacos, poeira: regra.poeira, diamantes: regra.diamantes, cartas: (dados.cartasGanhas as CartaGanha[] | undefined) ?? [] });
+      const replay = dados.replay as ReplayDoTeste | undefined;
+      // a mensagem de vitória só aparece depois da luta
+      setAviso(null);
+      if (replay) setLuta(replay);
+      else setVista('recompensas');
     }
   };
 
@@ -129,6 +138,10 @@ export function TesteEquipeScreen({ tokenFresco }: { tokenFresco: Token }) {
     else if (vista === 'recompensas') setVista(party ? 'party' : 'testes');
     else if (vista === 'party') setVista('testes');
   };
+
+  if (luta) {
+    return <CombateEmGrupo replay={luta} mapa={ARENAS_DO_TESTE[luta.categoria]} onFim={() => { setLuta(null); setVista('recompensas'); }} />;
+  }
 
   return (
     <PalcoPixel fundo={vista === 'testes' ? TESTE_UI.fundo : TESTE_UI.fundoDesfocado}>
@@ -303,10 +316,20 @@ export function TesteEquipeScreen({ tokenFresco }: { tokenFresco: Token }) {
         <>
           {desfecho.resultado.venceu ? (
             <>
-              {POSICAO.cartas.xs.map((x, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={i} src={DORSO(desfecho.resultado.categoria)} alt="" aria-hidden draggable={false} className="absolute" style={{ left: u(x - 6), top: u(POSICAO.cartas.y), width: u(70), height: u(117), ...pixel }} />
-              ))}
+              {POSICAO.cartas.xs.map((x, i) => {
+                const carta = desfecho.cartas[i];
+                return carta ? (
+                  <div key={i} className="absolute" role="img" aria-label={`${carta.nome}${carta.nova ? `, ${T.nova}` : ''}`} style={{ left: u(x - 6), top: u(POSICAO.cartas.y), width: u(70), height: u(117) }}>
+                    <ArteDaCarta tipoId={carta.tipo} className="absolute" style={{ left: u(4), top: u(4), width: u(62), height: u(109), objectFit: 'fill' }} />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={MOLDURA_DA_CARTA(indiceDaRaridade(carta.raridade) + 1)} alt="" aria-hidden draggable={false} className="absolute inset-0 w-full h-full" style={pixel} />
+                    {carta.nova && <span className="absolute font-cinzel font-black uppercase" style={{ left: u(8), top: u(6), fontSize: u(5.5), color: '#1b1206', backgroundColor: DOURADO, padding: `0 ${u(2)}` }}>{T.nova}</span>}
+                  </div>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img key={i} src={DORSO(desfecho.resultado.categoria)} alt="" aria-hidden draggable={false} className="absolute" style={{ left: u(x - 6), top: u(POSICAO.cartas.y), width: u(70), height: u(117), ...pixel }} />
+                );
+              })}
               <Texto x={180} y={226} tamanho={7} caixaAlta largura={320} cor={DOURADO}>{T.cartasGanhas(3, T.nomeDaCategoria[desfecho.resultado.categoria])}</Texto>
               <Link href="/colecao?aba=alma" className="absolute font-cinzel font-bold underline" style={{ left: u(110), top: u(231), fontSize: u(5.8), color: CREME, textShadow: SOMBRA_DO_TEXTO }}>{T.verNaColecao}</Link>
               <Premio y={POSICAO.placasDePremio.ys[0]} icone={TESTE_UI.caco} rotulo={T.cacosDeAlma} valor={`+${desfecho.cacos}`} iw={20} ih={34} />

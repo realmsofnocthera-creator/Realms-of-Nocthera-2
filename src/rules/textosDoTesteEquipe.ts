@@ -70,6 +70,7 @@ export const TEXTOS_DO_TESTE_EQUIPE = {
   vitoria: 'Vitória!',
   derrota: 'Derrota',
   cartasGanhas: (n: number, categoria: string) => `${n} cartas de ${categoria}`,
+  nova: 'nova',
   verNaColecao: 'Ver na Coleção da Alma',
   cacosDeAlma: 'Cacos de alma',
   poeiraDeAlma: 'Poeira de alma',
