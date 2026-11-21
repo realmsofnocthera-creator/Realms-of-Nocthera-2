@@ -39,6 +39,8 @@ interface CombateCacadaProps {
   cena?: ArteDoChefeMundial;
   /** No chefe mundial a barra do chefe mostra o dano causado na partida (a vida dele é sem fim); este é o melhor dano do dia do jogador, a meta da barra. */
   melhorDoDia?: number;
+  /** Sem a abertura "A Batalha começa": nas lutas seguintes de uma sequência (a Batalha Sangrenta) ela toca só na primeira. */
+  semAbertura?: boolean;
   /** HP com que o personagem entra na luta (Batalha Sangrenta). */
   hpInicialJogador?: number;
   /**
@@ -158,11 +160,11 @@ export function geometriaDaCena(largura: number, altura: number, alvoDoChefe?: A
  * (um por golpe) e, no crítico, a estrela, o aviso e o tremor da tela. A barra de vida desce na hora do impacto e deixa um
  * rastro claro. No último golpe tudo vai em câmera lenta e a criatura se desfaz.
  */
-export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, hpInicialJogador, onFim, telaDeFim, mapa, cena, melhorDoDia }: CombateCacadaProps) {
+export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, hpInicialJogador, onFim, telaDeFim, mapa, cena, melhorDoDia, semAbertura }: CombateCacadaProps) {
   const quadros: QuadroLuta[] = useMemo(() => montarQuadros(resultado, personagem, monstro, 5, hpInicialJogador), [resultado, personagem, monstro, hpInicialJogador]);
   const [indice, setIndice] = useState(0);
   // a abertura de batalha (a cena do Yuri) toca antes de a luta começar
-  const [abertura, setAbertura] = useState(true);
+  const [abertura, setAbertura] = useState(!semAbertura);
   const [rapido, setRapido] = useState(false);
   // o quadro cujo golpe já acertou (a vida só desce, e os efeitos só aparecem, na hora do impacto)
   const [acertou, setAcertou] = useState(-1);
@@ -356,7 +358,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
                     <div className={`w-full h-full ${mortoMonstro ? 'cacada-morte' : ''}`} style={mortoMonstro ? { animationDuration: lenta ? '1500ms' : '1000ms' } : undefined}>
                       <div className={`w-full h-full ${vis.monstro.hp > 0 && !acao && !animacaoMonstro ? 'cacada-respira' : ''} ${q.monstro.enfurecido && vis.monstro.hp > 0 ? 'cacada-furia' : ''}`} style={{ filter: tintaDosStatus(vis.monstro.status), transition: 'filter 300ms' }}>
                         {animacaoMonstro ? (
-                          <SpriteAnimado parado={animacaoMonstro.parado} ataque={animacaoMonstro.ataque} golpe={q.agiu === 'monstro' ? indice : null} velocidade={velocidadeMonstro} espelhado rotulo={monstro.nome} />
+                          <SpriteAnimado parado={animacaoMonstro.parado} ataque={animacaoMonstro.ataque} golpe={q.agiu === 'monstro' ? indice : null} velocidade={velocidadeMonstro} espelhado rotulo={monstro.nome} reacao={animacaoMonstro.reacao} reagir={acao?.de === 'jogador' && impactou && acao.dano > 0 ? indice : null} />
                         ) : spriteMonstro ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={spriteMonstro.src} alt={monstro.nome} className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} draggable={false} />

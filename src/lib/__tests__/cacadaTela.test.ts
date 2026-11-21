@@ -7,7 +7,7 @@ import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
 import { dropsTela, estrelaDoMonstro, estrelasDoRanque, monstrosDaEstrela, ranquesDaCacada } from '@/lib/cacadaTela';
 import { CICLO_ESPECIAL, danoCausadoAoChefe, espacosDoPersonagem, larguraDasBarras, montarQuadros } from '@/lib/cacadaReplay';
 import { MochilaScreen } from '@/components/mochila/MochilaScreen';
-import { BarraDoInimigo, BarraVidaEscudo, destacarLinha, geometriaDaCena } from '@/components/cacada/CombateCacada';
+import { BarraDoInimigo, BarraVidaEscudo, CombateCacada, destacarLinha, geometriaDaCena } from '@/components/cacada/CombateCacada';
 import { CENARIO_ESTRELA, SPRITE_CLASSE, SPRITE_MONSTRO } from '@/lib/cacadaArte';
 import fs from 'node:fs';
 
@@ -137,5 +137,19 @@ describe('barra do chefe mundial: dano causado na partida', () => {
     expect(html).toContain('Melhor de hoje: 9.000');
     expect(html).not.toContain('1000000000');
     expect(html).not.toContain('1.000.000.000');
+  });
+});
+
+describe('abertura da batalha só na primeira luta de uma sequência', () => {
+  it('com semAbertura a luta já começa, sem a cena "A Batalha começa" por cima', async () => {
+    await createCharacter('t-ab', { nome: 'Aragorn', racaId: 'elfo', classeId: 'cavaleiro', pontos: { vigor: 5, sorte: 0, forca: 5, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 0 } });
+    await updateCharacter('t-ab', { nivel: 2, atributos: { vigor: 400, sorte: 0, forca: 300, vitalidade: 100, arcano: 0, inteligencia: 0, agilidade: 50 } });
+    const antes = (await getCharacterByUid('t-ab'))!;
+    const r = await executarCacada('t-ab', 'lobo-cinzento', { seed: 7, combateId: 'cacada-tela-abertura' });
+    const props = { resultado: r.resultado, personagem: antes, monstro: MONSTROS_CACADA_MAP['lobo-cinzento'], titulo: 'Teste', onFim: () => undefined };
+    const primeira = renderToStaticMarkup(React.createElement(CombateCacada, props));
+    const seguinte = renderToStaticMarkup(React.createElement(CombateCacada, { ...props, semAbertura: true }));
+    expect(primeira).toContain('Batalha! O confronto começa.');
+    expect(seguinte).not.toContain('Batalha! O confronto começa.');
   });
 });
