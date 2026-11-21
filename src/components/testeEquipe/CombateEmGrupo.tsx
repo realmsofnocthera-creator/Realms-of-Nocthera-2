@@ -178,7 +178,7 @@ export function CombateEmGrupo({ replay, mapa, onFim }: { replay: ReplayDoTeste;
           {herois.map((h, i) => <Sombra key={h.a.nome} x={h.x} y={h.pes} largura={h.largura * 0.55} apagada={impactou ? vis.aliados[i].hp <= 0 : false} />)}
 
           {/* o chefe */}
-          <div className="absolute -translate-x-1/2" style={{ left: chefe.x, top: chefe.pes - alturaChefe, height: alturaChefe, aspectRatio: String(animacaoChefe?.proporcao ?? 1), zIndex: agindo?.lado === 'chefe' ? 40 : 4 }}>
+          <div className="absolute -translate-x-1/2" style={{ left: chefe.x, top: chefe.pes - alturaChefe, height: alturaChefe, aspectRatio: String(animacaoChefe?.proporcao ?? 1), zIndex: agindo?.lado === 'chefe' ? 90 : 4 }}>
             <div key={`ci-${indice}`} className="w-full h-full" style={agindo?.lado === 'chefe' ? { animation: `cacadaInvestida ${tempos.duracao}ms ease-in-out both`, ['--lx' as string]: `${(herois[agindo.alvo].x - chefe.x) * 0.52}px`, ['--ly' as string]: `${(herois[agindo.alvo].pes - chefe.pes) * 0.5}px` } : undefined}>
               <div key={`cr-${indice}`} className="w-full h-full" style={reage('chefe') ? reacaoVars('chefe') : undefined}>
                 <div className={`w-full h-full ${mortoChefe ? 'cacada-morte' : ''}`}>
@@ -195,7 +195,7 @@ export function CombateEmGrupo({ replay, mapa, onFim }: { replay: ReplayDoTeste;
             const agiu = agindo?.lado === 'aliado' && agindo.i === i;
             const morto = impactou && vis.aliados[i].hp <= 0;
             return (
-              <div key={h.a.nome} className="absolute -translate-x-1/2" style={{ left: h.x, top: h.pes - h.altura, height: h.altura, aspectRatio: String(h.an ? h.an.proporcao : 1), zIndex: agiu ? 40 : Math.round(h.pes) }}>
+              <div key={h.a.nome} className="absolute -translate-x-1/2" style={{ left: h.x, top: h.pes - h.altura, height: h.altura, aspectRatio: String(h.an ? h.an.proporcao : 1), zIndex: agiu ? 90 : Math.round(h.pes / 10) }}>
                 <div key={`ji-${i}-${indice}`} className="w-full h-full" style={agiu ? { animation: `cacadaInvestida ${tempos.duracao}ms ease-in-out both`, ['--lx' as string]: `${(chefe.x - h.x) * 0.5}px`, ['--ly' as string]: `${(chefe.pes - h.pes) * 0.5}px` } : undefined}>
                   <div key={`jr-${i}-${indice}`} className="w-full h-full" style={reage(i) ? reacaoVars(i) : undefined}>
                     <div className={`w-full h-full ${morto ? 'cacada-morte-heroi' : ''}`} style={{ filter: tintaDosStatus(vis.aliados[i].status), transition: 'filter 300ms' }}>
@@ -237,7 +237,7 @@ export function CombateEmGrupo({ replay, mapa, onFim }: { replay: ReplayDoTeste;
         {critico && impactou && <div key={`f-${indice}`} aria-hidden="true" className="absolute inset-0 pointer-events-none bg-white" style={{ animation: 'cacadaClarao 260ms ease-out both' }} />}
         {faixa && !abertura && !terminou && <FaixaDeHabilidade key={`h-${indice}`} nome={faixa} icone={null} heroi={acao?.de === 'jogador'} duracao={Math.round(tempos.duracao * 0.8)} />}
         {terminou && (
-          <div role="status" className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none" style={{ background: 'rgba(0,0,0,.45)' }}>
+          <div role="status" className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ background: 'rgba(0,0,0,.45)', zIndex: 200 }}>
             <span className="font-cinzel font-black text-[34px] uppercase" style={{ color: replay.venceu ? '#F3C769' : '#FF9A8F', textShadow: '2px 2px 0 #000, -1px -1px 0 #000' }}>{replay.venceu ? 'Vitória!' : 'Derrota'}</span>
           </div>
         )}
