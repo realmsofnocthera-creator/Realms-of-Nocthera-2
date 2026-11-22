@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     const limiteConta = limitarPorConta(user.uid, 'escrita');
     if (limiteConta) return limiteConta;
     const b = (await req.json().catch(() => ({}))) ?? {};
-    if (b.acao === 'comprarMoedas') return NextResponse.json(await comprarComMoedasVip(user.uid, b.chave, b.quantidade));
+    if (b.acao === 'comprarMoedas') return NextResponse.json(await comprarComMoedasVip(user.uid, b.chave, b.quantidade, undefined, b.idempotencyKey));
     if (b.acao === 'abrirBau') return NextResponse.json(await abrirBauDeEscolha(user.uid, b.bau, b.escolha));
     return NextResponse.json(await comprarNoTeste(user.uid, b.produto));
   } catch (error) {

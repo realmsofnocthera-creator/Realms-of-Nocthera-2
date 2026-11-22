@@ -1,4 +1,5 @@
 import { randomInt, randomUUID } from 'node:crypto';
+import { guardarResultado, lerChave, resultadoGuardado } from '@/rules/idempotencia';
 import { semanaDe, fimDaSemana } from '@/rules/chefeSemanal';
 import { criarCarta } from '@/rules/almas';
 import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
@@ -104,7 +105,8 @@ function itensDaCompra(p: ProdutoDaLoja, quantidade: number, escolha: string): I
 }
 
 /** Compra `quantidade` unidades do produto (do catálogo desta semana), dentro do limite do mês. */
-export async function comprarNaLoja(uid: string, chaveBruta: unknown, quantidadeBruta: unknown, escolhaBruta: unknown, agora = new Date()): Promise<{ mensagem: string }> {
+export async function comprarNaLoja(uid: string, chaveBruta: unknown, quantidadeBruta: unknown, escolhaBruta: unknown, agora = new Date(), idempotencyKey?: unknown): Promise<{ mensagem: string }> {
+  const chaveDeRepeticao = lerChave(idempotencyKey);
   await exigirSistemaLigado(uid, 'loja');
   const chave = typeof chaveBruta === 'string' ? chaveBruta : '';
   const produto = catalogoDaSemana(semanaDe(agora)).find((p) => p.chave === chave);
@@ -117,6 +119,8 @@ export async function comprarNaLoja(uid: string, chaveBruta: unknown, quantidade
   const rotulo = `${quantidade > 1 ? `${quantidade}× ` : ''}${nomeDoItem}`;
   return repositorio.executarTransacao('loja:comprar', async (ctx) => {
     let eu = await carregarPersonagem(ctx, uid);
+    const repetida = resultadoGuardado<{ mensagem: string }>(eu.idempotencia, chaveDeRepeticao, 'loja:comprar', agora);
+    if (repetida) return repetida;
     const total = comDescontoDoPasse(produto.preco, descontoDosPasses(eu, agora)) * quantidade;
     if (eu.nivel < NIVEL_DA_LOJA) throw new ErroDaLoja(`A loja abre no nível ${NIVEL_DA_LOJA}.`);
     const comprados = compradasNoMes(eu.comprasNaLoja, chave, agora);
@@ -140,7 +144,8 @@ export async function comprarNaLoja(uid: string, chaveBruta: unknown, quantidade
     const correio = cartasPelaCaixa.length
       ? comMensagem(eu.correio, novaMensagem({ titulo: 'Compra na Loja', texto: `${nomeDoItem} não cabia na sua mochila e chegou pelo Correio.`, de: 'Loja', presente: { cartas: cartasPelaCaixa } }, agora), agora)
       : eu.correio;
-    salvarPersonagem(ctx, eu, { ...patch, [produto.moeda]: eu[produto.moeda], comprasNaLoja, correio });
-    return { mensagem: `Você comprou ${rotulo} por ${nomeDaMoedaDaLoja(produto.moeda, total)}.${cartasPelaCaixa.length ? ' O que não cabia na mochila foi para o Correio.' : ''}` };
+    const resposta = { mensagem: `Você comprou ${rotulo} por ${nomeDaMoedaDaLoja(produto.moeda, total)}.${cartasPelaCaixa.length ? ' O que não cabia na mochila foi para o Correio.' : ''}` };
+    salvarPersonagem(ctx, eu, { ...patch, [produto.moeda]: eu[produto.moeda], comprasNaLoja, correio, ...guardarResultado(eu.idempotencia, chaveDeRepeticao, 'loja:comprar', resposta, agora) });
+    return resposta;
   });
 }

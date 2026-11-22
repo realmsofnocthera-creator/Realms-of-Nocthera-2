@@ -123,6 +123,17 @@ describe('Pacote do Iniciante e Loja de Moedas VIP (8.5): servidor', () => {
     expect(r2.naoRecuperado).toContain('o emblema épico do baú (já aberto)');
   });
 
+  it('idempotência: a mesma chave não cobra as Moedas VIP duas vezes', async () => {
+    await updateCharacter('u1', { moedasVip: 1_000 });
+    const a = await comprarComMoedasVip('u1', 'material:mundo-osso-bruto', 10, OUTUBRO, 'toque-vip-0001');
+    const b = await comprarComMoedasVip('u1', 'material:mundo-osso-bruto', 10, OUTUBRO, 'toque-vip-0001');
+    expect(b).toEqual(a);
+    const c = (await getCharacterByUid('u1'))!;
+    expect(c.moedasVip).toBe(980);
+    expect(c.inventario?.['mundo-osso-bruto']).toBe(10);
+    expect(await erro(comprarComMoedasVip('u1', 'material:mundo-osso-bruto', 10, OUTUBRO, 'curta'))).toMatchObject({ name: 'ErroDeChave' });
+  });
+
   it('compra material com Moedas VIP: tira as moedas, entrega no inventário e respeita o limite do mês', async () => {
     await updateCharacter('u1', { moedasVip: 1_000 });
     const r = await comprarComMoedasVip('u1', 'material:mundo-osso-bruto', 10, OUTUBRO);

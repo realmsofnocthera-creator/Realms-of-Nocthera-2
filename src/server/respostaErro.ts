@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ErroPersistencia } from './persistencia';
 import { ErroContaSancionada } from './sancoes';
 import { ErroManutencao, ErroSistemaDesligado } from './errosDeSistema';
+import { ErroDeChave } from '@/rules/idempotencia';
 
 /**
  * Resposta padrão dos erros que vêm da autenticação e do banco: 503 quando o banco falha (0.5-C1), com mensagem
@@ -21,6 +22,9 @@ export function respostaErroPersistencia(error: unknown): NextResponse | null {
   }
   if (error instanceof ErroSistemaDesligado) {
     return NextResponse.json({ error: error.message, sistemaDesligado: error.sistema }, { status: 503 });
+  }
+  if (error instanceof ErroDeChave) {
+    return NextResponse.json({ error: error.message }, { status: error.status });
   }
   return null;
 }
