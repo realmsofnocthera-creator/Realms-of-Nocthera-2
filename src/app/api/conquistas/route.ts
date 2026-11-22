@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** { acao: resgatar | resgatarTudo | titulo, id?, titulo? }. Devolve a mensagem e o estado novo. */
+/** { acao: resgatar | resgatarTudo | titulo | moldura, id?, titulo?, moldura? }. Devolve a mensagem e o estado novo. */
 export async function POST(req: NextRequest) {
   try {
     const limiteIp = limitarPorIp(req, 'escrita');
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const limiteConta = limitarPorConta(user.uid, 'escrita');
     if (limiteConta) return limiteConta;
     const b = (await req.json().catch(() => ({}))) ?? {};
-    return NextResponse.json(await agirNasConquistas(user.uid, b.acao, { id: b.id, titulo: b.titulo }));
+    return NextResponse.json(await agirNasConquistas(user.uid, b.acao, { id: b.id, titulo: b.titulo, moldura: b.moldura }));
   } catch (error) {
     return respostaDeErro(error, 'conquistas.acao_falhou');
   }

@@ -25,7 +25,9 @@ import { TITULO_MAP } from '@/rules/titulos';
 import { conquistasEmDestaque, DEGRAUS } from '@/rules/conquistas';
 import { CharacterDocument, PublicCharacterProfile } from '@/server/characterService';
 import { getAvatarFaceStyle, resolveAvatarSrc } from '@/assets/avatars';
-import { HUD_IMAGES } from '@/assets/hud';
+import { FaixaDoTitulo } from '@/components/perfil/FaixaDoTitulo';
+import { MolduraDoAvatar } from '@/components/perfil/MolduraDoAvatar';
+import { molduraEscolhida } from '@/rules/molduras';
 import { PERFIL_IMAGES } from '@/assets/perfil';
 import { PersonalizarPerfil } from '@/components/perfil/PersonalizarPerfil';
 import { PerfilEquipamentos } from '@/components/perfil/PerfilEquipamentos';
@@ -73,7 +75,8 @@ function characterToPublicProfile(char: CharacterDocument): PublicCharacterProfi
     sobre: typeof char.sobre === 'string' ? char.sobre : '',
     equipamentosPrincipais: equipamentosDoPerfil(char),
     ...(char.guildaId && char.guildaNome ? { guilda: char.guildaNome } : {}),
-    ...(char.tituloId && TITULO_MAP[char.tituloId] ? { titulo: TITULO_MAP[char.tituloId].nome } : {}),
+    ...(char.tituloId && TITULO_MAP[char.tituloId] ? { titulo: TITULO_MAP[char.tituloId].nome, tituloId: char.tituloId } : {}),
+    ...(molduraEscolhida(char) ? { molduraId: char.molduraId } : {}),
     conquistasEmDestaque: conquistasEmDestaque(char.conquistas),
   };
 }
@@ -105,11 +108,14 @@ export function PerfilPublicoModal({
   const [localOwnAvatarId, setLocalOwnAvatarId] = useState<string | null>(null);
   /** Título escolhido nesta abertura (undefined = o do personagem; '' = sem título). */
   const [localTituloId, setLocalTituloId] = useState<string | undefined>(undefined);
+  /** Moldura escolhida nesta abertura (undefined = a do personagem; '' = a Padrão). */
+  const [localMolduraId, setLocalMolduraId] = useState<string | undefined>(undefined);
 
   const effectiveOwnCharacter: CharacterDocument = {
     ...ownCharacter,
     ...(localOwnAvatarId !== null ? { avatarId: localOwnAvatarId } : {}),
     ...(localTituloId !== undefined ? { tituloId: localTituloId || undefined } : {}),
+    ...(localMolduraId !== undefined ? { molduraId: localMolduraId || undefined } : {}),
   };
 
   const ownPublicProfile = characterToPublicProfile(effectiveOwnCharacter);
@@ -366,9 +372,10 @@ export function PerfilPublicoModal({
             </form>
 
             {/* BLOCO DE IDENTIDADE: Avatar circular com moldura + Nome + Título (Em breve) */}
-            <div className="relative flex items-center gap-2 sm:gap-3 pt-0.5">
+            {/* com uma moldura do Yuri (maior que o avatar), o rosto fica no meio e o nome e o título vão embaixo */}
+            <div className={`relative flex gap-2 sm:gap-3 pt-0.5 ${viewedProfile.molduraId ? 'flex-col items-center text-center' : 'items-center'}`}>
               {/* Avatar circular com rosto recortado + moldura-perfil.png + ícone de troca (só no próprio perfil) */}
-              <div className="relative w-13 h-13 sm:w-16 sm:h-16 flex items-center justify-center shrink-0">
+              <div className={`relative w-13 h-13 sm:w-16 sm:h-16 flex items-center justify-center shrink-0 ${viewedProfile.molduraId ? 'mt-8 mb-7 sm:mt-10 sm:mb-9' : ''}`}>
                 <div className="w-[86%] h-[86%] rounded-full overflow-hidden bg-[#16120E]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -378,13 +385,7 @@ export function PerfilPublicoModal({
                     className="w-full h-full select-none pointer-events-none"
                   />
                 </div>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={HUD_IMAGES.molduraPerfil}
-                  alt=""
-                  aria-hidden="true"
-                  className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                />
+                <MolduraDoAvatar molduraId={viewedProfile.molduraId} />
 
                 {/* Ícone de troca sobreposto no canto do círculo — SOMENTE no próprio perfil */}
                 {isOwnProfile && (
@@ -412,21 +413,26 @@ export function PerfilPublicoModal({
                     onAvatarUpdated?.(novoAvatarId);
                   }}
                   aoTrocarTitulo={(id) => setLocalTituloId(id)}
+                  aoTrocarMoldura={(id) => setLocalMolduraId(id)}
                 />
               )}
 
-              <div className="min-w-0 flex-1 space-y-1">
+              <div className={`min-w-0 space-y-1 ${viewedProfile.molduraId ? 'flex flex-col items-center' : 'flex-1'}`}>
                 <h3 className="font-cinzel font-extrabold text-sm sm:text-lg text-[#231A12] truncate leading-tight">
                   {viewedProfile.nome}
                 </h3>
 
-                {/* Badge do título escolhido, logo abaixo do nome como na referência */}
+                {/* A faixa do título escolhido (arte do Yuri), logo abaixo do nome */}
+                {viewedProfile.tituloId && TITULO_MAP[viewedProfile.tituloId] ? (
+                  <FaixaDoTitulo id={viewedProfile.tituloId} className="w-[150px] max-w-full" />
+                ) : (
                 <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#3E245B] via-[#54337A] to-[#3E245B] border border-[#D4AF37] text-[#F5E7B8] shadow-sm max-w-full">
                   <Sparkles className="w-2.5 h-2.5 text-[#F7E396] shrink-0" />
                   <span className="text-[9px] sm:text-[10px] font-cinzel font-semibold truncate">
                     {viewedProfile.titulo ?? 'Sem título'}
                   </span>
                 </div>
+                )}
               </div>
             </div>
 

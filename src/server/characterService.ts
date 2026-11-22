@@ -162,6 +162,7 @@ import { cadastrarNaRede } from '@/server/integridade';
 import { semanaDe } from '@/rules/chefeSemanal';
 import { conquistasEmDestaque, somarEstatisticas, type ConquistasDoJogador, type Contador, type EstatisticasDoJogador } from '@/rules/conquistas';
 import { detalheDaVitoria, type DetalheDaVitoria } from '@/game/resumoDaLuta';
+import { molduraEscolhida } from '@/rules/molduras';
 import { TITULO_MAP } from '@/rules/titulos';
 import { somarVitoriasNoBestiario } from '@/rules/bestiario';
 import { ELEMENTOS, type Elemento } from '@/rules/elements';
@@ -340,6 +341,8 @@ export interface CharacterDocument {
   conquistas?: ConquistasDoJogador;
   titulos?: string[];
   tituloId?: string;
+  /** A moldura do avatar escolhida (vale só se o personagem ainda tem a moldura; senão, a Padrão). */
+  molduraId?: string;
   /** Teste de Equipe (7.4): as dificuldades concluídas de cada teste ("alma:3"), as chaves da provação e os selos do abismo. */
   testeEquipeConcluidas?: string[];
   chavesDaProvacao?: ChavesDaProvacao;
@@ -389,8 +392,11 @@ export interface PublicCharacterProfile {
   equipamentosPrincipais: EquipamentoPerfil[];
   /** O nome da guilda do personagem, se ele estiver numa (7.3). */
   guilda?: string;
-  /** O título que o jogador escolheu mostrar (o nome). */
+  /** O título que o jogador escolheu mostrar (o nome) e o id dele (para a faixa de arte). */
   titulo?: string;
+  tituloId?: string;
+  /** A moldura do avatar que o jogador escolheu (se não houver, a Padrão). */
+  molduraId?: string;
   /** As 4 conquistas mais avançadas (degraus resgatados), para a vitrine do perfil. */
   conquistasEmDestaque?: { nome: string; degraus: number }[];
 }
@@ -843,7 +849,8 @@ function toPublicCharacterProfile(char: CharacterDocument): PublicCharacterProfi
     sobre: typeof char.sobre === 'string' ? char.sobre : '',
     equipamentosPrincipais: equipamentosDoPerfil(char),
     ...(char.guildaId && char.guildaNome ? { guilda: char.guildaNome } : {}),
-    ...(char.tituloId && TITULO_MAP[char.tituloId] && char.titulos?.includes(char.tituloId) ? { titulo: TITULO_MAP[char.tituloId].nome } : {}),
+    ...(char.tituloId && TITULO_MAP[char.tituloId] && char.titulos?.includes(char.tituloId) ? { titulo: TITULO_MAP[char.tituloId].nome, tituloId: char.tituloId } : {}),
+    ...(molduraEscolhida(char) ? { molduraId: char.molduraId } : {}),
     conquistasEmDestaque: conquistasEmDestaque(char.conquistas),
   };
 }
