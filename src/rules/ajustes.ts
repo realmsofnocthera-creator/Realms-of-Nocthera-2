@@ -1,4 +1,5 @@
 /** Ajustes manuais do Painel do Mestre (3.5.4.2): campos permitidos e limites por pedido. */
+import { MATERIAIS_MUNDO } from './materiaisArmas';
 export const CAMPOS_DE_AJUSTE = [
   'ouro',
   'diamantes',
@@ -66,7 +67,13 @@ export const LIMITE_POR_CAMPO: Readonly<Record<CampoDeAjuste, number>> = {
 };
 
 export const LIMITE_DE_MATERIAL_POR_PEDIDO = 1_000;
-export const MAXIMO_DE_MATERIAIS_POR_PEDIDO = 20;
+// 40: cabem os 35 materiais de mundo juntos (o pacote "400 de cada" do Correio do Mestre).
+export const MAXIMO_DE_MATERIAIS_POR_PEDIDO = 40;
+
+/** Todos os materiais de mundo, com a mesma quantidade de cada (id → quantidade), para o presente do Correio ou do ajuste do Mestre. */
+export function materiaisDeMundoEm(quantidade: number): Record<string, number> {
+  return Object.fromEntries(MATERIAIS_MUNDO.map((m) => [m.id, quantidade]));
+}
 
 export function ehCampoDeAjuste(valor: string): valor is CampoDeAjuste {
   return (CAMPOS_DE_AJUSTE as readonly string[]).includes(valor);
