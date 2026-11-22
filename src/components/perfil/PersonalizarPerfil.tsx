@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AVATAR_IMAGES, getAvatarFaceStyle, resolveAvatarSrc } from '@/assets/avatars';
 import { TELAS_UI } from '@/assets/telasSociaisUi';
 import { PalcoPixel, Texto } from '@/components/pixel/GradePixel';
@@ -101,7 +102,9 @@ export function PersonalizarPerfil({ personagem, abaInicial = 'avatar', aoFechar
   const moldurasDoJogador = MOLDURAS.filter((m) => molduraLiberada(personagem, m));
   const moldurasQueFaltam = MOLDURAS.filter((m) => !molduraLiberada(personagem, m));
 
-  return (
+  if (typeof document === 'undefined') return null;
+  // Sai do perfil (que é um "container", onde o fixed ficava preso só na parte da esquerda e deixava o resto da tela por baixo) e cobre a tela inteira.
+  return createPortal(
     <div className="fixed inset-0 z-[100]">
       <PalcoPixel fundo={TELAS_UI.fundoPerfil}>
         <Cabecalho titulo={T.titulo} voltar={aoFechar} rotuloVoltar={TT.voltar} />
@@ -186,6 +189,7 @@ export function PersonalizarPerfil({ personagem, abaInicial = 'avatar', aoFechar
           </AreaQueRola>
         )}
       </PalcoPixel>
-    </div>
+    </div>,
+    document.body
   );
 }
