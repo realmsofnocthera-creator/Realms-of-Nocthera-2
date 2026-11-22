@@ -50,3 +50,15 @@ describe('Balanceamento 2.4: ajuste de dano por classe', () => {
     expect(fatorDeDanoDaClasse('constructor')).toBe(100);
   });
 });
+
+describe('Balanceamento 2.3: chefe do Teste de Equipe', () => {
+  it('sobe pela escala boss do nível de referência (dificuldade 1 = nível 25), com a vida multiplicada pelo tamanho da party', async () => {
+    const { montarChefeDoTeste } = await import('@/rules/testeEquipe');
+    const { pontosDeReferencia, PERFIS, MULT_CHAVE } = await import('@/rules/cacada');
+    const antes = Math.round(pontosDeReferencia(25) * 0.8 * PERFIS.normal.hp * MULT_CHAVE.hp * 1.5);
+    const um = montarChefeDoTeste('corpo', 1, 1);
+    expect(um.hp).toBe(escalarVida(antes, 25, 'boss'));
+    expect(um.hp).toBeGreaterThan(antes * 10);
+    expect(montarChefeDoTeste('corpo', 1, 3).hp).toBe(um.hp * 3);
+  });
+});

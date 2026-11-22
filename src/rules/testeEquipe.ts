@@ -1,3 +1,4 @@
+import { escalarAtaque, escalarVida } from './escalaMonstros';
 import type { Attributes } from './attributes';
 import { CATEGORIAS_DE_CARTA, NOME_DA_CATEGORIA, type CategoriaDeCarta } from './almas';
 import { MULT_CHAVE, PERFIS, pontosDeReferencia } from './cacada';
@@ -151,7 +152,8 @@ export function montarChefeDoTeste(categoria: CategoriaDoTeste, dificuldade: num
   const ref = 25 + (d - 1);
   const p = pontosDeReferencia(Math.min(30, ref)) * MULT_DA_DIFICULDADE[d - 1];
   const perfil = PERFIS.normal;
-  const dano = Math.max(1, Math.round(p * perfil.forca * MULT_CHAVE.forca));
+  // Balanceamento 2.3: o chefe sobe pela escala boss do nível de referência (a mesma dos outros modos); as dificuldades, a vida pelo tamanho da party e o 1,5× seguem por cima
+  const dano = escalarAtaque(Math.max(1, Math.round(p * perfil.forca * MULT_CHAVE.forca)), Math.min(30, ref), 'boss');
   const atributos: Attributes = {
     vigor: Math.round(p * 0.2),
     sorte: 0,
@@ -161,7 +163,7 @@ export function montarChefeDoTeste(categoria: CategoriaDoTeste, dificuldade: num
     inteligencia: chefe.tipoDano === 'magico' ? dano : 0,
     agilidade: Math.max(1, Math.round(p * perfil.agilidade)),
   };
-  const vidaDeUm = Math.round(p * perfil.hp * MULT_CHAVE.hp * 1.5);
+  const vidaDeUm = escalarVida(Math.round(p * perfil.hp * MULT_CHAVE.hp * 1.5), Math.min(30, ref), 'boss');
   return {
     id: chefe.id,
     nome: chefe.nome,
