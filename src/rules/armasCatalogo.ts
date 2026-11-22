@@ -1,4 +1,5 @@
 import type { ArmaBase } from './armas';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Catálogo das 164 armas base (uma por posição nas árvores dos 35 monstros), aprovado pelo Yuri em 12/10/2026.
@@ -1976,6 +1977,6 @@ export const ARMAS_BASE: readonly ArmaBase[] = [
   },
 ];
 
-export const ARMAS_BASE_MAP: Readonly<Record<string, ArmaBase>> = Object.fromEntries(
+export const ARMAS_BASE_MAP: Readonly<Record<string, ArmaBase>> = mapaDeEntradas(
   ARMAS_BASE.map((a) => [a.id, a])
 );

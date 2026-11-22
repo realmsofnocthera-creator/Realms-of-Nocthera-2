@@ -16,6 +16,7 @@ import { percentualCustoReforja } from '@/rules/armas';
 import { MATERIAIS_MAP } from '@/rules/materiais';
 import { RARIDADE_MAP, RaridadeMaterial } from '@/rules/raridades';
 import { Ambiente, custoDaReceita, pagarCusto } from './forja';
+import { temId, buscarNoMapa } from '@/lib/mapaSeguro';
 
 /**
  * Armaduras no servidor: fabricar peça, reforjar e usar orbes de armadura. Funções puras: recebem o estado do
@@ -88,7 +89,7 @@ export function planejarFabricacaoArmadura(
   pecaId: unknown,
   amb: Ambiente
 ): ResultadoArmadura<PlanoComCusto> {
-  const peca = typeof pecaId === 'string' ? PECAS_ARMADURA_MAP[pecaId] : undefined;
+  const peca = buscarNoMapa(PECAS_ARMADURA_MAP, pecaId);
   if (!peca) return { ok: false, motivo: 'pecaInvalida' };
   if (pecaDesativada(peca.id)) return { ok: false, motivo: 'pecaDesativada' };
   if (estado.armaduras.length >= MAX_ARMADURAS_POR_PERSONAGEM + (estado.espacosExtras ?? 0)) return { ok: false, motivo: 'limiteDeArmaduras' };
@@ -150,7 +151,7 @@ export function planejarUsoDeOrbes(
   const pedido = Object.entries(orbes as Record<string, unknown>).filter(([, q]) => q !== 0);
   if (pedido.length === 0) return { ok: false, motivo: 'orbesInvalidos' };
   for (const [id, q] of pedido) {
-    if (!ORBES_ARMADURA_MAP[id] || typeof q !== 'number' || !Number.isInteger(q) || q < 0) return { ok: false, motivo: 'orbesInvalidos' };
+    if (!temId(ORBES_ARMADURA_MAP, id) || typeof q !== 'number' || !Number.isInteger(q) || q < 0) return { ok: false, motivo: 'orbesInvalidos' };
   }
   const nivelAntes = nivelDoXpArmadura(atual.xp);
   if (nivelAntes >= NIVEL_MAXIMO_ARMADURA) return { ok: false, motivo: 'nivelMaximo' };

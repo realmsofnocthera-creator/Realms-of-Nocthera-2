@@ -1,6 +1,7 @@
 import { MONSTROS_CACADA_DADOS } from '@/rules/cacada';
 import { PROVACOES } from '@/rules/provacoes';
 import { SUBCLASSES } from '@/rules/subclasses';
+import { temId, mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Provação de Batalha Sangrenta — regras puras (sem banco). Decididas pelo Yuri em 13/10/2026:
@@ -33,7 +34,7 @@ export const DIFICULDADES_BATALHA: readonly DefinicaoDificuldade[] = [
   { id: 'inferno', nome: 'Inferno', estrela: 9, chefes: 2, fragmentos: { min: 7, max: 12 }, fragmentosSubclasse: { chancePercentual: 20, min: 1, max: 2 } },
 ];
 
-export const DIFICULDADES_BATALHA_MAP: Readonly<Record<DificuldadeBatalha, DefinicaoDificuldade>> = Object.fromEntries(
+export const DIFICULDADES_BATALHA_MAP: Readonly<Record<DificuldadeBatalha, DefinicaoDificuldade>> = mapaDeEntradas(
   DIFICULDADES_BATALHA.map((d) => [d.id, d])
 ) as Record<DificuldadeBatalha, DefinicaoDificuldade>;
 
@@ -98,7 +99,7 @@ export function gastarTentativa(estado: EstadoBatalhaSangrenta | undefined, agor
 }
 
 export function ehDificuldadeBatalha(valor: unknown): valor is DificuldadeBatalha {
-  return typeof valor === 'string' && valor in DIFICULDADES_BATALHA_MAP;
+  return temId(DIFICULDADES_BATALHA_MAP, valor);
 }
 
 /** A Fácil está sempre aberta; as outras abrem ao vencer a anterior pelo menos uma vez. */

@@ -1,6 +1,7 @@
 import { MATERIAIS_MAP } from '@/rules/materiais';
 import { MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
 import { GAME_CONFIG } from '@/rules/config';
+import { temId } from '@/lib/mapaSeguro';
 
 /**
  * Condição de acesso de um objeto do mapa (Campanha, 5.5-5): porta, baú, ativador de cena e área de monstros só
@@ -30,7 +31,7 @@ export const MENSAGEM_PADRAO_DE_BLOQUEIO = 'Você ainda não pode passar por aqu
 
 const eObjeto = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
-export const itemExiste = (id: string) => id in MATERIAIS_MAP || id in MATERIAIS_MUNDO_MAP;
+export const itemExiste = (id: string) => temId(MATERIAIS_MAP, id) || temId(MATERIAIS_MUNDO_MAP, id);
 
 /** Confere a condição bruta de um objeto e devolve a cópia limpa (undefined se não há exigência nenhuma). */
 export function validarCondicao(bruto: unknown, nome: string, erros: string[]): CondicaoDeAcesso | undefined {

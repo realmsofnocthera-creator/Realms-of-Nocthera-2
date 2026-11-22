@@ -1,4 +1,5 @@
 import { CATEGORIAS_ARMA, type CategoriaArma } from './armas';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Maestrias (decididas pelo Yuri em 23/10/2026; conceito do roadmap: 100 níveis por trilha, marcos a cada 10). Cada
@@ -137,7 +138,7 @@ export const TRILHAS_DE_MAESTRIA: readonly TrilhaDeMaestria[] = [
   ),
 ];
 
-export const TRILHA_MAP: Readonly<Record<string, TrilhaDeMaestria>> = Object.fromEntries(TRILHAS_DE_MAESTRIA.map((t) => [t.id, t]));
+export const TRILHA_MAP: Readonly<Record<string, TrilhaDeMaestria>> = mapaDeEntradas(TRILHAS_DE_MAESTRIA.map((t) => [t.id, t]));
 export const NOME_DO_GRUPO_DE_MAESTRIA: Readonly<Record<GrupoDeMaestria, string>> = {
   armas: 'Armas',
   chefes: 'Chefes',

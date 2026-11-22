@@ -9,6 +9,7 @@ import { CategoriaCorporal, TipoGolpe } from './corposMonstros';
 import { HabilidadeMonstro, MonsterDefinition } from './monsters';
 import { SUBESPECIES_CACADA, SubespecieCacada } from './cacadaSubespecies';
 import { XP_TABLE } from './xpTable';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Provação da Caçada (estilo Monster Hunter), decidida pelo Yuri em 12/10/2026.
@@ -1444,7 +1445,7 @@ export const MONSTROS_CACADA: readonly MonsterDefinition[] =
   MONSTROS_CACADA_DADOS.map(montarMonstroCacada);
 
 export const MONSTROS_CACADA_MAP: Readonly<Record<string, MonsterDefinition>> =
-  Object.fromEntries(MONSTROS_CACADA.map((m) => [m.id, m]));
+  mapaDeEntradas(MONSTROS_CACADA.map((m) => [m.id, m]));
 
 export const DADOS_CACADA_MAP: Readonly<Record<string, MonstroCacadaDados>> =
-  Object.fromEntries(MONSTROS_CACADA_DADOS.map((m) => [m.id, m]));
+  mapaDeEntradas(MONSTROS_CACADA_DADOS.map((m) => [m.id, m]));

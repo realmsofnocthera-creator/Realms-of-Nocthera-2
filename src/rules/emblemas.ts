@@ -1,3 +1,4 @@
+import { mapaDeEntradas, temId } from '@/lib/mapaSeguro';
 /**
  * Raridades dos emblemas da Provação do Guerreiro (Yuri, 14/10/2026): Comum, Raro, Muito raro, Épico, Lendário e
  * Mítico. Nesta primeira versão o emblema é só a raridade (sem nome nem efeito); o catálogo e os efeitos vêm depois.
@@ -19,10 +20,10 @@ export const EMBLEMA_RARIDADES: readonly DefinicaoEmblemaRaridade[] = [
   { id: 'mitico', nome: 'Mítico', cor: '#FF5A5A' },
 ];
 
-export const EMBLEMA_RARIDADE_MAP: Readonly<Record<EmblemaRaridade, DefinicaoEmblemaRaridade>> = Object.fromEntries(
+export const EMBLEMA_RARIDADE_MAP: Readonly<Record<EmblemaRaridade, DefinicaoEmblemaRaridade>> = mapaDeEntradas(
   EMBLEMA_RARIDADES.map((r) => [r.id, r])
 ) as Record<EmblemaRaridade, DefinicaoEmblemaRaridade>;
 
 export function ehEmblemaRaridade(v: unknown): v is EmblemaRaridade {
-  return typeof v === 'string' && v in EMBLEMA_RARIDADE_MAP;
+  return temId(EMBLEMA_RARIDADE_MAP, v);
 }

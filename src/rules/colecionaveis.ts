@@ -1,4 +1,5 @@
 import type { AttributeName } from './attributes';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Buscar e Colecionáveis (decididos pelo Yuri em 22/10/2026). O card Buscar do Menu é a roleta: cada busca gasta 10
@@ -211,7 +212,7 @@ export const COLECIONAVEIS: readonly Colecionavel[] = (() => {
   return lista;
 })();
 
-export const COLECIONAVEL_MAP: Readonly<Record<string, Colecionavel>> = Object.fromEntries(COLECIONAVEIS.map((c) => [c.id, c]));
+export const COLECIONAVEL_MAP: Readonly<Record<string, Colecionavel>> = mapaDeEntradas(COLECIONAVEIS.map((c) => [c.id, c]));
 export const colecionaveisDaRaridade = (r: RaridadeDeColecionavel) => COLECIONAVEIS.filter((c) => c.raridade === r);
 
 // ---------------------------------------------------------------------------------------------------------------

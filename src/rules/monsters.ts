@@ -10,6 +10,7 @@ import { EfeitoStatus } from './statusEffects';
 import { CategoriaCorporal, TipoGolpe } from './corposMonstros';
 import type { ResultadoHabilidade } from '@/game/combate/habilidades/tipos';
 import type { MecanicaChefeId } from '@/game/combate/mecanicasChefe';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /** Uma ação de habilidade do monstro: o nome que aparece no log e o efeito (mesmos campos das habilidades, catálogo 1.2). */
 export interface AcaoMonstro {
@@ -177,7 +178,7 @@ export const MONSTERS: readonly MonsterDefinition[] = [
   },
 ] as const;
 
-export const MONSTERS_MAP: Readonly<Record<string, MonsterDefinition>> = Object.fromEntries(
+export const MONSTERS_MAP: Readonly<Record<string, MonsterDefinition>> = mapaDeEntradas(
   MONSTERS.map((m) => [m.id, m])
 );
 

@@ -1,3 +1,4 @@
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 /**
  * Títulos do perfil (decididos pelo Yuri em 23/10/2026): vêm das conquistas (o último degrau de algumas) e de
  * ranking e eventos (pelo Correio, inclusive mandados pelo Mestre). O jogador escolhe um para mostrar no perfil.
@@ -40,7 +41,7 @@ export const TITULOS: readonly TituloDefinition[] = [
   { id: 'eterno-da-arena', nome: 'Eterno da Arena', origem: 'Terminar a semana no ranque Eterno da Arena ranqueada (pelo Correio)' },
 ];
 
-export const TITULO_MAP: Readonly<Record<string, TituloDefinition>> = Object.fromEntries(TITULOS.map((t) => [t.id, t]));
+export const TITULO_MAP: Readonly<Record<string, TituloDefinition>> = mapaDeEntradas(TITULOS.map((t) => [t.id, t]));
 export const ehTitulo = (v: unknown): v is string => typeof v === 'string' && !!TITULO_MAP[v];
 
 /** Lê os títulos do jogador (sem repetidos e só os que existem). */

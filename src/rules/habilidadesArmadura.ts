@@ -1,3 +1,4 @@
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 /**
  * Habilidades de armadura (lista do Monster Hunter World: Iceborne adaptada às regras do jogo, aprovada pelo Yuri em 13/10/2026).
  * A Parte 6 original foi excluída; entraram as 4 habilidades exclusivas dos monstros 9★.
@@ -195,6 +196,6 @@ export const HABILIDADES_ARMADURA: readonly HabilidadeArmadura[] = [
     niveis: { 1: 'Com o conjunto: dano de Fogo +5% e recupera 1% do dano causado em HP.', 2: 'Dano de Fogo +10%, recupera 2% do dano causado e Queimadura +20% de chance (relativo).', 3: 'Dano de Fogo +15%, recupera 3% do dano causado, Queimadura +40% de chance (relativo) e −5% de dano de Fogo recebido.' } },
 ];
 
-export const HABILIDADES_ARMADURA_MAP: Readonly<Record<string, HabilidadeArmadura>> = Object.fromEntries(
+export const HABILIDADES_ARMADURA_MAP: Readonly<Record<string, HabilidadeArmadura>> = mapaDeEntradas(
   HABILIDADES_ARMADURA.map((h) => [h.id, h])
 );

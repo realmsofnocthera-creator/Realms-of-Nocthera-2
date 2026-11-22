@@ -1,3 +1,4 @@
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 /**
  * O tutorial (do nível 1 ao 25): capítulos que aparecem quando o jogador chega ao nível de cada modo. Cada passo mostra um texto e, quando tem
  * `alvo`, destaca na tela onde tocar (o elemento com `data-tutorial="<alvo>"`). Um passo `tocar` só avança quando o jogador toca no destaque (é o
@@ -179,4 +180,4 @@ export const CAPITULOS_DO_TUTORIAL: readonly CapituloDoTutorial[] = [
   },
 ];
 
-export const CAPITULO_MAP: Readonly<Record<string, CapituloDoTutorial>> = Object.fromEntries(CAPITULOS_DO_TUTORIAL.map((c) => [c.id, c]));
+export const CAPITULO_MAP: Readonly<Record<string, CapituloDoTutorial>> = mapaDeEntradas(CAPITULOS_DO_TUTORIAL.map((c) => [c.id, c]));

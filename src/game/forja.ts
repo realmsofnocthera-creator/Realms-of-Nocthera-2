@@ -18,6 +18,7 @@ import { MATERIAIS_MAP } from '@/rules/materiais';
 import { ORBES_ARMADURA_MAP } from '@/rules/armaduras';
 import { MATERIAIS_MUNDO, MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
 import { RaridadeMaterial } from '@/rules/raridades';
+import { temId, buscarNoMapa } from '@/lib/mapaSeguro';
 
 /**
  * Forja (servidor): fabricar, evoluir, reforjar e customizar armas. Funções puras: recebem o estado do
@@ -159,10 +160,10 @@ export function planejarFabricacao(
   pedido: PedidoFabricacao,
   amb: Ambiente
 ): ResultadoForja<{ inventario: Record<string, number>; ouroGasto: number; armas: ArmaPersonagem[]; arma: ArmaPersonagem; base: ArmaBase }> {
-  const base = typeof pedido.baseId === 'string' ? ARMAS_BASE_MAP[pedido.baseId] : undefined;
+  const base = buscarNoMapa(ARMAS_BASE_MAP, pedido.baseId);
   if (!base) return { ok: false, motivo: 'armaInvalida' };
   if (armaDesativada(base.id)) return { ok: false, motivo: 'armaDesativada' };
-  if (typeof pedido.categoria !== 'string' || !(pedido.categoria in CATEGORIAS_ARMA_MAP)) {
+  if (!temId(CATEGORIAS_ARMA_MAP, pedido.categoria)) {
     return { ok: false, motivo: 'categoriaInvalida' };
   }
   const categoria = pedido.categoria as CategoriaArma;

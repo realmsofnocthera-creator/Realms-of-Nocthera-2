@@ -1,5 +1,6 @@
 import type { AttributeName } from './attributes';
 import type { EmblemaRaridade } from './emblemas';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Os 25 emblemas de Realms of Nocthera (catálogo do Yuri, 14/10/2026): 2 Comuns, 3 Raros, 4 Muito raros, 6 Épicos,
@@ -265,7 +266,7 @@ export const TIPOS_EMBLEMA: readonly TipoEmblema[] = [
   },
 ];
 
-export const TIPO_EMBLEMA_MAP: Readonly<Record<string, TipoEmblema>> = Object.fromEntries(TIPOS_EMBLEMA.map((t) => [t.id, t]));
+export const TIPO_EMBLEMA_MAP: Readonly<Record<string, TipoEmblema>> = mapaDeEntradas(TIPOS_EMBLEMA.map((t) => [t.id, t]));
 
 export function tiposDaRaridade(raridade: EmblemaRaridade): TipoEmblema[] {
   return TIPOS_EMBLEMA.filter((t) => t.raridade === raridade);

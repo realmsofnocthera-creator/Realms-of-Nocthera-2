@@ -1,6 +1,7 @@
 import { ESPACOS_EXTRAS_DA_MOCHILA } from './vip';
 import type { AttributeName } from './attributes';
 import type { EmblemaRaridade } from './emblemas';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Sistema de Alma (7.8, decidido pelo Yuri em 22/10/2026): cartas equipadas na aba Alma da ficha, liberada no nível 25.
@@ -153,7 +154,7 @@ export const TIPOS_DE_CARTA: readonly TipoDeCarta[] = RARIDADES_DE_CARTA.flatMap
   )
 );
 
-export const TIPO_DE_CARTA_MAP: Readonly<Record<string, TipoDeCarta>> = Object.fromEntries(TIPOS_DE_CARTA.map((t) => [t.id, t]));
+export const TIPO_DE_CARTA_MAP: Readonly<Record<string, TipoDeCarta>> = mapaDeEntradas(TIPOS_DE_CARTA.map((t) => [t.id, t]));
 export const tiposDaRaridadeDeCarta = (raridade: EmblemaRaridade) => TIPOS_DE_CARTA.filter((t) => t.raridade === raridade);
 
 export interface EfeitoSorteado {

@@ -1,6 +1,7 @@
 import { ATTRIBUTES, Attributes } from '@/rules/attributes';
 import { EmblemaRaridade } from '@/rules/emblemas';
 import { HabilidadeEmblema, TIPO_EMBLEMA_MAP, tiposDaRaridade, TipoEmblema } from '@/rules/emblemasCatalogo';
+import { temId } from '@/lib/mapaSeguro';
 
 /**
  * Sistema de emblemas (Yuri, 14/10/2026) — regras puras (sem banco).
@@ -126,7 +127,7 @@ export function fundirEmblemas(
   estrelas: unknown,
   novoId: string
 ): Resultado<{ itens: EmblemaItem[]; consumidos: string[]; criado: EmblemaItem }> {
-  if (typeof tipoId !== 'string' || !TIPO_EMBLEMA_MAP[tipoId]) return { ok: false, motivo: 'tipoInvalido' };
+  if (!temId(TIPO_EMBLEMA_MAP, tipoId)) return { ok: false, motivo: 'tipoInvalido' };
   if (typeof estrelas !== 'number' || !Number.isInteger(estrelas) || estrelas < 1) return { ok: false, motivo: 'estrelaInvalida' };
   if (estrelas >= estrelasMaximasDoTipo(tipoId)) return { ok: false, motivo: 'estrelaMaxima' };
   const custo = CUSTO_DA_FUSAO[estrelas];

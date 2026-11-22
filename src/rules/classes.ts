@@ -1,5 +1,6 @@
 import { Attributes } from './attributes';
 import { Elemento } from './elements';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 export interface ClassAbilityMilestone {
   id: string;
@@ -383,7 +384,7 @@ export const CLASSES: readonly ClassDefinition[] = [
   },
 ];
 
-export const CLASSES_MAP: Readonly<Record<string, ClassDefinition>> = Object.fromEntries(
+export const CLASSES_MAP: Readonly<Record<string, ClassDefinition>> = mapaDeEntradas(
   CLASSES.map((c) => [c.id, c])
 );
 

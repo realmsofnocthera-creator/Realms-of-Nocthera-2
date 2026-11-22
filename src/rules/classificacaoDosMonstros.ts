@@ -1,4 +1,5 @@
 import type { ClassificacaoDeMonstro } from '@/rules/maestrias';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * A classificação de cada criatura da Caçada nas 13 classificações do bestiário (as do Yuri, 23/10/2026; os ícones já existem
@@ -36,6 +37,6 @@ const POR_CLASSIFICACAO: Readonly<Record<ClassificacaoDeMonstro, readonly string
   primordiais: ['vaelgrun', 'nershaga', 'ghorvazul', 'tharvok', 'dravakhar', 'oryndrak', 'reydras'],
 };
 
-export const CLASSIFICACAO_DO_MONSTRO: Readonly<Record<string, ClassificacaoDeMonstro>> = Object.fromEntries(
+export const CLASSIFICACAO_DO_MONSTRO: Readonly<Record<string, ClassificacaoDeMonstro>> = mapaDeEntradas(
   (Object.entries(POR_CLASSIFICACAO) as [ClassificacaoDeMonstro, readonly string[]][]).flatMap(([classificacao, ids]) => ids.map((id) => [id, classificacao]))
 );

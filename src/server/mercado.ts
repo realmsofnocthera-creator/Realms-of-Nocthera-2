@@ -46,6 +46,7 @@ import { comMensagem, novaMensagem } from '@/server/correio';
 import { registrarLog, descreverErro } from '@/server/log';
 import { repositorio, type ContextoTransacao } from '@/server/persistencia';
 import { exigirSistemaLigado } from '@/server/sistemasLeitura';
+import { temId } from '@/lib/mapaSeguro';
 
 /**
  * Troca entre jogadores (7.2). O item sai da mochila do vendedor ao anunciar e fica guardado no anúncio; na compra, o
@@ -189,7 +190,7 @@ function retirar(ctx: ContextoTransacao, c: CharacterDocument, ref: RefDoItem, q
   const naoEquipado = 'Tire o item do equipamento antes de vender.';
   switch (ref.tipo) {
     case 'material': {
-      if (!MATERIAIS_MAP[ref.id] && !MATERIAIS_MUNDO_MAP[ref.id]) throw new ErroDoMercado('Esse material não pode ser vendido.');
+      if (!temId(MATERIAIS_MAP, ref.id) && !temId(MATERIAIS_MUNDO_MAP, ref.id)) throw new ErroDoMercado('Esse material não pode ser vendido.');
       const tem = c.inventario?.[ref.id] ?? 0;
       if (quantidade > tem) throw new ErroDoMercado(`Você só tem ${tem} desse material.`);
       const inventario = { ...(c.inventario ?? {}) };

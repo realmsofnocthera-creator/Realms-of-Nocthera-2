@@ -1,6 +1,7 @@
 import { CATEGORIAS_DE_CONQUISTA, CONQUISTAS, DEGRAUS, NOME_DA_CATEGORIA, type CategoriaDeConquista } from '@/rules/conquistas';
 import { RANQUES } from '@/rules/arenaRanqueada';
 import { TITULO_MAP } from '@/rules/titulos';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Molduras do avatar no perfil (arte do Yuri, 22 estáticas e 7 animadas). Cada uma é liberada por uma regra que já existe no jogo:
@@ -61,7 +62,7 @@ const DO_CHEFE_MUNDIAL: MolduraDefinition = {
 /** As 22 molduras, na ordem da tela: ranques, Campeonato, categorias e Chefe Mundial. */
 export const MOLDURAS: readonly MolduraDefinition[] = [...DO_RANQUE, ...DO_CAMPEONATO, ...DA_CATEGORIA, DO_CHEFE_MUNDIAL].map((m) => ({ ...m, ...(ANIMADAS.has(m.id) ? { animada: true } : {}) }));
 
-export const MOLDURA_MAP: Readonly<Record<string, MolduraDefinition>> = Object.fromEntries(MOLDURAS.map((m) => [m.id, m]));
+export const MOLDURA_MAP: Readonly<Record<string, MolduraDefinition>> = mapaDeEntradas(MOLDURAS.map((m) => [m.id, m]));
 export const ehMoldura = (v: unknown): v is string => typeof v === 'string' && !!MOLDURA_MAP[v];
 
 /** Lista que as telas antigas liam (as molduras já têm arte). */

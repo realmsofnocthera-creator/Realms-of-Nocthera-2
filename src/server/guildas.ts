@@ -78,6 +78,7 @@ import { xpParaProximoNivel } from '@/game';
 import { chaveDoNome, chaveDoNomeDeGuilda, repositorio, type ContextoTransacao } from '@/server/persistencia';
 import { comLimiteSilencioso } from '@/server/sancoes';
 import { exigirSistemaLigado, lerConfiguracaoDeSistemas } from '@/server/sistemasLeitura';
+import { temId } from '@/lib/mapaSeguro';
 
 /**
  * Guildas (7.3). Toda mudança é uma transação que lê e grava juntos o documento da guilda e o dos personagens
@@ -874,6 +875,9 @@ export async function lutarIncursao(uid: string, r: RegrasDeGuilda, semente: num
  * Doação para um ramo da Pesquisa: ouro e/ou materiais (pontos pela raridade). Só tira o que falta para o próximo
  * nível. Quando as duas barras enchem, o ramo sobe e o bônus novo vai para o personagem de todos os membros.
  */
+/** Quantos materiais diferentes cabem numa doação da Pesquisa. */
+export const MAXIMO_DE_MATERIAIS_NA_DOACAO = 20;
+
 export async function doarPesquisa(uid: string, pedido: PedidoDeAcao, r: RegrasDeGuilda): Promise<{ mensagem: string }> {
   if (!ehRamoDaPesquisa(pedido.ramo)) throw new ErroDeGuilda('Escolha um ramo da Pesquisa.');
   const ramo = pedido.ramo;
@@ -882,9 +886,12 @@ export async function doarPesquisa(uid: string, pedido: PedidoDeAcao, r: RegrasD
   const materiaisPedidos: [string, number][] = [];
   if (pedido.materiais !== undefined) {
     if (typeof pedido.materiais !== 'object' || pedido.materiais === null) throw new ErroDeGuilda('Materiais inválidos.');
-    for (const [id, qtd] of Object.entries(pedido.materiais as Record<string, unknown>)) {
-      if (!MATERIAIS_MAP[id] || typeof qtd !== 'number' || !Number.isInteger(qtd) || qtd < 0) throw new ErroDeGuilda('Materiais inválidos.');
-      if (qtd > 0) materiaisPedidos.push([id, qtd]);
+    const entradas = Object.entries(pedido.materiais as Record<string, unknown>);
+    if (entradas.length > MAXIMO_DE_MATERIAIS_NA_DOACAO) throw new ErroDeGuilda('Materiais demais numa doação.');
+    for (const [id, qtd] of entradas) {
+      // o id precisa ser do catálogo (nunca "constructor" ou "__proto__") e a quantidade, um inteiro positivo e seguro
+      if (!temId(MATERIAIS_MAP, id) || typeof qtd !== 'number' || !Number.isSafeInteger(qtd) || qtd <= 0) throw new ErroDeGuilda('Materiais inválidos.');
+      materiaisPedidos.push([id, qtd]);
     }
   }
   if (ouroPedido === 0 && materiaisPedidos.length === 0) throw new ErroDeGuilda('Escolha o ouro ou os materiais para doar.');

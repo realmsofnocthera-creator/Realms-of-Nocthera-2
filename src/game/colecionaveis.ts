@@ -19,6 +19,7 @@ import {
   type SeloDeBusca,
   type SelosDoJogador,
 } from '@/rules/colecionaveis';
+import { buscarNoMapa } from '@/lib/mapaSeguro';
 
 /**
  * Buscar e Colecionáveis: operações puras (sem banco). O servidor chama estas funções numa transação e grava o
@@ -111,7 +112,7 @@ export function buscar(
 
 /** Ativa o colecionável gastando os fragmentos dele. */
 export function ativarColecionavel(colecionaveis: ColecionaveisDoJogador, id: unknown): Resultado<{ colecionaveis: ColecionaveisDoJogador }> {
-  const c = typeof id === 'string' ? COLECIONAVEL_MAP[id] : undefined;
+  const c = buscarNoMapa(COLECIONAVEL_MAP, id);
   if (!c) return falha('colecionavelNaoEncontrado');
   const atual = colecionaveis[c.id] ?? { fragmentos: 0 };
   if (estaAtivo(atual)) return falha('jaAtivo');
@@ -127,7 +128,7 @@ export function reforcarColecionavel(
   id: unknown,
   niveis: number
 ): Resultado<{ colecionaveis: ColecionaveisDoJogador; memoria: number; nivel: number }> {
-  const c = typeof id === 'string' ? COLECIONAVEL_MAP[id] : undefined;
+  const c = buscarNoMapa(COLECIONAVEL_MAP, id);
   if (!c) return falha('colecionavelNaoEncontrado');
   const atual = colecionaveis[c.id];
   if (!atual || !estaAtivo(atual)) return falha('naoAtivo');
@@ -145,7 +146,7 @@ export function subirEstrela(
   pedras: number,
   id: unknown
 ): Resultado<{ colecionaveis: ColecionaveisDoJogador; pedras: number; estrelas: number }> {
-  const c = typeof id === 'string' ? COLECIONAVEL_MAP[id] : undefined;
+  const c = buscarNoMapa(COLECIONAVEL_MAP, id);
   if (!c) return falha('colecionavelNaoEncontrado');
   const atual = colecionaveis[c.id];
   if (!atual || !estaAtivo(atual)) return falha('naoAtivo');

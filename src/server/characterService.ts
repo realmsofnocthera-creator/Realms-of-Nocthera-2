@@ -178,6 +178,7 @@ import {
   ResumoTorreRegistro,
   repositorio,
 } from './persistencia';
+import { buscarNoMapa } from '@/lib/mapaSeguro';
 
 /**
  * Regras de personagem no servidor.
@@ -1880,7 +1881,7 @@ export async function executarCombate(
   opcoes: OpcoesCombate
 ): Promise<RespostaCombate> {
   await exigirSistemaLigado(uid, 'combate');
-  const monstro = await monstroEfetivo(monsterId, MONSTERS_MAP[monsterId]);
+  const monstro = await monstroEfetivo(monsterId, buscarNoMapa(MONSTERS_MAP, monsterId));
   if (!monstro) {
     throw new Error(`Monstro "${monsterId}" não encontrado.`);
   }

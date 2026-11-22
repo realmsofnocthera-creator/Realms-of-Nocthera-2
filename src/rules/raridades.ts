@@ -1,3 +1,4 @@
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 /**
  * Raridades dos materiais (decididas pelo Yuri em 12/10/2026) e a chance de cada uma por vitória na Caçada.
  * O Comum é garantido; a Sorte do caçador soma na chance das outras.
@@ -19,6 +20,6 @@ export const RARIDADES_MATERIAL: readonly DefinicaoRaridade[] = [
   { id: 'lendario', nome: 'Lendário', estrelas: 5, chancePercentual: 1 },
 ];
 
-export const RARIDADE_MAP: Readonly<Record<RaridadeMaterial, DefinicaoRaridade>> = Object.fromEntries(
+export const RARIDADE_MAP: Readonly<Record<RaridadeMaterial, DefinicaoRaridade>> = mapaDeEntradas(
   RARIDADES_MATERIAL.map((r) => [r.id, r])
 ) as Record<RaridadeMaterial, DefinicaoRaridade>;

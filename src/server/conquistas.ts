@@ -15,6 +15,7 @@ import { ehMoldura, MOLDURA_MAP, molduraDoPersonagem, molduraEscolhida, molduraL
 import { alterarSaldoEm, carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { repositorio } from '@/server/persistencia';
 import { exigirSistemaLigado } from '@/server/sistemasLeitura';
+import { temId, buscarNoMapa } from '@/lib/mapaSeguro';
 
 /**
  * Conquistas e títulos: o estado (progresso de cada conquista e os títulos do jogador), resgatar os degraus batidos
@@ -116,7 +117,7 @@ export async function agirNasConquistas(uid: string, acao: unknown, pedido: { id
     if (acao === 'titulo') {
       // '' ou null tira o título
       const id = typeof pedido.titulo === 'string' ? pedido.titulo : '';
-      if (id && !(eu.titulos ?? []).includes(id)) throw new ErroDeConquista('Você ainda não tem esse título.');
+      if (id && (!temId(TITULO_MAP, id) || !(eu.titulos ?? []).includes(id))) throw new ErroDeConquista('Você ainda não tem esse título.');
       const salvo = salvarPersonagem(ctx, eu, { tituloId: id || undefined });
       return { mensagem: id ? `Título escolhido: ${TITULO_MAP[id].nome}.` : 'Título retirado do perfil.', estado: estadoDe(salvo) };
     }
@@ -130,7 +131,7 @@ export async function agirNasConquistas(uid: string, acao: unknown, pedido: { id
       return { mensagem: id ? `Moldura escolhida: ${MOLDURA_MAP[id].nome}.` : 'Moldura Padrão no perfil.', estado: estadoDe(salvo) };
     }
 
-    const alvo = acao === 'resgatar' ? (typeof pedido.id === 'string' ? CONQUISTA_MAP[pedido.id] : undefined) : null;
+    const alvo = acao === 'resgatar' ? buscarNoMapa(CONQUISTA_MAP, pedido.id) : null;
     if (acao === 'resgatar' && !alvo) throw new ErroDeConquista('Conquista não encontrada.');
     const resgatados = { ...(eu.conquistas ?? {}) };
     const recompensas: RecompensaDeConquista[] = [];

@@ -12,6 +12,7 @@ import { RARIDADE_MAP, RaridadeMaterial } from '@/rules/raridades';
 import { CUSTOMIZACAO } from '@/rules/armas';
 import { BILHETE_DE_MELHORIA, diversosDaRaridade } from './forja';
 import type { MonsterDefinition } from '@/rules/monsters';
+import { temId } from '@/lib/mapaSeguro';
 
 /**
  * Provação da Caçada — regras puras (sem banco): liberação das estrelas, XP com a trava contra farm
@@ -150,7 +151,7 @@ export function validarEntradaCacada(
   nivel: number,
   chavesVencidas: readonly number[] | undefined
 ): EntradaCacada {
-  if (typeof monstroId !== 'string' || !MONSTROS_CACADA_MAP[monstroId]) return { ok: false, motivo: 'monstroInvalido' };
+  if (!temId(MONSTROS_CACADA_MAP, monstroId)) return { ok: false, motivo: 'monstroInvalido' };
   const dados = DADOS_CACADA_MAP[monstroId];
   const estado = estadoDaEstrela(dados.estrela, nivel, chavesVencidas);
   if (!estado.liberada) return { ok: false, motivo: estado.motivo };

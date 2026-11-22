@@ -1,4 +1,5 @@
 import type { RaridadeMaterial } from './raridades';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Materiais de mundo das armas (aprovados pelo Yuri em 12/10/2026): 35, 7 por raridade.
@@ -53,6 +54,6 @@ export const MATERIAIS_MUNDO: readonly MaterialMundo[] = [
   { id: 'mundo-essencia-primordial', nome: 'Essência Primordial', raridade: 'lendario', tipo: 'diverso' },
 ];
 
-export const MATERIAIS_MUNDO_MAP: Readonly<Record<string, MaterialMundo>> = Object.fromEntries(
+export const MATERIAIS_MUNDO_MAP: Readonly<Record<string, MaterialMundo>> = mapaDeEntradas(
   MATERIAIS_MUNDO.map((m) => [m.id, m])
 );

@@ -6,6 +6,7 @@ import { TITULO_MAP } from './titulos';
 import type { Elemento } from './elements';
 import { CHEFES_ESPECIAIS_MAP } from './chefesEspeciais';
 import { SUBESPECIES_CACADA } from './cacadaSubespecies';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Conquistas (decididas pelo Yuri em 23/10/2026): metas com progresso e resgate. Cada conquista tem 5 degraus; o
@@ -292,7 +293,7 @@ export const CONQUISTAS: readonly Conquista[] = [
   { id: 'campeonatosVencidos', nome: 'Campeão', categoria: 'pvp', meta: 'Vença {n} campeonatos', metaDeUm: 'Vença 1 campeonato', metas: [1, 2, 3, 5, 10], progresso: (f) => f.campeonatosVencidos ?? 0 },
 ];
 
-export const CONQUISTA_MAP: Readonly<Record<string, Conquista>> = Object.fromEntries(CONQUISTAS.map((c) => [c.id, c]));
+export const CONQUISTA_MAP: Readonly<Record<string, Conquista>> = mapaDeEntradas(CONQUISTAS.map((c) => [c.id, c]));
 
 export const textoDaMeta = (c: Conquista, degrau: number) =>
   c.metas[degrau] === 1 && c.metaDeUm ? c.metaDeUm : c.meta.replace('{n}', c.metas[degrau].toLocaleString('pt-BR'));

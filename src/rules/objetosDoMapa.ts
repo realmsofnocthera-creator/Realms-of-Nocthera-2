@@ -1,6 +1,7 @@
 import { MATERIAIS_MAP } from '@/rules/materiais';
 import { MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
 import { ID_DE_REFERENCIA, validarCondicao, type CondicaoDeAcesso } from '@/rules/condicao';
+import { temId } from '@/lib/mapaSeguro';
 
 /**
  * Objetos interativos do mapa (3.5.6.3), parte do formato do mapa. Sete tipos, cada um com um gatilho e uma ação
@@ -219,7 +220,7 @@ export function validarObjetos(bruto: unknown, largura: number, altura: number, 
     }
     if (tipo === 'bau') {
       const item = o.item;
-      if (!ehObjeto(item) || typeof item.id !== 'string' || !(item.id in MATERIAIS_MAP || item.id in MATERIAIS_MUNDO_MAP)) {
+      if (!ehObjeto(item) || typeof item.id !== 'string' || !(temId(MATERIAIS_MAP, item.id) || temId(MATERIAIS_MUNDO_MAP, item.id))) {
         erros.push(`${nome}: item desconhecido.`);
       } else if (!inteiro(item.qtd, 1, QUANTIDADE_MAXIMA_NO_BAU)) {
         erros.push(`${nome}: a quantidade vai de 1 a ${QUANTIDADE_MAXIMA_NO_BAU}.`);

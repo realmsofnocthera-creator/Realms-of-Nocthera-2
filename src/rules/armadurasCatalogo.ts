@@ -1,4 +1,5 @@
 import type { PecaArmadura } from './armaduras';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Catálogo das 410 peças de armadura (82 conjuntos × 5 espaços), aprovado pelo Yuri em 13/10/2026: um conjunto por monstro e
@@ -2468,6 +2469,6 @@ export const PECAS_ARMADURA: readonly PecaArmadura[] = [
   },
 ];
 
-export const PECAS_ARMADURA_MAP: Readonly<Record<string, PecaArmadura>> = Object.fromEntries(
+export const PECAS_ARMADURA_MAP: Readonly<Record<string, PecaArmadura>> = mapaDeEntradas(
   PECAS_ARMADURA.map((p) => [p.id, p])
 );

@@ -1,6 +1,7 @@
 import type { AttributeName } from './attributes';
 import type { RaridadeMaterial } from './raridades';
 import { DANO_FIXO_POR_ESTRELA, RaridadeArma, ReceitaArma } from './armas';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Armaduras (decididas pelo Yuri em 13/10/2026):
@@ -38,7 +39,7 @@ export const ESPACOS_ARMADURA: readonly DefinicaoEspacoArmadura[] = [
   { id: 'botas', nome: 'Botas', fixo: 'agilidade', parteDaBase: 0.125 },
 ];
 
-export const ESPACOS_ARMADURA_MAP: Readonly<Record<EspacoArmadura, DefinicaoEspacoArmadura>> = Object.fromEntries(
+export const ESPACOS_ARMADURA_MAP: Readonly<Record<EspacoArmadura, DefinicaoEspacoArmadura>> = mapaDeEntradas(
   ESPACOS_ARMADURA.map((e) => [e.id, e])
 ) as Record<EspacoArmadura, DefinicaoEspacoArmadura>;
 
@@ -136,7 +137,7 @@ export const ORBES_ARMADURA: readonly OrbeArmadura[] = [
   { id: 'orbe-de-armadura-regio', nome: 'Orbe de Armadura Régio', raridade: 'lendario', xp: 1000 },
 ];
 
-export const ORBES_ARMADURA_MAP: Readonly<Record<string, OrbeArmadura>> = Object.fromEntries(
+export const ORBES_ARMADURA_MAP: Readonly<Record<string, OrbeArmadura>> = mapaDeEntradas(
   ORBES_ARMADURA.map((o) => [o.id, o])
 );
 

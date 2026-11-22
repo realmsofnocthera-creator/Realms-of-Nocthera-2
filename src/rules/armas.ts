@@ -2,6 +2,7 @@ import type { AttributeName } from './attributes';
 import type { Elemento } from './elements';
 import type { RaridadeMaterial } from './raridades';
 import type { EfeitoStatus } from './statusEffects';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Armas (decididas pelo Yuri em 12/10/2026), estilo Monster Hunter World:
@@ -92,7 +93,7 @@ export const CATEGORIAS_ARMA: readonly DefinicaoCategoriaArma[] = [
   },
 ];
 
-export const CATEGORIAS_ARMA_MAP: Readonly<Record<CategoriaArma, DefinicaoCategoriaArma>> = Object.fromEntries(
+export const CATEGORIAS_ARMA_MAP: Readonly<Record<CategoriaArma, DefinicaoCategoriaArma>> = mapaDeEntradas(
   CATEGORIAS_ARMA.map((c) => [c.id, c])
 ) as Record<CategoriaArma, DefinicaoCategoriaArma>;
 
@@ -113,7 +114,7 @@ export const RARIDADES_ARMA: readonly DefinicaoRaridadeArma[] = [
   { id: 'mitico', nome: 'Mítico', pontosMin: 101, pontosMax: 150 },
 ];
 
-export const RARIDADES_ARMA_MAP: Readonly<Record<RaridadeArma, DefinicaoRaridadeArma>> = Object.fromEntries(
+export const RARIDADES_ARMA_MAP: Readonly<Record<RaridadeArma, DefinicaoRaridadeArma>> = mapaDeEntradas(
   RARIDADES_ARMA.map((r) => [r.id, r])
 ) as Record<RaridadeArma, DefinicaoRaridadeArma>;
 

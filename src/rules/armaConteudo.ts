@@ -3,6 +3,7 @@ import { MATERIAIS_MAP } from '@/rules/materiais';
 import { MATERIAIS_MUNDO_MAP } from '@/rules/materiaisArmas';
 import type { ResultadoValidacao } from '@/rules/mapa';
 import { RARIDADES_MATERIAL, type RaridadeMaterial } from '@/rules/raridades';
+import { temId } from '@/lib/mapaSeguro';
 
 /**
  * Arma no banco (3.5.2.1 e 3.5.3.2), formato 1: o que o Painel do Mestre pode ajustar numa arma do catálogo.
@@ -81,8 +82,8 @@ export function validarReceita(brutoReceita: unknown, erros: string[]): ReceitaA
       }
     }
     receita = {
-      materiaisMonstro: itensDaReceita(r.materiaisMonstro, 'Materiais do monstro', (id) => id in MATERIAIS_MAP, erros),
-      materiaisMundo: itensDaReceita(r.materiaisMundo, 'Materiais do mundo', (id) => id in MATERIAIS_MUNDO_MAP, erros),
+      materiaisMonstro: itensDaReceita(r.materiaisMonstro, 'Materiais do monstro', (id) => temId(MATERIAIS_MAP, id), erros),
+      materiaisMundo: itensDaReceita(r.materiaisMundo, 'Materiais do mundo', (id) => temId(MATERIAIS_MUNDO_MAP, id), erros),
       diversos,
       ouro: typeof r.ouro === 'number' ? r.ouro : 0,
     };

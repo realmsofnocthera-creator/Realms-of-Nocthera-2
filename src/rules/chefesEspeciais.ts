@@ -1,5 +1,6 @@
 import { MonsterDefinition, PassivasMonstro } from './monsters';
 import { montarMonstroCacada, MonstroCacadaDados } from './cacada';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Chefes Especiais da Batalha Sangrenta (lore e kits do Yuri, 13/10/2026). Vida e atributos saem da estrela da
@@ -171,10 +172,10 @@ export const CHEFES_ESPECIAIS_MONSTROS: readonly MonsterDefinition[] = CHEFES.ma
   passivas: c.passivas,
 }));
 
-export const CHEFES_ESPECIAIS_MAP: Readonly<Record<string, MonsterDefinition>> = Object.fromEntries(
+export const CHEFES_ESPECIAIS_MAP: Readonly<Record<string, MonsterDefinition>> = mapaDeEntradas(
   CHEFES_ESPECIAIS_MONSTROS.map((m) => [m.id, m])
 );
 
-export const ESPECIALIDADE_CHEFE_ESPECIAL: Readonly<Record<string, string>> = Object.fromEntries(
+export const ESPECIALIDADE_CHEFE_ESPECIAL: Readonly<Record<string, string>> = mapaDeEntradas(
   CHEFES.map((c) => [c.dados.id, c.especialidade])
 );

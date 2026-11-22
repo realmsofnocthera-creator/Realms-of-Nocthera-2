@@ -1,5 +1,6 @@
 import { Attributes } from './attributes';
 import { GAME_CONFIG } from './config';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 export type DraconianLineage = 'fogo' | 'gelo' | 'relampago' | 'terra' | 'vento';
 
@@ -369,7 +370,7 @@ export const RACES: readonly RaceDefinition[] = [
   },
 ] as const;
 
-export const RACES_MAP: Readonly<Record<string, RaceDefinition>> = Object.fromEntries(
+export const RACES_MAP: Readonly<Record<string, RaceDefinition>> = mapaDeEntradas(
   RACES.map((r) => [r.id, r])
 );
 

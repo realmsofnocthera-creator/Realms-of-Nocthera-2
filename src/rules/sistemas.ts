@@ -1,4 +1,5 @@
 import { REGRAS_PADRAO_DE_GUILDA, regrasDeGuildaValidas, type RegrasDeGuilda } from '@/rules/guilda';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Feature flags e modo manutenção (3.5.5.2). O Dono desliga e liga sistemas do jogo sem deploy, com mensagem
@@ -30,7 +31,7 @@ export const SISTEMAS = [
 ] as const;
 export type SistemaId = (typeof SISTEMAS)[number]['id'];
 
-export const NOME_DO_SISTEMA: Readonly<Record<SistemaId, string>> = Object.fromEntries(SISTEMAS.map((s) => [s.id, s.nome])) as Record<SistemaId, string>;
+export const NOME_DO_SISTEMA: Readonly<Record<SistemaId, string>> = mapaDeEntradas(SISTEMAS.map((s) => [s.id, s.nome])) as Record<SistemaId, string>;
 
 export function ehSistema(v: unknown): v is SistemaId {
   return typeof v === 'string' && SISTEMAS.some((s) => s.id === v);

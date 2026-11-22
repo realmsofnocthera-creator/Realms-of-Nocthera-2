@@ -14,6 +14,7 @@ import { gerarSementeCombate } from '@/server/combateSemente';
 import { sorteadorDaSemente } from '@/server/almas';
 import { repositorio } from '@/server/persistencia';
 import { exigirSistemaLigado } from '@/server/sistemasLeitura';
+import {  } from '@/lib/mapaSeguro';
 
 /**
  * Buscar (a roleta de colecionáveis) e a aba Colecionáveis: buscar com selos, ativar, reforçar e subir estrelas, tudo

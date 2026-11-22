@@ -5,6 +5,7 @@ import { gerarSementeCombate } from '@/server/combateSemente';
 import { respostaErroPersistencia } from '@/server/respostaErro';
 import { MONSTERS_MAP } from '@/rules/monsters';
 import { limitarPorConta, limitarPorIp } from '@/server/rateLimit';
+import { buscarNoMapa } from '@/lib/mapaSeguro';
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const monstro = MONSTERS_MAP[monsterId];
+    const monstro = buscarNoMapa(MONSTERS_MAP, monsterId);
     if (!monstro) {
       return NextResponse.json(
         { error: `Monstro "${monsterId}" não encontrado.` },

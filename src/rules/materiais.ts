@@ -1,4 +1,5 @@
 import type { RaridadeMaterial } from './raridades';
+import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
  * Catálogo de materiais da Caçada (bestiário v2, aprovado em 12/10/2026): 142 dos 35 monstros e 141 das 43 subespécies.
@@ -1704,4 +1705,4 @@ export const MATERIAIS: readonly MaterialDefinition[] = [
 ];
 
 export const MATERIAIS_MAP: Readonly<Record<string, MaterialDefinition>> =
-  Object.fromEntries(MATERIAIS.map((m) => [m.id, m]));
+  mapaDeEntradas(MATERIAIS.map((m) => [m.id, m]));
