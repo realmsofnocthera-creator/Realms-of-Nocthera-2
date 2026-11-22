@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { NOME_DO_CAMPO, type CampoDeAjuste } from '@/rules/ajustes';
+import { MAXIMO_DE_MATERIAIS_POR_PEDIDO, materiaisDeMundoEm, NOME_DO_CAMPO, type CampoDeAjuste } from '@/rules/ajustes';
 import { TEXTO_MAXIMO, TITULO_MAXIMO } from '@/rules/correio';
 import { TITULOS } from '@/rules/titulos';
 import { NOCTHERA_THEME } from '@/theme/theme';
@@ -31,6 +31,8 @@ export function CorreioDoMestre({ tokenFresco, jogador }: { tokenFresco: Token; 
   const [texto, setTexto] = useState('');
   const [valores, setValores] = useState<Partial<Record<CampoDeAjuste, string>>>({});
   const [tituloDoPerfil, setTituloDoPerfil] = useState('');
+  // o "código" dos materiais: um JSON { "id-do-material": quantidade }, que o botão abaixo preenche com 400 de cada material de mundo
+  const [materiaisCodigo, setMateriaisCodigo] = useState('');
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null);
   const campo = 'rounded-sm border px-2 py-1 text-[12px] w-full';
@@ -42,10 +44,23 @@ export function CorreioDoMestre({ tokenFresco, jogador }: { tokenFresco: Token; 
     if (paraTodos && !window.confirm('Mandar esta mensagem para TODOS os jogadores?')) return;
     setOcupado(true);
     setAviso(null);
+    let materiais: Record<string, number> | undefined;
+    if (materiaisCodigo.trim()) {
+      try {
+        const lido: unknown = JSON.parse(materiaisCodigo);
+        if (!lido || typeof lido !== 'object' || Array.isArray(lido)) throw new Error('formato');
+        materiais = lido as Record<string, number>;
+        if (Object.keys(materiais).length > MAXIMO_DE_MATERIAIS_POR_PEDIDO) throw new Error('muitos');
+      } catch {
+        setOcupado(false);
+        setAviso({ texto: `Os materiais precisam estar no formato { "id-do-material": quantidade }, com até ${MAXIMO_DE_MATERIAIS_POR_PEDIDO} materiais.`, erro: true });
+        return;
+      }
+    }
     const campos = Object.fromEntries(Object.entries(valores).filter(([, v]) => v && v.trim()).map(([k, v]) => [k, Number(v)]));
     const r = await chamar(tokenFresco, '/api/mestre/correio', {
       method: 'POST',
-      body: JSON.stringify({ destino: paraTodos ? 'todos' : jogador!.uid, titulo, texto, campos, ...(tituloDoPerfil ? { titulos: [tituloDoPerfil] } : {}) }),
+      body: JSON.stringify({ destino: paraTodos ? 'todos' : jogador!.uid, titulo, texto, campos, ...(materiais ? { materiais } : {}), ...(tituloDoPerfil ? { titulos: [tituloDoPerfil] } : {}) }),
     });
     setOcupado(false);
     if (!r.ok) {
@@ -56,6 +71,7 @@ export function CorreioDoMestre({ tokenFresco, jogador }: { tokenFresco: Token; 
     setTitulo('');
     setTexto('');
     setValores({});
+    setMateriaisCodigo('');
     setTituloDoPerfil('');
   }
 
@@ -88,6 +104,15 @@ export function CorreioDoMestre({ tokenFresco, jogador }: { tokenFresco: Token; 
               />
             </label>
           ))}
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="materiais-codigo" className="text-[11px]">Materiais (código): {'{ "id-do-material": quantidade }'}</label>
+          <textarea id="materiais-codigo" className={`${campo} font-mono`} style={estiloCampo} rows={3} value={materiaisCodigo} onChange={(e) => setMateriaisCodigo(e.target.value)} placeholder='{ "mundo-osso-bruto": 400 }' spellCheck={false} />
+          <div>
+            <button type="button" onClick={() => setMateriaisCodigo(JSON.stringify(materiaisDeMundoEm(400)))} className="rounded-sm border px-2 py-1 text-[11px] font-bold" style={{ borderColor: `${OURO}99`, color: '#F5E3B3' }}>
+              Preencher: 400 de cada material de mundo
+            </button>
+          </div>
         </div>
         <label className="text-[11px] flex flex-col gap-0.5">
           Título do perfil (ranking e eventos)
