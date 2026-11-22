@@ -10,6 +10,7 @@ import { TEXTOS_DA_FICHA } from '@/rules/textosDaFicha';
 import { CharacterDocument } from '@/server/characterService';
 import type { SlotHabilidade } from '@/rules/habilidadesEquipadas';
 import type { SlotEquipamento } from '@/lib/equipamentoTela';
+import { publicarPersonagem } from '@/lib/personagemAtual';
 
 interface SessionUser {
   uid: string;
@@ -21,6 +22,8 @@ export default function PersonagemPage() {
   const router = useRouter();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [character, setCharacter] = useState<CharacterDocument | null>(null);
+  // o tutorial (que fica em todas as telas) sabe quem está jogando e em que nível, sem ler o personagem de novo
+  useEffect(() => publicarPersonagem(character), [character]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

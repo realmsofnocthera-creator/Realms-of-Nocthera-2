@@ -22,7 +22,7 @@ export function FichaBannerDesenvolvimento({ character, className = '' }: FichaB
   const hasPoints = Boolean(character && character.pontosDisponiveis > 0);
   const t = TEXTOS_DA_FICHA.desenvolvimento;
   return (
-    <Link href="/desenvolvimento" aria-label={t.titulo} className={`relative flex items-center justify-center gap-[2.4cqw] mx-auto select-none cursor-pointer active:translate-y-px ${className}`} style={{ width: '88cqw' }}>
+    <Link href="/desenvolvimento" data-tutorial="ficha-desenvolvimento" aria-label={t.titulo} className={`relative flex items-center justify-center gap-[2.4cqw] mx-auto select-none cursor-pointer active:translate-y-px ${className}`} style={{ width: '88cqw' }}>
       <span className="relative block shrink-0" style={{ width: '24cqw', aspectRatio: '480 / 394' }}>
         <NotificationDot visible={hasPoints} className="top-0 right-0" />
         {/* eslint-disable-next-line @next/next/no-img-element */}

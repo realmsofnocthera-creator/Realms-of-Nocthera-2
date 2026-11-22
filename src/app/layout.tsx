@@ -3,6 +3,7 @@ import localFont from 'next/font/local';
 import './globals.css';
 import { FirebaseInit } from '@/components/FirebaseInit';
 import { ChatFlutuante } from '@/components/chat/ChatFlutuante';
+import { TutorialGuia } from '@/components/tutorial/TutorialGuia';
 
 const cinzel = localFont({
   src: [
@@ -67,6 +68,7 @@ export default function RootLayout({
         <FirebaseInit />
         {children}
         <ChatFlutuante />
+        <TutorialGuia />
       </body>
     </html>
   );

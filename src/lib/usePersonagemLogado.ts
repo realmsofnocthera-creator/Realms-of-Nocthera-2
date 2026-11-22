@@ -6,6 +6,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { carregarCatalogoPublicado } from '@/lib/catalogoCliente';
 import type { CharacterDocument } from '@/server/characterService';
+import { publicarPersonagem } from '@/lib/personagemAtual';
 
 /**
  * Carrega o personagem do usuário logado (e o token) para as telas; sem login ou sem personagem, vai para /login.
@@ -14,6 +15,8 @@ import type { CharacterDocument } from '@/server/characterService';
 export function usePersonagemLogado() {
   const router = useRouter();
   const [character, setCharacter] = useState<CharacterDocument | null>(null);
+  // o tutorial (que fica em todas as telas) sabe quem está jogando e em que nível, sem ler o personagem de novo
+  useEffect(() => publicarPersonagem(character), [character]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -14,6 +14,8 @@ import { degrausProntos } from '@/rules/conquistas';
 import { useAvisos } from '@/lib/useAvisos';
 import { useAnunciosNovos } from '@/lib/useAnunciosNovos';
 import { CheckinPopup } from '@/components/checkin/CheckinPopup';
+import { gravarProgresso, recomecar } from '@/lib/tutorialProgresso';
+import { TEXTOS_DO_TUTORIAL } from '@/rules/textosDoTutorial';
 
 export interface MenuScreenProps {
   personagem?: CharacterDocument | null;
@@ -166,6 +168,7 @@ export function MenuScreen({ personagem, onFechar }: MenuScreenProps) {
             return (
               <article
                 key={item.id}
+                data-tutorial={`menu-${item.id}`}
                 aria-label={item.nome}
                 onClick={() => {
                   // Telas que já existem: a Mochila mostra os materiais da Caçada; Produção leva ao Ferreiro; Anúncios mostra o que o painel publicou
@@ -215,7 +218,8 @@ export function MenuScreen({ personagem, onFechar }: MenuScreenProps) {
           })}
         </section>
 
-        <div className="w-full flex justify-center">
+        <div className="w-full flex flex-col items-center gap-1.5">
+          {personagem && <ReverTutoriais uid={personagem.uid} />}
           <AtalhoMestre />
         </div>
       </div>
@@ -223,3 +227,23 @@ export function MenuScreen({ personagem, onFechar }: MenuScreenProps) {
     </main>
   );
 }
+
+/** Liga de novo os tutoriais (quem pulou todos, ou quer ver de novo): o guia recomeça do começo, na próxima tela. */
+function ReverTutoriais({ uid }: { uid: string }) {
+  const [feito, setFeito] = React.useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        gravarProgresso(uid, recomecar());
+        window.dispatchEvent(new Event('nocthera:tutorial'));
+        setFeito(true);
+      }}
+      className="font-cinzel text-[11px] underline cursor-pointer"
+      style={{ color: '#C8A656' }}
+    >
+      {feito ? TEXTOS_DO_TUTORIAL.tutoriaisReligados : TEXTOS_DO_TUTORIAL.reverTutoriais}
+    </button>
+  );
+}
+

@@ -25,6 +25,7 @@ import { ALTURA_DE_REFERENCIA_DA_ARTE, ALTURA_MONSTRO_PADRAO, ANIMACAO_DO_MONSTR
 import { larguraDasBarras, danoCausadoAoChefe, montarQuadros, PainelLuta, QuadroLuta } from '@/lib/cacadaReplay';
 import { textoDaFicha } from '@/rules/textosDaFicha';
 import { TEXTOS_DO_COMBATE as T } from '@/rules/textosDoCombate';
+import { useTutorialAberto } from '@/lib/tutorialAberto';
 
 interface CombateCacadaProps {
   resultado: ResultadoCombate;
@@ -224,6 +225,8 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   const furiaDoChefe = !!cena && (vis.monstro.enfurecido || (vis.monstro.escudoMax > 0 && vis.monstro.escudo <= 0));
 
   const [telaFinal, setTelaFinal] = useState(false);
+  // a luta espera enquanto o tutorial explica a tela
+  const tutorialAberto = useTutorialAberto();
   const avisouFim = useRef(false);
   const avisarFim = useCallback(() => {
     if (avisouFim.current) return;
@@ -232,7 +235,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   }, [onFim]);
 
   useEffect(() => {
-    if (abertura || telaFinal || aguardandoUltimate) return;
+    if (abertura || telaFinal || aguardandoUltimate || tutorialAberto) return;
     const timers: number[] = [];
     if (acao) timers.push(window.setTimeout(() => setAcertou(indice), tempos.impacto));
     if (fim) {
@@ -244,7 +247,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
       timers.push(window.setTimeout(() => setIndice((i) => Math.min(quadros.length - 1, i + 1)), acao ? tempos.duracao : tempos.duracao * 0.5));
     }
     return () => timers.forEach((t) => window.clearTimeout(t));
-  }, [abertura, telaFinal, aguardandoUltimate, indice, fim, rapido, lenta, acao, tempos.impacto, tempos.duracao, quadros.length, venceu, telaDeFim, avisarFim]);
+  }, [abertura, telaFinal, aguardandoUltimate, tutorialAberto, indice, fim, rapido, lenta, acao, tempos.impacto, tempos.duracao, quadros.length, venceu, telaDeFim, avisarFim]);
 
   // a tela não rola durante a luta (nem para cima nem para baixo)
   useEffect(() => {
@@ -313,7 +316,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   const cura = acao && impactou && acao.cura > 0 ? acao : null;
 
   return (
-    <div className="fixed inset-0 select-none overflow-hidden overscroll-none" style={{ backgroundColor: '#07050a', touchAction: 'none' }}>
+    <div className="fixed inset-0 select-none overflow-hidden overscroll-none" style={{ backgroundColor: '#07050a', touchAction: 'none' }} data-tutorial={abertura || telaFinal ? undefined : 'combate-pronto'}>
       {abertura && <AberturaDeBatalha aoTerminar={() => setAbertura(false)} />}
       {aguardandoUltimate && !abertura && !telaFinal && idUltimate && (
         <UltimateCinematica key={`u-${indice}`} id={idUltimate} modo={MODO_DA_ULTIMATE} rapido={rapido} aoTerminar={() => setUltimatesTocadas((t) => [...t, indice])} />
@@ -441,7 +444,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
       <p className="sr-only" aria-live="polite">{ultimaLinha}</p>
 
       {/* canto de cima à esquerda: o turno e as opções */}
-      <div className="absolute left-2 top-[max(8px,env(safe-area-inset-top))] z-20 flex items-center gap-1.5">
+      <div className="absolute left-2 top-[max(8px,env(safe-area-inset-top))] z-20 flex items-center gap-1.5" data-tutorial="combate-controles">
         <div className="h-10 pl-1.5 pr-3 flex items-center gap-1.5 border-2 font-cinzel font-black text-[18px] text-[#F3E6CC]" style={MOLDURA} aria-label={textoDaFicha(T.turno, { n: q.turno })}>
           <Hourglass className="w-5 h-5" style={{ color: '#E9B872' }} aria-hidden="true" />
           {q.turno}
@@ -458,17 +461,17 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
       </div>
 
       {/* canto de cima à direita: a vida do inimigo */}
-      <div className="absolute right-2 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-20 w-[62%] max-w-[300px]">
+      <div className="absolute right-2 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-20 w-[62%] max-w-[300px]" data-tutorial="combate-inimigo">
         <BarraDoInimigo painel={vis.monstro} modoDano={cena ? { melhor: melhorDoDia ?? 0 } : undefined} />
       </div>
 
       {/* embaixo à esquerda: o retrato, a vida e o sobreescudo */}
-      <div className="absolute left-2 bottom-[max(10px,env(safe-area-inset-bottom))] z-20 w-[58%] max-w-[290px]">
+      <div className="absolute left-2 bottom-[max(10px,env(safe-area-inset-bottom))] z-20 w-[58%] max-w-[290px]" data-tutorial="combate-jogador">
         <PainelDoJogador painel={vis.jogador} retrato={retrato} />
       </div>
 
       {/* embaixo à direita: as habilidades e quantos ataques (ticks) faltam */}
-      <div className="absolute right-2 bottom-[max(10px,env(safe-area-inset-bottom))] z-20 flex items-end gap-1.5">
+      <div className="absolute right-2 bottom-[max(10px,env(safe-area-inset-bottom))] z-20 flex items-end gap-1.5" data-tutorial="combate-habilidades">
         {comContagem.map((h) => (
           <div key={h.espaco} className={`relative w-12 h-12 border-2 overflow-hidden ${h.ativandoAgora ? 'cacada-habilidade-ativa' : ''}`} title={textoDaFicha(T.habilidade, { nome: h.nome, texto: h.texto })}
             style={{ ...MOLDURA, borderColor: h.ativandoAgora ? '#F3C769' : MOLDURA.borderColor }}>

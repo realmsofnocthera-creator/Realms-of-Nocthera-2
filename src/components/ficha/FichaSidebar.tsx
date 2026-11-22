@@ -31,7 +31,7 @@ export function FichaSidebar({ className = '', aba = 'personagem', onMudarAba, a
     { id: 'alma' as const, rotulo: almaLiberada ? t.alma : textoDaFicha(t.almaBloqueada, { nivel: NIVEL_DA_ALMA }), src: ABAS_DA_FICHA_UI.alma, ativa: aba === 'alma' },
   ];
   return (
-    <nav aria-label={TEXTOS_DA_FICHA.navegacao} className={`flex items-center gap-[0.8cqw] ${className}`}>
+    <nav data-tutorial="ficha-abas" aria-label={TEXTOS_DA_FICHA.navegacao} className={`flex items-center gap-[0.8cqw] ${className}`}>
       {botoes.map((b) => {
         const alma = b.id === 'alma';
         // a aba aberta e as que a ficha não sabe trocar ficam desligadas (aria-disabled), como antes

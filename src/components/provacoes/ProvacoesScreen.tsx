@@ -59,6 +59,7 @@ function ProvacaoNaPagina({ provacao, nivelDoPersonagem, proxima, inclinacao }: 
   const faltam = provacao.nivelRequerido - nivelDoPersonagem;
   const conteudo = (
     <article
+      data-tutorial={`provacao-${provacao.id}`}
       aria-label={textoDaFicha(aberta ? T.abertaAria : T.bloqueadaAria, { nome: provacao.nome, n: provacao.nivelRequerido })}
       className={`relative w-full h-full flex flex-col items-center justify-center ${aberta ? '' : 'cursor-not-allowed'}`}
       style={{ transform: `rotate(${inclinacao}deg)` }}

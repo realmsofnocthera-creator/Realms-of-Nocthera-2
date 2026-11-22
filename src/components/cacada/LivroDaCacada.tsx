@@ -185,6 +185,7 @@ export function LivroDaCacada({ personagem, lugar, aoMudarLugar, ocupado, aoCaca
               key={e.estrela}
               type="button"
               onClick={() => escolherEstrela(e.estrela)}
+              data-tutorial="cacada-estrelas"
               aria-pressed={ativa}
               aria-label={e.liberada ? textoDaFicha(T.estrelaAria, { n: e.estrela }) : textoDaFicha(T.estrelaBloqueadaAria, { n: e.estrela, requisito: e.bloqueio ?? '' })}
               className="absolute flex items-center justify-center cursor-pointer font-cinzel font-black text-[3cqw] leading-none focus-visible:outline focus-visible:outline-[0.6cqw] focus-visible:outline-[#6FE3EE]"
@@ -197,13 +198,13 @@ export function LivroDaCacada({ personagem, lugar, aoMudarLugar, ocupado, aoCaca
 
         {/* o conteúdo das páginas */}
         <div className="absolute inset-0 pointer-events-none" style={{ opacity: conteudoOculto ? 0 : 1, transition: 'opacity 120ms ease-out' }} aria-hidden={conteudoOculto || undefined}>
-          <div className="absolute flex flex-col justify-around pointer-events-auto" style={caixaEmPorcento(L.paginas.esquerda)} data-pagina="esquerda">
+          <div className="absolute flex flex-col justify-around pointer-events-auto" style={caixaEmPorcento(L.paginas.esquerda)} data-pagina="esquerda" data-tutorial="cacada-monstros">
             {(paginas[pagina] ?? []).map((m, i) => (
               <MonstroNaLista key={m.id} monstro={m} indice={i} escolhido={m.id === lugar.monstroId} aoEscolher={() => aoMudarLugar({ ...lugar, monstroId: m.id })} />
             ))}
             {!monstros.length && <p className="text-center font-cinzel font-bold text-[2.6cqw]" style={{ color: TINTA }}>{T.semMonstros}</p>}
           </div>
-          <div className="absolute pointer-events-auto" style={caixaEmPorcento(L.paginas.direita)} data-pagina="direita">
+          <div className="absolute pointer-events-auto" style={caixaEmPorcento(L.paginas.direita)} data-pagina="direita" data-tutorial="cacada-cacar">
             {monstro && (
               <DetalhesDoMonstro
                 monstro={monstro}

@@ -185,6 +185,7 @@ export function HudMenu({
             return (
               <button
                 key={item.id}
+                data-tutorial={`hub-${item.id}`}
                 type="button"
                 onClick={item.onClick}
                 className={`caixa-pixel ${item.caixa} group relative w-[7.5rem] sm:w-44 md:w-52 h-10 sm:h-12 md:h-14 flex items-center px-2 sm:px-3 cursor-pointer transition-transform duration-150 hover:scale-[1.03] active:scale-[0.98]`}
@@ -213,6 +214,7 @@ export function HudMenu({
           <button
             type="button"
             onClick={() => router.push('/missoes')}
+            data-tutorial="hub-missoes"
             aria-label={avisos.missoes ? 'Missões (há algo para resgatar)' : 'Missões'}
             className="caixa-pixel pointer-events-auto relative flex items-center gap-1.5 sm:gap-2 pl-1.5 pr-3 py-1 cursor-pointer transition-transform duration-150 hover:scale-105 active:scale-95"
           >
@@ -239,6 +241,7 @@ export function HudMenu({
                 return (
                   <button
                     key={item.id}
+                data-tutorial={`hub-${item.id}`}
                     type="button"
                     onClick={item.onClick}
                     className="group relative flex flex-col items-center justify-end px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md transition-transform duration-150 cursor-pointer hover:scale-105 active:scale-95"
@@ -263,6 +266,7 @@ export function HudMenu({
               return (
                 <button
                   key={item.id}
+                data-tutorial={`hub-${item.id}`}
                   type="button"
                   disabled
                   aria-disabled="true"

@@ -25,7 +25,7 @@ export function ModosDaArena({ aoEscolher, aoAbrirRegras }: { aoEscolher: (m: Mo
       <button type="button" onClick={aoAbrirRegras} aria-label={T.regras} className="absolute cursor-pointer active:translate-y-px" style={{ left: u(POSICAO.livro.x), top: u(POSICAO.livro.y), width: u(POSICAO.livro.l), height: u(POSICAO.livro.a), backgroundImage: `url(${ARENA_UI.livro})`, backgroundSize: '100% 100%', ...pixel }} />
       <Texto x={180} y={78} tamanho={6.4} cor={SUB} negrito={false} caixaAlta largura={300}>{T.escolhaOModo}</Texto>
       {CARTOES.map(({ id, arte, rect }) => (
-        <button key={id} type="button" onClick={() => aoEscolher(id)} aria-label={T.modos[id].nome} className="absolute cursor-pointer active:translate-y-px" style={{ left: u(rect.x), top: u(rect.y), width: u(rect.l), height: u(rect.a), backgroundImage: `url(${arte})`, backgroundSize: '100% 100%', ...pixel }}>
+        <button key={id} type="button" data-tutorial={`arena-modo-${id}`} onClick={() => aoEscolher(id)} aria-label={T.modos[id].nome} className="absolute cursor-pointer active:translate-y-px" style={{ left: u(rect.x), top: u(rect.y), width: u(rect.l), height: u(rect.a), backgroundImage: `url(${arte})`, backgroundSize: '100% 100%', ...pixel }}>
           <Texto x={257} y={33} tamanho={12} caixaAlta largura={92} cor={CREME}>{T.modos[id].nome}</Texto>
           <Texto x={213} y={77} tamanho={5.2} caixaAlta largura={76} alinhar="left" cor={SUB} negrito={false}>{T.modos[id].sub}</Texto>
         </button>

@@ -126,6 +126,7 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
           onClick={onOpenProfile}
           className="relative z-10 w-11 h-11 sm:w-15 sm:h-15 md:w-16 md:h-16 flex items-center justify-center shrink-0 select-none cursor-pointer group focus:outline-none"
           aria-label="Abrir Perfil Público do personagem"
+          data-tutorial="hub-perfil"
           title="Ver Perfil Público"
         >
           <div className="w-[86%] h-[86%] rounded-full overflow-hidden bg-[#16120E] group-hover:brightness-110 transition-all">
@@ -208,6 +209,7 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
           onClick={() => alternarTotal('ouro')}
           className="pilula-pixel relative flex items-center gap-1 sm:gap-1.5 pl-1 pr-1.5 sm:pr-2 py-0.5 tabular-nums cursor-pointer"
           aria-label={`Ouro: ${formatarTotal(personagem.ouro)}`}
+          data-tutorial="hub-ouro"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -262,6 +264,7 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
         {/* Botão do Correio (o ponto aparece quando há presente para resgatar) */}
         <Link
           href="/correio"
+          data-tutorial="hub-correio"
           title="Correio"
           aria-label={presentesNoCorreio ? `Correio: ${presentesNoCorreio} ${presentesNoCorreio === 1 ? 'presente' : 'presentes'} para resgatar` : 'Correio'}
           className="relative w-6 h-6 sm:w-8 sm:h-8 rounded-md flex items-center justify-center select-none"

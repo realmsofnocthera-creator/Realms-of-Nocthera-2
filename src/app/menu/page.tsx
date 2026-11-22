@@ -7,10 +7,13 @@ import { auth } from '@/lib/firebase';
 import { CharacterDocument } from '@/server/characterService';
 import { MenuScreen } from '@/components/menu/MenuScreen';
 import { NOCTHERA_THEME } from '@/theme/theme';
+import { publicarPersonagem } from '@/lib/personagemAtual';
 
 export default function MenuPage() {
   const router = useRouter();
   const [character, setCharacter] = useState<CharacterDocument | null>(null);
+  // o tutorial (que fica em todas as telas) sabe quem está jogando e em que nível, sem ler o personagem de novo
+  useEffect(() => publicarPersonagem(character), [character]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
