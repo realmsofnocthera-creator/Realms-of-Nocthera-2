@@ -172,7 +172,7 @@ describe('1.2.4 — Dano ofensivo no turno de combate', () => {
   });
 
   it('Ímpeto Imprudente: enquanto dura, quem o usa sofre com a defesa reduzida', () => {
-    const portador = barbaro('teste_impeto', { mitigacao: 20, impeto: { ataquesRestantes: 2, bonusDanoPercentual: 50, reducaoDefesaPercentual: 50 } });
+    const portador = barbaro('teste_impeto', { mitigacao: 20, atributos: { vigor: 40, sorte: 0, forca: 20, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 1 }, impeto: { ataquesRestantes: 2, bonusDanoPercentual: 50, reducaoDefesaPercentual: 50 } });
     const atacante: Combatente = alvo(0, { atributos: { vigor: 1, sorte: 0, forca: 50, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 1 } });
     expect(turnoDeCombate(atacante, portador, 1).turnoLog.ataques[0].danoEfetivo).toBe(40); // 50 − (20 × 50%)
     portador.impeto = undefined;

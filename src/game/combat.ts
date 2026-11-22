@@ -2622,7 +2622,10 @@ function turnoDeCombateInterno(
   const temSedeDeSangue =
     racaAtacante?.passivaRacial.efeito === 'roubarVidaDanoFisico';
 
-  const mitigacao = defensor.mitigacao ?? 0;
+  // A Vitalidade reduz o dano de TODA classe (1 ponto = 1 de Defesa Física): o Cavaleiro soma a dele dentro de aplicarDefesaCavaleiro (com Muralha de
+  // Ferro e os bônus de postura); os outros personagens somam aqui. Monstros não têm classe e já trazem a DEF deles em `mitigacao`.
+  const defesaPorVitalidade = defensor.classeId && !ehCavaleiroDefensor ? calcularDefesaFisica(defensor.atributos.vitalidade) : 0;
+  const mitigacao = (defensor.mitigacao ?? 0) + defesaPorVitalidade;
   const ataques: AtaqueLog[] = [];
 
   let hpAtual = defensor.hp;
