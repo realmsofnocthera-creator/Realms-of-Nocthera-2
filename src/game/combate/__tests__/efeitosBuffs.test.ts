@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Combatente, resolverCombate, turnoDeCombate } from '@/game/combat';
 import {
   AplicacaoBuff,
@@ -15,6 +15,10 @@ import {
   registrarHabilidade,
 } from '@/game/combate/habilidades';
 import { MONSTERS_MAP } from '@/rules/monsters';
+
+// Estes testes conferem a mecânica com números exatos: o ajuste de dano por classe (Balanceamento 2.4) fica desligado aqui e tem testes próprios.
+vi.mock('@/rules/ajusteDeClasses', async (original) => ({ ...(await original<typeof import('@/rules/ajusteDeClasses')>()), fatorDeDanoDaClasse: () => 100 }));
+
 
 /** 1.2.4 — Catálogo, categoria Atributos e buffs. */
 
@@ -225,13 +229,14 @@ describe('1.2.4 — Atributos e buffs no combate', () => {
     expect(turnoDeCombate(b, alvo(), 2).turnoLog.ataques).toHaveLength(2);
   });
 
-  it('Sincronismo: Agilidade 8 contra 5 (1,6x) dá ataque duplo só com o buff', () => {
+  it('Sincronismo: Agilidade 8 contra 5 soma 10 pontos à chance do ataque extra (23% → 33%)', () => {
     const b = barbaro('teste_sincronismo', {
       atributos: { vigor: 40, sorte: 0, forca: 20, vitalidade: 10, arcano: 0, inteligencia: 0, agilidade: 8 },
     });
     const a = alvo(0, { atributos: { ...alvo().atributos, agilidade: 5 } });
-    expect(turnoDeCombate(b, a, 1).turnoLog.ataques).toHaveLength(1); // aplica o Sincronismo
-    expect(turnoDeCombate(b, a, 2).turnoLog.ataques).toHaveLength(2);
+    const sorteio = { sorteioAgilidade: () => 28 }; // 28 > 23% (sem o buff), < 33% (com o buff)
+    expect(turnoDeCombate(b, a, 1, sorteio).turnoLog.ataques).toHaveLength(1); // aplica o Sincronismo
+    expect(turnoDeCombate(b, a, 2, sorteio).turnoLog.ataques).toHaveLength(2);
   });
 
   it('Delírio Controlado: +50% de dano em todas as classes (golpe padrão do Cavaleiro) e defesa em dobro', () => {

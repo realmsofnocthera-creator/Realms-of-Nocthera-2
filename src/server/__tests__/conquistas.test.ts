@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET as conquistasGet, POST as conquistasPost } from '@/app/api/conquistas/route';
 import { limparCacheRevogacao } from '@/server/auth';
@@ -15,6 +15,10 @@ import { definirSistema } from '@/server/sistemasPainel';
 import { HORA_MS } from '@/rules/expedicao';
 import { getTransactionsByUid, resetCharacterStore } from '@/test/repositorioMemoria';
 import { tokenDeTeste } from '@/test/firebaseAdminMock';
+
+// Estes testes conferem a mecânica com números exatos: o ajuste de dano por classe (Balanceamento 2.4) fica desligado aqui e tem testes próprios.
+vi.mock('@/rules/ajusteDeClasses', async (original) => ({ ...(await original<typeof import('@/rules/ajusteDeClasses')>()), fatorDeDanoDaClasse: () => 100 }));
+
 
 const PONTOS = { vigor: 5, sorte: 0, forca: 5, vitalidade: 0, arcano: 0, inteligencia: 0, agilidade: 0 };
 const FORTE = { vigor: 300, sorte: 0, forca: 300, vitalidade: 100, arcano: 0, inteligencia: 0, agilidade: 50 };

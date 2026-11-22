@@ -1,8 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Combatente, resolverCombate, turnoDeCombate } from '@/game/combat';
 import { multiplicadorCritico, sorteioCritico } from '@/game/combate/critico';
 import { calcularChanceCritico } from '@/game';
 import { MONSTERS_MAP } from '@/rules/monsters';
+
+// Estes testes conferem a mecânica com números exatos: o ajuste de dano por classe (Balanceamento 2.4) fica desligado aqui e tem testes próprios.
+vi.mock('@/rules/ajusteDeClasses', async (original) => ({ ...(await original<typeof import('@/rules/ajusteDeClasses')>()), fatorDeDanoDaClasse: () => 100 }));
+
 
 /**
  * Sorte → crítico: chance = 2% + 0,1% por ponto de Sorte; cada golpe sorteia;

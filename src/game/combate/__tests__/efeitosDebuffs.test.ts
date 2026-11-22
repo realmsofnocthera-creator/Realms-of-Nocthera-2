@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Combatente, resolverCombate, turnoDeCombate } from '@/game/combat';
 import { calcularDanoEfeito, formatarEventoEfeito } from '@/game/statusEffects';
 import {
@@ -19,6 +19,10 @@ import {
   registrarHabilidade,
 } from '@/game/combate/habilidades';
 import { MONSTERS_MAP } from '@/rules/monsters';
+
+// Estes testes conferem a mecânica com números exatos: o ajuste de dano por classe (Balanceamento 2.4) fica desligado aqui e tem testes próprios.
+vi.mock('@/rules/ajusteDeClasses', async (original) => ({ ...(await original<typeof import('@/rules/ajusteDeClasses')>()), fatorDeDanoDaClasse: () => 100 }));
+
 
 /** 1.2.4 — Catálogo, categoria Debuffs e controle. */
 
@@ -201,19 +205,20 @@ describe('1.2.4 — Debuffs e controle no combate', () => {
     expect(turnoDeCombate(rapido, alvoAgil, 2).turnoLog.ataques).toHaveLength(1); // alvo 14 → 9; 10 < 18
   });
 
-  it('Exaustão: contra uma Agilidade que cai o suficiente, o ataque duplo passa a valer', () => {
+  it('Exaustão: contra uma Agilidade que cai, a chance do ataque extra sobe (17% → 33%)', () => {
     // Alvo com Agilidade 10 vira 7: um atacante com Agilidade 14 passa a ter o dobro (14 ≥ 14)
     const atacante = barbaro('teste_exaustao', {
       habilidadesEquipadas: undefined,
       atributos: { vigor: 40, sorte: 0, forca: 20, vitalidade: 10, arcano: 0, inteligencia: 0, agilidade: 14 },
     });
     const normal = alvo(0, { atributos: { ...alvo().atributos, agilidade: 10 } });
-    expect(turnoDeCombate(atacante, normal, 1).turnoLog.ataques).toHaveLength(1);
+    const sorteio = { sorteioAgilidade: () => 25 };
+    expect(turnoDeCombate(atacante, normal, 1, sorteio).turnoLog.ataques).toHaveLength(1);
     const exausto = alvo(0, {
       atributos: { ...alvo().atributos, agilidade: 10 },
       debuffs: adicionarDebuffs([], [{ tipo: 'exaustao', percentual: 30, rodadas: 2 }]),
     });
-    expect(turnoDeCombate(atacante, exausto, 1).turnoLog.ataques).toHaveLength(2);
+    expect(turnoDeCombate(atacante, exausto, 1, sorteio).turnoLog.ataques).toHaveLength(2);
   });
 
   it('Distração: o alvo perde a próxima ação e depois volta a agir', () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Combatente, turnoDeCombate } from '@/game/combat';
 import {
   BONUS_DANO_POR_CONDICAO_PERCENTUAL,
@@ -18,6 +18,10 @@ import {
   registrarHabilidade,
   resolverDanoHabilidade,
 } from '@/game/combate/habilidades';
+
+// Estes testes conferem a mecânica com números exatos: o ajuste de dano por classe (Balanceamento 2.4) fica desligado aqui e tem testes próprios.
+vi.mock('@/rules/ajusteDeClasses', async (original) => ({ ...(await original<typeof import('@/rules/ajusteDeClasses')>()), fatorDeDanoDaClasse: () => 100 }));
+
 
 /** 1.9.1 — Bônus por status no alvo e Marca (catálogo 1.2), com a lista do Yuri. */
 

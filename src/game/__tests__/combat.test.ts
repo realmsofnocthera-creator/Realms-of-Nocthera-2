@@ -55,6 +55,10 @@ import {
 } from '@/server/characterService';
 import { getTransactionsByUid, resetCharacterStore } from '@/test/repositorioMemoria';
 
+// Estes testes conferem a mecânica com números exatos: o ajuste de dano por classe (Balanceamento 2.4) fica desligado aqui e tem testes próprios.
+vi.mock('@/rules/ajusteDeClasses', async (original) => ({ ...(await original<typeof import('@/rules/ajusteDeClasses')>()), fatorDeDanoDaClasse: () => 100 }));
+
+
 // A semente do combate vem do servidor (0.5-B1); aqui ela é fixa para o teste da rota ser determinístico
 vi.mock('../../server/combateSemente', () => ({ gerarSementeCombate: () => 42 }));
 
@@ -81,7 +85,7 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
       expect(calcularDanoMagico(0)).toBe(0);
     });
 
-    it('turnoDeCombate respeita 2 ataques quando agilidade do atacante for o dobro ou mais', () => {
+    it('turnoDeCombate dá o ataque extra por Agilidade quando o sorteio da semente cai dentro da chance (6 contra 2: 50%, com teto de 40%)', () => {
       const atacanteRapido: Combatente = {
         nome: 'Ladino',
         hp: 30,
@@ -114,7 +118,8 @@ describe('ORDEM 3 - Motor de Combate (Testes Puros e Sistema)', () => {
         },
       };
 
-      const turno = turnoDeCombate(atacanteRapido, defensorLento, 1);
+      // Balanceamento 2.2: o ataque extra é uma chance (teto de 40%); o sorteio 10 (em 100) cai dentro dela
+      const turno = turnoDeCombate(atacanteRapido, defensorLento, 1, { sorteioAgilidade: () => 10 });
       // Deve ter desferido 2 ataques no turno
       expect(turno.turnoLog.ataques.length).toBe(2);
       expect(defensorLento.hp).toBe(50 - 4 * 2); // 42

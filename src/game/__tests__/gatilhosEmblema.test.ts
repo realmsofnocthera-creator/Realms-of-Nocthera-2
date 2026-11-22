@@ -1,10 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Combatente, resolverCombate } from '@/game/combat';
 import { bonusDosGatilhos, consumirGolpeDosGatilhos, dispararGatilhos, novoEstadoGatilhos } from '@/game/combate/gatilhosEmblema';
 import { EquipamentoCombate } from '@/game/combate/equipamentoCombate';
 import { EmblemaItem } from '@/game/emblemas';
 import { efeitosEstaticosDosEmblemas, efeitosVazios, emblemasNoCombate, EmblemasNoCombate, GatilhoNoCombate } from '@/game/emblemasEfeitos';
 import { MONSTERS_MAP, MonsterDefinition } from '@/rules/monsters';
+
+// Estes testes conferem a mecânica com números exatos: o ajuste de dano por classe (Balanceamento 2.4) fica desligado aqui e tem testes próprios.
+vi.mock('@/rules/ajusteDeClasses', async (original) => ({ ...(await original<typeof import('@/rules/ajusteDeClasses')>()), fatorDeDanoDaClasse: () => 100 }));
+
 
 const item = (id: string, tipo: string, estrelas = 1): EmblemaItem => ({ id, tipo, estrelas });
 const gat = (extra: Partial<GatilhoNoCombate> & Pick<GatilhoNoCombate, 'quando' | 'resultado'>): GatilhoNoCombate => ({
@@ -287,7 +291,10 @@ describe('Monstro com DEF e as habilidades que mexem nela', () => {
   it('Investida Voraz: do segundo golpe da ação em diante, mais dano', () => {
     const veloz = { atributos: { ...heroi().atributos, agilidade: 500 } };
     const equip: EquipamentoCombate = { ...SEM_BONUS, emblemas: { ...efeitosVazios(), danoGolpesSeguidosPercentual: 100 } };
-    const ataques = (c: Combatente) => resolverCombate(c, ALVO, 11, SEM_STATUS).logTurnos[0].ataques.filter((a) => a.atacante === 'Herói');
+    const ataquesCom = (c: Combatente, seed: number) => resolverCombate(c, ALVO, seed, SEM_STATUS).logTurnos[0].ataques.filter((a) => a.atacante === 'Herói');
+    // o ataque extra por Agilidade agora é uma chance (teto de 40%) sorteada pela semente: usa a primeira semente em que ele sai
+    const seed = Array.from({ length: 200 }, (_, i) => i + 1).find((x) => ataquesCom(heroi(SEM_BONUS, veloz), x).length >= 2)!;
+    const ataques = (c: Combatente) => ataquesCom(c, seed);
     const [a1, a2] = ataques(heroi(equip, veloz));
     expect(a2.danoBruto).toBeGreaterThan(a1.danoBruto);
     const [b1, b2] = ataques(heroi(SEM_BONUS, veloz));

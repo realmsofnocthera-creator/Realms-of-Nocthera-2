@@ -1,4 +1,5 @@
 import { MULT_CHAVE, PERFIS, pontosDeReferencia } from '@/rules/cacada';
+import { escalarAtaque, escalarVida } from '@/rules/escalaMonstros';
 import type { Attributes } from '@/rules/attributes';
 import { EMBLEMA_RARIDADES, EmblemaRaridade } from '@/rules/emblemas';
 import { escolherTipoDaRaridade } from './emblemas';
@@ -148,7 +149,8 @@ export function montarChefeGuerreiro(dificuldade: number): MonsterDefinition {
   const ref = nivelDeReferenciaDoChefe(dificuldade);
   const p = pontosDeReferencia(ref);
   const perfil = PERFIS.normal;
-  const dano = Math.max(1, Math.round(p * perfil.forca * MULT_CHAVE.forca));
+  // Balanceamento 2.3: o chefe sobe pela escala boss do nível de referência
+  const dano = escalarAtaque(Math.max(1, Math.round(p * perfil.forca * MULT_CHAVE.forca)), ref, 'boss');
   const atributos: Attributes = {
     vigor: Math.round(p * 0.2),
     sorte: 0,
@@ -162,7 +164,7 @@ export function montarChefeGuerreiro(dificuldade: number): MonsterDefinition {
     id: c.id,
     nome: c.nome,
     nivel: Math.min(30, ref),
-    hp: Math.round(p * perfil.hp * MULT_CHAVE.hp),
+    hp: escalarVida(Math.round(p * perfil.hp * MULT_CHAVE.hp), ref, 'boss'),
     chefe: true,
     categoriaCorporal: c.categoriaCorporal,
     atributos,

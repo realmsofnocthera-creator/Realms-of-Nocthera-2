@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Combatente, turnoDeCombate } from '@/game/combat';
 import { MONSTERS_MAP } from '@/rules/monsters';
 import {
@@ -6,6 +6,10 @@ import {
   registrarHabilidadesDeSubclasse,
 } from '@/game/combate/habilidades';
 import { reduzirDanoPercentual } from '@/game/combate/efeitos';
+
+// Estes testes conferem a mecânica com números exatos: o ajuste de dano por classe (Balanceamento 2.4) fica desligado aqui e tem testes próprios.
+vi.mock('@/rules/ajusteDeClasses', async (original) => ({ ...(await original<typeof import('@/rules/ajusteDeClasses')>()), fatorDeDanoDaClasse: () => 100 }));
+
 
 describe('ORDEM 48D — Passivas de Subclasse (Frenesi e Casca de Pedra)', () => {
   beforeEach(() => {

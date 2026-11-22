@@ -1,7 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Combatente, resolverCombate } from '@/game/combat';
 import { elementoDaArmaNaRodada, EquipamentoCombate } from '@/game/combate/equipamentoCombate';
 import { MONSTERS_MAP, MonsterDefinition } from '@/rules/monsters';
+
+// Estes testes conferem a mecânica com números exatos: o ajuste de dano por classe (Balanceamento 2.4) fica desligado aqui e tem testes próprios.
+vi.mock('@/rules/ajusteDeClasses', async (original) => ({ ...(await original<typeof import('@/rules/ajusteDeClasses')>()), fatorDeDanoDaClasse: () => 100 }));
+
 
 /** O motor só lê a ficha do equipamento: bônus de dano, crítico, status e elemento da arma. */
 

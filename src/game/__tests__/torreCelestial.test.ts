@@ -104,7 +104,8 @@ describe('Torre Celestial (regras)', () => {
     for (let a = 20; a <= 300; a += 10) {
       const antes = montarMonstroDaTorre(a - 10);
       const agora = montarMonstroDaTorre(a);
-      expect(agora.hp).toBeGreaterThan(antes.hp * 0.9);
+      // Balanceamento 2.3: a escala cai na entrada do nível 26 (a tabela acompanha os emblemas), então um chefe pode ter até metade da vida do anterior
+      expect(agora.hp).toBeGreaterThan(antes.hp * 0.45);
     }
     const hpAndar1 = montarMonstroDaTorre(1).hp;
     const hpAndar150 = montarMonstroDaTorre(150).hp;

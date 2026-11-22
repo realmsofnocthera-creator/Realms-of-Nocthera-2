@@ -16,6 +16,11 @@ export const GAME_CONFIG = {
   OURO_PERDIDO_MORTE: 50,
   DANO_MINIMO: 1,
   MAXIMO_ATAQUES_POR_TURNO: 2,
+  // Balanceamento 2.2: o ataque extra por Agilidade é uma chance, não um corte seco. chance = (AGI atacante − AGI defensor) / (soma), no máximo isto
+  // (com o dobro de Agilidade a chance é 33%; com o triplo ou mais, 40%). PROVISÓRIO até a validação final.
+  CHANCE_ATAQUE_EXTRA_AGILIDADE_MAXIMA: 0.4,
+  // O buff Sincronismo soma isto (pontos percentuais) à chance (antes baixava o limite de 2x para 1,5x). A definir com o Game Design.
+  BONUS_SINCRONISMO_CHANCE_ATAQUE_EXTRA: 0.1,
   // Regra 1.2.2: reduções de dano recebido somadas nunca passam deste teto (só Imortalidade Breve zera o dano)
   TETO_REDUCAO_DANO_PERCENTUAL: 80,
   // Roadmap 1.3: tipo do golpe contra o corpo do alvo (fraqueza +25%, resistência −25%)

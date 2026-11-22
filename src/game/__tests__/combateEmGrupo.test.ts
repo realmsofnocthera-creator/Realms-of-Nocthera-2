@@ -1,7 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { resolverCombate, resolverCombateEmGrupo, type Combatente } from '@/game/combat';
 import { montarChefeDoTeste } from '@/rules/testeEquipe';
 import type { MonsterDefinition } from '@/rules/monsters';
+
+// Estes testes conferem a mecânica com números exatos: o ajuste de dano por classe (Balanceamento 2.4) fica desligado aqui e tem testes próprios.
+vi.mock('@/rules/ajusteDeClasses', async (original) => ({ ...(await original<typeof import('@/rules/ajusteDeClasses')>()), fatorDeDanoDaClasse: () => 100 }));
+
 
 const aliado = (nome: string, forca: number, vigor = 300): Combatente => ({
   nome,
@@ -35,10 +39,10 @@ describe('Luta em grupo (Teste de Equipe)', () => {
   });
 
   it('três aliados derrubam juntos um chefe que um sozinho não derruba', () => {
-    const vida = 12000;
+    const vida = 8000;
     const sozinho = resolverCombate(aliado('A', 60, 120), chefe(vida, 120), 5);
     expect(sozinho.vencedor).toBe('monstro');
-    const grupo = resolverCombateEmGrupo([aliado('A', 60, 120), aliado('B', 60, 120), aliado('C', 60, 120)], chefe(vida, 120), 5);
+    const grupo = resolverCombateEmGrupo([aliado('A', 60, 140), aliado('B', 60, 140), aliado('C', 60, 140)], chefe(vida, 120), 5);
     expect(grupo.vencedor).toBe('grupo');
     expect(grupo.chefeFinal.hp).toBe(0);
     const total = grupo.aliados.reduce((s, a) => s + a.dano, 0);
@@ -64,7 +68,7 @@ describe('Luta em grupo (Teste de Equipe)', () => {
   });
 
   it('o replay traz os turnos de cada aliado, na ordem das rodadas, com o chefe compartilhado', () => {
-    const r = resolverCombateEmGrupo([aliado('A', 60, 120), aliado('B', 60, 120), aliado('C', 60, 120)], chefe(12000, 120), 5);
+    const r = resolverCombateEmGrupo([aliado('A', 60, 140), aliado('B', 60, 140), aliado('C', 60, 140)], chefe(8000, 120), 5);
     expect(r.replay).toHaveLength(3);
     for (const turnos of r.replay) {
       expect(turnos.length).toBeGreaterThan(0);

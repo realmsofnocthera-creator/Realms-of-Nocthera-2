@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Combatente, turnoDeCombate } from '@/game/combat';
 import { resolverDanoHabilidade } from '@/game/combate/habilidades/resolver';
 import {
@@ -8,6 +8,10 @@ import {
   limparRegistroParaTestes,
   registrarHabilidade,
 } from '@/game/combate/habilidades';
+
+// Estes testes conferem a mecânica com números exatos: o ajuste de dano por classe (Balanceamento 2.4) fica desligado aqui e tem testes próprios.
+vi.mock('@/rules/ajusteDeClasses', async (original) => ({ ...(await original<typeof import('@/rules/ajusteDeClasses')>()), fatorDeDanoDaClasse: () => 100 }));
+
 
 /** 1.2.4 — Catálogo, categoria Dano ofensivo. */
 

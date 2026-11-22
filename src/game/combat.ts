@@ -51,6 +51,8 @@ import {
   reduzirDanoPercentual,
 } from './combate/efeitos';
 import { calcularInstintoSobrevivencia } from './combate/passivasClasse';
+import { chanceDeAtaqueExtraPorAgilidade } from './combate/ataqueExtra';
+import { fatorDeDanoDaClasse } from '@/rules/ajusteDeClasses';
 import { LadoCombate, multiplicadorCritico, sorteioCritico } from './combate/critico';
 import { sobreescudoInicialDoMonstro } from './combate/sobreescudoMonstro';
 import { elementoDaArmaNaRodada, EquipamentoCombate } from './combate/equipamentoCombate';
@@ -148,6 +150,7 @@ import {
   avancarBuffs,
   bonusDanoDosBuffs,
   bonusDefesaDosBuffs,
+  MULTIPLICADOR_AGILIDADE_DUPLO_PADRAO,
   multiplicadorAgilidadeParaDuplo,
 } from './combate/efeitosBuffs';
 import {
@@ -2532,6 +2535,8 @@ export interface OpcoesTurno {
     sorteioMecanica?: (indice: number) => number;
     /** Sorteio em [0, 100) do ataque adicional dos emblemas (Ritmo da Tempestade). */
     sorteioAtaqueExtra?: () => number;
+    /** Sorteio em [0, 100) do ataque extra por Agilidade (determinístico pela semente). Sem ele, não há ataque extra por Agilidade. */
+    sorteioAgilidade?: () => number;
     /** Este é o primeiro golpe que o defensor sofre na luta (Pouso Seguro). */
     primeiroGolpeRecebido?: boolean;
     aoFinalizarAtaque?: (
@@ -2565,10 +2570,14 @@ function turnoDeCombateInterno(
     nivel: nivelDefensor,
   });
 
-  // Sincronismo: com o buff ativo, o ataque duplo exige 1,5x a Agilidade do inimigo em vez de 2x
-  const temDobroAgilidade =
-    agilAtacante > 0 &&
-    agilAtacante >= agilDefensor * multiplicadorAgilidadeParaDuplo(atacante.buffs);
+  // Ataque extra por Agilidade: uma chance (e não mais um corte seco), sorteada pela semente da luta. O Sincronismo soma 10 pontos percentuais.
+  // Sem o sorteio (quem chama o turno sozinho, sem semente), não há ataque extra.
+  const chanceAgilidade = chanceDeAtaqueExtraPorAgilidade(
+    agilAtacante,
+    agilDefensor,
+    multiplicadorAgilidadeParaDuplo(atacante.buffs) < MULTIPLICADOR_AGILIDADE_DUPLO_PADRAO
+  );
+  const temDobroAgilidade = chanceAgilidade > 0 && !!opcoesTurno?.sorteioAgilidade && opcoesTurno.sorteioAgilidade() < chanceAgilidade * 100;
   let maxAtaques = temDobroAgilidade ? GAME_CONFIG.MAXIMO_ATAQUES_POR_TURNO : 1;
   // Ritmo da Tempestade (emblema): chance de um ataque adicional para quem ainda não ataca duas vezes
   const chanceAtaqueAdicional = atacante.equipamento?.emblemas?.chanceAtaqueAdicional ?? 0;
@@ -3320,6 +3329,21 @@ function turnoDeCombateInterno(
       golpes = golpes.map((g, indice) => (indice === 0 ? g : Math.floor((g * (100 + bonusGolpesSeguidos)) / 100)));
       danoPorGolpe = golpes[0];
       danoBruto = golpes.reduce((acc, val) => acc + val, 0);
+    }
+
+    // Balanceamento 2.4: o ajuste de dano total da classe do atacante (antes da defesa e do crítico)
+    const fatorDaClasse = acaoCausaDano ? fatorDeDanoDaClasse(atacante.classeId) : 100;
+    if (fatorDaClasse !== 100) {
+      const ajustar = (v: number): number => Math.max(GAME_CONFIG.DANO_MINIMO, Math.floor((v * fatorDaClasse) / 100));
+      danoBruto = ajustar(danoBruto);
+      if (golpes && golpes.length > 0) {
+        golpes = golpes.map(ajustar);
+        danoPorGolpe = golpes[0];
+        danoBruto = golpes.reduce((acc, val) => acc + val, 0);
+      }
+      if (danoGolpeExtraSamuraiPotencial > 0) {
+        danoGolpeExtraSamuraiPotencial = ajustar(danoGolpeExtraSamuraiPotencial);
+      }
     }
 
     // Roadmap 1.3: tipo do golpe (Contusão/Corte/Perfuração da arma, ou mágico) contra o corpo do alvo.
@@ -4381,6 +4405,7 @@ function criarLadoDoPersonagem(
     const tPersonagem = turnoDeCombate(p, m, rodada, {
       sorteioCritico: (idxAtk, idxGolpe) => luta.sorteioCritico(rodada, idxAtk, idxGolpe),
       sorteioAtaqueExtra: () => sorteio(rodada, 3900),
+      sorteioAgilidade: () => luta.sorteioCritico(rodada, 77, 0),
       ...opcoesDoDefensor,
     });
     passarRodadaEfeitosDefensivos(m);
@@ -4751,6 +4776,8 @@ export function* motorDeCombate(
     const efeitosMonstro = monstro.efeitosAplicados ?? [];
     const tMonstro = turnoDeCombate(m, p, rodada, {
       sorteioCritico: (idxAtk, idxGolpe) => obterSorteioCritico(rodada, idxAtk, idxGolpe, 'monstro'),
+      // pela semente da luta (não pelo sorteio dos status, que os testes e o Mestre podem forçar)
+      sorteioAgilidade: () => obterSorteioCritico(rodada, 77, 0, 'monstro'),
       sorteioDefesa: (idxAtk, idxGolpe) => obterSorteioStatus(rodada, 900 + idxAtk * 16 + idxGolpe),
       sorteioMecanica: (indice) => obterSorteioStatus(rodada, 1200 + indice),
       primeiroGolpeRecebido: !lado.jaFoiAtingido,

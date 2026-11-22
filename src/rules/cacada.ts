@@ -9,6 +9,7 @@ import { CategoriaCorporal, TipoGolpe } from './corposMonstros';
 import { HabilidadeMonstro, MonsterDefinition } from './monsters';
 import { SUBESPECIES_CACADA, SubespecieCacada } from './cacadaSubespecies';
 import { XP_BASE_DA_CACADA } from './xpTable';
+import { categoriaDeEscala, escalarAtaque, escalarVida } from './escalaMonstros';
 import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
@@ -1398,7 +1399,8 @@ export function montarMonstroCacada(d: MonstroCacadaDados): MonsterDefinition {
   const atributos: Attributes = {
     vigor: Math.round(p * 0.2),
     sorte: 0,
-    forca: Math.max(1, Math.round(p * perfil.forca * multForca * (1 + (d.forcaPercentual ?? 0) / 100))),
+    // Balanceamento 2.3: o ataque sobe pela escala do nível e da categoria (normal, difícil, boss)
+    forca: escalarAtaque(Math.max(1, Math.round(p * perfil.forca * multForca * (1 + (d.forcaPercentual ?? 0) / 100))), nivel, categoriaDeEscala(d.perfil, d.chave === true)),
     vitalidade: Math.round(p * perfil.vitalidade * (1 + (d.vitalidadePercentual ?? 0) / 100)),
     arcano: 0,
     inteligencia: 0,
@@ -1413,7 +1415,7 @@ export function montarMonstroCacada(d: MonstroCacadaDados): MonsterDefinition {
     id: d.id,
     nome: d.nome,
     nivel,
-    hp: Math.round(p * perfil.hp * multHp),
+    hp: escalarVida(Math.round(p * perfil.hp * multHp), nivel, categoriaDeEscala(d.perfil, d.chave === true)),
     chefe: d.chave === true,
     ...(d.perfil === 'blindado' ? { blindado: true } : {}),
     categoriaCorporal: d.categoriaCorporal,

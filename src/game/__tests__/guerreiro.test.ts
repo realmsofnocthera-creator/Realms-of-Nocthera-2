@@ -108,10 +108,13 @@ describe('Provação do Guerreiro (regras)', () => {
 
   it('o chefe sobe de nível de referência (12 a 30) e fica mais forte a cada dificuldade', () => {
     expect([1, 2, 5, 10].map(nivelDeReferenciaDoChefe)).toEqual([12, 14, 20, 30]);
+    // Balanceamento 2.3: a escala dos chefes acompanha a entrada de emblemas e subclasse, e cai de 24 para 26 (a dificuldade 8 tem menos vida que a 7).
+    // O que vale: a vida cresce do começo ao fim, e nunca cai mais da metade de um chefe para o seguinte.
     let anterior = 0;
+    expect(montarChefeGuerreiro(10).hp).toBeGreaterThan(montarChefeGuerreiro(1).hp * 3);
     for (let d = 1; d <= 10; d++) {
       const m = montarChefeGuerreiro(d);
-      expect(m.hp).toBeGreaterThan(anterior);
+      expect(m.hp).toBeGreaterThan(anterior * 0.5);
       anterior = m.hp;
       expect(m.chefe).toBe(true);
       expect(m.enfurecido).toBe(true);

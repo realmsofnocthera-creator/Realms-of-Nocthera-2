@@ -1,4 +1,5 @@
 import { ESTRELAS_CACADA, MONSTROS_CACADA_DADOS, MULT_CHAVE, PERFIS, pontosDeReferencia } from '@/rules/cacada';
+import { categoriaDeEscala, escalarAtaque, escalarVida } from '@/rules/escalaMonstros';
 import type { MonstroCacadaDados } from '@/rules/cacada';
 import { MODIFICADOR_FRAQUEZA, ModificadoresElementais } from '@/rules/elements';
 import { MODIFICADOR_RESISTENCIA_CACADA } from '@/rules/cacada';
@@ -150,10 +151,12 @@ export function montarMonstroDaTorre(andar: number): MonsterDefinition {
   const base = chefeDados ? undefined : monstroBaseDoAndar(andar);
   const perfil = PERFIS[chefeDados ? 'normal' : base?.perfil ?? 'normal'];
   const mult = chefeDados ? MULT_CHAVE : { hp: 1, forca: 1 };
+  const categoria = categoriaDeEscala(chefeDados ? undefined : base?.perfil, chefeDados !== undefined);
   const atributos: Attributes = {
     vigor: Math.round(p * 0.2),
     sorte: 0,
-    forca: Math.max(1, Math.round(p * perfil.forca * mult.forca * (1 + (base?.forcaPercentual ?? 0) / 100))),
+    // Balanceamento 2.3: vida e ataque sobem pela escala do nível de referência do andar (chefes da Torre = boss)
+    forca: escalarAtaque(Math.max(1, Math.round(p * perfil.forca * mult.forca * (1 + (base?.forcaPercentual ?? 0) / 100))), ref, categoria),
     vitalidade: Math.round(p * perfil.vitalidade * (1 + (base?.vitalidadePercentual ?? 0) / 100)),
     arcano: 0,
     inteligencia: 0,
@@ -168,7 +171,7 @@ export function montarMonstroDaTorre(andar: number): MonsterDefinition {
     id: chefeDados?.id ?? base!.id,
     nome: chefeDados?.nome ?? base!.nome,
     nivel: Math.min(30, Math.max(1, Math.round(ref))),
-    hp: Math.round(p * perfil.hp * mult.hp),
+    hp: escalarVida(Math.round(p * perfil.hp * mult.hp), ref, categoria),
     chefe: chefeDados !== undefined,
     categoriaCorporal: chefeDados?.categoriaCorporal ?? base!.categoriaCorporal,
     ...(base?.fraquezasProprias ? { fraquezasProprias: base.fraquezasProprias } : {}),

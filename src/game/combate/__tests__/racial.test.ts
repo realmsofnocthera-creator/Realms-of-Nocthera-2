@@ -1,7 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Combatente, resolverCombate, turnoDeCombate } from '@/game/combat';
 import { racialDeveDisparar } from '@/game/combate/racial';
 import { MONSTERS_MAP } from '@/rules/monsters';
+
+// Estes testes conferem a mecânica com números exatos: o ajuste de dano por classe (Balanceamento 2.4) fica desligado aqui e tem testes próprios.
+vi.mock('@/rules/ajusteDeClasses', async (original) => ({ ...(await original<typeof import('@/rules/ajusteDeClasses')>()), fatorDeDanoDaClasse: () => 100 }));
+
 
 /** 1.8.1 — Habilidades raciais ativas: automáticas com HP abaixo de 50%, sem custo, recarga de 8 rodadas. */
 

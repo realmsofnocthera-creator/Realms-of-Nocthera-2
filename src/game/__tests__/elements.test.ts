@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   DRACONIANO_FRAQUEZA_OPOSTA,
   DRACONIANO_RESISTENCIA_LINHAGEM,
@@ -18,6 +18,10 @@ import {
   obterTextoReacaoElemental,
 } from '@/game/elements';
 import { Combatente, resolverCombate, turnoDeCombate } from '@/game/combat';
+
+// Estes testes conferem a mecânica com números exatos: o ajuste de dano por classe (Balanceamento 2.4) fica desligado aqui e tem testes próprios.
+vi.mock('@/rules/ajusteDeClasses', async (original) => ({ ...(await original<typeof import('@/rules/ajusteDeClasses')>()), fatorDeDanoDaClasse: () => 100 }));
+
 
 describe('ORDEM 22 — Sistema de Elementos (Bloco A)', () => {
   describe('1. Dados e Constantes Elementais (src/rules/elements.ts)', () => {
