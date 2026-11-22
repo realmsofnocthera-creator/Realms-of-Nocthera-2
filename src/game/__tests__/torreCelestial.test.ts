@@ -39,13 +39,14 @@ describe('Torre Celestial (regras)', () => {
     expect(andarAtual(undefined)).toBe(1);
   });
 
-  it('XP fixo de 27 por andar, só abaixo do nível 15', () => {
-    expect(xpDoAndar(5)).toBe(27);
-    expect(xpDoAndar(14)).toBe(27);
+  it('XP fixo de 6 por andar, só abaixo do nível 15', () => {
+    expect(xpDoAndar(5)).toBe(6);
+    expect(xpDoAndar(14)).toBe(6);
     expect(xpDoAndar(15)).toBe(0);
     expect(xpDoAndar(30)).toBe(0);
-    // 2.700 de XP levam do nível 5 ao 15: 100 andares
-    expect(27 * 100).toBe(2700);
+    // Ordem 3: 6 de XP por andar (era 27, -78%): 1 andar rende cerca de 1 luta da Caçada 2★
+    expect(TORRE.xpPorAndar).toBe(6);
+    expect(TORRE.nivelMaximoDeXp).toBe(15);
   });
 
   it('essência cresce até o andar 199 e a soma completa o Reforço (nível 30)', () => {
@@ -80,7 +81,7 @@ describe('Torre Celestial (regras)', () => {
   });
 
   it('recompensa junta XP, essência, Diamantes e fragmentos do andar', () => {
-    expect(recompensaDoAndar(1, 5)).toEqual({ essenciaHabilidade: 3, diamantes: 0, fragmentosAscensao: 0, xp: 27 });
+    expect(recompensaDoAndar(1, 5)).toEqual({ essenciaHabilidade: 3, diamantes: 0, fragmentosAscensao: 0, xp: 6 });
     expect(recompensaDoAndar(200, 30)).toEqual({ essenciaHabilidade: 0, diamantes: 5, fragmentosAscensao: 1, xp: 0 });
   });
 

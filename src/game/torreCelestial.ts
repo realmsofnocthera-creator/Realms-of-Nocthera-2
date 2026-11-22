@@ -15,7 +15,7 @@ import { CHEFES_TORRE_POR_ANDAR, ChefeTorre } from '@/rules/torreChefes';
 export const TORRE = {
   andares: 300,
   /** XP fixo por andar, só enquanto o personagem estiver abaixo do nível máximo de XP da Torre. */
-  xpPorAndar: 27,
+  xpPorAndar: 6,
   /** A Torre só dá XP até o personagem chegar a este nível. */
   nivelMaximoDeXp: 15,
   /** Do andar 1 ao 199 o andar dá essência de habilidade (piso de 3,4 × andar). */
