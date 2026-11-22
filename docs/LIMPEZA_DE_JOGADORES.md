@@ -12,7 +12,14 @@
 `mestres` (os papéis do painel), `configuracao`, `conteudo` (monstros, mapas, itens editados), `logAdmin` e `correioGeral`.
 **Atenção:** se há outros Mestres (além do dono), os papéis deles ficam em `mestres`, mas os logins deles serão apagados como os de qualquer jogador. Eles precisam criar a conta de novo (o uid muda, então o papel antigo deixa de valer: recadastre-os no painel).
 
-## Passo a passo
+## Pelo celular: Painel do Mestre (sem terminal)
+**Painel do Mestre → aba Papéis → "Limpeza de jogadores"** (só o Dono, com o login `mineirosangela1@gmail.com`):
+1. **Ver o que seria apagado (ensaio)**: mostra as contagens, sem apagar nada.
+2. Digite a frase `APAGAR gen-lang-client-0756716853` e toque em **Apagar todos os jogadores** (confirma de novo). Fica no log do painel.
+3. Reinicie o Cloud Run depois, para limpar as memórias do servidor (as outras instâncias guardam sanções e nomes).
+Se parar no meio (muitos dados ou a cota de 20 mil exclusões por dia do Spark), toque de novo: ele continua do que sobrou. **Sem backup.** Depois de usar, esta tela pode ser removida do app.
+
+## Pelo terminal (computador): passo a passo
 1. **Backup antes** (o Firestore não desfaz): `gcloud firestore export gs://SEU-BUCKET/antes-da-limpeza --project=gen-lang-client-0756716853 --database=ai-studio-realmsofnocthera-7113e23c-5465-4b0b-afbe-84aab53dd0f8` (precisa de um bucket e do plano com exportação). Se o backup agendado diário (`scripts/configurar-backup-firestore.sh`) estiver ativo, confirme que o último existe.
 2. Entre com a conta dona do projeto: `gcloud auth application-default login`.
 3. **Ensaio (não apaga nada):** `node scripts/limpar-jogadores.mjs`. Confira as contagens e o dono preservado.

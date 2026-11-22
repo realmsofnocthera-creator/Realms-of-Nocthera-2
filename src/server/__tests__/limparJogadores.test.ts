@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { limparJogadores, COLECOES_INTEIRAS, COLECOES_POR_JOGADOR, COLECOES_MANTIDAS, CAMPOS_DO_DONO_A_LIMPAR, totalDeApagamentos } from '../../../scripts/limpar-jogadores.mjs';
+import { limparJogadores, COLECOES_INTEIRAS, COLECOES_POR_JOGADOR, COLECOES_MANTIDAS, CAMPOS_DO_DONO_A_LIMPAR, totalDeApagamentos } from '../limpezaDeJogadores.mjs';
 
 /** Um "Firestore" de mentira: coleção → documentos (id → dados). */
 function mundo() {

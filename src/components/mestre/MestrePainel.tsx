@@ -14,6 +14,7 @@ import { ConteudoPainel } from '@/components/mestre/ConteudoPainel';
 import { ChatPainel } from '@/components/mestre/ChatPainel';
 import { ComprasPainel } from '@/components/mestre/ComprasPainel';
 import { GuildasPainel } from '@/components/mestre/GuildasPainel';
+import { LimpezaPainel } from '@/components/mestre/LimpezaPainel';
 import { JogadoresPainel } from '@/components/mestre/JogadoresPainel';
 import { SistemasPainel } from '@/components/mestre/SistemasPainel';
 
@@ -114,6 +115,7 @@ export function MestrePainel({ sessao, tokenFresco }: { sessao: SessaoDoPainel; 
         {aba === 'compras' && podeJogadores && <ComprasPainel sessao={sessao} tokenFresco={tokenFresco} />}
         {aba === 'sistemas' && <SistemasPainel sessao={sessao} tokenFresco={tokenFresco} />}
         {aba === 'papeis' && podePapeis && <Papeis sessao={sessao} tokenFresco={tokenFresco} />}
+        {aba === 'papeis' && podePapeis && sessao.papel === 'dono' && <LimpezaPainel tokenFresco={tokenFresco} />}
         {aba === 'log' && podeLog && <Log tokenFresco={tokenFresco} />}
       </div>
     </main>
