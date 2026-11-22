@@ -64,7 +64,7 @@ export const ABAIXAR_MUSICA_MS = 4000;
 // ---- Música ----
 
 export type IdDeMusica =
-  | 'menu_principal' | 'menu_quietude' | 'beyond_the_great_divide' | 'iron_wind_over_bone' | 'throne_of_the_unforgiven' | 'finis_mundi'
+  | 'menu_principal' | 'beyond_the_great_divide' | 'iron_wind_over_bone' | 'throne_of_the_unforgiven' | 'finis_mundi'
   | 'sovereign_of_the_permafrost' | 'throne_of_frozen_breath' | 'the_final_parry' | 'beneath_the_blade' | 'silentium_fugit' | 'cla_mo_re_in_te_ne_bris' | 'vis_fati';
 
 export const caminhoDaMusica = (id: IdDeMusica): string => `/audio/musica/musica_${id}.m4a`;
@@ -83,12 +83,11 @@ export interface ContextoDeMusica {
 }
 
 const MENU: ContextoDeMusica = { faixas: ['menu_principal'], pausaMs: [3000, 5000] };
-const CALMA: ContextoDeMusica = { faixas: ['menu_quietude'], pausaMs: [0, 0] };
 const MAPA: ContextoDeMusica = { faixas: ['beyond_the_great_divide'], pausaMs: [3000, 5000] };
 const COMBATE: ContextoDeMusica = { faixas: MUSICAS_DE_COMBATE, pausaMs: [2000, 4000] };
 const ARENA: ContextoDeMusica = { faixas: MUSICAS_DA_ARENA, pausaMs: [2000, 4000] };
 
-/** A música de cada tela (pelo endereço). Sem regra própria = a calma. */
+/** A música de cada tela (pelo endereço). Sem regra própria = o tema do menu (Hub, Mochila, Coleção, Loja...). */
 export function musicaDaRota(caminho: string): ContextoDeMusica {
   const p = caminho.split('?')[0].replace(/\/+$/, '') || '/';
   if (p === '/' || p === '/login') return MENU;
@@ -98,7 +97,8 @@ export function musicaDaRota(caminho: string): ContextoDeMusica {
   if (p === '/torre-celestial') return { faixas: ['throne_of_frozen_breath'], pausaMs: [2000, 4000] };
   if (p === '/provacoes') return { faixas: ['silentium_fugit'], pausaMs: [3000, 5000] };
   if (p === '/cacada' || p === '/batalha-sangrenta' || p === '/teste-equipe') return COMBATE;
-  return CALMA;
+  // o Hub, a Mochila e todos os outros menus: o tema do menu
+  return MENU;
 }
 
 /** Sorteia a próxima faixa do contexto, sem repetir a que acabou de tocar (se houver outra). */

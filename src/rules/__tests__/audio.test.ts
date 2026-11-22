@@ -8,7 +8,7 @@ import { SONS_COMBATE, SONS_ELEMENTOS, SONS_INTERFACE, SONS_STINGERS } from '@/r
 describe('áudio: arquivos', () => {
   it('todo som e toda música listados existem em public/audio, e não sobra arquivo fora da lista', () => {
     for (const id of [...SONS_INTERFACE, ...SONS_COMBATE, ...SONS_ELEMENTOS, ...SONS_STINGERS] as IdDeSom[]) expect(existsSync(`public${caminhoDoSom(id)}`), id).toBe(true);
-    const faixas = new Set<IdDeMusica>(['menu_principal', 'menu_quietude', ...MUSICAS_DE_COMBATE, ...MUSICAS_DA_ARENA]);
+    const faixas = new Set<IdDeMusica>(['menu_principal', ...MUSICAS_DE_COMBATE, ...MUSICAS_DA_ARENA]);
     for (const f of faixas) expect(existsSync(`public${caminhoDaMusica(f)}`), f).toBe(true);
     expect(readdirSync('public/audio/musica')).toHaveLength(faixas.size);
     expect(readdirSync('public/audio/musica').some((n) => n.includes('gemini'))).toBe(false);
@@ -24,12 +24,11 @@ describe('áudio: música por tela', () => {
       const f = musicaDaRota(r).faixas;
       expect(f.length).toBeGreaterThan(5);
       expect(f).not.toContain('menu_principal');
-      expect(f).not.toContain('menu_quietude');
       for (const a of MUSICAS_DA_ARENA) expect(f).not.toContain(a);
     }
     expect(musicaDaRota('/torre-celestial').faixas).toEqual(['throne_of_frozen_breath']);
     expect(musicaDaRota('/chefe-mundial').faixas).toEqual(['finis_mundi']);
-    expect(musicaDaRota('/mochila').faixas).toEqual(['menu_quietude']);
+    for (const r of ['/hub', '/mochila', '/loja', '/colecao', '/menu', '/guilda']) expect(musicaDaRota(r).faixas).toEqual(['menu_principal']);
     expect(musicaDaRota('/cacada/?x=1').faixas).toEqual(musicaDaRota('/cacada').faixas);
   });
 

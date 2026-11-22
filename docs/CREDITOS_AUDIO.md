@@ -7,8 +7,7 @@ Declaração do dono do projeto (Yuri, em conversa de desenvolvimento): os direi
 | Arquivos | Origem |
 |---|---|
 | `public/audio/interface`, `combate`, `elementos`, `stingers` (107 sons, sem os de música) | Sintetizados por script (`gerar_audio.py` e `gerar_combate_stingers.py`, do pacote de áudio v0.6, semente fixa). Sem material de terceiros. |
-| `public/audio/musica/musica_menu_quietude.m4a` | Rascunho sintetizado por script. |
-| `public/audio/musica/musica_*.m4a` (as 12 faixas restantes) | Enviadas pelo dono do projeto. |
+| `public/audio/musica/musica_*.m4a` (o tema do menu e as outras 11 faixas) | Enviadas pelo dono do projeto. |
 
 ## Nota de proveniência (guarde)
 Os MP3 originais das músicas trazem, no próprio arquivo, Content Credentials (C2PA) do Google dizendo que foram geradas com IA generativa do Google (marca d'água SynthID). O pacote de áudio verificou isso em 3 arquivos (menu, `gemini_music` e `vis_fati`). Por isso:
