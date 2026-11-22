@@ -8,7 +8,7 @@ import { EfeitoStatus } from './statusEffects';
 import { CategoriaCorporal, TipoGolpe } from './corposMonstros';
 import { HabilidadeMonstro, MonsterDefinition } from './monsters';
 import { SUBESPECIES_CACADA, SubespecieCacada } from './cacadaSubespecies';
-import { XP_TABLE } from './xpTable';
+import { XP_BASE_DA_CACADA } from './xpTable';
 
 /**
  * Provação da Caçada (estilo Monster Hunter), decidida pelo Yuri em 12/10/2026.
@@ -1421,10 +1421,10 @@ export function montarMonstroCacada(d: MonstroCacadaDados): MonsterDefinition {
       ? { resistenciasProprias: d.resistenciasProprias }
       : {}),
     atributos,
-    // XP curto: 5% do XP do próximo nível no nível mínimo da estrela (a trava contra farm entra ao premiar)
+    // XP curto: 5% da base de XP da Caçada (tabela antiga, separada da XP_TABLE) no nível mínimo da estrela (a trava contra farm entra ao premiar)
     xpConcedido: Math.max(
       1,
-      Math.round((XP_TABLE[estrela.nivelMinimo] ?? 0) * 0.05),
+      Math.round((XP_BASE_DA_CACADA[estrela.nivelMinimo] ?? 0) * 0.05),
     ),
     ouroConcedido: { min: 8 * nivel, max: 15 * nivel },
     modificadoresElementais,
