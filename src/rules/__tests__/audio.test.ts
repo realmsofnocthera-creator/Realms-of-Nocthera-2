@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import {
-  caminhoDaMusica, caminhoDoSom, canalDoSom, MUSICAS_DA_ARENA, MUSICAS_DE_COMBATE, musicaDaRota, preferenciasDoTexto, prioridadeDoSom, proximaFaixa, VOLUMES_PADRAO, type IdDeMusica, type IdDeSom,
+  caminhoDaMusica, caminhoDoSom, canalDoSom, MUSICAS_DA_ARENA, MUSICAS_DE_COMBATE, musicaDaLuta, musicaDaRota, preferenciasDoTexto, prioridadeDoSom, proximaFaixa, VOLUMES_PADRAO, type IdDeMusica, type IdDeSom,
 } from '@/rules/audio';
 import { SONS_COMBATE, SONS_ELEMENTOS, SONS_INTERFACE, SONS_STINGERS } from '@/rules/audioSons';
 
@@ -15,25 +15,26 @@ describe('áudio: arquivos', () => {
   });
 });
 
-describe('áudio: música por tela', () => {
-  it('menu e login tocam o tema do menu; a Arena só as da Arena; combates sorteiam, sem menu nem Arena', () => {
-    expect(musicaDaRota('/').faixas).toEqual(['menu_principal']);
-    expect(musicaDaRota('/login').faixas).toEqual(['menu_principal']);
-    expect(musicaDaRota('/combate').faixas).toEqual(['the_final_parry', 'beneath_the_blade']);
-    for (const r of ['/cacada', '/batalha-sangrenta']) {
-      const f = musicaDaRota(r).faixas;
+describe('áudio: música por tela e por luta', () => {
+  it('fora de luta, TODAS as telas tocam o tema do menu (Hub, Provações, Guilda, Perfil, livros, salas da Arena e da Torre)', () => {
+    for (const r of ['/', '/login', '/hub', '/provacoes', '/guilda', '/personagem', '/menu', '/mochila', '/cacada', '/bestiario', '/combate', '/torre-celestial', '/chefe-mundial', '/expedicao', '/campanha', '/teste-equipe'])
+      expect(musicaDaRota(r).faixas, r).toEqual(['menu_principal']);
+  });
+
+  it('na luta: a Arena só com as dela; Torre e Chefe Mundial com a própria; o resto sorteia as de combate, sem menu nem Arena', () => {
+    expect(musicaDaLuta('/combate').faixas).toEqual(['the_final_parry', 'beneath_the_blade']);
+    expect(musicaDaLuta('/torre-celestial').faixas).toEqual(['throne_of_frozen_breath']);
+    expect(musicaDaLuta('/chefe-mundial').faixas).toEqual(['finis_mundi']);
+    for (const r of ['/cacada', '/batalha-sangrenta', '/teste-equipe', '/provacoes', '/intro']) {
+      const f = musicaDaLuta(r).faixas;
       expect(f.length).toBeGreaterThan(5);
       expect(f).not.toContain('menu_principal');
       for (const a of MUSICAS_DA_ARENA) expect(f).not.toContain(a);
     }
-    expect(musicaDaRota('/torre-celestial').faixas).toEqual(['throne_of_frozen_breath']);
-    expect(musicaDaRota('/chefe-mundial').faixas).toEqual(['finis_mundi']);
-    for (const r of ['/hub', '/mochila', '/loja', '/colecao', '/menu', '/guilda']) expect(musicaDaRota(r).faixas).toEqual(['menu_principal']);
-    expect(musicaDaRota('/cacada/?x=1').faixas).toEqual(musicaDaRota('/cacada').faixas);
   });
 
   it('o sorteio não repete a faixa que acabou de tocar', () => {
-    const ctx = musicaDaRota('/cacada');
+    const ctx = musicaDaLuta('/cacada');
     for (let i = 0; i < 50; i++) expect(proximaFaixa(ctx, 'vis_fati', () => i / 50)).not.toBe('vis_fati');
     expect(proximaFaixa(musicaDaRota('/'), 'menu_principal')).toBe('menu_principal');
   });

@@ -87,19 +87,25 @@ const MAPA: ContextoDeMusica = { faixas: ['beyond_the_great_divide'], pausaMs: [
 const COMBATE: ContextoDeMusica = { faixas: MUSICAS_DE_COMBATE, pausaMs: [2000, 4000] };
 const ARENA: ContextoDeMusica = { faixas: MUSICAS_DA_ARENA, pausaMs: [2000, 4000] };
 
-/** A música de cada tela (pelo endereço). Sem regra própria = o tema do menu (Hub, Mochila, Coleção, Loja...). */
-export function musicaDaRota(caminho: string): ContextoDeMusica {
-  const p = caminho.split('?')[0].replace(/\/+$/, '') || '/';
-  if (p === '/' || p === '/login') return MENU;
-  if (p === '/combate') return ARENA;
-  if (p === '/campanha' || p === '/expedicao') return MAPA;
-  if (p === '/chefe-mundial') return { faixas: ['finis_mundi'], pausaMs: [2000, 4000] };
-  if (p === '/torre-celestial') return { faixas: ['throne_of_frozen_breath'], pausaMs: [2000, 4000] };
-  if (p === '/provacoes') return { faixas: ['silentium_fugit'], pausaMs: [3000, 5000] };
-  if (p === '/cacada' || p === '/batalha-sangrenta' || p === '/teste-equipe') return COMBATE;
-  // o Hub, a Mochila e todos os outros menus: o tema do menu
+/**
+ * A música das telas: o tema do menu ("Where The Old Kings Rest") em TODAS as telas fora de luta (Hub, Provações, Guilda, Perfil, os livros da
+ * Caçada e do Bestiário, as salas da Arena e da Torre...). Ela só muda quando uma luta aparece na tela (ver `musicaDaLuta`).
+ */
+export function musicaDaRota(_caminho: string): ContextoDeMusica {
   return MENU;
 }
+
+/** A música de uma luta, pelo modo (o endereço da tela): Arena só com as dela; Torre e Chefe Mundial com a própria; o resto sorteia as de combate. */
+export function musicaDaLuta(caminho: string): ContextoDeMusica {
+  const p = caminho.split('?')[0].replace(/\/+$/, '') || '/';
+  if (p === '/combate') return ARENA;
+  if (p === '/chefe-mundial') return { faixas: ['finis_mundi'], pausaMs: [2000, 4000] };
+  if (p === '/torre-celestial') return { faixas: ['throne_of_frozen_breath'], pausaMs: [2000, 4000] };
+  return COMBATE;
+}
+
+/** A música do mapa e da expedição (guardada para quando a Campanha abrir). */
+export const MUSICA_DO_MAPA = MAPA;
 
 /** Sorteia a próxima faixa do contexto, sem repetir a que acabou de tocar (se houver outra). */
 export function proximaFaixa(ctx: ContextoDeMusica, anterior: IdDeMusica | null, sorteio: () => number = Math.random): IdDeMusica {

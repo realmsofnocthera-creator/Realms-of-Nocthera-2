@@ -244,8 +244,38 @@ function iniciarMusica() {
   tocarFaixa(faixa, contextoDeMusica.faixas.length === 1 && contextoDeMusica.pausaMs[1] === 0);
 }
 
-/** Muda a música para a de uma tela. A mesma chave não reinicia; sem contexto (null) a música para. */
+// A música da tela (rota) e a da luta: enquanto uma luta está na tela, a da luta manda; quando ela sai, volta a da tela (com uma folga, para
+// lutas seguidas, como a Batalha Sangrenta, não reiniciarem a faixa a cada luta).
+let musicaDaTela: { chave: string; c: ContextoDeMusica | null } = { chave: '', c: null };
+let lutasNaTela = 0;
+let timerDeVolta: ReturnType<typeof setTimeout> | null = null;
+
+/** A música da tela (a rota). Durante uma luta, fica guardada e volta quando a luta sai. */
 export function definirMusica(chave: string, c: ContextoDeMusica | null): void {
+  musicaDaTela = { chave, c };
+  if (lutasNaTela === 0) aplicarMusica(chave, c);
+}
+
+/** Uma luta entrou na tela: toca a música dela. Devolve a função que avisa que a luta saiu. */
+export function entrarEmLuta(c: ContextoDeMusica): () => void {
+  lutasNaTela++;
+  if (timerDeVolta) { clearTimeout(timerDeVolta); timerDeVolta = null; }
+  aplicarMusica(`luta:${c.faixas.join(',')}`, c);
+  let saiu = false;
+  return () => {
+    if (saiu) return;
+    saiu = true;
+    lutasNaTela = Math.max(0, lutasNaTela - 1);
+    if (lutasNaTela > 0) return;
+    if (timerDeVolta) clearTimeout(timerDeVolta);
+    timerDeVolta = setTimeout(() => {
+      timerDeVolta = null;
+      if (lutasNaTela === 0) aplicarMusica(musicaDaTela.chave, musicaDaTela.c);
+    }, 1500);
+  };
+}
+
+function aplicarMusica(chave: string, c: ContextoDeMusica | null): void {
   if (chave === chaveDoContexto) return;
   chaveDoContexto = chave;
   contextoDeMusica = c;

@@ -7,7 +7,6 @@ import { resolveAvatarSrc } from '@/assets/avatars';
 import { ICONE_MONSTRO } from '@/lib/cacadaArte';
 import { auth } from '@/lib/firebase';
 import { definirMusica } from '@/lib/audio/motor';
-import { musicaDaRota } from '@/rules/audio';
 import { MONSTROS_CACADA_MAP } from '@/rules/cacada';
 import { XP_TABLE } from '@/rules/xpTable';
 import { TEXTOS_DA_INTRO as T } from '@/rules/textosDaIntro';
@@ -47,8 +46,6 @@ export function IntroDoLobo({ personagem }: { personagem: CharacterDocument }) {
       if (res.status === 409) return irAoHub(); // já viveu a introdução
       if (!res.ok || !dados.vitoria) throw new Error(dados.error || T.erro);
       setResposta(dados as RespostaDaIntro);
-      // as lutas tocam a música de combate (que sorteia as faixas)
-      definirMusica('intro:luta', musicaDaRota('/cacada'));
       setFase('lobo');
     } catch (e) {
       setErro(e instanceof Error ? e.message : T.erro);
