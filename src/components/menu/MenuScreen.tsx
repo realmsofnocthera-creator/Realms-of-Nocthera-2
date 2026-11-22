@@ -13,6 +13,7 @@ import { NotificationBadge } from '@/components/hud/NotificationBadge';
 import { degrausProntos } from '@/rules/conquistas';
 import { useAvisos } from '@/lib/useAvisos';
 import { useAnunciosNovos } from '@/lib/useAnunciosNovos';
+import { PainelDeSom } from '@/components/audio/PainelDeSom';
 import { CheckinPopup } from '@/components/checkin/CheckinPopup';
 import { gravarProgresso, recomecar } from '@/lib/tutorialProgresso';
 import { TEXTOS_DO_TUTORIAL } from '@/rules/textosDoTutorial';
@@ -217,6 +218,8 @@ export function MenuScreen({ personagem, onFechar }: MenuScreenProps) {
             );
           })}
         </section>
+
+        <PainelDeSom />
 
         <div className="w-full flex flex-col items-center gap-1.5">
           {personagem && <ReverTutoriais uid={personagem.uid} />}

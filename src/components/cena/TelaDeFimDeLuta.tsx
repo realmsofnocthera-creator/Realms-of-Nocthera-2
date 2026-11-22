@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { tocar } from '@/lib/audio/motor';
 import { tirarOVerde } from './AberturaDeBatalha';
 import { textoDaFicha } from '@/rules/textosDaFicha';
 import { TEXTOS_DO_FIM_DA_LUTA as T } from '@/rules/textosDoCombate';
@@ -82,6 +83,10 @@ export interface TelaDeFimProps {
  * vídeo pula direto para o fim.
  */
 export function TelaDeFimDeLuta({ tipo, retrato, xp, ouro, espolios = [], aviso, voltar, repetir, aoAcabar }: TelaDeFimProps) {
+  // o aviso sonoro de quem venceu ou perdeu
+  useEffect(() => {
+    tocar(tipo === 'vitoria' ? 'stinger_vitoria' : 'stinger_derrota');
+  }, [tipo]);
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [tempo, setTempo] = useState(0);
