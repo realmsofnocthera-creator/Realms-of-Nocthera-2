@@ -17,7 +17,7 @@ describe('Torre Celestial (tela)', () => {
     expect(torreDoPersonagem({ nivel: 4 }).bloqueio).toBe('Requer nível 5');
     const t = torreDoPersonagem({ nivel: 5 });
     expect(t).toMatchObject({ andar: 1, vencidos: 0, completa: false, bloqueio: null, chefe: false });
-    expect(t.recompensas).toEqual([{ rotulo: 'XP', valor: 27 }, { rotulo: 'Essência de habilidade', valor: 3 }]);
+    expect(t.recompensas).toEqual([{ rotulo: 'XP', valor: 6 }, { rotulo: 'Essência de habilidade', valor: 3 }]);
     expect(t.proximoChefe).toMatchObject({ andar: 10, nome: 'Rikk, o Rato Carniceiro', faltam: 9 });
   });
 

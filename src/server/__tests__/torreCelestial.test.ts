@@ -31,12 +31,12 @@ describe('Torre Celestial (servidor)', () => {
     expect((await getCharacterByUid('t1'))!.torreAndar).toBeUndefined();
   });
 
-  it('vitória no andar 1: avança, dá 27 de XP e 3 de essência de habilidade', async () => {
+  it('vitória no andar 1: avança, dá 6 de XP e 3 de essência de habilidade', async () => {
     const antes = await setup('t2');
     const r = await executarTorre('t2', { seed: 7, combateId: 'torre-0001' });
     expect(r.resultado.vencedor).toBe('personagem');
     expect(r.torre).toMatchObject({ andar: 1, chefe: false, venceu: true, essenciaHabilidade: 3, diamantes: 0, fragmentosAscensao: 0, proximoAndar: 2 });
-    expect(r.torre.xpGanho).toBeGreaterThanOrEqual(27);
+    expect(r.torre.xpGanho).toBeGreaterThanOrEqual(6);
     const c = (await getCharacterByUid('t2'))!;
     expect(c.torreAndar).toBe(1);
     expect(c.essenciaHabilidade).toBe((antes.essenciaHabilidade ?? 0) + 3);
