@@ -13,17 +13,17 @@ export function sonsDaAcao(acao: AcaoDaLuta): IdDeSom[] {
     return [doHeroi ? 'sfx_falha_errou' : 'sfx_escudo_bloqueio'];
   }
   if (doHeroi) {
-    if (acao.elemento) sons.push(`elem_${acao.elemento}_impacto` as IdDeSom);
+    if (acao.elemento) sons.push(`elem_${acao.elemento}_impacto` as IdDeSom, 'sfx_impacto_carne_1');
     else if (acao.tipoGolpe === 'perfuracao') sons.push('sfx_lanca_golpe', 'sfx_impacto_carne_2');
     else if (acao.tipoGolpe === 'contusao') sons.push('sfx_martelo_golpe', 'sfx_impacto_carne_3');
-    else if (acao.tipoGolpe === 'magico') sons.push('sfx_cajado_golpe');
+    else if (acao.tipoGolpe === 'magico') sons.push('sfx_cajado_golpe', 'sfx_impacto_carne_2');
     else sons.push('sfx_espada_golpe', 'sfx_impacto_carne_1');
-    if (acao.criticos > 0) sons.push('sfx_dano_critico');
+    if (acao.criticos > 0) sons.push('sfx_dano_critico', 'sfx_impacto_metal_pesado');
     if (acao.reacao === 'resistencia') sons.push('sfx_resistencia');
     if (acao.reacao === 'imune') sons.push('sfx_imunidade');
   } else {
     if (acao.elemento) sons.push(`elem_${acao.elemento}_impacto` as IdDeSom);
-    sons.push(acao.criticos > 0 || acao.dano > 0 && acao.golpes.length > 1 ? 'sfx_dano_recebido_pesado' : 'sfx_dano_recebido_leve');
+    sons.push('sfx_impacto_carne_3', acao.criticos > 0 || acao.dano > 0 && acao.golpes.length > 1 ? 'sfx_dano_recebido_pesado' : 'sfx_dano_recebido_leve');
   }
   if (acao.cura > 0) sons.push('sfx_cura');
   return sons;

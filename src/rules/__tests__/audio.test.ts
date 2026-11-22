@@ -40,7 +40,7 @@ describe('áudio: música por tela', () => {
 });
 
 describe('áudio: preferências e prioridades', () => {
-  it('padrão 55/80/70, volume sempre entre 0 e 1, lixo vira padrão', () => {
+  it('padrão 45/95/70, volume sempre entre 0 e 1, lixo vira padrão', () => {
     expect(preferenciasDoTexto(null)).toEqual({ volumes: VOLUMES_PADRAO, mudo: false });
     expect(preferenciasDoTexto({ volumes: { musica: 2, efeitos: -1, interface: 'x' }, mudo: true })).toMatchObject({ volumes: { musica: 1, efeitos: 0, interface: 0.7 }, mudo: true });
   });

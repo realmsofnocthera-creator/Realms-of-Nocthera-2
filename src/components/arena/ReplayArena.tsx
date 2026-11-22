@@ -19,6 +19,7 @@ import { TEXTOS_SUBCLASSE } from '@/rules/subclasseTextos';
 import { textoDaFicha } from '@/rules/textosDaFicha';
 import { TEXTOS_DO_COMBATE as T } from '@/rules/textosDoCombate';
 import type { LadoNaTela } from '@/server/arena';
+import { useSonsDaLuta } from '@/lib/audio/useSonsDaLuta';
 
 const OURO = '#C8A656';
 
@@ -85,6 +86,7 @@ export function ReplayArena({ combate, lados, titulo, modo = 'arena', onFim }: {
   const duracaoDoAtaque = q.agiu && anim[q.agiu] ? Math.ceil(anim[q.agiu]!.ataque.ms.reduce((x, y) => x + y, 0) / velocidade(q.agiu)) + 90 : 0;
   const tempos = { impacto: base.impacto, duracao: acao ? Math.max(base.duracao, duracaoDoAtaque) : base.duracao };
   const impactou = !acao || acertou === indice;
+  useSonsDaLuta(acao, acertou, indice, true);
   const vis = impactou || !ant ? q : ant;
 
   useEffect(() => {

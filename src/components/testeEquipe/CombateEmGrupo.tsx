@@ -20,6 +20,7 @@ import { TEXTOS_SUBCLASSE } from '@/rules/subclasseTextos';
 import type { AliadoDoReplay, ReplayDoTeste } from '@/rules/testeEquipe';
 import { textoDaFicha } from '@/rules/textosDaFicha';
 import { TEXTOS_DO_COMBATE as T } from '@/rules/textosDoCombate';
+import { useSonsDaLuta } from '@/lib/audio/useSonsDaLuta';
 
 /** Os nomes da especial e da suprema do aliado (a faixa com o nome só aparece nelas, não no ataque básico). */
 function habilidadesDeVerdade(a: AliadoDoReplay): string[] {
@@ -93,6 +94,7 @@ export function CombateEmGrupo({ replay, mapa, onFim }: { replay: ReplayDoTeste;
     : 0;
   const tempos = { impacto: base.impacto, duracao: acao ? Math.max(base.duracao, duracaoDoAtaque) : base.duracao };
   const impactou = !acao || acertou === indice;
+  useSonsDaLuta(acao, acertou, indice);
   const vis = impactou || !ant ? q : ant;
 
   const avisarFim = () => {

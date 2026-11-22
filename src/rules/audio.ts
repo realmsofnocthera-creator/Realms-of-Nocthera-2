@@ -9,8 +9,8 @@ export type Canal = (typeof CANAIS)[number];
 
 export const ROTULO_DO_CANAL: Readonly<Record<Canal, string>> = { musica: 'Música', efeitos: 'Efeitos', interface: 'Interface', ambiente: 'Ambiente' };
 
-/** O padrão do Yuri/Áudio: música 55%, efeitos 80%, interface 70%; ambiente 60% (ainda não há sons de ambiente). */
-export const VOLUMES_PADRAO: Readonly<Record<Canal, number>> = { musica: 0.55, efeitos: 0.8, interface: 0.7, ambiente: 0.6 };
+/** Padrão: música 45%, efeitos 95% (os golpes precisam se ouvir por cima da música), interface 70%; ambiente 60% (ainda não há sons de ambiente). */
+export const VOLUMES_PADRAO: Readonly<Record<Canal, number>> = { musica: 0.45, efeitos: 0.95, interface: 0.7, ambiente: 0.6 };
 
 export interface PreferenciasDeAudio {
   volumes: Record<Canal, number>;

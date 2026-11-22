@@ -14,8 +14,7 @@ import { MapaDaCacada } from './MapaDaCacada';
 import { CenaDoChefe, type EventoDoChefe } from './CenaDoChefe';
 import { DURACAO_DO_CLIPE_MS, IMPACTO_DO_ATAQUE_DO_CHEFE_MS, type ArteDoChefeMundial, type AlvoDoChefe } from '@/assets/chefesMundiaisArte';
 import { AberturaDeBatalha } from '@/components/cena/AberturaDeBatalha';
-import { tocar } from '@/lib/audio/motor';
-import { sonsDaAcao } from '@/lib/audio/sonsDeCombate';
+import { useSonsDaLuta } from '@/lib/audio/useSonsDaLuta';
 import { TelaDeFimDeLuta, type TelaDeFimProps } from '@/components/cena/TelaDeFimDeLuta';
 import { SpriteAnimado } from '@/components/cena/SpriteAnimado';
 import { UltimateCinematica } from '@/components/cena/UltimateCinematica';
@@ -226,11 +225,8 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   // o chefe se enfurece quando o Sobreescudo dele quebra (ou quando o combate já o marca como Enfurecido)
   const furiaDoChefe = !!cena && (vis.monstro.enfurecido || (vis.monstro.escudoMax > 0 && vis.monstro.escudo <= 0));
 
-  // o som do golpe, na hora do impacto
-  useEffect(() => {
-    if (!acao || acertou !== indice) return;
-    for (const id of sonsDaAcao(acao)) tocar(id);
-  }, [acertou, indice, acao]);
+  // o som do golpe, na hora do impacto (e os sons da luta baixados ao abrir)
+  useSonsDaLuta(acao, acertou, indice);
 
   const [telaFinal, setTelaFinal] = useState(false);
   // a luta espera enquanto o tutorial explica a tela

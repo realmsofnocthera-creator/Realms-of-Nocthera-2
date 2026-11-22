@@ -174,22 +174,42 @@ function abaixarMusica() {
 }
 
 // ---- Música ----
+// UMA faixa por vez: toda faixa criada fica registrada; ao começar outra, todas as anteriores param (com um fade curto). Um só timer de início.
+const todasAsFaixas = new Set<{ el: HTMLAudioElement; ganho: GainNode }>();
+let timerDeInicio: ReturnType<typeof setTimeout> | null = null;
+
+function cancelarTimers() {
+  if (timerDaPausa) { clearTimeout(timerDaPausa); timerDaPausa = null; }
+  if (timerDeInicio) { clearTimeout(timerDeInicio); timerDeInicio = null; }
+}
+
+function soltarFaixa(f: { el: HTMLAudioElement; ganho: GainNode }, suave: boolean) {
+  const fim = () => {
+    f.el.onended = null;
+    f.el.pause();
+    f.el.removeAttribute('src');
+    f.el.load();
+    try { f.ganho.disconnect(); } catch { /* já solto */ }
+    todasAsFaixas.delete(f);
+  };
+  if (suave && ctx) {
+    f.ganho.gain.cancelScheduledValues(ctx.currentTime);
+    f.ganho.gain.setTargetAtTime(0, ctx.currentTime, 0.12);
+    setTimeout(fim, 450);
+  } else fim();
+}
 
 function pararMusica(suave: boolean) {
-  if (timerDaPausa) { clearTimeout(timerDaPausa); timerDaPausa = null; }
-  const m = musica;
+  cancelarTimers();
   musica = null;
-  if (!m) return;
-  const fim = () => { m.el.pause(); m.el.removeAttribute('src'); m.el.load(); try { m.ganho.disconnect(); } catch { /* já solto */ } };
-  if (suave && ctx) {
-    m.ganho.gain.setTargetAtTime(0, ctx.currentTime, 0.2);
-    setTimeout(fim, 900);
-  } else fim();
+  for (const f of [...todasAsFaixas]) soltarFaixa(f, suave);
 }
 
 function tocarFaixa(id: IdDeMusica, loop: boolean) {
   const c = contexto();
   if (!c || !ganhoDaMusica) return;
+  // garantia: nenhuma outra faixa continua tocando por baixo
+  for (const f of [...todasAsFaixas]) soltarFaixa(f, true);
   const el = new Audio(caminhoDaMusica(id));
   el.loop = loop;
   el.preload = 'auto';
@@ -198,23 +218,27 @@ function tocarFaixa(id: IdDeMusica, loop: boolean) {
   ganho.gain.value = 0;
   c.createMediaElementSource(el).connect(ganho);
   ganho.connect(ganhoDaMusica);
-  ganho.gain.setTargetAtTime(1, c.currentTime, 0.6);
+  ganho.gain.setTargetAtTime(1, c.currentTime, 0.5);
+  const faixa = { el, ganho };
+  todasAsFaixas.add(faixa);
   musica = { el, id, ganho };
   ultimaFaixa = id;
   el.onended = () => {
     if (musica?.el !== el) return;
     const ctxAtual = contextoDeMusica;
+    soltarFaixa(faixa, false);
+    musica = null;
     if (!ctxAtual) return;
     const [min, max] = ctxAtual.pausaMs;
-    const espera = min + Math.random() * (max - min);
-    pararMusica(false);
-    timerDaPausa = setTimeout(iniciarMusica, espera);
+    cancelarTimers();
+    timerDaPausa = setTimeout(iniciarMusica, min + Math.random() * (max - min));
   };
-  if (abaVisivel) void el.play().catch(() => { /* o navegador ainda não deixou: tenta de novo no próximo toque */ });
+  if (abaVisivel) void el.play().catch(() => { /* o navegador ainda não deixou: o próximo toque tenta de novo */ });
 }
 
 function iniciarMusica() {
   timerDaPausa = null;
+  timerDeInicio = null;
   if (!desbloqueado || !contextoDeMusica || musica) return;
   const faixa = proximaFaixa(contextoDeMusica, ultimaFaixa);
   tocarFaixa(faixa, contextoDeMusica.faixas.length === 1 && contextoDeMusica.pausaMs[1] === 0);
@@ -228,7 +252,13 @@ export function definirMusica(chave: string, c: ContextoDeMusica | null): void {
   // se a faixa que está tocando também serve para a tela nova, ela segue (a música não "pula" ao trocar de tela parecida)
   if (musica && c?.faixas.includes(musica.id)) return;
   pararMusica(true);
-  if (c && desbloqueado) setTimeout(iniciarMusica, 700);
+  if (c && desbloqueado) timerDeInicio = setTimeout(iniciarMusica, 500);
+}
+
+/** Baixa já uma lista de sons (os da luta, ao abrir a luta), para o primeiro golpe não sair mudo nem atrasado. */
+export function precarregarSons(ids: readonly IdDeSom[]): void {
+  if (!desbloqueado) return;
+  for (const id of ids) void buffer(id);
 }
 
 /** Liga o som no primeiro toque (exigência do navegador). */
@@ -236,7 +266,10 @@ export function desbloquear(): void {
   const c = contexto();
   if (!c) return;
   if (c.state === 'suspended') void c.resume().catch(() => {});
-  if (desbloqueado) return;
+  if (desbloqueado) {
+    if (musica && musica.el.paused && abaVisivel) void musica.el.play().catch(() => {});
+    return;
+  }
   desbloqueado = true;
   precarregarInterface();
   if (contextoDeMusica && !musica) iniciarMusica();
@@ -252,6 +285,6 @@ export function definirAbaVisivel(visivel: boolean): void {
   } else {
     void ctx.resume().catch(() => {});
     if (musica) void musica.el.play().catch(() => {});
-    else if (contextoDeMusica && desbloqueado && !timerDaPausa) iniciarMusica();
+    else if (contextoDeMusica && desbloqueado && !timerDaPausa && !timerDeInicio) iniciarMusica();
   }
 }
