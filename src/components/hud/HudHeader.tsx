@@ -12,7 +12,9 @@ import { formatarCompacto, formatarTotal } from '@/rules/numerosCompactos';
 import { XP_TABLE } from '@/rules/xpTable';
 import { GAME_CONFIG } from '@/rules/config';
 import { NOCTHERA_THEME } from '@/theme/theme';
-import { HUD_ICONS, HUD_IMAGES } from '@/assets/hud';
+import { HUD_ICONS } from '@/assets/hud';
+import { MolduraDoAvatar } from '@/components/perfil/MolduraDoAvatar';
+import { molduraEscolhida } from '@/rules/molduras';
 import { getAvatarFaceStyle, resolveAvatarSrc } from '@/assets/avatars';
 import { NotificationBadge } from './NotificationBadge';
 
@@ -116,7 +118,7 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
   };
 
   return (
-    <header className="relative z-30 w-full flex flex-col gap-1 px-2 sm:px-4 pt-2 sm:pt-3 pointer-events-auto">
+    <header className={`relative z-30 w-full flex flex-col gap-1 px-2 sm:px-4 pointer-events-auto ${molduraEscolhida(personagem) ? 'pt-9 sm:pt-12' : 'pt-2 sm:pt-3'}`}>
       <div className="w-full flex items-start justify-between gap-1.5 sm:gap-3">
       {/* TOPO ESQUERDO: Retrato com Moldura + Faixa Horizontal Compacta com Nome, Lv e Barra de XP */}
       <div className="flex items-center min-w-0 shrink">
@@ -124,7 +126,7 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
         <button
           type="button"
           onClick={onOpenProfile}
-          className="relative z-10 w-11 h-11 sm:w-15 sm:h-15 md:w-16 md:h-16 flex items-center justify-center shrink-0 select-none cursor-pointer group focus:outline-none"
+          className={`relative z-10 w-11 h-11 sm:w-15 sm:h-15 md:w-16 md:h-16 flex items-center justify-center shrink-0 select-none cursor-pointer group focus:outline-none ${molduraEscolhida(personagem) ? 'ml-6 sm:ml-9' : ''}`}
           aria-label="Abrir Perfil Público do personagem"
           title="Ver Perfil Público"
         >
@@ -143,13 +145,7 @@ export function HudHeader({ personagem, onOpenProfile }: HudHeaderProps) {
               />
             </motion.div>
           </div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={HUD_IMAGES.molduraPerfil}
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-contain select-none pointer-events-none"
-          />
+          <MolduraDoAvatar molduraId={molduraEscolhida(personagem)?.id} />
         </button>
 
         {/* Placa em pixel acoplada à direita da moldura: nome, nível e barra de XP em blocos */}

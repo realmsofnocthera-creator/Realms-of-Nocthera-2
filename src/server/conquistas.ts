@@ -11,6 +11,7 @@ import {
   type RecompensaDeConquista,
 } from '@/rules/conquistas';
 import { comTitulos, TITULO_MAP, type TituloDefinition } from '@/rules/titulos';
+import { ehMoldura, MOLDURA_MAP, molduraDoPersonagem, molduraEscolhida, molduraLiberada } from '@/rules/molduras';
 import { alterarSaldoEm, carregarPersonagem, salvarPersonagem, type CharacterDocument } from '@/server/characterService';
 import { repositorio } from '@/server/persistencia';
 import { exigirSistemaLigado } from '@/server/sistemasLeitura';
@@ -51,6 +52,9 @@ export interface EstadoDasConquistas {
   prontos: number;
   titulos: TituloDefinition[];
   tituloId: string | null;
+  /** As molduras do avatar que o jogador tem, e a escolhida (null = a Padrão). */
+  molduras: string[];
+  molduraId: string | null;
 }
 
 export function estadoDe(char: CharacterDocument): EstadoDasConquistas {
@@ -78,6 +82,8 @@ export function estadoDe(char: CharacterDocument): EstadoDasConquistas {
     prontos: conquistas.reduce((t, c) => t + c.prontos, 0),
     titulos: (char.titulos ?? []).flatMap((id) => (TITULO_MAP[id] ? [TITULO_MAP[id]] : [])),
     tituloId: char.tituloId && char.titulos?.includes(char.tituloId) ? char.tituloId : null,
+    molduras: molduraDoPersonagem(char).map((m) => m.id),
+    molduraId: molduraEscolhida(char)?.id ?? null,
   };
 }
 
@@ -87,7 +93,7 @@ export async function estadoDasConquistas(uid: string): Promise<EstadoDasConquis
   return estadoDe(char);
 }
 
-export const ACOES_DAS_CONQUISTAS = ['resgatar', 'resgatarTudo', 'titulo'] as const;
+export const ACOES_DAS_CONQUISTAS = ['resgatar', 'resgatarTudo', 'titulo', 'moldura'] as const;
 export type AcaoDasConquistas = (typeof ACOES_DAS_CONQUISTAS)[number];
 
 /** O que um resgate entregou, em linhas curtas. */
@@ -101,9 +107,9 @@ function textoDaRecompensa(r: ReturnType<typeof somarRecompensas>): string {
   return partes.join(', ');
 }
 
-export async function agirNasConquistas(uid: string, acao: unknown, pedido: { id?: unknown; titulo?: unknown }): Promise<{ mensagem: string; estado: EstadoDasConquistas }> {
+export async function agirNasConquistas(uid: string, acao: unknown, pedido: { id?: unknown; titulo?: unknown; moldura?: unknown }): Promise<{ mensagem: string; estado: EstadoDasConquistas }> {
   if (typeof acao !== 'string' || !(ACOES_DAS_CONQUISTAS as readonly string[]).includes(acao)) throw new ErroDeConquista('Ação desconhecida.');
-  if (acao !== 'titulo') await exigirSistemaLigado(uid, 'conquistas');
+  if (acao !== 'titulo' && acao !== 'moldura') await exigirSistemaLigado(uid, 'conquistas');
   return repositorio.executarTransacao(`conquistas:${acao}`, async (ctx) => {
     const eu = await carregarPersonagem(ctx, uid);
 
@@ -113,6 +119,15 @@ export async function agirNasConquistas(uid: string, acao: unknown, pedido: { id
       if (id && !(eu.titulos ?? []).includes(id)) throw new ErroDeConquista('Você ainda não tem esse título.');
       const salvo = salvarPersonagem(ctx, eu, { tituloId: id || undefined });
       return { mensagem: id ? `Título escolhido: ${TITULO_MAP[id].nome}.` : 'Título retirado do perfil.', estado: estadoDe(salvo) };
+    }
+
+    if (acao === 'moldura') {
+      // '' tira a moldura (volta a Padrão)
+      const id = typeof pedido.moldura === 'string' ? pedido.moldura : '';
+      if (id && !ehMoldura(id)) throw new ErroDeConquista('Moldura desconhecida.');
+      if (id && !molduraLiberada(eu, MOLDURA_MAP[id])) throw new ErroDeConquista('Você ainda não tem essa moldura.');
+      const salvo = salvarPersonagem(ctx, eu, { molduraId: id || undefined });
+      return { mensagem: id ? `Moldura escolhida: ${MOLDURA_MAP[id].nome}.` : 'Moldura Padrão no perfil.', estado: estadoDe(salvo) };
     }
 
     const alvo = acao === 'resgatar' ? (typeof pedido.id === 'string' ? CONQUISTA_MAP[pedido.id] : undefined) : null;

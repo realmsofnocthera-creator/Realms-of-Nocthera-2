@@ -6,6 +6,7 @@ import imgFundoTorre from './images/torre/fundo-1.webp';
 import imgFundoBuscar from './images/buscar/fundo.webp';
 import imgPergaminho from './images/torre/pergaminho.webp';
 import imgSigilo from './images/torre/icone-sigilo.webp';
+import imgCadeado from './images/torre/icone-cadeado.webp';
 import imgPresente from './images/checkin/presente.webp';
 import imgFeito from './images/checkin/feito.webp';
 import imgBauPequeno from './images/checkin/bau-pequeno.webp';
@@ -34,6 +35,7 @@ export const TELAS_UI = {
   fundoPerfil: srcDaImagem(imgFundoBuscar),
   pergaminho: srcDaImagem(imgPergaminho),
   sigilo: srcDaImagem(imgSigilo),
+  cadeado: srcDaImagem(imgCadeado),
   presente: srcDaImagem(imgPresente),
   feito: srcDaImagem(imgFeito),
   bauFechado: srcDaImagem(imgBauPequeno),

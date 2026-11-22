@@ -88,6 +88,30 @@ describe('Conquistas: servidor', () => {
     expect((await erro(agirNasConquistas('u1', 'resgatarTudo', {})))?.message).toMatch(/Não há conquistas/);
   });
 
+  it('a moldura de categoria vem do 5º degrau; o jogador a escolhe, ela aparece no perfil público e some se ele deixar de tê-la', async () => {
+    expect((await erro(agirNasConquistas('u1', 'moldura', { moldura: 'categoria-provacoes' })))?.message).toMatch(/ainda não tem/);
+    expect((await erro(agirNasConquistas('u1', 'moldura', { moldura: 'nao-existe' })))?.message).toMatch(/desconhecida/);
+    expect((await estadoDasConquistas('u1')).molduras).toEqual([]);
+    await updateCharacter('u1', { torreAndar: 300 });
+    await agirNasConquistas('u1', 'resgatar', { id: 'torre' });
+    expect((await estadoDasConquistas('u1')).molduras).toEqual(['categoria-provacoes']);
+    const r = await agirNasConquistas('u1', 'moldura', { moldura: 'categoria-provacoes' });
+    expect(r.estado.molduraId).toBe('categoria-provacoes');
+    expect((await getPublicCharacterByName('Aragorn'))?.molduraId).toBe('categoria-provacoes');
+    // as molduras de título só com o título (uma da Arena, não ganha só por ter a conquista)
+    expect((await erro(agirNasConquistas('u1', 'moldura', { moldura: 'ranque-eterno' })))?.message).toMatch(/ainda não tem/);
+    await agirNasConquistas('u1', 'moldura', { moldura: '' });
+    expect((await getPublicCharacterByName('Aragorn'))?.molduraId).toBeUndefined();
+  });
+
+  it('a moldura do ranque e a do Campeonato vêm dos títulos que chegam pelo Correio', async () => {
+    await enviarMensagemDoMestre(dono, { destino: 'u1', titulo: 'Arena', texto: 'Ranque', titulos: ['eterno-da-arena', 'lenda-de-nocthera'] }, undefined, T0);
+    await agirNoCorreio('u1', 'resgatarTudo', {}, T0);
+    expect((await estadoDasConquistas('u1')).molduras).toEqual(['ranque-eterno', 'campeonato-4']);
+    const r = await agirNasConquistas('u1', 'moldura', { moldura: 'campeonato-4' });
+    expect(r.estado.molduraId).toBe('campeonato-4');
+  });
+
   it('o 5º degrau dá o título; o jogador escolhe o título e ele aparece no perfil público', async () => {
     await updateCharacter('u1', { torreAndar: 300 });
     expect((await erro(agirNasConquistas('u1', 'titulo', { titulo: 'conquistador-da-torre' })))?.message).toMatch(/ainda não tem/);
