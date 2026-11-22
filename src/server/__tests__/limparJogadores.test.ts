@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error o script é .mjs (sem tipos)
 import { limparJogadores, COLECOES_INTEIRAS, COLECOES_POR_JOGADOR, COLECOES_MANTIDAS, CAMPOS_DO_DONO_A_LIMPAR, totalDeApagamentos } from '../../../scripts/limpar-jogadores.mjs';
 
 /** Um "Firestore" de mentira: coleção → documentos (id → dados). */
@@ -34,9 +33,10 @@ describe('limpeza de jogadores (núcleo do script)', () => {
   it('o ensaio não apaga nada e conta o que apagaria', async () => {
     const m = mundo();
     const r = await limparJogadores({ io: m.io, donoUid: 'DONO', executar: false });
+    const por = r.colecoesPorJogador as Record<string, number>;
     expect(r.usuarios.apagar).toBe(3);
-    expect(r.colecoesPorJogador.characters).toBe(3);
-    expect(r.colecoesPorJogador.transactions).toBe(3);
+    expect(por.characters).toBe(3);
+    expect(por.transactions).toBe(3);
     expect(Object.keys(m.col.characters)).toHaveLength(4);
     expect(m.logins.size).toBe(4);
     expect(m.col.guildas).toBeDefined();
