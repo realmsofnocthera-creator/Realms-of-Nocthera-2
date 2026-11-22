@@ -68,7 +68,7 @@ describe('1.8.1 — racias de buff (Humano, Anão, Elfo, Orc)', () => {
   });
 
   it('Anão: −20% de dano físico recebido, +3 Força e −2 Agilidade', () => {
-    const h = heroi('anao', 'barbaro', { mitigacao: 0 });
+    const h = heroi('anao', 'barbaro', { mitigacao: 0, atributos: { vigor: 20, sorte: 0, forca: 20, vitalidade: 0, arcano: 2, inteligencia: 20, agilidade: 5 } });
     const atacante: Combatente = alvo({ nome: 'Atacante', atributos: { ...alvo().atributos, forca: 50 } });
     const antes = turnoDeCombate(atacante, { ...h, hp: 100 }, 1).turnoLog.ataques[0].danoEfetivo;
     // Anão já resiste 15% do dano físico (1.4: passiva Resistência Ancestral 10% + racial 5%): 50 → 42
@@ -76,7 +76,7 @@ describe('1.8.1 — racias de buff (Humano, Anão, Elfo, Orc)', () => {
     const primeiro = turnoDeCombate(h, alvo(), 1).turnoLog.ataques[0];
     expect(primeiro.racialAcionada).toBe('Fúria da Forja');
     expect(primeiro.danoBruto).toBe(23); // 20 + 3
-    expect(turnoDeCombate(atacante, h, 2).turnoLog.ataques[0].danoEfetivo).toBe(32); // 50 − (15% + 20% da Fúria da Forja, somados)
+    expect(turnoDeCombate(atacante, h, 2).turnoLog.ataques[0].danoEfetivo).toBe(30); // 50 − (15% + 20% da Fúria da Forja, somados) = 32,5, menos 2 de Defesa pela Vitalidade +2 da Fúria (a Vitalidade reduz o dano de todas as classes)
   });
 
   it('Orc: +10% de dano físico (soma na regra 1.2.2) e −2 de Agilidade', () => {

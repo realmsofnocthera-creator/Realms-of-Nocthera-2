@@ -4,14 +4,15 @@ import { montarQuadrosEmGrupo } from '../cacadaReplayGrupo';
 import { posicoesDaFormacao } from '../formacaoDoGrupo';
 import { montarChefeDoTeste, type ReplayDoTeste } from '@/rules/testeEquipe';
 
-const aliado = (nome: string, classeId: string, forca: number): Combatente => ({
+const aliado = (nome: string, classeId: string, forca: number, vitalidade = 60): Combatente => ({
   nome, hp: 2400, hpMax: 2400, sobreescudo: 300,
-  atributos: { vigor: 240, sorte: 10, forca, vitalidade: 60, arcano: 0, inteligencia: 0, agilidade: 40 },
+  atributos: { vigor: 240, sorte: 10, forca, vitalidade, arcano: 0, inteligencia: 0, agilidade: 40 },
   racaId: 'humano', classeId, nivel: 30, ouro: 0,
 });
 
-function replayDe(venceuForca: number): ReplayDoTeste {
-  const cs = [aliado('Brann', 'barbaro', venceuForca), aliado('Brann', 'cavaleiro', venceuForca), aliado('Lyra', 'ladino', venceuForca)];
+// vitalidade 0 na derrota: a Vitalidade agora reduz o dano de todas as classes, e aliados com defesa aguentariam o chefe
+function replayDe(venceuForca: number, vitalidade = 60): ReplayDoTeste {
+  const cs = [aliado('Brann', 'barbaro', venceuForca, vitalidade), aliado('Brann', 'cavaleiro', venceuForca, vitalidade), aliado('Lyra', 'ladino', venceuForca, vitalidade)];
   const chefe = montarChefeDoTeste('alma', 1, 3);
   const r = resolverCombateEmGrupo(cs, chefe, 11);
   return {
@@ -44,7 +45,7 @@ describe('replay da luta em grupo', () => {
   });
 
   it('na derrota o chefe resiste (com vida) e os aliados caídos ficam com a vida zerada', () => {
-    const replay = replayDe(1);
+    const replay = replayDe(1, 0);
     expect(replay.venceu).toBe(false);
     const quadros = montarQuadrosEmGrupo(replay);
     const ultimo = quadros[quadros.length - 1];
