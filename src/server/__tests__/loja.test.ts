@@ -57,6 +57,22 @@ describe('Loja (7.2): servidor', () => {
     await updateCharacter('u1', { nivel: 5, ouro: 100_000, diamantes: 500, essenciaDeSoberano: 1_000 });
   });
 
+  it('idempotência: repetir a mesma chave devolve o resultado de antes e não cobra de novo; chave inválida é 400 e a mesma chave em outra compra é 409', async () => {
+    const chave = 'toque-0001-abcdef';
+    const a = await comprarNaLoja('u1', 'recursos:selo:desgastado', 10, undefined, AGORA, chave);
+    const b = await comprarNaLoja('u1', 'recursos:selo:desgastado', 10, undefined, AGORA, chave);
+    expect(b).toEqual(a);
+    const c = await getCharacterByUid('u1');
+    expect(c!.ouro).toBe(98_000);
+    expect(c!.selosDeBusca?.desgastado).toBe(10);
+    // sem chave, cada pedido compra de novo (como antes)
+    await comprarNaLoja('u1', 'recursos:selo:desgastado', 10, undefined, AGORA);
+    expect((await getCharacterByUid('u1'))!.ouro).toBe(96_000);
+    const ruim = await erro(comprarNaLoja('u1', 'recursos:selo:desgastado', 1, undefined, AGORA, 'x y'));
+    expect(ruim).toMatchObject({ name: 'ErroDeChave', status: 400 });
+    expect((await getCharacterByUid('u1'))!.ouro).toBe(96_000);
+  });
+
   it('compra recurso e material, tira o preço e conta o limite do mês', async () => {
     const e = await estadoDaLoja('u1', AGORA);
     expect(e).toMatchObject({ podeComprar: true, giraEm: '2026-11-02T03:00:00.000Z', saldos: { ouro: 100_000, diamantes: 500, essenciaDeSoberano: 1_000 } });

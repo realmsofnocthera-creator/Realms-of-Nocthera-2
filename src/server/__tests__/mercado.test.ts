@@ -76,6 +76,25 @@ describe('Troca entre jogadores (7.2)', () => {
     expect(e.vendaveis.find((v) => v.ref.id === 'pelo-de-rato')).toMatchObject({ quantidade: 30, categoria: 'material' });
   });
 
+  it('idempotência: repetir a mesma chave não anuncia, compra nem cancela duas vezes', async () => {
+    const pedidoDeAnuncio = { item: { tipo: 'material', id: 'pelo-de-rato' }, moeda: 'ouro', preco: 5, quantidade: 3, idempotencyKey: 'anuncio-0001-xx' };
+    const a1 = await agirNoMercado('u1', true, 'anunciar', pedidoDeAnuncio, T0);
+    const a2 = await agirNoMercado('u1', true, 'anunciar', pedidoDeAnuncio, T0);
+    expect(a2).toEqual(a1);
+    const vendedor = (await getCharacterByUid('u1'))!;
+    expect(vendedor.anunciosNoMercado).toHaveLength(1);
+    const an = await primeiroAnuncio('u2');
+    const compradorAntes = (await getCharacterByUid('u2'))!;
+    const pedidoDeCompra = { id: an.id, idempotencyKey: 'compra-0001-xx' };
+    const c1 = await agirNoMercado('u2', true, 'comprar', pedidoDeCompra, T0);
+    const c2 = await agirNoMercado('u2', true, 'comprar', pedidoDeCompra, T0);
+    expect(c2).toEqual(c1);
+    expect((await getCharacterByUid('u1'))!.ouro).toBe(vendedor.ouro! + 5);
+    expect((await getCharacterByUid('u2'))!.ouro).toBe(compradorAntes.ouro! - 5);
+    // a chave de uma ação não vale em outra
+    expect(await erro(agirNoMercado('u2', true, 'cancelar', { id: an.id, idempotencyKey: 'compra-0001-xx' }, T0))).toMatchObject({ name: 'ErroDeChave', status: 409 });
+  });
+
   it('anunciar tira o item da mochila; comprar passa o dinheiro e o item, com extrato e aviso no Correio', async () => {
     const r = await anunciar('u1', { tipo: 'arma', id: 'w1' }, 'ouro', 1200);
     expect(r.mensagem).toMatch(/à venda por 1\.200 de ouro, por 7 dias/);

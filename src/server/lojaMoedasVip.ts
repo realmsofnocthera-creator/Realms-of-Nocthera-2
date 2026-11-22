@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { guardarResultado, lerChave, resultadoGuardado } from '@/rules/idempotencia';
 import { mesDeBrasilia } from '@/rules/loja';
 import { compradasNaLojaVip, itemDaLojaVip } from '@/rules/lojaMoedasVip';
 import type { BauDeEscolha } from '@/rules/arenaRanqueada';
@@ -16,7 +17,8 @@ const QUANTIDADE_MAXIMA_POR_COMPRA = 100;
 /** Os baús de escolha guardados no personagem não passam de 20 (é o que o documento lê). */
 const BAUS_MAXIMOS = 20;
 
-export async function comprarComMoedasVip(uid: string, chaveBruta: unknown, quantidadeBruta: unknown, agora = new Date()): Promise<{ mensagem: string }> {
+export async function comprarComMoedasVip(uid: string, chaveBruta: unknown, quantidadeBruta: unknown, agora = new Date(), idempotencyKey?: unknown): Promise<{ mensagem: string }> {
+  const chaveDeRepeticao = lerChave(idempotencyKey);
   await exigirSistemaLigado(uid, 'lojaVip');
   const item = itemDaLojaVip(chaveBruta);
   if (!item) throw new ErroDeCompra('Esse item não está na Loja de Moedas VIP.');
@@ -24,6 +26,8 @@ export async function comprarComMoedasVip(uid: string, chaveBruta: unknown, quan
   if (quantidade < 1 || quantidade > QUANTIDADE_MAXIMA_POR_COMPRA) throw new ErroDeCompra('Quantidade inválida.');
   return repositorio.executarTransacao('loja:moedasVip', async (ctx) => {
     const eu = await carregarPersonagem(ctx, uid);
+    const repetida = resultadoGuardado<{ mensagem: string }>(eu.idempotencia, chaveDeRepeticao, 'loja:moedasVip', agora);
+    if (repetida) return repetida;
     const comprados = compradasNaLojaVip(eu.comprasMoedasVip, item.chave, agora);
     if (comprados + quantidade > item.limiteMensal) {
       const resta = Math.max(0, item.limiteMensal - comprados);
@@ -46,8 +50,9 @@ export async function comprarComMoedasVip(uid: string, chaveBruta: unknown, quan
       const novos: BauDeEscolha[] = Array.from({ length: quantidade }, () => ({ id: `bau-${randomUUID()}`, tipo, origem: 'Loja de Moedas VIP', em: agora.toISOString() }));
       patch.bausDeEscolha = [...baus, ...novos];
     }
-    salvarPersonagem(ctx, eu, patch);
     const rotulo = `${quantidade > 1 ? `${quantidade}× ` : ''}${item.nome}`;
-    return { mensagem: `Você comprou ${rotulo} por ${total.toLocaleString('pt-BR')} Moedas VIP.${item.tipo === 'material' ? '' : ' Abra o baú na aba VIP para escolher.'}` };
+    const resposta = { mensagem: `Você comprou ${rotulo} por ${total.toLocaleString('pt-BR')} Moedas VIP.${item.tipo === 'material' ? '' : ' Abra o baú na aba VIP para escolher.'}` };
+    salvarPersonagem(ctx, eu, { ...patch, ...guardarResultado(eu.idempotencia, chaveDeRepeticao, 'loja:moedasVip', resposta, agora) });
+    return resposta;
   });
 }

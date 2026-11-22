@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     const limiteConta = limitarPorConta(user.uid, 'escrita');
     if (limiteConta) return limiteConta;
     const b = (await req.json().catch(() => ({}))) ?? {};
-    return NextResponse.json(await comprarNaLoja(user.uid, b.chave, b.quantidade, b.escolha));
+    return NextResponse.json(await comprarNaLoja(user.uid, b.chave, b.quantidade, b.escolha, undefined, b.idempotencyKey));
   } catch (error) {
     return respostaDeErro(error, 'loja.comprar_falhou');
   }

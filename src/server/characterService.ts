@@ -163,6 +163,7 @@ import { semanaDe } from '@/rules/chefeSemanal';
 import { conquistasEmDestaque, somarEstatisticas, type ConquistasDoJogador, type Contador, type EstatisticasDoJogador } from '@/rules/conquistas';
 import { detalheDaVitoria, type DetalheDaVitoria } from '@/game/resumoDaLuta';
 import { molduraEscolhida } from '@/rules/molduras';
+import type { ChaveGuardada } from '@/rules/idempotencia';
 import { TITULO_MAP } from '@/rules/titulos';
 import { somarVitoriasNoBestiario } from '@/rules/bestiario';
 import { ELEMENTOS, type Elemento } from '@/rules/elements';
@@ -342,6 +343,8 @@ export interface CharacterDocument {
   conquistas?: ConquistasDoJogador;
   titulos?: string[];
   tituloId?: string;
+  /** As últimas chaves de repetição das compras (idempotência: repetir a mesma chave devolve o resultado de antes). */
+  idempotencia?: ChaveGuardada[];
   /** A moldura do avatar escolhida (vale só se o personagem ainda tem a moldura; senão, a Padrão). */
   molduraId?: string;
   /** Teste de Equipe (7.4): as dificuldades concluídas de cada teste ("alma:3"), as chaves da provação e os selos do abismo. */

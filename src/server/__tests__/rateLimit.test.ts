@@ -1,11 +1,23 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { criarLimitador } from '@/server/rateLimit';
+import { criarLimitador, TETO_DE_COMBATE_POR_HORA } from '@/server/rateLimit';
 import { createCharacter } from '@/server/characterService';
 import { resetCharacterStore } from '@/test/repositorioMemoria';
 import { tokenDeTeste } from '@/test/firebaseAdminMock';
 
 const REGRA = { limite: 3, janelaMs: 1000 };
+
+describe('teto de combate por hora (P2)', () => {
+  it('1.200 lutas por hora passam, a seguinte é barrada, e na hora seguinte volta; fica acima do sinal de revisão', async () => {
+    const { TETO_DE_ACOES_POR_HORA } = await import('@/rules/integridade');
+    expect(TETO_DE_COMBATE_POR_HORA.limite).toBeGreaterThan(TETO_DE_ACOES_POR_HORA);
+    const l = criarLimitador();
+    const t0 = 1_000_000;
+    for (let i = 0; i < TETO_DE_COMBATE_POR_HORA.limite; i++) expect(l.verificar('u', TETO_DE_COMBATE_POR_HORA, t0 + i).permitido).toBe(true);
+    expect(l.verificar('u', TETO_DE_COMBATE_POR_HORA, t0 + 5000).permitido).toBe(false);
+    expect(l.verificar('u', TETO_DE_COMBATE_POR_HORA, t0 + TETO_DE_COMBATE_POR_HORA.janelaMs + 40 * 60_000).permitido).toBe(true);
+  });
+});
 
 describe('0.5-A3 — rate limiting', () => {
   it('permite até o limite na janela e bloqueia a próxima com Retry-After', () => {

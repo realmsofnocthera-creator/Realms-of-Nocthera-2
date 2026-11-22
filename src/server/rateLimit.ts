@@ -103,6 +103,14 @@ const REGRAS: Record<GrupoLimite, { porIp: RegraLimite; porConta: RegraLimite }>
   },
 };
 
+/**
+ * Teto por hora, por conta (P2 de segurança). Os 120 lutas por minuto só barram rajada: um robô que luta num ritmo de gente
+ * (1 a cada 3 s) passaria o dia todo. 1.200 lutas por hora é o dobro do sinal de revisão (600 ações/hora em integridade.ts):
+ * a revisão avisa primeiro e este teto só segura quem passa muito disso. PROPOSTA, A CONFIRMAR com o Yuri.
+ * Em memória, por instância: não custa leitura nem gravação no Firestore.
+ */
+export const TETO_DE_COMBATE_POR_HORA: RegraLimite = { limite: 1200, janelaMs: 60 * 60_000 };
+
 const limitador = criarLimitador();
 
 /**
@@ -139,6 +147,13 @@ export function limitarPorIp(req: NextRequest, grupo: GrupoLimite): NextResponse
 /** Limite por conta: chamar logo depois de autenticar. Retorna a resposta 429 ou null. */
 export function limitarPorConta(uid: string, grupo: GrupoLimite): NextResponse | null {
   const r = limitador.verificar(`uid:${grupo}:${uid}`, REGRAS[grupo].porConta);
+  if (r.permitido && grupo === 'combate') {
+    const h = limitador.verificar(`uid:combate-hora:${uid}`, TETO_DE_COMBATE_POR_HORA);
+    if (!h.permitido) {
+      registrarLog('WARNING', 'rate_limit.conta_hora', { grupo, uid, retryAfterSegundos: h.retryAfterSegundos });
+      return resposta429(h.retryAfterSegundos);
+    }
+  }
   if (r.permitido) return null;
   registrarLog('WARNING', 'rate_limit.conta', { grupo, uid, retryAfterSegundos: r.retryAfterSegundos });
   return resposta429(r.retryAfterSegundos);

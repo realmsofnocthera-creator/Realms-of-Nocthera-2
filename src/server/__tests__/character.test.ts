@@ -197,6 +197,21 @@ describe('ORDEM 2 & ORDEM 4 - Criação, Raças e Gerenciamento de Personagem', 
   });
 
   describe('4. Segurança: Bloqueio de Escrita Direta do Cliente em characters/ e transactions/', () => {
+    it('firestore.rules: users/{uid} só aceita o e-mail do próprio login, até 254 caracteres', async () => {
+      const fs = await import('fs');
+      const path = await import('path');
+      const regras = fs.readFileSync(path.resolve(process.cwd(), 'firestore.rules'), 'utf-8');
+      const bloco = regras.match(/match\s+\/users\/\{uid\}\s*\{([\s\S]*?)\n    \}/);
+      expect(bloco).not.toBeNull();
+      const criar = bloco![1].match(/allow\s+create:([\s\S]*?);/);
+      expect(criar).not.toBeNull();
+      expect(criar![1]).toMatch(/incoming\(\)\.email\s*==\s*request\.auth\.token\.email/);
+      expect(criar![1]).toMatch(/incoming\(\)\.email\.size\(\)\s*<=\s*254/);
+      expect(criar![1]).toMatch(/request\.auth\.token\.email\s*!=\s*null/);
+      expect(criar![1]).toMatch(/incoming\(\)\.dataCriacao\.size\(\)\s*<=\s*40/);
+      expect(bloco![1]).toMatch(/allow\s+update,\s*delete:\s*if\s+false\s*;/);
+    });
+
     it('firestore.rules deve conter allow write: if false explicitamente para characters e transactions', async () => {
       const fs = await import('fs');
       const path = await import('path');

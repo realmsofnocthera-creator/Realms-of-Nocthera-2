@@ -32,11 +32,13 @@ export async function signUpWithEmail(email: string, pass: string): Promise<User
   const uid = credential.user.uid;
 
   try {
-    // Grava users/{uid} no Firestore conforme Ordem 2
-    await setDoc(doc(db, 'users', uid), {
-      email: credential.user.email || email,
-      dataCriacao: new Date().toISOString(),
-    });
+    // Grava users/{uid} no Firestore conforme Ordem 2. As regras só aceitam o e-mail do próprio login (o do token), então é o da conta, não o digitado.
+    if (credential.user.email) {
+      await setDoc(doc(db, 'users', uid), {
+        email: credential.user.email,
+        dataCriacao: new Date().toISOString(),
+      });
+    }
   } catch (error) {
     console.warn('Nota: Criação do documento users/{uid} em Firestore:', error);
   }
@@ -58,10 +60,12 @@ export async function loginWithGoogle(): Promise<UserCredential> {
   const credential = await signInWithPopup(auth, googleProvider);
   const uid = credential.user.uid;
   try {
-    await setDoc(doc(db, 'users', uid), {
-      email: credential.user.email || '',
-      dataCriacao: new Date().toISOString(),
-    }, { merge: true });
+    if (credential.user.email) {
+      await setDoc(doc(db, 'users', uid), {
+        email: credential.user.email,
+        dataCriacao: new Date().toISOString(),
+      }, { merge: true });
+    }
   } catch {
     // Continua
   }

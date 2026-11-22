@@ -1,3 +1,4 @@
+import { guardarResultado, lerChave, resultadoGuardado } from '@/rules/idempotencia';
 import { randomUUID } from 'node:crypto';
 import { CARTAS_MAXIMAS, TIPO_DE_CARTA_MAP, type CartaItem } from '@/rules/almas';
 import { espacosExtrasDoVip } from '@/rules/vip';
@@ -427,6 +428,8 @@ export interface PedidoDoMercado {
   moeda?: unknown;
   preco?: unknown;
   id?: unknown;
+  /** Chave de repetição: repetir a mesma devolve o resultado de antes, sem negociar de novo. */
+  idempotencyKey?: unknown;
 }
 
 const nomeDaMoeda = (m: MoedaDoMercado, n: number) => (m === 'ouro' ? `${n.toLocaleString('pt-BR')} de ouro` : `${n.toLocaleString('pt-BR')} ${n === 1 ? 'Diamante' : 'Diamantes'}`);
@@ -440,11 +443,12 @@ function refDoPedido(bruto: unknown): RefDoItem {
 
 export async function agirNoMercado(uid: string, emailVerificado: boolean, acao: unknown, pedido: PedidoDoMercado, agora = new Date()): Promise<{ mensagem: string }> {
   if (typeof acao !== 'string' || !(ACOES_DO_MERCADO as readonly string[]).includes(acao)) throw new ErroDoMercado('Ação desconhecida.');
+  const chave = lerChave(pedido.idempotencyKey);
   await exigirSistemaLigado(uid, 'mercado');
   let resposta: { mensagem: string; revisoes: EntradaDeRevisao[] };
-  if (acao === 'anunciar') resposta = await anunciar(uid, emailVerificado, pedido, agora);
-  else if (acao === 'comprar') resposta = await comprar(uid, emailVerificado, pedido, agora);
-  else resposta = await cancelar(uid, pedido, agora);
+  if (acao === 'anunciar') resposta = await anunciar(uid, emailVerificado, pedido, agora, chave);
+  else if (acao === 'comprar') resposta = await comprar(uid, emailVerificado, pedido, agora, chave);
+  else resposta = await cancelar(uid, pedido, agora, chave);
   limparCacheDoMercado();
   for (const r of resposta.revisoes) await repositorio.gravarRevisao(r).catch((e) => registrarLog('ERROR', 'mercado.revisao_falhou', descreverErro(e)));
   return { mensagem: resposta.mensagem };
@@ -455,7 +459,7 @@ function exigirQuemNegocia(c: CharacterDocument, emailVerificado: boolean) {
   exigirEmailVerificado({ emailVerificado });
 }
 
-async function anunciar(uid: string, emailVerificado: boolean, pedido: PedidoDoMercado, agora: Date) {
+async function anunciar(uid: string, emailVerificado: boolean, pedido: PedidoDoMercado, agora: Date, chave: string | null) {
   const ref = refDoPedido(pedido.item);
   if (!ehMoedaDoMercado(pedido.moeda)) throw new ErroDoMercado('Escolha a moeda: ouro ou Diamantes.');
   if (!precoValido(pedido.preco)) throw new ErroDoMercado('Escolha um preço inteiro a partir de 1.');
@@ -466,6 +470,8 @@ async function anunciar(uid: string, emailVerificado: boolean, pedido: PedidoDoM
   const preco = pedido.preco;
   return repositorio.executarTransacao('mercado:anunciar', async (ctx) => {
     const eu = await carregarPersonagem(ctx, uid);
+    const repetida = resultadoGuardado<{ mensagem: string }>(eu.idempotencia, chave, 'mercado:anunciar', agora);
+    if (repetida) return { ...repetida, revisoes: [] };
     exigirQuemNegocia(eu, emailVerificado);
     const meus = eu.anunciosNoMercado ?? [];
     if (meus.length >= ANUNCIOS_ATIVOS_MAXIMOS) throw new ErroDoMercado(`Você já tem ${ANUNCIOS_ATIVOS_MAXIMOS} anúncios no Mercado. Cancele um ou espere vender.`);
@@ -487,19 +493,22 @@ async function anunciar(uid: string, emailVerificado: boolean, pedido: PedidoDoM
       expiraEm: new Date(agora.getTime() + DURACAO_DO_ANUNCIO_MS).toISOString(),
     };
     ctx.gravarAnuncioDoMercado(anuncio);
-    salvarPersonagem(ctx, r.doc, { ...r.patch, anunciosNoMercado: [...meus, anuncio.id] });
-    return { mensagem: `${d.quantidade > 1 ? `${d.quantidade}× ` : ''}${d.nome} à venda por ${nomeDaMoeda(moeda, preco)}, por 7 dias.`, revisoes: [] };
+    const mensagem = `${d.quantidade > 1 ? `${d.quantidade}× ` : ''}${d.nome} à venda por ${nomeDaMoeda(moeda, preco)}, por 7 dias.`;
+    salvarPersonagem(ctx, r.doc, { ...r.patch, anunciosNoMercado: [...meus, anuncio.id], ...guardarResultado(eu.idempotencia, chave, 'mercado:anunciar', { mensagem }, agora) });
+    return { mensagem, revisoes: [] };
   });
 }
 
-async function comprar(uid: string, emailVerificado: boolean, pedido: PedidoDoMercado, agora: Date) {
+async function comprar(uid: string, emailVerificado: boolean, pedido: PedidoDoMercado, agora: Date, chave: string | null) {
   const id = typeof pedido.id === 'string' && pedido.id.length <= 64 ? pedido.id : '';
   if (!id) throw new ErroDoMercado('Escolha o anúncio.');
   return repositorio.executarTransacao('mercado:comprar', async (ctx) => {
+    let eu = await carregarPersonagem(ctx, uid);
+    const repetida = resultadoGuardado<{ mensagem: string }>(eu.idempotencia, chave, 'mercado:comprar', agora);
+    if (repetida) return { ...repetida, revisoes: [] };
     const a = await ctx.lerAnuncioDoMercado(id);
     if (!a || anuncioExpirado(a, agora)) throw new ErroDoMercado('Esse anúncio não está mais à venda.');
     if (a.vendedorUid === uid) throw new ErroDoMercado('Esse anúncio é seu. Para tirar do Mercado, cancele.');
-    let eu = await carregarPersonagem(ctx, uid);
     exigirQuemNegocia(eu, emailVerificado);
     let vendedor = await carregarPersonagem(ctx, a.vendedorUid);
     const rotulo = `${a.quantidade > 1 ? `${a.quantidade}× ` : ''}${a.nome}`;
@@ -519,7 +528,8 @@ async function comprar(uid: string, emailVerificado: boolean, pedido: PedidoDoMe
     const unidade = precoPorUnidade(a);
     const atipico = precoAtipico(unidade, precos);
     ctx.gravarPrecosDoMercado(chaveDoPreco, [...precos, unidade].slice(-VENDAS_GUARDADAS_POR_ITEM));
-    salvarPersonagem(ctx, eu, { ...r.patch, ouro: eu.ouro, diamantes: eu.diamantes, correio: correioDoComprador, comprasNoMercado: compras, ...contarNoPatch(eu, { comprasNoMercado: 1 }) });
+    const textoDaCompra = `Você comprou ${rotulo} por ${nomeDaMoeda(a.moeda, a.preco)}.${r.pelaCaixa ? ' Não cabia na sua mochila: o item foi para o Correio.' : ''}`;
+    salvarPersonagem(ctx, eu, { ...r.patch, ouro: eu.ouro, diamantes: eu.diamantes, correio: correioDoComprador, comprasNoMercado: compras, ...contarNoPatch(eu, { comprasNoMercado: 1 }), ...guardarResultado(eu.idempotencia, chave, 'mercado:comprar', { mensagem: textoDaCompra }, agora) });
     salvarPersonagem(ctx, vendedor, {
       ouro: vendedor.ouro,
       diamantes: vendedor.diamantes,
@@ -534,7 +544,7 @@ async function comprar(uid: string, emailVerificado: boolean, pedido: PedidoDoMe
       revisoes.push({ id: idDaRevisao(uid, hora, 'trocaEntreAsMesmasContas'), uid, nome: eu.nome, tipo: 'trocaEntreAsMesmasContas', descricao: `${doMesmo} compras de ${vendedor.nome} em 24 horas no Mercado.`, criadaEm: agora.toISOString(), revisada: false, contasDaRede: [a.vendedorUid] });
     if (atipico)
       revisoes.push({ id: idDaRevisao(a.vendedorUid, hora, 'precoAtipico'), uid: a.vendedorUid, nome: vendedor.nome, tipo: 'precoAtipico', descricao: `Vendeu ${rotulo} para ${eu.nome} por ${nomeDaMoeda(a.moeda, a.preco)}, muito fora do preço normal desse item.`, criadaEm: agora.toISOString(), revisada: false, contasDaRede: [uid] });
-    return { mensagem: `Você comprou ${rotulo} por ${nomeDaMoeda(a.moeda, a.preco)}.${r.pelaCaixa ? ' Não cabia na sua mochila: o item foi para o Correio.' : ''}`, revisoes };
+    return { mensagem: textoDaCompra, revisoes };
   });
 }
 
@@ -555,19 +565,22 @@ function chaveDoTipoDoItem(item: ItemDoAnuncio): string {
   }
 }
 
-async function cancelar(uid: string, pedido: PedidoDoMercado, agora: Date) {
+async function cancelar(uid: string, pedido: PedidoDoMercado, agora: Date, chave: string | null) {
   const id = typeof pedido.id === 'string' && pedido.id.length <= 64 ? pedido.id : '';
   if (!id) throw new ErroDoMercado('Escolha o anúncio.');
   return repositorio.executarTransacao('mercado:cancelar', async (ctx) => {
+    let eu = await carregarPersonagem(ctx, uid);
+    const repetida = resultadoGuardado<{ mensagem: string }>(eu.idempotencia, chave, 'mercado:cancelar', agora);
+    if (repetida) return { ...repetida, revisoes: [] };
     const a = await ctx.lerAnuncioDoMercado(id);
     if (!a || a.vendedorUid !== uid) throw new ErroDoMercado('Esse anúncio não está mais no Mercado.');
-    let eu = await carregarPersonagem(ctx, uid);
     const r = entregarItem(ctx, eu, a.item, `Mercado: anúncio cancelado (${a.nome})`);
     eu = r.doc;
     const correio = r.pelaCaixa ? comMensagem(eu.correio, novaMensagem({ titulo: 'Anúncio cancelado', texto: `${a.nome} não cabia na sua mochila e voltou pelo Correio.`, de: 'Mercado', presente: r.pelaCaixa }, agora), agora) : eu.correio;
     const ficam = (eu.anunciosNoMercado ?? []).filter((x) => x !== id);
-    salvarPersonagem(ctx, eu, { ...r.patch, correio, anunciosNoMercado: ficam.length ? ficam : undefined });
+    const mensagem = `Anúncio cancelado: ${a.nome} voltou para ${r.pelaCaixa ? 'o Correio' : 'a sua mochila'}.`;
+    salvarPersonagem(ctx, eu, { ...r.patch, correio, anunciosNoMercado: ficam.length ? ficam : undefined, ...guardarResultado(eu.idempotencia, chave, 'mercado:cancelar', { mensagem }, agora) });
     ctx.apagarAnuncioDoMercado(id);
-    return { mensagem: `Anúncio cancelado: ${a.nome} voltou para ${r.pelaCaixa ? 'o Correio' : 'a sua mochila'}.`, revisoes: [] };
+    return { mensagem, revisoes: [] };
   });
 }

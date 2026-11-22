@@ -31,7 +31,12 @@ service cloud.firestore {
                     && incoming().keys().hasAll(['email', 'dataCriacao'])
                     && incoming().keys().hasOnly(['email', 'dataCriacao'])
                     && incoming().email is string
-                    && incoming().dataCriacao is string;
+                    // 6.5 (P2): o e-mail gravado precisa ser o da própria conta (o do token do login), e caber no limite do e-mail (254)
+                    && request.auth.token.email != null
+                    && incoming().email == request.auth.token.email
+                    && incoming().email.size() <= 254
+                    && incoming().dataCriacao is string
+                    && incoming().dataCriacao.size() <= 40;
       allow update, delete: if false;
     }
 

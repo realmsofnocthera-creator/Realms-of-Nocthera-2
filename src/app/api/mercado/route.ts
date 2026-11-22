@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const limiteConta = limitarPorConta(user.uid, 'escrita');
     if (limiteConta) return limiteConta;
     const b = (await req.json().catch(() => ({}))) ?? {};
-    return NextResponse.json(await agirNoMercado(user.uid, user.emailVerificado, b.acao, { item: b.item, quantidade: b.quantidade, moeda: b.moeda, preco: b.preco, id: b.id }));
+    return NextResponse.json(await agirNoMercado(user.uid, user.emailVerificado, b.acao, { item: b.item, quantidade: b.quantidade, moeda: b.moeda, preco: b.preco, id: b.id, idempotencyKey: b.idempotencyKey }));
   } catch (error) {
     return respostaDeErro(error, 'mercado.acao_falhou');
   }

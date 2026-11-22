@@ -9,11 +9,22 @@ updates:
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
     groups:
-      # as atualizações pequenas vêm juntas num PR só, para não lotar a lista
-      pequenas:
+      # as atualizações pequenas vêm juntas num PR só, para não lotar a lista: uma para o que vai ao jogador e outra só para o desenvolvimento
+      producao-pequenas:
+        dependency-type: production
         update-types: [minor, patch]
+      desenvolvimento-pequenas:
+        dependency-type: development
+        update-types: [minor, patch]
+    # as grandes (major) vêm uma por PR, para serem lidas e testadas com calma
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+      day: monday
+      timezone: America/Sao_Paulo
     open-pull-requests-limit: 3
+    groups:
+      # as ações fixadas por SHA sobem juntas num PR só
+      acoes:
+        patterns: ['*']

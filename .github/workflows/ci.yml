@@ -1,4 +1,6 @@
 # 0.5-D4 — Regra fixa do roadmap (build e testes limpos) verificada em cada push e PR.
+# As ações vêm fixadas pelo SHA do commit (o comentário diz a versão): uma tag como @v4 pode ser movida por quem controla a ação. O Dependabot
+# (github-actions) abre o PR para atualizar o SHA e o comentário juntos.
 name: CI
 
 on:
@@ -17,9 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -27,8 +29,9 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      - name: Auditoria de segurança (dependências de produção, alta ou crítica)
-        run: npm audit --omit=dev --audit-level=high
+      # 6.5-14: falha a partir de severidade moderada nas dependências de produção
+      - name: Auditoria de segurança (dependências de produção, moderada ou mais)
+        run: npm audit --omit=dev --audit-level=moderate
 
       - name: Lint
         run: npm run lint
@@ -52,10 +55,10 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_COMMENTS: 'false'
