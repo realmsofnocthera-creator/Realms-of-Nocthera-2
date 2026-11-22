@@ -755,7 +755,8 @@ export function CharacterCreateForm({
       }
 
       onCharacterCreated();
-      router.push('/hub');
+      // o personagem novo começa pela introdução (vídeo, o lobo e a criatura de 9★) e depois vai ao Hub
+      router.push('/intro');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar personagem.');
     } finally {

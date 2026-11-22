@@ -13,6 +13,8 @@ export function AudioDoJogo() {
   const caminho = usePathname() ?? '/';
 
   useEffect(() => {
+    // a introdução (/intro) cuida da própria música: o vídeo tem som e as lutas tocam a de combate
+    if (caminho.startsWith('/intro')) return;
     definirMusica(`rota:${musicaDaRota(caminho).faixas.join(',')}`, musicaDaRota(caminho));
   }, [caminho]);
 

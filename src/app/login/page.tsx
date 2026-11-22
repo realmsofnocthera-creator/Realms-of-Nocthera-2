@@ -470,7 +470,7 @@ export default function LoginPage() {
               idToken={idToken || ''}
               aceite={aceite ?? undefined}
               onCharacterCreated={() => {
-                router.replace('/hub');
+                router.replace('/intro');
               }}
               onLogout={handleLogout}
               userEmail={user.email || ''}
