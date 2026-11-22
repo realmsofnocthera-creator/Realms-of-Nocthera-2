@@ -4,11 +4,10 @@ import { categoriaDeEscala, escalaDoNivel, escalarVida } from '@/rules/escalaMon
 import { AJUSTE_DE_DANO_POR_CLASSE, fatorDeDanoDaClasse } from '@/rules/ajusteDeClasses';
 
 describe('Balanceamento 2.3: escala dos monstros', () => {
-  it('os níveis 1, 2 e 30 ficam como a tabela; o resto é suavizado entre os vizinhos', () => {
-    expect(escalaDoNivel(2, 'normal')).toEqual({ kh: 5.3, kf: 5.5 });
+  it('o nível 30 fica como a tabela; o resto é suavizado entre os vizinhos (a partir do nível 14, sem o ajuste do começo)', () => {
     expect(escalaDoNivel(30, 'boss')).toEqual({ kh: 12.9, kf: 8.1 });
-    // nível 4 normal: (5.1 + 2×5.3 + 4.2) / 4
-    expect(escalaDoNivel(4, 'normal').kh).toBeCloseTo((5.1 + 2 * 5.3 + 4.2) / 4, 5);
+    // nível 20 normal: (8.2 + 2×7.7 + 6.6) / 4 (o nível 20 é de um boss, a coluna normal usa 8.2 / 7.7 / 6.6)
+    expect(escalaDoNivel(20, 'normal').kh).toBeCloseTo((8.2 + 2 * 7.7 + 6.6) / 4, 5);
   });
   it('o pico bruto do boss no nível 20 (29,0) é alisado', () => {
     expect(escalaDoNivel(20, 'boss').kh).toBeLessThan(25);
@@ -21,9 +20,9 @@ describe('Balanceamento 2.3: escala dos monstros', () => {
     expect(d8).toBeLessThan(Math.max(d4, d12) + 1);
   });
   it('nível fracionário (Torre) interpola e nível fora da faixa fica nos extremos', () => {
-    const a = escalaDoNivel(10, 'normal').kh;
-    const b = escalaDoNivel(11, 'normal').kh;
-    expect(escalaDoNivel(10.5, 'normal').kh).toBeCloseTo((a + b) / 2, 5);
+    const a = escalaDoNivel(20, 'normal').kh;
+    const b = escalaDoNivel(21, 'normal').kh;
+    expect(escalaDoNivel(20.5, 'normal').kh).toBeCloseTo((a + b) / 2, 5);
     expect(escalaDoNivel(99, 'normal')).toEqual(escalaDoNivel(30, 'normal'));
     expect(escalaDoNivel(-3, 'normal')).toEqual(escalaDoNivel(1, 'normal'));
   });
@@ -35,7 +34,7 @@ describe('Balanceamento 2.3: escala dos monstros', () => {
     expect(categoriaDeEscala('blindado', true)).toBe('boss');
   });
   it('a vida dos monstros da Caçada está multiplicada (nível ≥ 2 sempre acima da conta base)', () => {
-    expect(escalarVida(100, 10, 'normal')).toBeGreaterThan(300);
+    expect(escalarVida(100, 20, 'normal')).toBeGreaterThan(500);
     expect(MONSTROS_CACADA).toHaveLength(MONSTROS_CACADA_DADOS.length);
     for (const m of MONSTROS_CACADA) expect(m.hp).toBeGreaterThan(0);
   });

@@ -78,6 +78,26 @@ const CURVAS: Readonly<Record<CategoriaDeEscala, Par[]>> = {
   boss: colunaSuavizada(3),
 };
 
+/**
+ * Ajuste do começo do jogo: a tabela foi calibrada para o jogador de REFERÊNCIA (com equipamento), mas quem acabou de criar o personagem não tem nenhum.
+ * Do nível 1 ao 8 os monstros valem esta fração da tabela (um personagem cru, sem equipamento, vence os de 1★); do nível 9 ao 14 a fração sobe aos poucos
+ * até 1 (a tabela inteira, quando o jogador já tem equipamento e emblemas). Valores calibrados por simulação de personagens crus das 6 classes.
+ */
+export const AJUSTE_DE_INICIO: Record<CategoriaDeEscala, { kh: number; kf: number }> = {
+  normal: { kh: 0.27, kf: 0.16 },
+  dificil: { kh: 0.2, kf: 0.12 },
+  boss: { kh: 0.18, kf: 0.09 },
+};
+export const NIVEL_ATE_O_AJUSTE_TOTAL = 8;
+export const NIVEL_DA_TABELA_INTEIRA = 14;
+
+/** O peso do ajuste de começo no nível (1 até o nível 8; cai em linha reta até 0 no nível 14). */
+export function pesoDoAjusteDeInicio(nivel: number): number {
+  if (nivel <= NIVEL_ATE_O_AJUSTE_TOTAL) return 1;
+  if (nivel >= NIVEL_DA_TABELA_INTEIRA) return 0;
+  return (NIVEL_DA_TABELA_INTEIRA - nivel) / (NIVEL_DA_TABELA_INTEIRA - NIVEL_ATE_O_AJUSTE_TOTAL);
+}
+
 /** Os multiplicadores no nível (pode ser fracionário, como o nível de referência da Torre: interpola entre os vizinhos). */
 export function escalaDoNivel(nivel: number, categoria: CategoriaDeEscala): { kh: number; kf: number } {
   const curva = CURVAS[categoria];
@@ -87,7 +107,12 @@ export function escalaDoNivel(nivel: number, categoria: CategoriaDeEscala): { kh
   const t = n - baixo;
   const a = curva[baixo - 1];
   const b = curva[alto - 1];
-  return { kh: a[0] + (b[0] - a[0]) * t, kf: a[1] + (b[1] - a[1]) * t };
+  const w = pesoDoAjusteDeInicio(n);
+  const ini = AJUSTE_DE_INICIO[categoria];
+  return {
+    kh: (a[0] + (b[0] - a[0]) * t) * (1 - w * (1 - ini.kh)),
+    kf: (a[1] + (b[1] - a[1]) * t) * (1 - w * (1 - ini.kf)),
+  };
 }
 
 /** Normal = perfis normal e ágil; difícil = blindado e lento (o "—" da tabela interpola). Monstro-chave e chefes são `boss`. */
