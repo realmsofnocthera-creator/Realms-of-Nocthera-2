@@ -9,6 +9,7 @@ import { getAvatarFaceStyle, resolveAvatarSrc } from '@/assets/avatars';
 import { TELAS_UI, GEMA_DA_RARIDADE } from '@/assets/telasSociaisUi';
 import { MolduraDoAvatar } from '@/components/perfil/MolduraDoAvatar';
 import { BarraVip } from '@/components/vip/BarraVip';
+import { EfeitoDeEntrada } from '@/components/cena/EfeitoDeEntrada';
 import { ANIMACAO_DO_HEROI } from '@/lib/cacadaArte';
 import { BANNER_DO_PASSE, ILUSTRACAO_DA_LOJA, MOLDURA_DO_MENSAL, type MolduraDaLoja } from '@/assets/lojaPagaArte';
 import { DEFINICOES_DOS_PASSES } from '@/rules/passes';
@@ -193,17 +194,16 @@ function PreviaDoCosmetico({ item, indice }: { item: ItemCosmetico; indice: numb
           <div className="absolute inset-x-0 bottom-0 h-1/3" style={{ background: `linear-gradient(0deg, ${t.cor}88, transparent)` }} />
         </div>
       );
-    case 'efeito': {
-      const escala = Math.min(100 / fx.altura, 100 / fx.largura) * 1.15;
+    case 'efeito':
+      // o efeito de entrada de verdade (o mesmo da luta), tocando em laço em volta do herói
       return (
-        <div className="absolute inset-0 flex items-end justify-center pb-[8%]">
-          <Heroi classe={classe} altura={64} style={{ position: 'absolute', bottom: '10%' }} />
-          <div className="absolute left-1/2 top-[48%]" style={{ transform: 'translate(-50%, -50%)', mixBlendMode: 'screen' }}>
-            <Folha src={`${PASTA_DOS_EFEITOS}${t.efeito}.webp`} quadros={fx.quadros} largura={fx.largura} altura={fx.altura} fps={fx.fps} escala={escala} style={{ filter: `drop-shadow(0 0 5px ${t.cor}) saturate(1.6)` }} />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="relative" style={{ height: '58%', aspectRatio: '61 / 103' }}>
+            <Heroi classe={classe} altura={66} style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }} />
+            <EfeitoDeEntrada id={item.id} repetir escala={1.45} />
           </div>
         </div>
       );
-    }
     case 'aura': {
       const lendaria = item.raridade === 'lendario';
       return (

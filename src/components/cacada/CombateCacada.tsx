@@ -14,6 +14,7 @@ import { MapaDaCacada } from './MapaDaCacada';
 import { CenaDoChefe, type EventoDoChefe } from './CenaDoChefe';
 import { DURACAO_DO_CLIPE_MS, IMPACTO_DO_ATAQUE_DO_CHEFE_MS, type ArteDoChefeMundial, type AlvoDoChefe } from '@/assets/chefesMundiaisArte';
 import { AberturaDeBatalha } from '@/components/cena/AberturaDeBatalha';
+import { EfeitoDeEntrada } from '@/components/cena/EfeitoDeEntrada';
 import { useSonsDaLuta } from '@/lib/audio/useSonsDaLuta';
 import { TelaDeFimDeLuta, type TelaDeFimProps } from '@/components/cena/TelaDeFimDeLuta';
 import { SpriteAnimado } from '@/components/cena/SpriteAnimado';
@@ -41,6 +42,8 @@ interface CombateCacadaProps {
   cena?: ArteDoChefeMundial;
   /** No chefe mundial a barra do chefe mostra o dano causado na partida (a vida dele é sem fim); este é o melhor dano do dia do jogador, a meta da barra. */
   melhorDoDia?: number;
+  /** O efeito de entrada em combate (cosmético da Loja Premium): toca em volta do herói quando a luta começa. Serve para qualquer personagem. */
+  efeitoDeEntrada?: string;
   /** Sem a abertura "A Batalha começa": nas lutas seguintes de uma sequência (a Batalha Sangrenta) ela toca só na primeira. */
   semAbertura?: boolean;
   /** HP com que o personagem entra na luta (Batalha Sangrenta). */
@@ -162,7 +165,7 @@ export function geometriaDaCena(largura: number, altura: number, alvoDoChefe?: A
  * (um por golpe) e, no crítico, a estrela, o aviso e o tremor da tela. A barra de vida desce na hora do impacto e deixa um
  * rastro claro. No último golpe tudo vai em câmera lenta e a criatura se desfaz.
  */
-export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, hpInicialJogador, onFim, telaDeFim, mapa, cena, melhorDoDia, semAbertura }: CombateCacadaProps) {
+export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, hpInicialJogador, onFim, telaDeFim, mapa, cena, melhorDoDia, semAbertura, efeitoDeEntrada }: CombateCacadaProps) {
   const quadros: QuadroLuta[] = useMemo(() => montarQuadros(resultado, personagem, monstro, 5, hpInicialJogador), [resultado, personagem, monstro, hpInicialJogador]);
   const [indice, setIndice] = useState(0);
   // a abertura de batalha (a cena do Yuri) toca antes de a luta começar
@@ -398,6 +401,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
                     )}
                   </div>
                 </div>
+                {efeitoDeEntrada && !abertura && <EfeitoDeEntrada id={efeitoDeEntrada} />}
               </div>
             </div>
 

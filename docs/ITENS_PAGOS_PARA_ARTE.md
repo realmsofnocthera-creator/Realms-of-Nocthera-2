@@ -19,7 +19,7 @@ Gerada a partir do código (`src/rules/lojaPaga.ts`, `compras.ts`, `passes.ts`) 
 | 1 | **Passe do Iniciante** (ícone ou banner) + **definir os benefícios** | 1 | Pacotes | banner vertical como os dos Passes (420x780) ou ícone 256x256 |
 | 2 | **Molduras de perfil** (cosméticos) | 8 | Cosméticos | 128x128, buraco do rosto em (64, 66) com raio 26; as épicas e lendárias podem ter loop `-anim` |
 | 3 | **Avatares alternativos** | 6 | Cosméticos | retrato 480x720, rosto na parte de cima |
-| 4 | **Efeitos de entrada em combate** | 6 | Cosméticos | cena de 2 a 4 s, vertical 576x864, 24 fps (MP4 e WebM) |
+| 4 | **Efeitos de entrada em combate** (já existe uma versão feita em código, serve para todos os personagens; arte própria é opcional) | 6 | Cosméticos | camada transparente que se centra no herói e vale para qualquer classe: folha de quadros (como os efeitos de magia, ~158x142 por quadro, 26 quadros, 15 fps) ou animação WebP, 2 a 3 s, toca uma vez |
 | 5 | **Auras de personagem** | 4 | Cosméticos | camada animada em volta do herói, loop de 6 quadros, 128x160 |
 | 6 | **Skins de personagem** | 4 | Cosméticos | herói da classe (frente e costas, parado 6 quadros, ataque 9 quadros, 61x103) e retrato 480x720 |
 | 7 | **Decorações de chat e cores de nome** | 4 | Cosméticos | balão 9-slice até 64x64 e o código de cor do nome |
