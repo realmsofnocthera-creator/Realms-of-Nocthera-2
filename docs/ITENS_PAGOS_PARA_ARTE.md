@@ -201,6 +201,91 @@ Os **bônus** (XP, ouro, ouro diário, mochila, tentativas) já funcionam e **n�
 | vip-10-titulo | 10 | Título | Título VIP Transcendente | faixa de título 176x48 (a moldura do mesmo nome abre junto) |
 
 
+## 8. O que cada pacote contém
+
+Conteúdo de cada item pago, para você saber o que desenhar e o que entregar. Tudo o que está aqui vem do código (`compras.ts`, `passes.ts`, `lojaPaga.ts`).
+
+### 8.1 Pacotes de Diamantes
+
+| Pacote | Preço | Diamantes (base + bônus) | Na 1ª compra da conta (dobro) |
+|---|---|---|---|
+| Pequeno | R$ 4,99 | 100 = 100 | 200 |
+| Básico | R$ 9,99 | 200 + 20 = 220 | 440 |
+| Médio | R$ 19,99 | 400 + 80 = 480 | 960 |
+| Grande | R$ 34,99 | 800 + 100 = 900 | 1800 |
+| Premium | R$ 59,99 | 1500 + 200 = 1700 | 3400 |
+| Supremo | R$ 99,99 | 2500 + 500 = 3000 | 6000 |
+
+A primeira compra de Diamantes da conta vale 2x (base e bônus).
+
+### 8.2 Pacote do Iniciante
+
+- Preço: R$ 9,99 · 1 por conta
+- Conteúdo: 4.000 de ouro, 200 Diamantes e 1 baú de escolha de emblema épico (abre na aba VIP)
+
+### 8.3 Passe do Iniciante (novo)
+
+- Preço: R$ 14,99 · 1 por conta · só nos 14 primeiros dias da conta · dura 14 dias
+- Conteúdo: **a definir** (os benefícios ainda estão em branco)
+
+### 8.4 Vaga Extra de Expedição (novo)
+
+- Preço: R$ 9,99
+- Conteúdo: +1 vaga de expedição por 30 dias (sem passar de 5 vagas no total)
+
+### 8.5 Expansão da Mochila (novo)
+
+| Pacote | Preço | Espaços | Acumulado |
+|---|---|---|---|
+| 1º | R$ 2,99 | +20 | +20 (R$ 2,99) |
+| 2º | R$ 4,99 | +20 | +40 (R$ 7,98) |
+| 3º | R$ 5,99 | +20 | +60 (R$ 13,97) |
+| 4º | R$ 5,99 | +20 | +80 (R$ 19,96) |
+| 5º | R$ 7,99 | +20 | +100 (R$ 27,95) |
+| 6º | R$ 7,99 | +20 | +120 (R$ 35,94) |
+| 7º | R$ 9,99 | +20 | +140 (R$ 45,93) |
+| 8º | R$ 9,99 | +20 | +160 (R$ 55,92) |
+| 9º | R$ 11,99 | +20 | +180 (R$ 67,91) |
+| 10º | R$ 11,99 | +20 | +200 (R$ 79,90) |
+
+Total: +200 espaços. Cada pacote só pode ser comprado depois do anterior. **A definir:** qual mochila ganha os espaços (cartas, armas ou armaduras).
+
+### 8.6 Pacotes mensais (4 por cadeia, um por mês, em ordem)
+
+| Cadeia | Pacote | Preço | Conteúdo |
+|---|---|---|---|
+| Coleção | I | R$ 4,99 | 50 desgastado, 40 encantado |
+| Coleção | II | R$ 29,99 | 50 encantado, 40 eternidade |
+| Coleção | III | R$ 59,99 | 50 eternidade, 40 origem |
+| Coleção | IV | R$ 99,99 | 100 eternidade, 100 origem |
+| Ouro | I | R$ 4,99 | 1.000 de ouro |
+| Ouro | II | R$ 29,99 | 5.000 de ouro |
+| Ouro | III | R$ 59,99 | 12.000 de ouro |
+| Ouro | IV | R$ 99,99 | 30.000 de ouro |
+| Expedição | I | R$ 4,99 | 8 Avanços de expedição |
+| Expedição | II | R$ 29,99 | 24 Avanços de expedição |
+| Expedição | III | R$ 59,99 | 56 Avanços de expedição |
+| Expedição | IV | R$ 99,99 | 128 Avanços de expedição |
+
+As cadeias voltam ao primeiro pacote no dia 1 de cada mês (horário de Brasília).
+
+### 8.7 Passes (30 dias)
+
+| Passe | Preço | Por dia | Benefícios |
+|---|---|---|---|
+| Passe Premium | R$ 19,99 | 10 Moedas VIP + 4 Avanços de expedição | +10% de XP e +15% de ouro nos combates. -5% na Loja e na Forja. Por dia: 4 Avanços de expedição e 10 Moedas VIP. Moldura exclusiva. (em breve) |
+| Passe Deluxe | R$ 49,99 | 20 Moedas VIP + 8 Avanços de expedição + 10 encantado | +20% de XP e +25% de ouro nos combates. -10% na Loja e na Forja. Por dia: 8 Avanços de expedição, 20 Moedas VIP e 10 Selos Encantados. |
+| Passe do Invocador | R$ 29,99 | 20 desgastado, 20 encantado, 10 eternidade, 5 origem | Por dia: 20 Selos Desgastados, 20 Encantados, 10 da Eternidade e 5 da Origem. |
+| Passe de Diamantes | R$ 19,99 | 20 Diamantes | Por dia: 20 Diamantes (600 em 30 dias). |
+
+### 8.8 Conjuntos temáticos (25% de desconto)
+
+| Conjunto | Preço | Avulso | O que leva |
+|---|---|---|---|
+| Conjunto Raro · Gelo | R$ 28,99 | R$ 37,97 | Moldura de perfil Raro · Gelo; Avatar alternativo Raro · Gelo; Efeito de entrada em combate Raro · Gelo |
+| Conjunto Épico · Sombrio | R$ 77,99 | R$ 103,96 | Moldura de perfil Épico · Sombrio; Avatar alternativo Épico · Sombrio; Efeito de entrada em combate Épico · Sombrio; Aura de personagem Épico · Sombrio |
+| Conjunto Lendário · Fogo | R$ 149,99 | R$ 202,96 | Moldura de perfil Lendário · Fogo; Avatar alternativo Lendário · Fogo; Efeito de entrada em combate Lendário · Fogo; Aura de personagem Lendário · Fogo |
+
 ## Especificação das artes (medidas tiradas do que o jogo já usa)
 
 - **Ícones de pacote, passe, vaga e mochila:** WebP com fundo transparente, 128x128 (pixel art, sem suavização), até 350 KB. O Pacote do Iniciante e os de Diamantes podem ter versão 256x256 para o destaque.
