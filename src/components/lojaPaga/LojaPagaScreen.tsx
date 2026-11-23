@@ -10,9 +10,8 @@ import { TELAS_UI, GEMA_DA_RARIDADE } from '@/assets/telasSociaisUi';
 import { MolduraDoAvatar } from '@/components/perfil/MolduraDoAvatar';
 import { BarraVip } from '@/components/vip/BarraVip';
 import { ANIMACAO_DO_HEROI } from '@/lib/cacadaArte';
-import { ICONES_DE_ABA } from '@/assets/mochilaUi';
-import { EXPEDICAO_UI } from '@/assets/expedicaoUi';
-import { HUD_ICONS } from '@/assets/hud';
+import { BANNER_DO_PASSE, ILUSTRACAO_DA_LOJA, MOLDURA_DO_MENSAL, type MolduraDaLoja } from '@/assets/lojaPagaArte';
+import { DEFINICOES_DOS_PASSES } from '@/rules/passes';
 import { formatarReais } from '@/rules/vip';
 import { PACOTES_MENSAIS, NOME_DA_CADEIA, CADEIAS_MENSAIS } from '@/rules/compras';
 import {
@@ -287,23 +286,51 @@ const Pix = ({ src, l }: { src: string; l: number }) => (
   <img src={src} alt="" aria-hidden="true" draggable={false} className="lp-pix" style={{ width: l, height: 'auto' }} />
 );
 
+/** Uma moldura ou banner da Loja (arte do Yuri) com o texto dentro do furo. */
+function Quadro({ arte, rotulo, children }: { arte: MolduraDaLoja; rotulo: string; children: React.ReactNode }) {
+  const f = arte.furo;
+  return (
+    <div role="group" aria-label={rotulo} className="relative w-full" style={{ aspectRatio: String(arte.proporcao) }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={arte.src} alt="" aria-hidden="true" draggable={false} className="lp-pix absolute inset-0 w-full h-full" />
+      <div className="absolute flex flex-col items-center justify-center text-center" style={{ left: `${f.x}%`, top: `${f.y}%`, width: `${f.l}%`, height: `${f.a}%` }}>{children}</div>
+    </div>
+  );
+}
+
+const SOMBRA = '0 1px 0 #000, 0 0 6px rgba(0,0,0,.85)';
+const NOME_DO_SELO: Readonly<Record<string, string>> = { desgastado: 'Selos Desgastados', encantado: 'Selos Encantados', eternidade: 'Selos da Eternidade', origem: 'Selos da Origem' };
+
+/** O que um pacote entrega, em linhas curtas (para caber dentro da moldura). */
+function linhasDaEntrega(e: { ouro?: number; diamantes?: number; moedasVip?: number; avancosDeExpedicao?: number; selos?: Record<string, number | undefined> }): string[] {
+  const l: string[] = [];
+  if (e.ouro) l.push(`${e.ouro.toLocaleString('pt-BR')} de ouro`);
+  if (e.diamantes) l.push(`${e.diamantes} Diamantes`);
+  if (e.moedasVip) l.push(`${e.moedasVip} Moedas VIP`);
+  if (e.avancosDeExpedicao) l.push(`${e.avancosDeExpedicao} Avanços de expedição`);
+  for (const [k, v] of Object.entries(e.selos ?? {})) if (v) l.push(`${v} ${NOME_DO_SELO[k] ?? k}`);
+  return l;
+}
+
 function Diamantes() {
   return (
     <div className="grid grid-cols-2 gap-2">
       {DIAMANTES_NA_VITRINE.map((p, i) => {
         const total = p.base + p.bonus;
         const destaque = i === 3 ? 'Mais vendido' : i === 5 ? 'Melhor valor' : undefined;
+        const arte = i === 0 ? null : ILUSTRACAO_DA_LOJA.diamantes[(i + 1) as 2 | 3 | 4 | 5 | 6];
         return (
           <Moldura key={p.id} cor={i >= 4 ? '#F3B13C' : '#5AA7F0'} brilho={i >= 4} selo={destaque}>
-            <div className="self-center pt-3">
-              <Medalhao raridade={i >= 4 ? 'lendario' : i >= 2 ? 'raro' : 'comum'} lado={76}>
-                <div className="flex items-end justify-center gap-px" style={{ width: 52 }}>
-                  {Array.from({ length: Math.min(4, 1 + Math.floor(i / 1.4)) }, (_, k) => <Pix key={k} src={ARENA_UI.diamante} l={14 + k * 2 + i} />)}
-                </div>
-              </Medalhao>
+            <div className="flex items-center justify-center h-[88px] pt-3" aria-hidden="true">
+              {arte ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={arte} alt="" draggable={false} className="lp-pix lp-flutua max-h-full max-w-full w-auto h-auto object-contain" style={{ filter: 'drop-shadow(0 0 8px rgba(120,200,255,.55))' }} />
+              ) : (
+                <Pix src={ARENA_UI.diamante} l={46} />
+              )}
             </div>
             <div className="text-center leading-tight">
-              <p className="font-cinzel font-black text-base" style={{ color: CREME }}>{total.toLocaleString('pt-BR')} <span className="text-[10px] font-bold">Diamantes</span></p>
+              <p className="font-cinzel font-black text-base" style={{ color: CREME }}>{total.toLocaleString('pt-BR')} <span className="text-[10px] font-bold">{total === 1 ? 'Diamante' : 'Diamantes'}</span></p>
               <p className="text-[10px]" style={{ color: '#9fd4a0' }}>{p.bonus > 0 ? `${p.base} + ${p.bonus} de bônus` : p.nome}</p>
             </div>
             <BotaoEmBreve preco={formatarReais(p.precoCentavos)} cor={i >= 4 ? '#F3B13C' : '#5AA7F0'} />
@@ -315,38 +342,91 @@ function Diamantes() {
   );
 }
 
+function PacotesMensais() {
+  return (
+    <div className="flex flex-col gap-4">
+      {CADEIAS_MENSAIS.map((cadeia) => (
+        <section key={cadeia} aria-labelledby={`mensal-${cadeia}`} className="flex flex-col gap-2">
+          <div className="text-center leading-tight">
+            <h3 id={`mensal-${cadeia}`} className="font-cinzel font-black uppercase tracking-[0.2em] text-sm" style={{ color: CREME, textShadow: '0 1px 0 #000' }}>Pacote mensal · {NOME_DA_CADEIA[cadeia]}</h3>
+            <p className="text-[10px]" style={{ color: '#C8A25A' }}>4 pacotes por mês, em ordem. Reinicia no dia 1.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {PACOTES_MENSAIS.filter((x) => x.cadeia === cadeia).map((x) => {
+              const ordem = x.ordem as 1 | 2 | 3 | 4;
+              const numeral = ['I', 'II', 'III', 'IV'][ordem - 1];
+              return (
+                <Quadro key={x.id} arte={MOLDURA_DO_MENSAL[ordem]} rotulo={`${NOME_DA_CADEIA[cadeia]} ${numeral}, ${formatarReais(x.precoCentavos)}`}>
+                  <span className="text-[7px] font-black uppercase tracking-[0.2em]" style={{ color: '#E6C775', textShadow: SOMBRA }}>{NOME_DA_CADEIA[cadeia]}</span>
+                  <span className="font-cinzel font-black text-[22px] leading-none" style={{ color: '#FFF1CC', textShadow: SOMBRA }}>{numeral}</span>
+                  <span className="mt-0.5 flex flex-col leading-tight text-[9px] font-bold" style={{ color: '#F5E3B3', textShadow: SOMBRA }}>
+                    {linhasDaEntrega(x.entrega).map((t) => <span key={t}>{t}</span>)}
+                  </span>
+                  <span className="mt-1 font-cinzel font-black text-[13px]" style={{ color: '#FFE08A', textShadow: SOMBRA }}>{formatarReais(x.precoCentavos)}</span>
+                  <span className="text-[6px] font-black uppercase tracking-widest opacity-80" style={{ color: '#E9D9AE', textShadow: SOMBRA }}>Em breve</span>
+                </Quadro>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 function Pacotes() {
-  const [verTodos, setVerTodos] = useState(false);
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-2">
-        <Moldura cor="#7BC47F" selo="Para começar">
-          <div className="self-center mt-4"><Medalhao raridade="raro" lado={76}><Pix src={TELAS_UI.presente} l={36} /></Medalhao></div>
-          <div className="text-center leading-tight"><p className="font-cinzel font-black text-sm" style={{ color: CREME }}>{PACOTE_DO_INICIANTE_NA_VITRINE.nome}</p><p className="text-[10px]" style={{ color: '#C8A25A' }}>{PACOTE_DO_INICIANTE_NA_VITRINE.ouro.toLocaleString('pt-BR')} de ouro, {PACOTE_DO_INICIANTE_NA_VITRINE.diamantes} Diamantes e um baú de emblema épico. 1 por conta.</p></div>
-          <BotaoEmBreve preco={formatarReais(PACOTE_DO_INICIANTE_NA_VITRINE.precoCentavos)} cor="#7BC47F" />
-        </Moldura>
-        <Moldura cor="#F3B13C" brilho selo="Novo">
-          <div className="self-center mt-4"><Medalhao raridade="lendario" lado={76}><Pix src={ARENA_UI.louros} l={40} /></Medalhao></div>
-          <div className="text-center leading-tight"><p className="font-cinzel font-black text-sm" style={{ color: CREME }}>{PASSE_DO_INICIANTE.nome}</p><p className="text-[10px]" style={{ color: '#C8A25A' }}>{PASSE_DO_INICIANTE.regras}</p></div>
-          <BotaoEmBreve preco={formatarReais(PASSE_DO_INICIANTE.precoCentavos)} cor="#F3B13C" />
-        </Moldura>
-        <div className="col-span-2">
-          <Moldura cor="#5AA7F0" selo="Novo">
-            <div className="flex items-center gap-3 pt-3">
-              <Medalhao raridade="raro" lado={64}><Pix src={EXPEDICAO_UI.ampulheta} l={34} /></Medalhao>
-              <div className="leading-tight flex-1"><p className="font-cinzel font-black text-sm" style={{ color: CREME }}>{VAGA_EXTRA_DE_EXPEDICAO.nome} ({VAGA_EXTRA_DE_EXPEDICAO.duracaoEmDias} dias)</p><p className="text-[10px]" style={{ color: '#C8A25A' }}>{VAGA_EXTRA_DE_EXPEDICAO.regras}</p></div>
-            </div>
-            <BotaoEmBreve preco={formatarReais(VAGA_EXTRA_DE_EXPEDICAO.precoCentavos)} cor="#5AA7F0" />
-          </Moldura>
+      <Moldura cor="#7BC47F" selo="Para começar">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={ILUSTRACAO_DA_LOJA.iniciante} alt="" aria-hidden="true" draggable={false} className="lp-pix self-center mt-4 w-[78%] max-w-[300px] h-auto lp-flutua" style={{ filter: 'drop-shadow(0 0 10px rgba(123,196,127,.5))' }} />
+        <div className="text-center leading-tight">
+          <p className="font-cinzel font-black text-base" style={{ color: CREME }}>{PACOTE_DO_INICIANTE_NA_VITRINE.nome}</p>
+          <ul className="mt-1 inline-flex flex-col gap-0.5 text-[11px] text-left" style={{ color: '#E9D9AE' }}>
+            <li>• {PACOTE_DO_INICIANTE_NA_VITRINE.ouro.toLocaleString('pt-BR')} de ouro</li>
+            <li>• {PACOTE_DO_INICIANTE_NA_VITRINE.diamantes} Diamantes</li>
+            <li>• 1 baú de escolha de emblema épico</li>
+          </ul>
+          <p className="text-[10px] mt-1" style={{ color: '#C8A25A' }}>1 por conta.</p>
         </div>
-      </div>
+        <BotaoEmBreve preco={formatarReais(PACOTE_DO_INICIANTE_NA_VITRINE.precoCentavos)} cor="#7BC47F" />
+      </Moldura>
+
+      <Moldura cor="#F3B13C" brilho selo="Novo">
+        <div className="flex items-center gap-3 pt-3">
+          <Medalhao raridade="lendario" lado={76}><Pix src={ARENA_UI.louros} l={40} /></Medalhao>
+          <div className="leading-tight"><p className="font-cinzel font-black text-sm" style={{ color: CREME }}>{PASSE_DO_INICIANTE.nome}</p><p className="text-[10px]" style={{ color: '#C8A25A' }}>{PASSE_DO_INICIANTE.regras}</p><p className="text-[10px] mt-0.5" style={{ color: '#9a8f78' }}>Benefícios: a definir.</p></div>
+        </div>
+        <BotaoEmBreve preco={formatarReais(PASSE_DO_INICIANTE.precoCentavos)} cor="#F3B13C" />
+      </Moldura>
+
+      <Moldura cor="#5AA7F0" selo="Novo">
+        <div className="flex items-center gap-2 pt-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={ILUSTRACAO_DA_LOJA.vagaDeExpedicao} alt="" aria-hidden="true" draggable={false} className="lp-pix w-[42%] h-auto shrink-0 lp-flutua" style={{ filter: 'drop-shadow(0 0 8px rgba(90,167,240,.5))' }} />
+          <div className="leading-tight">
+            <p className="font-cinzel font-black text-sm" style={{ color: CREME }}>{VAGA_EXTRA_DE_EXPEDICAO.nome}</p>
+            <ul className="mt-1 flex flex-col gap-0.5 text-[10px]" style={{ color: '#E9D9AE' }}>
+              <li>• +1 vaga de expedição</li>
+              <li>• Por {VAGA_EXTRA_DE_EXPEDICAO.duracaoEmDias} dias</li>
+              <li>• Até {VAGA_EXTRA_DE_EXPEDICAO.limiteDeVagas} vagas no total</li>
+            </ul>
+          </div>
+        </div>
+        <BotaoEmBreve preco={formatarReais(VAGA_EXTRA_DE_EXPEDICAO.precoCentavos)} cor="#5AA7F0" />
+      </Moldura>
 
       <Moldura cor="#C27BF0" selo="Novo">
-        <div className="flex items-center gap-3 pt-3">
-          <Medalhao raridade="epico" lado={64}><Pix src={ICONES_DE_ABA.todos} l={34} /></Medalhao>
+        <div className="flex items-center gap-2 pt-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={ILUSTRACAO_DA_LOJA.mochila} alt="" aria-hidden="true" draggable={false} className="lp-pix w-[42%] h-auto shrink-0 lp-flutua" style={{ filter: 'drop-shadow(0 0 8px rgba(194,123,240,.5))' }} />
           <div className="leading-tight">
             <p className="font-cinzel font-black text-sm" style={{ color: CREME }}>Expansão da Mochila</p>
-            <p className="text-[10px]" style={{ color: '#C8A25A' }}>+20 espaços por pacote, em 10 pacotes que se compram em ordem. Todos juntos: +{TOTAL_DE_ESPACOS_DA_EXPANSAO} espaços por {formatarReais(TOTAL_DA_EXPANSAO_DA_MOCHILA_CENTAVOS)}. O 1º é o mais barato.</p>
+            <ul className="mt-1 flex flex-col gap-0.5 text-[10px]" style={{ color: '#E9D9AE' }}>
+              <li>• +20 espaços por pacote</li>
+              <li>• 10 pacotes, em ordem</li>
+              <li>• Todos juntos: +{TOTAL_DE_ESPACOS_DA_EXPANSAO} espaços por {formatarReais(TOTAL_DA_EXPANSAO_DA_MOCHILA_CENTAVOS)}</li>
+            </ul>
           </div>
         </div>
         <ol className="grid grid-cols-5 gap-1" aria-label="Os 10 pacotes da Expansão da Mochila">
@@ -358,52 +438,45 @@ function Pacotes() {
             </li>
           ))}
         </ol>
-        <p className="text-[10px] text-center" style={{ color: '#C8A25A' }}>O 1º pacote ({formatarReais(EXPANSOES_DA_MOCHILA[0].precoCentavos)}) é barato de propósito. Você só pode comprar o pacote seguinte depois do anterior.</p>
+        <p className="text-[10px] text-center" style={{ color: '#C8A25A' }}>O 1º pacote ({formatarReais(EXPANSOES_DA_MOCHILA[0].precoCentavos)}) é barato de propósito. Você só compra o pacote seguinte depois do anterior.</p>
         <BotaoEmBreve preco={`A partir de ${formatarReais(EXPANSOES_DA_MOCHILA[0].precoCentavos)}`} cor="#C27BF0" />
       </Moldura>
 
-      <div className="flex flex-col gap-2">
-        <button type="button" onClick={() => setVerTodos((v) => !v)} aria-expanded={verTodos} className="self-center text-[11px] font-cinzel font-bold uppercase tracking-widest px-3 py-1 border rounded-sm cursor-pointer" style={{ borderColor: `${OURO}88`, color: CREME, backgroundColor: 'rgba(28,20,12,.9)' }}>
-          {verTodos ? 'Esconder' : 'Ver'} os pacotes mensais
-        </button>
-        {verTodos && (
-          <div className="grid grid-cols-1 gap-2">
-            {CADEIAS_MENSAIS.map((cadeia) => (
-              <Moldura key={cadeia} cor="#C8A656">
-                <p className="font-cinzel font-black text-sm text-center" style={{ color: CREME }}>Pacote mensal · {NOME_DA_CADEIA[cadeia]}</p>
-                <ul className="grid grid-cols-4 gap-1">
-                  {PACOTES_MENSAIS.filter((p) => p.cadeia === cadeia).map((p) => (
-                    <li key={p.id} className="flex flex-col items-center py-1 rounded-sm" style={{ border: '1px solid #5b4a2e', backgroundColor: 'rgba(20,14,9,.9)' }}>
-                      <span className="text-[9px] font-bold" style={{ color: '#C8A25A' }}>{p.nome.split(' ').at(-1)}</span>
-                      <span className="text-[11px] font-black" style={{ color: CREME }}>{formatarReais(p.precoCentavos)}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-[10px] text-center" style={{ color: '#C8A25A' }}>4 pacotes por mês, em ordem. Reinicia no dia 1.</p>
-              </Moldura>
-            ))}
-          </div>
-        )}
-      </div>
+      <PacotesMensais />
     </div>
   );
 }
 
+function linhasDoPasse(id: string): string[] {
+  const d = DEFINICOES_DOS_PASSES.find((x) => x.id === id);
+  if (!d) return [];
+  const l: string[] = [];
+  if (d.xp) l.push(`+${d.xp}% de XP`);
+  if (d.ouro) l.push(`+${d.ouro}% de ouro`);
+  if (d.desconto) l.push(`-${d.desconto}% na Loja e na Forja`);
+  const dia = linhasDaEntrega(d.porDia as Parameters<typeof linhasDaEntrega>[0]);
+  if (dia.length) l.push('Por dia:', ...dia);
+  return l;
+}
+
 function Passes() {
+  const ordem: readonly ('premium' | 'deluxe' | 'invocador' | 'diamantes')[] = ['premium', 'deluxe', 'invocador', 'diamantes'];
   return (
-    <div className="grid grid-cols-1 gap-2">
-      {PASSES_NA_VITRINE.map((p, i) => (
-        <Moldura key={p.id} cor={i === 1 ? '#F3B13C' : '#C27BF0'} brilho={i === 1} selo={i === 1 ? 'Completo' : undefined}>
-          <div className="flex items-center gap-3 pt-3">
-            <Medalhao raridade={i === 1 ? 'lendario' : 'epico'} lado={64}><Pix src={i === 0 ? ARENA_UI.louros : i === 1 ? ARENA_UI.trofeu : i === 2 ? EXPEDICAO_UI.pedraDaRecordacao : HUD_ICONS.diamante} l={30} /></Medalhao>
-            <div className="leading-tight flex-1">
-              <p className="font-cinzel font-black text-sm" style={{ color: CREME }}>{p.nome}</p>
-              <ul className="text-[10px] list-disc pl-3" style={{ color: '#C8A25A' }}>{p.beneficios.map((b) => <li key={b}>{b}</li>)}</ul>
-            </div>
-          </div>
-          <BotaoEmBreve preco={`${formatarReais(p.precoCentavos)} · 30 dias`} cor={i === 1 ? '#F3B13C' : '#C27BF0'} />
-        </Moldura>
-      ))}
+    <div className="grid grid-cols-2 gap-x-2 gap-y-3">
+      {ordem.map((id) => {
+        const p = PASSES_NA_VITRINE.find((x) => x.id === id)!;
+        return (
+          <Quadro key={id} arte={BANNER_DO_PASSE[id]} rotulo={`${p.nome}, ${formatarReais(p.precoCentavos)}, 30 dias`}>
+            <span className="font-cinzel font-black text-[11px] leading-tight" style={{ color: '#FFF1CC', textShadow: SOMBRA }}>{p.nome}</span>
+            <span className="mt-1 flex flex-col leading-tight text-[8.5px] font-bold" style={{ color: '#F5E3B3', textShadow: SOMBRA }}>
+              {linhasDoPasse(id).map((t) => <span key={t} className={t.endsWith(':') ? 'mt-0.5 uppercase tracking-wider text-[7px]' : ''} style={t.endsWith(':') ? { color: '#E6C775' } : undefined}>{t}</span>)}
+            </span>
+            <span className="mt-1.5 font-cinzel font-black text-[13px]" style={{ color: '#FFE08A', textShadow: SOMBRA }}>{formatarReais(p.precoCentavos)}</span>
+            <span className="text-[7px] font-bold" style={{ color: '#E9D9AE', textShadow: SOMBRA }}>30 dias</span>
+            <span className="text-[6px] font-black uppercase tracking-widest opacity-80" style={{ color: '#E9D9AE', textShadow: SOMBRA }}>Em breve</span>
+          </Quadro>
+        );
+      })}
     </div>
   );
 }
