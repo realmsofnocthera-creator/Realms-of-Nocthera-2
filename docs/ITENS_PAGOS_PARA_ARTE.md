@@ -2,6 +2,41 @@
 
 Gerada a partir do código (`src/rules/lojaPaga.ts`, `compras.ts`, `passes.ts`) em 23/11/2026. Os preços são os que você passou. **Os nomes dos cosméticos são provisórios** (use o que quiser) e **a quantidade de desenhos por tipo é uma proposta minha**: 2 por raridade, o 1º faz parte do conjunto. Diga se quer mais ou menos.
 
+## STATUS DAS ARTES (atualizado em 23/11/2026)
+
+**Já entregues e na Loja Premium: 34 itens ✅** (marcados com ✅ nas tabelas abaixo)
+- 6 pacotes de Diamantes (o 1º usa só um diamante; do 2º ao 6º, os montes que você mandou)
+- Pacote do Iniciante (baús com diamantes)
+- Vaga Extra de Expedição (ampulheta)
+- Expansão da Mochila: os 10 pacotes usam a mesma mochila (uma arte só)
+- 12 pacotes mensais (as 4 molduras I a IV valem para as 3 cadeias: Coleção, Ouro e Expedição)
+- 4 Passes (banners verticais: Premium, Deluxe, Invocador e Diamantes)
+
+**FALTA FAZER: 52 itens**
+
+| # | O que falta | Qtd | Onde entra | Medida da arte |
+|---|---|---|---|---|
+| 1 | **Passe do Iniciante** (ícone ou banner) + **definir os benefícios** | 1 | Pacotes | banner vertical como os dos Passes (420x780) ou ícone 256x256 |
+| 2 | **Molduras de perfil** (cosméticos) | 8 | Cosméticos | 128x128, buraco do rosto em (64, 66) com raio 26; as épicas e lendárias podem ter loop `-anim` |
+| 3 | **Avatares alternativos** | 6 | Cosméticos | retrato 480x720, rosto na parte de cima |
+| 4 | **Efeitos de entrada em combate** | 6 | Cosméticos | cena de 2 a 4 s, vertical 576x864, 24 fps (MP4 e WebM) |
+| 5 | **Auras de personagem** | 4 | Cosméticos | camada animada em volta do herói, loop de 6 quadros, 128x160 |
+| 6 | **Skins de personagem** | 4 | Cosméticos | herói da classe (frente e costas, parado 6 quadros, ataque 9 quadros, 61x103) e retrato 480x720 |
+| 7 | **Decorações de chat e cores de nome** | 4 | Cosméticos | balão 9-slice até 64x64 e o código de cor do nome |
+| 8 | **Capas dos Conjuntos** (Raro, Épico e Lendário) | 3 | Conjuntos | 512x256 (os itens vêm dos tipos acima) |
+| 9 | **Recompensas de aparência do VIP** | 16 | Tela do VIP | molduras (5), títulos (4), skins (3), auras (1), efeitos (2), emblemas de chat (1), decoração (1); medidas na seção 7 |
+| | **Total que falta** | **52** | | |
+
+**O que também falta decidir (não é arte)**
+1. Passe do Iniciante: o que ele dá (hoje está "a definir").
+2. Skin: vale para uma classe só ou para qualquer classe? (se for por classe, a arte sobe para até 6 versões por skin)
+3. O Passe do Iniciante (R$ 14,99) substitui o Pacote do Iniciante (R$ 9,99) ou ficam os dois?
+4. Qual mochila ganha os espaços da Expansão (cartas, armas ou armaduras)?
+5. Nomes finais dos 32 cosméticos e das 16 recompensas do VIP (os nomes de hoje são provisórios; a lore é sua).
+6. Quantos desenhos por tipo e raridade (hoje: 2 por célula da tabela).
+
+**Quando você mandar a arte:** eu tiro o fundo verde, comprimo para WebP e ligo ao item (nos cosméticos, no lugar da prévia provisória; no VIP, o item vira "resgatável" no baú).
+
 ## Resumo: o que precisa de arte
 
 | Grupo | Quantidade | Tipo de arte |
@@ -27,56 +62,56 @@ Gerada a partir do código (`src/rules/lojaPaga.ts`, `compras.ts`, `passes.ts`) 
 
 | Id | Item | Preço | Regras |
 |---|---|---|---|
-| iniciante | Pacote do Iniciante (já existe) | R$ 9,99 | 1 por conta; 4000 de ouro, 200 Diamantes e baú de emblema épico |
+| iniciante ✅ | Pacote do Iniciante (já existe) | R$ 9,99 | 1 por conta; 4000 de ouro, 200 Diamantes e baú de emblema épico |
 | passe-iniciante | Passe do Iniciante (novo) | R$ 14,99 | 1 por conta. Só pode ser comprado nos 14 primeiros dias da conta e dura 14 dias. Benefícios: a definir |
-| vaga-expedicao-30d | Vaga Extra de Expedição (novo) | R$ 9,99 | +1 vaga de expedição por 30 dias, sem passar o limite de 5 vagas no total. |
-| mochila-1 | Expansão da Mochila 1º (novo) | R$ 2,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 2,99 |
-| mochila-2 | Expansão da Mochila 2º (novo) | R$ 4,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 7,98 |
-| mochila-3 | Expansão da Mochila 3º (novo) | R$ 5,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 13,97 |
-| mochila-4 | Expansão da Mochila 4º (novo) | R$ 5,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 19,96 |
-| mochila-5 | Expansão da Mochila 5º (novo) | R$ 7,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 27,95 |
-| mochila-6 | Expansão da Mochila 6º (novo) | R$ 7,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 35,94 |
-| mochila-7 | Expansão da Mochila 7º (novo) | R$ 9,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 45,93 |
-| mochila-8 | Expansão da Mochila 8º (novo) | R$ 9,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 55,92 |
-| mochila-9 | Expansão da Mochila 9º (novo) | R$ 11,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 67,91 |
-| mochila-10 | Expansão da Mochila 10º (novo) | R$ 11,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 79,90 |
+| vaga-expedicao-30d ✅ | Vaga Extra de Expedição (novo) | R$ 9,99 | +1 vaga de expedição por 30 dias, sem passar o limite de 5 vagas no total. |
+| mochila-1 ✅ | Expansão da Mochila 1º (novo) | R$ 2,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 2,99 |
+| mochila-2 ✅ | Expansão da Mochila 2º (novo) | R$ 4,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 7,98 |
+| mochila-3 ✅ | Expansão da Mochila 3º (novo) | R$ 5,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 13,97 |
+| mochila-4 ✅ | Expansão da Mochila 4º (novo) | R$ 5,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 19,96 |
+| mochila-5 ✅ | Expansão da Mochila 5º (novo) | R$ 7,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 27,95 |
+| mochila-6 ✅ | Expansão da Mochila 6º (novo) | R$ 7,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 35,94 |
+| mochila-7 ✅ | Expansão da Mochila 7º (novo) | R$ 9,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 45,93 |
+| mochila-8 ✅ | Expansão da Mochila 8º (novo) | R$ 9,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 55,92 |
+| mochila-9 ✅ | Expansão da Mochila 9º (novo) | R$ 11,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 67,91 |
+| mochila-10 ✅ | Expansão da Mochila 10º (novo) | R$ 11,99 | +20 espaços; só depois do pacote anterior; acumulado R$ 79,90 |
 
 ## 2. Diamantes (já existem)
 
 | Id | Nome | Preço | Diamantes |
 |---|---|---|---|
-| diamantes-1 | Pequeno | R$ 4,99 | 100 |
-| diamantes-2 | Básico | R$ 9,99 | 200 + 20 de bônus |
-| diamantes-3 | Médio | R$ 19,99 | 400 + 80 de bônus |
-| diamantes-4 | Grande | R$ 34,99 | 800 + 100 de bônus |
-| diamantes-5 | Premium | R$ 59,99 | 1500 + 200 de bônus |
-| diamantes-6 | Supremo | R$ 99,99 | 2500 + 500 de bônus |
+| diamantes-1 ✅ | Pequeno | R$ 4,99 | 100 |
+| diamantes-2 ✅ | Básico | R$ 9,99 | 200 + 20 de bônus |
+| diamantes-3 ✅ | Médio | R$ 19,99 | 400 + 80 de bônus |
+| diamantes-4 ✅ | Grande | R$ 34,99 | 800 + 100 de bônus |
+| diamantes-5 ✅ | Premium | R$ 59,99 | 1500 + 200 de bônus |
+| diamantes-6 ✅ | Supremo | R$ 99,99 | 2500 + 500 de bônus |
 
 ## 3. Passes (já existem, 30 dias)
 
 | Id | Nome | Preço | O que dá |
 |---|---|---|---|
-| passe-premium | Passe Premium | R$ 19,99 | +10% de XP e +15% de ouro nos combates. -5% na Loja e na Forja. Por dia: 4 Avanços de expedição e 10 Moedas VIP. Moldura exclusiva. |
-| passe-deluxe | Passe Deluxe | R$ 49,99 | +20% de XP e +25% de ouro nos combates. -10% na Loja e na Forja. Por dia: 8 Avanços de expedição, 20 Moedas VIP e 10 Selos Encantados. |
-| passe-invocador | Passe do Invocador | R$ 29,99 | Por dia: 20 Selos Desgastados, 20 Encantados, 10 da Eternidade e 5 da Origem. |
-| passe-diamantes | Passe de Diamantes | R$ 19,99 | Por dia: 20 Diamantes (600 em 30 dias). |
+| passe-premium ✅ | Passe Premium | R$ 19,99 | +10% de XP e +15% de ouro nos combates. -5% na Loja e na Forja. Por dia: 4 Avanços de expedição e 10 Moedas VIP. Moldura exclusiva. |
+| passe-deluxe ✅ | Passe Deluxe | R$ 49,99 | +20% de XP e +25% de ouro nos combates. -10% na Loja e na Forja. Por dia: 8 Avanços de expedição, 20 Moedas VIP e 10 Selos Encantados. |
+| passe-invocador ✅ | Passe do Invocador | R$ 29,99 | Por dia: 20 Selos Desgastados, 20 Encantados, 10 da Eternidade e 5 da Origem. |
+| passe-diamantes ✅ | Passe de Diamantes | R$ 19,99 | Por dia: 20 Diamantes (600 em 30 dias). |
 
 ## 4. Pacotes mensais (já existem; 4 por mês, em ordem)
 
 | Id | Nome | Preço |
 |---|---|---|
-| colecao-1 | Coleção I | R$ 4,99 |
-| colecao-2 | Coleção II | R$ 29,99 |
-| colecao-3 | Coleção III | R$ 59,99 |
-| colecao-4 | Coleção IV | R$ 99,99 |
-| ouro-1 | Ouro I | R$ 4,99 |
-| ouro-2 | Ouro II | R$ 29,99 |
-| ouro-3 | Ouro III | R$ 59,99 |
-| ouro-4 | Ouro IV | R$ 99,99 |
-| expedicao-1 | Expedição I | R$ 4,99 |
-| expedicao-2 | Expedição II | R$ 29,99 |
-| expedicao-3 | Expedição III | R$ 59,99 |
-| expedicao-4 | Expedição IV | R$ 99,99 |
+| colecao-1 ✅ | Coleção I | R$ 4,99 |
+| colecao-2 ✅ | Coleção II | R$ 29,99 |
+| colecao-3 ✅ | Coleção III | R$ 59,99 |
+| colecao-4 ✅ | Coleção IV | R$ 99,99 |
+| ouro-1 ✅ | Ouro I | R$ 4,99 |
+| ouro-2 ✅ | Ouro II | R$ 29,99 |
+| ouro-3 ✅ | Ouro III | R$ 59,99 |
+| ouro-4 ✅ | Ouro IV | R$ 99,99 |
+| expedicao-1 ✅ | Expedição I | R$ 4,99 |
+| expedicao-2 ✅ | Expedição II | R$ 29,99 |
+| expedicao-3 ✅ | Expedição III | R$ 59,99 |
+| expedicao-4 ✅ | Expedição IV | R$ 99,99 |
 
 ## 5. Cosméticos (novos; sem efeito em poder de combate)
 
