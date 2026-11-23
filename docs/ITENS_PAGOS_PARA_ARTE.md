@@ -20,7 +20,8 @@ Gerada a partir do código (`src/rules/lojaPaga.ts`, `compras.ts`, `passes.ts`) 
 | Skins de personagem | 4 | ver "Especificação" |
 | Decorações de chat e cores de nome | 4 | ver "Especificação" |
 | Conjuntos | 3 | só a arte de capa (os itens vêm dos tipos acima) |
-| **Total de itens com arte** | **70** | |
+| Recompensas do VIP | 16 | ver a seção 7 (moldura, título, skin, aura, efeito, emblema e decoração) |
+| **Total de itens com arte** | **86** | |
 
 ## 1. Pacotes e conveniência
 
@@ -160,6 +161,45 @@ Seu nome colorido e um enfeite nas suas mensagens do chat.
 | Conjunto Raro · Gelo | Moldura de perfil, Avatar alternativo, Efeito de entrada em combate | R$ 37,97 | R$ 28,99 | R$ 8,98 |
 | Conjunto Épico · Sombrio | Moldura de perfil, Avatar alternativo, Efeito de entrada em combate, Aura de personagem | R$ 103,96 | R$ 77,99 | R$ 25,97 |
 | Conjunto Lendário · Fogo | Moldura de perfil, Avatar alternativo, Efeito de entrada em combate, Aura de personagem | R$ 202,96 | R$ 149,99 | R$ 52,97 |
+## 7. Recompensas do VIP (níveis 0 a 10; 1 ponto VIP = R$ 1 gasto)
+
+Os **bônus** (XP, ouro, ouro diário, mochila, tentativas) já funcionam e **não precisam de arte**. As **recompensas de aparência** abaixo são resgatadas no baú da tela VIP; ficam "arte em produção" até você mandar a arte, e os nomes são provisórios. A tela VIP não mostra quantos pontos faltam para cada nível.
+
+| Nível | Nome | Pontos VIP (interno) | XP | Ouro | Ouro por dia | Benefícios ativos |
+|---|---|---|---|---|---|---|
+| 0 | Errante | 0 | +0% | +0% | 0 | Acesso padrão. |
+| 1 | Iniciado | 10 | +2% | +0% | 500 | Recompensa diária de 500 de ouro pelo Correio. |
+| 2 | Adepto | 30 | +3% | +3% | 500 | +1 chance diária na Provação do Guerreiro (uma extra em cada dificuldade). |
+| 3 | Discípulo | 75 | +4% | +5% | 500 | +20 espaços na mochila (cartas, armas e armaduras). |
+| 4 | Veterano | 150 | +5% | +7% | 500 | - |
+| 5 | Elite | 300 | +7% | +10% | 500 | +1 tentativa diária de Batalha Sangrenta. |
+| 6 | Ascendente | 600 | +8% | +12% | 500 | +1 chave grátis por dia no Teste de Equipe. |
+| 7 | Exaltado | 1000 | +10% | +15% | 500 | - |
+| 8 | Soberano | 1500 | +12% | +18% | 500 | - |
+| 9 | Imortal | 2200 | +13% | +20% | 500 | - |
+| 10 | Transcendente | 3000 | +15% | +30% | 500 | - |
+
+### Recompensas de aparência por nível (precisam de arte)
+
+| Id | Nível | Tipo | Nome provisório | Arte necessária |
+|---|---|---|---|---|
+| vip-1-moldura | 1 | Moldura | Moldura VIP | moldura 128x128 (buraco do rosto em 64,66, raio 26); as de nível 5 e 8 animadas (`-anim`) |
+| vip-2-titulo | 2 | Título | Título VIP: Adepto | faixa de título 176x48 (a moldura do mesmo nome abre junto) |
+| vip-3-moldura | 3 | Moldura | Moldura VIP exclusiva | moldura 128x128 (buraco do rosto em 64,66, raio 26); as de nível 5 e 8 animadas (`-anim`) |
+| vip-4-skin | 4 | Skin | Skin VIP | herói da classe (frente e costas, parado 6 quadros, ataque 9 quadros, 61x103) + retrato 480x720 |
+| vip-5-moldura | 5 | Moldura | Moldura animada VIP | moldura 128x128 (buraco do rosto em 64,66, raio 26); as de nível 5 e 8 animadas (`-anim`) |
+| vip-6-efeito | 6 | Efeito | Efeito de entrada em combate VIP | cena curta 2 a 4 s, vertical 576x864, 24 fps (MP4 e WebM) |
+| vip-7-emblema | 7 | Emblema | Emblema VIP do chat e da guilda | selo 16x16 ao lado do nome no chat e na guilda |
+| vip-7-skin | 7 | Skin | Skin VIP exclusiva | herói da classe (frente e costas, parado 6 quadros, ataque 9 quadros, 61x103) + retrato 480x720 |
+| vip-8-decoracao | 8 | Decoração de chat | Decoração VIP do chat | balão de chat 9-slice até 64x64 e cor do nome (código de cor) |
+| vip-8-moldura | 8 | Moldura | Moldura lendária animada VIP | moldura 128x128 (buraco do rosto em 64,66, raio 26); as de nível 5 e 8 animadas (`-anim`) |
+| vip-9-aura | 9 | Aura | Aura VIP | camada animada em volta do herói (loop de 6 quadros, 128x160) |
+| vip-9-titulo | 9 | Título | Título VIP especial | faixa de título 176x48 (a moldura do mesmo nome abre junto) |
+| vip-10-skin | 10 | Skin | Skin mítica VIP | herói da classe (frente e costas, parado 6 quadros, ataque 9 quadros, 61x103) + retrato 480x720 |
+| vip-10-efeito | 10 | Efeito | Efeito VIP especial no perfil | cena curta 2 a 4 s, vertical 576x864, 24 fps (MP4 e WebM) |
+| vip-10-moldura | 10 | Moldura | Moldura VIP Transcendente | moldura 128x128 (buraco do rosto em 64,66, raio 26); as de nível 5 e 8 animadas (`-anim`) |
+| vip-10-titulo | 10 | Título | Título VIP Transcendente | faixa de título 176x48 (a moldura do mesmo nome abre junto) |
+
 
 ## Especificação das artes (medidas tiradas do que o jogo já usa)
 
@@ -178,3 +218,4 @@ Seu nome colorido e um enfeite nas suas mensagens do chat.
 2. O Passe do Iniciante (R$ 14,99, 14 dias): o que ele dá por dia? Ainda está em branco.
 3. A Skin é por classe ou vale para qualquer classe?
 4. Os temas provisórios usam os 7 elementos do jogo. Você prefere outros temas (a lore é sua)?
+5. As 16 recompensas de aparência do VIP têm nomes provisórios e as artes ainda não existem: quando você mandar, eu ligo cada uma ao baú da tela VIP.

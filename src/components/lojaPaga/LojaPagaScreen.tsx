@@ -8,6 +8,7 @@ import { EFEITOS, PASTA_DOS_EFEITOS, type NomeDoEfeito } from '@/assets/efeitosP
 import { getAvatarFaceStyle, resolveAvatarSrc } from '@/assets/avatars';
 import { TELAS_UI, GEMA_DA_RARIDADE } from '@/assets/telasSociaisUi';
 import { MolduraDoAvatar } from '@/components/perfil/MolduraDoAvatar';
+import { BarraVip } from '@/components/vip/BarraVip';
 import { ANIMACAO_DO_HEROI } from '@/lib/cacadaArte';
 import { ICONES_DE_ABA } from '@/assets/mochilaUi';
 import { EXPEDICAO_UI } from '@/assets/expedicaoUi';
@@ -469,7 +470,7 @@ function Conjuntos() {
 }
 
 /** A tela da Loja Premium: o banner, a faixa de seções e as seções. */
-export function LojaPagaScreen({ nome, diamantes }: { nome?: string; diamantes?: number }) {
+export function LojaPagaScreen({ nome, diamantes, gastoCentavos }: { nome?: string; diamantes?: number; gastoCentavos?: number }) {
   const [secao, setSecao] = useState<SecaoDaLoja>('diamantes');
   const topo = useRef<HTMLDivElement>(null);
   const irPara = (s: SecaoDaLoja) => {
@@ -484,7 +485,7 @@ export function LojaPagaScreen({ nome, diamantes }: { nome?: string; diamantes?:
       <style>{ESTILOS}</style>
       <div ref={topo} className="w-full max-w-[520px] flex flex-col gap-4">
         <div className="flex items-center gap-2 pt-3">
-          <Link href="/loja" aria-label="Voltar à Loja" className="p-1"><ArrowLeft className="w-5 h-5" /></Link>
+          <Link href="/hub" aria-label="Voltar ao Hub" className="p-1"><ArrowLeft className="w-5 h-5" /></Link>
           <h1 className="font-cinzel font-black italic uppercase tracking-[0.22em] text-xl" style={{ color: '#FFE2A3', textShadow: '0 2px 0 #1A120B, 0 0 18px rgba(243,177,60,.55)' }}>Loja Premium</h1>
           {diamantes !== undefined && (
             <span className="ml-auto flex items-center gap-1 text-[12px] font-bold px-2 py-0.5 rounded-sm" style={{ border: `1px solid ${OURO}88`, backgroundColor: 'rgba(28,20,12,.9)' }} aria-label={`${diamantes} Diamantes`}>
@@ -494,6 +495,9 @@ export function LojaPagaScreen({ nome, diamantes }: { nome?: string; diamantes?:
             </span>
           )}
         </div>
+
+        {/* a barra do VIP: leva à tela do VIP */}
+        <BarraVip gastoCentavos={gastoCentavos ?? 0} />
 
         {/* o banner */}
         <section aria-label="Destaque" className="relative overflow-hidden rounded-sm lp-brilho" style={{ background: 'linear-gradient(135deg, #3d2606 0%, #1d1226 55%, #0e0a07 100%)', border: '1.5px solid #F3B13C', boxShadow: '0 0 30px rgba(243,177,60,.45), inset 0 0 40px rgba(194,123,240,.18)' }}>
@@ -530,7 +534,7 @@ export function LojaPagaScreen({ nome, diamantes }: { nome?: string; diamantes?:
           <Divisor />
           <p className="text-[10px]" style={{ color: '#C8A25A' }}>
             <Palette className="inline w-3 h-3 mr-1" aria-hidden="true" />
-            Cosméticos não mudam o poder de combate. Preços em reais (R$). As compras desta loja ainda não estão abertas; o que já pode ser comprado fica na aba VIP da Loja.
+            Cosméticos não mudam o poder de combate. Preços em reais (R$). As compras desta loja ainda não estão abertas. A loja comum, de ouro, fica no Menu, em Resgate. <Link href="/loja" className="underline">Compras de teste e Moedas VIP</Link>.
           </p>
         </footer>
       </div>

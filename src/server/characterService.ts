@@ -343,6 +343,8 @@ export interface CharacterDocument {
   conquistas?: ConquistasDoJogador;
   titulos?: string[];
   tituloId?: string;
+  /** As recompensas do VIP já resgatadas no baú da tela VIP (ids de `RECOMPENSAS_DO_VIP`). */
+  vipResgatados?: string[];
   /** A introdução (o lobo e a criatura de 9★) já foi jogada: vale uma vez só e leva o personagem ao nível 2. */
   introConcluida?: boolean;
   /** As últimas chaves de repetição das compras (idempotência: repetir a mesma chave devolve o resultado de antes). */
