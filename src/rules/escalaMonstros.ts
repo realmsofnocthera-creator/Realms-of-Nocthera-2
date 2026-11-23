@@ -84,9 +84,9 @@ const CURVAS: Readonly<Record<CategoriaDeEscala, Par[]>> = {
  * até 1 (a tabela inteira, quando o jogador já tem equipamento e emblemas). Valores calibrados por simulação de personagens crus das 6 classes.
  */
 export const AJUSTE_DE_INICIO: Record<CategoriaDeEscala, { kh: number; kf: number }> = {
-  normal: { kh: 0.27, kf: 0.16 },
-  dificil: { kh: 0.2, kf: 0.12 },
-  boss: { kh: 0.18, kf: 0.09 },
+  normal: { kh: 0.12, kf: 0.07 },
+  dificil: { kh: 0.12, kf: 0.07 },
+  boss: { kh: 0.1, kf: 0.05 },
 };
 export const NIVEL_ATE_O_AJUSTE_TOTAL = 8;
 export const NIVEL_DA_TABELA_INTEIRA = 14;
