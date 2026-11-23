@@ -137,6 +137,9 @@ export function LojaScreen({ tokenFresco }: { tokenFresco: Token }) {
         <header className="flex items-center gap-2">
           <Link href="/hub" aria-label="Voltar" className="p-1"><ArrowLeft className="w-5 h-5" /></Link>
           <h1 className="text-2xl font-cinzel font-extrabold italic tracking-widest uppercase" style={{ color: '#F5E3B3' }}>Loja</h1>
+          <Link href="/loja-premium" className="ml-auto text-[11px] font-cinzel font-black uppercase tracking-widest px-3 py-1.5 rounded-sm" style={{ background: 'linear-gradient(180deg, #F3B13C, #B9781A)', color: '#1A120B', boxShadow: '0 0 12px rgba(243,177,60,.55)' }}>
+            Loja Premium
+          </Link>
         </header>
         {aviso && <p role={aviso.erro ? 'alert' : 'status'} className="text-sm font-semibold" style={{ color: aviso.erro ? VERMELHO : VERDE }}>{aviso.texto}</p>}
         {erro ? (
