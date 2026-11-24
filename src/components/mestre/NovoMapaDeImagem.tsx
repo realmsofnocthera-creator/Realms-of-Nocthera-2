@@ -9,7 +9,7 @@ import {
   LADO_MAXIMO_DO_MAPA,
   LADO_MINIMO_DO_MAPA,
   mapaVazio,
-  PIXELS_MAXIMOS_DA_IMAGEM_DO_MAPA,
+  PIXELS_DO_AVISO_DA_IMAGEM_DO_MAPA,
   TAMANHOS_DE_TILE,
   TILE_PADRAO,
 } from '@/rules/mapa';
@@ -88,10 +88,10 @@ export function NovoMapaDeImagem({ tokenFresco, criado }: { tokenFresco: Token; 
   const entrada = useRef<HTMLInputElement>(null);
 
   const grade = imagem ? gradeDaImagem(imagem.largura, imagem.altura, tile) : null;
+  const pesada = imagem !== null && imagem.largura * imagem.altura > PIXELS_DO_AVISO_DA_IMAGEM_DO_MAPA;
   const problema = ((): string | null => {
     if (!imagem || !grade) return null;
     if (imagem.largura > LADO_MAXIMO_DA_IMAGEM_DO_MAPA || imagem.altura > LADO_MAXIMO_DA_IMAGEM_DO_MAPA) return `A imagem passa de ${LADO_MAXIMO_DA_IMAGEM_DO_MAPA} pixels de lado: divida em mapas menores.`;
-    if (imagem.largura * imagem.altura > PIXELS_MAXIMOS_DA_IMAGEM_DO_MAPA) return `A imagem passa de ${PIXELS_MAXIMOS_DA_IMAGEM_DO_MAPA / 1_000_000} milhões de pixels: divida em mapas menores.`;
     if (imagem.blob.size > BYTES_MAXIMOS_DA_IMAGEM_DO_MAPA) return `O arquivo passa de ${Math.round(BYTES_MAXIMOS_DA_IMAGEM_DO_MAPA / 1024 / 1024)} MB.`;
     if (grade.largura > LADO_MAXIMO_DO_MAPA || grade.altura > LADO_MAXIMO_DO_MAPA) return `Com tile de ${tile} px o mapa teria ${grade.largura} × ${grade.altura} tiles (o máximo é ${LADO_MAXIMO_DO_MAPA}): escolha um tile maior.`;
     if (grade.largura < LADO_MINIMO_DO_MAPA || grade.altura < LADO_MINIMO_DO_MAPA) return `O mapa precisa de pelo menos ${LADO_MINIMO_DO_MAPA} tiles de lado: escolha um tile menor ou uma imagem maior.`;
@@ -140,7 +140,7 @@ export function NovoMapaDeImagem({ tokenFresco, criado }: { tokenFresco: Token; 
   return (
     <Cartao titulo="Novo mapa a partir de uma imagem">
       <p className="text-[11px]" style={{ color: colors.text.secondary }}>
-        Envie a imagem inteira do mapa (PNG, até {LADO_MAXIMO_DA_IMAGEM_DO_MAPA} px de lado e {Math.round(BYTES_MAXIMOS_DA_IMAGEM_DO_MAPA / 1024 / 1024)} MB), escolha o tile da colisão e o mapa já nasce pronto. Depois é só pintar a colisão e colocar os objetos.
+        Envie a imagem inteira do mapa (PNG, até {LADO_MAXIMO_DA_IMAGEM_DO_MAPA} px de lado e {Math.round(BYTES_MAXIMOS_DA_IMAGEM_DO_MAPA / 1024 / 1024)} MB), escolha o tile da colisão e o mapa já nasce pronto. Depois, dentro do editor, você mesmo pinta a colisão e coloca os objetos.
       </p>
       <label className="inline-flex items-center gap-1.5 self-start px-3 py-1.5 rounded border text-[12px] cursor-pointer" style={{ borderColor: OURO, color: '#E6C775' }}>
         <ImagePlus className="w-4 h-4" /> {imagem ? 'Trocar a imagem' : 'Escolher a imagem'}
@@ -168,8 +168,9 @@ export function NovoMapaDeImagem({ tokenFresco, criado }: { tokenFresco: Token; 
             </label>
           </div>
           <p className="text-[11px]" style={{ color: problema ? VERMELHO : colors.text.secondary }}>
-            {imagem.nome}: {imagem.largura} × {imagem.altura} px · {(imagem.blob.size / 1024 / 1024).toFixed(1)} MB → com tile de {tile} px, o mapa terá {grade.largura} × {grade.altura} tiles ({(grade.largura * grade.altura).toLocaleString('pt-BR')} células de colisão).
+            {imagem.nome}: {imagem.largura} × {imagem.altura} px · {(imagem.blob.size / 1024 / 1024).toFixed(1)} MB → com tile de {tile} px, o mapa terá {grade.largura} × {grade.altura} tiles ({(grade.largura * grade.altura).toLocaleString('pt-BR')} células). Todas começam livres: a colisão é você quem pinta no editor.
           </p>
+          {pesada && !problema && <p role="status" className="text-[11px]" style={{ color: '#E6C775' }}>Imagem muito grande: pode ficar pesada em celulares mais fracos.</p>}
           {problema && <p role="alert" className="text-[12px] font-semibold" style={{ color: VERMELHO }}>{problema}</p>}
           <button type="submit" disabled={ocupado || problema !== null} className="self-start px-3 py-1.5 rounded font-cinzel font-bold text-xs disabled:opacity-50" style={{ backgroundColor: colors.accent.primary, color: colors.background.secondary }}>
             {ocupado ? 'Enviando a imagem...' : 'Criar o mapa'}

@@ -10,6 +10,7 @@ describe('Novo mapa a partir de uma imagem (renderização)', () => {
     expect(html).toContain('Escolher a imagem');
     expect(html).toContain('8192 px de lado');
     expect(html).toContain('24 MB');
+    expect(html).toContain('você mesmo pinta a colisão');
     expect(html).toContain('accept="image/*"');
     expect(html).not.toContain('Tile da colisão');
     expect(html).not.toContain('Criar o mapa');

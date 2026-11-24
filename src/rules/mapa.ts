@@ -20,9 +20,10 @@ export const LADO_MAXIMO_DO_MAPA = 256;
 export const TAMANHOS_DE_TILE = [16, 24, 32, 48, 64] as const;
 export const TILE_PADRAO = 32;
 export const MAIOR_TILE = 65_535;
-/** A imagem de fundo de um mapa de imagem: até 8192 px de lado, 40 milhões de pixels e 24 MB (PNG), guardada no armazenamento de arquivos. */
+/** A imagem de fundo de um mapa de imagem: até 8192 px de lado (8192 × 8192 cabe) e 24 MB (PNG), guardada no armazenamento de arquivos. */
 export const LADO_MAXIMO_DA_IMAGEM_DO_MAPA = 8192;
-export const PIXELS_MAXIMOS_DA_IMAGEM_DO_MAPA = 40_000_000;
+/** Acima disto a tela avisa que a imagem pode ficar pesada em celulares (não impede). */
+export const PIXELS_DO_AVISO_DA_IMAGEM_DO_MAPA = 40_000_000;
 export const BYTES_MAXIMOS_DA_IMAGEM_DO_MAPA = 24 * 1024 * 1024;
 export const MAXIMO_DE_TILESETS = 16;
 /** Cada tileset da lista do mapa ocupa um bloco de 4096 números: valor = posição do tileset × 4096 + tile + 1. */
@@ -174,8 +175,6 @@ export function validarMapa(bruto: unknown): ResultadoValidacao<MapaDados> {
       erros.push('O endereço da imagem do mapa não é de uma imagem enviada pelo painel.');
     } else if (!inteiroEntre(f.largura, 1, LADO_MAXIMO_DA_IMAGEM_DO_MAPA) || !inteiroEntre(f.altura, 1, LADO_MAXIMO_DA_IMAGEM_DO_MAPA)) {
       erros.push(`A imagem do mapa vai de 1 a ${LADO_MAXIMO_DA_IMAGEM_DO_MAPA} pixels de lado.`);
-    } else if (f.largura * f.altura > PIXELS_MAXIMOS_DA_IMAGEM_DO_MAPA) {
-      erros.push(`A imagem do mapa passa de ${PIXELS_MAXIMOS_DA_IMAGEM_DO_MAPA / 1_000_000} milhões de pixels.`);
     } else if (ladoOk(largura) && ladoOk(altura) && (TAMANHOS_DE_TILE as readonly unknown[]).includes(tamanhoDoTile)) {
       const g = gradeDaImagem(f.largura, f.altura, tamanhoDoTile as number);
       if (g.largura !== largura || g.altura !== altura) {

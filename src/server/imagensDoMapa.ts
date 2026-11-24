@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { BYTES_MAXIMOS_DA_IMAGEM_DO_MAPA, chaveDaImagemDoMapaNoEndereco, LADO_MAXIMO_DA_IMAGEM_DO_MAPA, PIXELS_MAXIMOS_DA_IMAGEM_DO_MAPA, type FundoDoMapa } from '@/rules/mapa';
+import { BYTES_MAXIMOS_DA_IMAGEM_DO_MAPA, chaveDaImagemDoMapaNoEndereco, LADO_MAXIMO_DA_IMAGEM_DO_MAPA, type FundoDoMapa } from '@/rules/mapa';
 import { dimensoesDoPng } from '@/rules/tileset';
 import { PERMISSAO_DE_EDICAO } from '@/rules/conteudo';
 import { armazenamentoPronto, chaveDaUrlPublica, gravarArquivo, lerInicioDoArquivo, urlPublicaDe } from '@/server/armazenamento';
@@ -16,7 +16,7 @@ export interface ImagemDoMapaEnviada {
 }
 
 /**
- * Recebe o PNG do painel (até 24 MB e 8192 px de lado), confere assinatura e dimensões e grava no armazenamento. O nome do arquivo é o SHA-256 do
+ * Recebe o PNG do painel (até 24 MB e 8192 × 8192 px), confere assinatura e dimensões e grava no armazenamento. O nome do arquivo é o SHA-256 do
  * conteúdo: enviar a mesma imagem de novo não duplica nada.
  */
 export async function enviarImagemDoMapa(sessao: SessaoMestre, bytes: Uint8Array, ip?: string): Promise<ImagemDoMapaEnviada> {
@@ -31,9 +31,6 @@ export async function enviarImagemDoMapa(sessao: SessaoMestre, bytes: Uint8Array
   const { largura, altura } = dimensoes;
   if (largura < 1 || altura < 1 || largura > LADO_MAXIMO_DA_IMAGEM_DO_MAPA || altura > LADO_MAXIMO_DA_IMAGEM_DO_MAPA) {
     throw new ErroMestre(400, `A imagem vai de 1 a ${LADO_MAXIMO_DA_IMAGEM_DO_MAPA} pixels de lado.`);
-  }
-  if (largura * altura > PIXELS_MAXIMOS_DA_IMAGEM_DO_MAPA) {
-    throw new ErroMestre(400, `A imagem passa de ${PIXELS_MAXIMOS_DA_IMAGEM_DO_MAPA / 1_000_000} milhões de pixels.`);
   }
   const chave = `mapas/${createHash('sha256').update(bytes).digest('hex')}.png`;
   await comRegistro(
