@@ -35,7 +35,9 @@ describe('Mapa de imagem (regras)', () => {
   it('recusa grade que não cobre a imagem, imagem grande demais, endereço ruim e campos a mais', () => {
     expect(erros(validarMapa({ ...comFundo(640, 480, 32), largura: 10, camadas: mapaVazio(10, 15, 32).camadas })).join(' ')).toMatch(/pede um mapa de 20 × 15 tiles/);
     expect(erros(validarMapa(comFundo(9000, 100, 64))).join(' ')).toMatch(/1 a 8192/);
-    expect(erros(validarMapa(comFundo(8192, 8192, 64))).join(' ')).toMatch(/milhões de pixels/);
+    // 8192 × 8192 cabe (o limite é só o lado)
+    expect(validarMapa(comFundo(8192, 8192, 64)).ok).toBe(true);
+    expect(validarMapa(comFundo(8192, 5376, 64)).ok).toBe(true);
     expect(erros(validarMapa({ ...comFundo(640, 480, 32), fundo: { url: 'https://x/y.png', largura: 640, altura: 480 } })).join(' ')).toMatch(/não é de uma imagem enviada/);
     expect(erros(validarMapa(comFundo(640, 480, 32, { extra: 1 }))).join(' ')).toMatch(/campos desconhecidos/);
     expect(erros(validarMapa({ ...comFundo(640, 480, 32), fundo: 'x' })).length).toBeGreaterThan(0);

@@ -59,7 +59,8 @@ describe('Mapa de imagem: imagem no armazenamento (R2)', () => {
   it('aceita imagens grandes (até 8192 px e 24 MB) e recusa o que passa, vazio, não-PNG e quem não edita mapas', async () => {
     await expect(enviarImagemDoMapa(mestre, png(8192, 4096))).resolves.toMatchObject({ largura: 8192, altura: 4096 });
     await expect(enviarImagemDoMapa(mestre, png(8193, 10))).rejects.toMatchObject({ status: 400, message: expect.stringMatching(/1 a 8192/) });
-    await expect(enviarImagemDoMapa(mestre, png(8192, 8192))).rejects.toMatchObject({ status: 400, message: expect.stringMatching(/milhões de pixels/) });
+    await expect(enviarImagemDoMapa(mestre, png(8192, 8192))).resolves.toMatchObject({ largura: 8192, altura: 8192 });
+    await expect(enviarImagemDoMapa(mestre, png(8192, 5376))).resolves.toMatchObject({ largura: 8192, altura: 5376 });
     await expect(enviarImagemDoMapa(mestre, png(100, 100, BYTES_MAXIMOS_DA_IMAGEM_DO_MAPA))).rejects.toMatchObject({ status: 400, message: expect.stringMatching(/24 MB/) });
     await expect(enviarImagemDoMapa(mestre, new Uint8Array())).rejects.toMatchObject({ status: 400 });
     await expect(enviarImagemDoMapa(mestre, new TextEncoder().encode('texto, não é PNG, de jeito nenhum aqui'))).rejects.toMatchObject({ status: 400, message: expect.stringMatching(/não é um PNG/) });
