@@ -8,14 +8,15 @@ import { TITULOS } from '@/rules/titulos';
 const publico = join(__dirname, '..', '..', '..', 'public');
 
 describe('molduras do avatar e faixas dos títulos', () => {
-  it('são 22 molduras (10 ranques, 4 do Campeonato, 7 de categoria e a do Chefe Mundial), 7 animadas', () => {
-    expect(MOLDURAS).toHaveLength(22);
-    expect(new Set(MOLDURAS.map((m) => m.id)).size).toBe(22);
+  it('são 27 molduras (10 ranques, 4 do Campeonato, 7 de categoria, a do Chefe Mundial e 5 do VIP), 9 animadas', () => {
+    expect(MOLDURAS).toHaveLength(27);
+    expect(new Set(MOLDURAS.map((m) => m.id)).size).toBe(27);
+    expect(MOLDURAS.filter((m) => m.grupo === 'vip')).toHaveLength(5);
     expect(MOLDURAS.filter((m) => m.grupo === 'ranque')).toHaveLength(10);
     expect(MOLDURAS.filter((m) => m.grupo === 'campeonato')).toHaveLength(4);
     expect(MOLDURAS.filter((m) => m.grupo === 'categoria')).toHaveLength(7);
-    expect(MOLDURAS.filter((m) => m.animada).map((m) => m.id).sort()).toEqual(['campeonato-4', 'categoria-forja', 'chefe-mundial', 'ranque-ascendente', 'ranque-eterno', 'ranque-soberano', 'ranque-transcendente']);
-    for (const m of MOLDURAS) expect(m.titulo || m.categoria, m.id).toBeTruthy();
+    expect(MOLDURAS.filter((m) => m.animada).map((m) => m.id).sort()).toEqual(['campeonato-4', 'categoria-forja', 'chefe-mundial', 'ranque-ascendente', 'ranque-eterno', 'ranque-soberano', 'ranque-transcendente', 'vip-5', 'vip-8']);
+    for (const m of MOLDURAS) expect(m.titulo || m.categoria || m.recompensaVip, m.id).toBeTruthy();
   });
 
   it('toda moldura tem a arte (e a animada, o loop), toda faixa de título existe, e não sobra arquivo', () => {
@@ -29,7 +30,7 @@ describe('molduras do avatar e faixas dos títulos', () => {
     expect(srcDaMoldura('ranque-recruta', true)).toBe('/images/molduras/ranque-recruta.webp');
     for (const f of readdirSync(join(publico, 'images/molduras'))) expect(esperados.has(f), f).toBe(true);
     const faixas = new Set(TITULOS.map((t) => `${t.id}.webp`));
-    expect(TITULOS).toHaveLength(27);
+    expect(TITULOS).toHaveLength(30); // 27 + os 3 do VIP
     for (const t of TITULOS) {
       const url = srcDoTitulo(t.id);
       expect(existsSync(join(publico, url)), url).toBe(true);

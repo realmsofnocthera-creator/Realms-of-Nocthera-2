@@ -41,7 +41,7 @@ describe('Conquistas: regras', () => {
     expect(TOTAL_DE_TESTES).toBe(18);
     expect(TOTAL_DE_CARTAS).toBe(54);
     // os títulos de conquista, o do Chefe Mundial, os 10 dos ranques da Arena ranqueada e os 4 do campeão
-    expect(TITULOS).toHaveLength(27);
+    expect(TITULOS).toHaveLength(30);
   });
 
   it('recompensa por degrau: 1/1/2/3/5 Diamantes e selos só nos dois últimos; Expedição e Buscas dão Avanços', () => {

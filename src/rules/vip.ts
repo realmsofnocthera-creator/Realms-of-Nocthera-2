@@ -180,3 +180,16 @@ export const NIVEL_DA_TENTATIVA_EXTRA = { guerreiro: 2, batalhaSangrenta: 5, tes
 export type ProvacaoComTentativaExtra = keyof typeof NIVEL_DA_TENTATIVA_EXTRA;
 /** 0 ou 1: as tentativas extras de hoje que o nível dá a essa provação (não acumulam com os níveis de baixo: é sempre +1). */
 export const tentativaExtraDoVip = (gastoCentavos: unknown, provacao: ProvacaoComTentativaExtra) => (nivelDoVip(gastoCentavos) >= NIVEL_DA_TENTATIVA_EXTRA[provacao] ? 1 : 0);
+
+// ---------------------------------------------------------------------------------------------------------------
+// Pontos VIP (23/11/2026): a tela mostra PONTOS, não dinheiro. 1 ponto VIP = R$ 1 gasto de verdade (valores
+// quebrados caem para baixo). Por dentro continua o gasto em centavos; só a exibição muda.
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Quantos pontos VIP valem estes centavos (1 ponto = R$ 1). */
+export function pontosDoVip(gastoCentavos: unknown): number {
+  const gasto = typeof gastoCentavos === 'number' && Number.isFinite(gastoCentavos) && gastoCentavos > 0 ? gastoCentavos : 0;
+  return Math.floor(gasto / 100);
+}
+
+export const formatarPontosVip = (pontos: number) => `${pontos.toLocaleString('pt-BR')} ${pontos === 1 ? 'ponto' : 'pontos'} VIP`;

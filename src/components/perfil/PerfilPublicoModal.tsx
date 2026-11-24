@@ -30,6 +30,7 @@ import { MolduraDoAvatar } from '@/components/perfil/MolduraDoAvatar';
 import { molduraEscolhida } from '@/rules/molduras';
 import { PERFIL_IMAGES } from '@/assets/perfil';
 import { PersonalizarPerfil } from '@/components/perfil/PersonalizarPerfil';
+import { BarraVip } from '@/components/vip/BarraVip';
 import { PerfilEquipamentos } from '@/components/perfil/PerfilEquipamentos';
 import { equipamentosDoPerfil, itensEquipados } from '@/lib/perfilEquipamentos';
 
@@ -435,6 +436,9 @@ export function PerfilPublicoModal({
                 )}
               </div>
             </div>
+
+            {/* A barra do VIP (só no próprio perfil): leva à tela do VIP */}
+            {isOwnProfile && <BarraVip gastoCentavos={effectiveOwnCharacter.gastoReal} compacta />}
 
             {/* Linha de Nível + Barra decorativa + Raça/Classe */}
             <div className="flex items-center justify-between gap-2 pb-1.5 perfil-divisor-b">

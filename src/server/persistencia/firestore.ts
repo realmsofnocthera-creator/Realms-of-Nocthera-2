@@ -35,6 +35,7 @@ import { bestiarioDoDocumento } from '@/rules/bestiario';
 import { conquistasDoDocumento, estatisticasDoDocumento, MAXIMO_DE_MONSTROS_DERROTADOS, monstrosDerrotadosDoDocumento, vocacoesDerrotadasDoDocumento } from '@/rules/conquistas';
 import { ehMoldura } from '@/rules/molduras';
 import { idempotenciaDoDocumento } from '@/rules/idempotencia';
+import { resgatadosDoDocumento } from '@/rules/vipRecompensas';
 import { ehTitulo, titulosDoDocumento } from '@/rules/titulos';
 import { checkinDoDocumento, diarioDoDocumento } from '@/rules/diario';
 import { revisaoDoDocumento, ritmoDoDocumento, type EntradaDeRevisao } from '@/rules/integridade';
@@ -471,6 +472,7 @@ export function personagemDoFirestore(uid: string, data: DocumentData): Characte
     ...(ehMoldura(data.molduraId) ? { molduraId: data.molduraId } : {}),
     ...(idempotenciaDoDocumento(data.idempotencia) ? { idempotencia: idempotenciaDoDocumento(data.idempotencia) } : {}),
     ...(data.introConcluida === true ? { introConcluida: true } : {}),
+    ...(resgatadosDoDocumento(data.vipResgatados) ? { vipResgatados: resgatadosDoDocumento(data.vipResgatados) } : {}),
     ...(quantidadePositiva(data.essenciaDeSoberano) ? { essenciaDeSoberano: quantidadePositiva(data.essenciaDeSoberano) } : {}),
     ...(mensagensDoDocumento(data.correio) ? { correio: mensagensDoDocumento(data.correio) } : {}),
     ...(correioGeralDoDocumento(data.correioGeral) ? { correioGeral: correioGeralDoDocumento(data.correioGeral) } : {}),
@@ -593,6 +595,7 @@ export function personagemParaFirestore(char: CharacterDocument): DocumentData {
     ...(char.molduraId ? { molduraId: char.molduraId } : {}),
     ...(char.idempotencia?.length ? { idempotencia: char.idempotencia } : {}),
     ...(char.introConcluida ? { introConcluida: true } : {}),
+    ...(char.vipResgatados?.length ? { vipResgatados: char.vipResgatados } : {}),
     ...(char.essenciaDeSoberano ? { essenciaDeSoberano: char.essenciaDeSoberano } : {}),
     ...(char.correio?.length ? { correio: semUndefined(char.correio) } : {}),
     ...(char.correioGeral && Object.keys(char.correioGeral).length ? { correioGeral: char.correioGeral } : {}),

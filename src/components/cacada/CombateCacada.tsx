@@ -14,6 +14,9 @@ import { MapaDaCacada } from './MapaDaCacada';
 import { CenaDoChefe, type EventoDoChefe } from './CenaDoChefe';
 import { DURACAO_DO_CLIPE_MS, IMPACTO_DO_ATAQUE_DO_CHEFE_MS, type ArteDoChefeMundial, type AlvoDoChefe } from '@/assets/chefesMundiaisArte';
 import { AberturaDeBatalha } from '@/components/cena/AberturaDeBatalha';
+import { AuraDePersonagem, EfeitoDeEntrada } from '@/components/cena/EfeitoDeEntrada';
+import { arteDaSkin } from '@/assets/cosmeticosArte';
+import { efeitoDeEntrada as dadosDoEfeito } from '@/rules/efeitosDeEntrada';
 import { useSonsDaLuta } from '@/lib/audio/useSonsDaLuta';
 import { TelaDeFimDeLuta, type TelaDeFimProps } from '@/components/cena/TelaDeFimDeLuta';
 import { SpriteAnimado } from '@/components/cena/SpriteAnimado';
@@ -41,6 +44,12 @@ interface CombateCacadaProps {
   cena?: ArteDoChefeMundial;
   /** No chefe mundial a barra do chefe mostra o dano causado na partida (a vida dele é sem fim); este é o melhor dano do dia do jogador, a meta da barra. */
   melhorDoDia?: number;
+  /** O efeito de entrada em combate (cosmético da Loja Premium): toca em volta do herói quando a luta começa. Serve para qualquer personagem. */
+  efeitoDeEntrada?: string;
+  /** A aura equipada do herói (`aura-<raridade>-<tema>`), em laço atrás e na frente dele. */
+  aura?: string;
+  /** A skin equipada do herói (`skin-<raridade>-<tema>`): troca a aparência dele, quando a arte é da classe dele. */
+  skin?: string;
   /** Sem a abertura "A Batalha começa": nas lutas seguintes de uma sequência (a Batalha Sangrenta) ela toca só na primeira. */
   semAbertura?: boolean;
   /** HP com que o personagem entra na luta (Batalha Sangrenta). */
@@ -162,11 +171,13 @@ export function geometriaDaCena(largura: number, altura: number, alvoDoChefe?: A
  * (um por golpe) e, no crítico, a estrela, o aviso e o tremor da tela. A barra de vida desce na hora do impacto e deixa um
  * rastro claro. No último golpe tudo vai em câmera lenta e a criatura se desfaz.
  */
-export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, hpInicialJogador, onFim, telaDeFim, mapa, cena, melhorDoDia, semAbertura }: CombateCacadaProps) {
+export function CombateCacada({ resultado, personagem, monstro, titulo, estrela, hpInicialJogador, onFim, telaDeFim, mapa, cena, melhorDoDia, semAbertura, efeitoDeEntrada, aura, skin }: CombateCacadaProps) {
   const quadros: QuadroLuta[] = useMemo(() => montarQuadros(resultado, personagem, monstro, 5, hpInicialJogador), [resultado, personagem, monstro, hpInicialJogador]);
   const [indice, setIndice] = useState(0);
   // a abertura de batalha (a cena do Yuri) toca antes de a luta começar
   const [abertura, setAbertura] = useState(!semAbertura);
+  // com efeito de entrada, o herói só aparece no quadro de revelação do efeito
+  const [heroiRevelado, setHeroiRevelado] = useState(!dadosDoEfeito(efeitoDeEntrada));
   const [rapido, setRapido] = useState(false);
   // o quadro cujo golpe já acertou (a vida só desce, e os efeitos só aparecem, na hora do impacto)
   const [acertou, setAcertou] = useState(-1);
@@ -195,7 +206,8 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
   const ultimateAgora = acao?.de === 'jogador' ? q.habilidades.find((h) => h.ativandoAgora && h.espaco === 'ultimate') : undefined;
   const idUltimate = ultimateAgora ? idDaUltimate(ultimateAgora.nome) : undefined;
   const aguardandoUltimate = !!idUltimate && !ultimatesTocadas.includes(indice);
-  const animacaoHeroi = animacaoDoHeroi(personagem.classeId, personagem.subclasseAtualId)?.costas;
+  const arteDaSkinEquipada = arteDaSkin(skin);
+  const animacaoHeroi = (arteDaSkinEquipada && arteDaSkinEquipada.classe === personagem.classeId ? arteDaSkinEquipada : animacaoDoHeroi(personagem.classeId, personagem.subclasseAtualId))?.costas;
   const base = temposDoQuadro(rapido, lenta);
   // o golpe do herói acerta no momento do impacto da animação dele, e o quadro dura até ela terminar
   const velocidadeHeroi = animacaoHeroi ? animacaoHeroi.impacto / base.impacto : 1;
@@ -384,9 +396,10 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
 
             {/* Jogador (de costas, virado para o monstro) */}
             <div className="absolute -translate-x-1/2" style={{ left: xJogador, top: g.jogador.pes - alturaJogador, height: alturaJogador, aspectRatio: spriteJogador ? String(spriteJogador.proporcao) : '1', zIndex: acao?.de === 'jogador' ? 6 : 5 }}>
+              {aura && <AuraDePersonagem id={aura} />}
               <div key={`ji-${indice}`} className="w-full h-full cacada-investida" style={acao?.de === 'jogador' ? { animation: `cacadaInvestida ${tempos.duracao}ms ease-in-out both`, ['--lx' as string]: `${investida.jogador.lx}px`, ['--ly' as string]: `${investida.jogador.ly}px` } : undefined}>
                 <div key={`jr-${indice}`} className="w-full h-full" style={reage('jogador') ? reacaoVars('jogador') : undefined}>
-                  <div className={`w-full h-full ${mortoJogador ? 'cacada-morte-heroi' : ''}`} style={{ filter: tintaDosStatus(vis.jogador.status), transition: 'filter 300ms' }}>
+                  <div className={`w-full h-full ${mortoJogador ? 'cacada-morte-heroi' : ''}`} style={{ filter: tintaDosStatus(vis.jogador.status), transition: 'filter 300ms', ...(heroiRevelado ? {} : { visibility: 'hidden' as const }) }}>
                     {animacaoHeroi ? (
                       <SpriteAnimado parado={animacaoHeroi.parado} ataque={animacaoHeroi.ataque} golpe={q.agiu === 'jogador' && !aguardandoUltimate ? indice : null} velocidade={velocidadeHeroi} espelhado rotulo={personagem.nome} />
                     ) : spriteJogador ? (
@@ -398,6 +411,7 @@ export function CombateCacada({ resultado, personagem, monstro, titulo, estrela,
                     )}
                   </div>
                 </div>
+                {efeitoDeEntrada && !abertura && <EfeitoDeEntrada id={efeitoDeEntrada} onRevelar={() => setHeroiRevelado(true)} />}
               </div>
             </div>
 

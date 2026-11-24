@@ -22,3 +22,30 @@ describe('Loja Premium (vitrine)', () => {
     expect(html).not.toMatch(/<button type="button"(?![^>]*disabled)[^>]*>\s*<span[^>]*>R\$/);
   });
 });
+
+describe('Loja Premium: as artes do Yuri nos pacotes', () => {
+  const html = renderToStaticMarkup(<LojaPagaScreen nome="Yuri" diamantes={1250} gastoCentavos={0} />).replace(/ /g, ' ');
+
+  it('todos os arquivos de arte existem em public', async () => {
+    const { existsSync } = await import('node:fs');
+    const { MOLDURA_DO_MENSAL, BANNER_DO_PASSE, ILUSTRACAO_DA_LOJA } = await import('@/assets/lojaPagaArte');
+    for (const m of [...Object.values(MOLDURA_DO_MENSAL), ...Object.values(BANNER_DO_PASSE)]) expect(existsSync(`public${m.src}`), m.src).toBe(true);
+    for (const src of [ILUSTRACAO_DA_LOJA.mochila, ILUSTRACAO_DA_LOJA.vagaDeExpedicao, ILUSTRACAO_DA_LOJA.iniciante, ...Object.values(ILUSTRACAO_DA_LOJA.diamantes)]) expect(existsSync(`public${src}`), src).toBe(true);
+  });
+
+  it('os 12 pacotes mensais e os 4 passes aparecem dentro das molduras, com nome, preço e itens', () => {
+    for (const trecho of ['Coleção', 'Ouro', 'Expedição']) expect(html).toContain(`Pacote mensal · ${trecho}`);
+    for (const t of ['R$ 4,99', 'R$ 29,99', 'R$ 59,99', 'R$ 99,99', '30.000 de ouro', '128 Avanços de expedição', '100 Selos da Origem']) expect(html).toContain(t);
+    for (const t of ['Passe Premium', 'Passe Deluxe', 'Passe do Invocador', 'Passe de Diamantes', '+10% de XP', '20 Diamantes']) expect(html).toContain(t);
+    expect((html.match(/role="group"/g) ?? []).length).toBe(12 + 4);
+  });
+
+  it('o pacote do iniciante lista o que leva, e a vaga e a mochila têm a arte e as regras', () => {
+    for (const t of ['4.000 de ouro', '200 Diamantes', '1 baú de escolha de emblema épico', '+1 vaga de expedição', 'Até 5 vagas no total', '+20 espaços por pacote', '/images/loja/mochila.webp', '/images/loja/vaga-expedicao.webp', '/images/loja/iniciante.webp']) expect(html).toContain(t);
+  });
+
+  it('os diamantes 2 a 6 usam o monte de diamantes e o 1º só um diamante', () => {
+    for (const n of [2, 3, 4, 5, 6]) expect(html).toContain(`/images/loja/diamantes-${n}.webp`);
+    expect(html).not.toContain('/images/loja/diamantes-1.webp');
+  });
+});

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { formatarReais } from '@/rules/vip';
+import { formatarPontosVip, formatarReais, pontosDoVip } from '@/rules/vip';
 import type { EstadoDaLojaVip } from '@/server/compras';
 import { NOCTHERA_THEME } from '@/theme/theme';
 
@@ -98,16 +98,16 @@ export function VipPainel({ tokenFresco }: { tokenFresco: Token }) {
       <section className="rounded-sm border px-3 py-2.5 flex flex-col gap-1.5" style={{ borderColor: OURO, backgroundColor: colors.background.secondary }}>
         <h2 className="text-sm font-cinzel font-bold" style={{ color: '#F5E3B3' }}>VIP {vip.nivel} · {vip.nome}</h2>
         <p className="text-[12px]" style={{ color: colors.text.secondary }}>
-          Gasto acumulado: {formatarReais(vip.gastoCentavos)} · bônus de {vip.bonus.xp}% de XP e {vip.bonus.ouro}% de ouro nos combates
+          {formatarPontosVip(pontosDoVip(vip.gastoCentavos))} · bônus de {vip.bonus.xp}% de XP e {vip.bonus.ouro}% de ouro nos combates
           {vip.ouroDiario ? ` · ${vip.ouroDiario.toLocaleString('pt-BR')} de ouro por dia no Correio` : ''}
         </p>
         <div role="progressbar" aria-label="Progresso para o próximo nível VIP" aria-valuenow={vip.percentual} aria-valuemin={0} aria-valuemax={100} className="h-2 rounded-sm" style={{ backgroundColor: '#221C16' }}>
           <div className="h-2 rounded-sm" style={{ width: `${vip.percentual}%`, backgroundColor: OURO }} />
         </div>
         <p className="text-[11px]" style={{ color: colors.text.secondary }}>
-          {vip.proximo ? `Faltam ${formatarReais(vip.proximo.faltamCentavos)} para o VIP ${vip.proximo.nivel} (${vip.proximo.nome}).` : 'Você chegou ao VIP máximo.'}
+          {vip.proximo ? `Próximo nível: VIP ${vip.proximo.nivel} (${vip.proximo.nome}).` : 'Você chegou ao VIP máximo.'}
         </p>
-        <p className="text-[11px]" style={{ color: colors.text.secondary }}>O nível é permanente enquanto o gasto se mantém. Compras estornadas deixam de contar. Os bônus de XP e ouro substituem os do nível anterior (não somam).</p>
+        <p className="text-[11px]" style={{ color: colors.text.secondary }}>1 ponto VIP = R$ 1 gasto. O nível é permanente enquanto os pontos se mantêm. Compras estornadas deixam de contar. Os bônus de XP e ouro substituem os do nível anterior (não somam).</p>
       </section>
 
       <section className="flex flex-col gap-1.5">
@@ -287,7 +287,7 @@ export function VipPainel({ tokenFresco }: { tokenFresco: Token }) {
             <li key={n.nivel} className="rounded-sm border px-2.5 py-1.5 flex flex-col gap-0.5" style={{ borderColor: n.atual ? OURO : '#4A3F2A', backgroundColor: colors.background.secondary, opacity: n.desbloqueado ? 1 : 0.75 }}>
               <div className="flex justify-between gap-2">
                 <span className="text-xs font-semibold" style={{ color: n.atual ? OURO : '#F5E3B3' }}>VIP {n.nivel} · {n.nome}{n.atual ? ' (você)' : ''}</span>
-                <span className="text-[11px] shrink-0" style={{ color: colors.text.secondary }}>{formatarReais(n.gastoCentavos)}</span>
+                <span className="text-[11px] shrink-0" style={{ color: colors.text.secondary }}>{n.atual ? 'seu nível' : n.desbloqueado ? 'conquistado' : ''}</span>
               </div>
               {(n.xp > 0 || n.ouro > 0) && <span className="text-[11px]" style={{ color: colors.text.primary }}>+{n.xp}% de XP{n.ouro ? ` · +${n.ouro}% de ouro` : ''}</span>}
               {n.beneficios.map((b) => (

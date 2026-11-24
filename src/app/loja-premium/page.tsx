@@ -15,5 +15,5 @@ export default function LojaPremiumPage() {
       </main>
     );
   }
-  return <LojaPagaScreen nome={character.nome} diamantes={character.diamantes ?? 0} />;
+  return <LojaPagaScreen nome={character.nome} diamantes={character.diamantes ?? 0} gastoCentavos={character.gastoReal} />;
 }

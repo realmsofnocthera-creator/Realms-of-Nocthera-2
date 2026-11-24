@@ -100,7 +100,8 @@ export function HudMenu({
       label: 'Loja',
       iconSrc: HUD_ICONS.menuLoja,
       enabled: true,
-      onClick: () => router.push('/loja'),
+      // a Loja do Hub é a loja virtual (Premium); a loja comum (de ouro) fica no Menu, em Resgate
+      onClick: () => router.push('/loja-premium'),
     },
     {
       id: 'guilda',

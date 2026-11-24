@@ -1,0 +1,436 @@
+{
+ "skins": {
+  "epico-sagrado": {
+   "frente": {
+    "idle": {
+     "quadros": 6,
+     "largura": 89,
+     "altura": 110,
+     "ms": [
+      320,
+      140,
+      140,
+      320,
+      140,
+      140
+     ]
+    },
+    "ataque": {
+     "quadros": 11,
+     "largura": 89,
+     "altura": 110,
+     "ms": [
+      110,
+      110,
+      200,
+      50,
+      50,
+      150,
+      90,
+      110,
+      120,
+      110,
+      160
+     ]
+    }
+   },
+   "costas": {
+    "idle": {
+     "quadros": 6,
+     "largura": 92,
+     "altura": 105,
+     "ms": [
+      320,
+      140,
+      140,
+      320,
+      140,
+      140
+     ]
+    },
+    "ataque": {
+     "quadros": 11,
+     "largura": 92,
+     "altura": 105,
+     "ms": [
+      110,
+      110,
+      200,
+      50,
+      50,
+      150,
+      90,
+      110,
+      120,
+      110,
+      160
+     ]
+    }
+   }
+  },
+  "epico-sombrio": {
+   "frente": {
+    "idle": {
+     "quadros": 6,
+     "largura": 121,
+     "altura": 106,
+     "ms": [
+      320,
+      140,
+      140,
+      320,
+      140,
+      140
+     ]
+    },
+    "ataque": {
+     "quadros": 11,
+     "largura": 121,
+     "altura": 106,
+     "ms": [
+      110,
+      110,
+      200,
+      50,
+      50,
+      150,
+      90,
+      110,
+      120,
+      110,
+      160
+     ]
+    }
+   },
+   "costas": {
+    "idle": {
+     "quadros": 6,
+     "largura": 112,
+     "altura": 102,
+     "ms": [
+      320,
+      140,
+      140,
+      320,
+      140,
+      140
+     ]
+    },
+    "ataque": {
+     "quadros": 11,
+     "largura": 112,
+     "altura": 102,
+     "ms": [
+      110,
+      110,
+      200,
+      50,
+      50,
+      150,
+      90,
+      110,
+      120,
+      110,
+      160
+     ]
+    }
+   }
+  },
+  "lendario-fogo": {
+   "frente": {
+    "idle": {
+     "quadros": 6,
+     "largura": 100,
+     "altura": 107,
+     "ms": [
+      320,
+      140,
+      140,
+      320,
+      140,
+      140
+     ]
+    },
+    "ataque": {
+     "quadros": 11,
+     "largura": 100,
+     "altura": 107,
+     "ms": [
+      110,
+      110,
+      200,
+      50,
+      50,
+      150,
+      90,
+      110,
+      120,
+      110,
+      160
+     ]
+    }
+   },
+   "costas": {
+    "idle": {
+     "quadros": 6,
+     "largura": 111,
+     "altura": 104,
+     "ms": [
+      320,
+      140,
+      140,
+      320,
+      140,
+      140
+     ]
+    },
+    "ataque": {
+     "quadros": 11,
+     "largura": 111,
+     "altura": 104,
+     "ms": [
+      110,
+      110,
+      200,
+      50,
+      50,
+      150,
+      90,
+      110,
+      120,
+      110,
+      160
+     ]
+    }
+   }
+  },
+  "lendario-vento": {
+   "frente": {
+    "idle": {
+     "quadros": 6,
+     "largura": 128,
+     "altura": 110,
+     "ms": [
+      320,
+      140,
+      140,
+      320,
+      140,
+      140
+     ]
+    },
+    "ataque": {
+     "quadros": 11,
+     "largura": 128,
+     "altura": 110,
+     "ms": [
+      110,
+      110,
+      200,
+      50,
+      50,
+      150,
+      90,
+      110,
+      120,
+      110,
+      160
+     ]
+    }
+   },
+   "costas": {
+    "idle": {
+     "quadros": 6,
+     "largura": 127,
+     "altura": 107,
+     "ms": [
+      320,
+      140,
+      140,
+      320,
+      140,
+      140
+     ]
+    },
+    "ataque": {
+     "quadros": 11,
+     "largura": 127,
+     "altura": 107,
+     "ms": [
+      110,
+      110,
+      200,
+      50,
+      50,
+      150,
+      90,
+      110,
+      120,
+      110,
+      160
+     ]
+    }
+   }
+  }
+ },
+ "auras": {
+  "epico-sombrio": {
+   "quadros": 24,
+   "fps": 12,
+   "lado": 192,
+   "pes": [
+    96,
+    152
+   ],
+   "loop": true
+  },
+  "epico-sagrado": {
+   "quadros": 24,
+   "fps": 12,
+   "lado": 192,
+   "pes": [
+    96,
+    152
+   ],
+   "loop": true
+  },
+  "lendario-fogo": {
+   "quadros": 24,
+   "fps": 12,
+   "lado": 192,
+   "pes": [
+    96,
+    152
+   ],
+   "loop": true
+  },
+  "lendario-vento": {
+   "quadros": 24,
+   "fps": 12,
+   "lado": 192,
+   "pes": [
+    96,
+    152
+   ],
+   "loop": true
+  }
+ },
+ "efeitos": {
+  "raro-gelo": {
+   "quadros": 30,
+   "fps": 24,
+   "lado": 192,
+   "pes": [
+    96,
+    152
+   ],
+   "loop": false,
+   "revelacao": 12
+  },
+  "raro-relampago": {
+   "quadros": 30,
+   "fps": 24,
+   "lado": 192,
+   "pes": [
+    96,
+    152
+   ],
+   "loop": false,
+   "revelacao": 7
+  },
+  "epico-sombrio": {
+   "quadros": 30,
+   "fps": 24,
+   "lado": 192,
+   "pes": [
+    96,
+    152
+   ],
+   "loop": false,
+   "revelacao": 12
+  },
+  "epico-sagrado": {
+   "quadros": 30,
+   "fps": 24,
+   "lado": 192,
+   "pes": [
+    96,
+    152
+   ],
+   "loop": false,
+   "revelacao": 11
+  },
+  "lendario-fogo": {
+   "quadros": 30,
+   "fps": 24,
+   "lado": 192,
+   "pes": [
+    96,
+    152
+   ],
+   "loop": false,
+   "revelacao": 12
+  },
+  "lendario-vento": {
+   "quadros": 30,
+   "fps": 24,
+   "lado": 192,
+   "pes": [
+    96,
+    152
+   ],
+   "loop": false,
+   "revelacao": 12
+  }
+ },
+ "molduras": {
+  "comum-terra": {
+   "quadros": 16,
+   "fps": 12,
+   "lado": 128,
+   "buraco": 52
+  },
+  "comum-vento": {
+   "quadros": 16,
+   "fps": 12,
+   "lado": 128,
+   "buraco": 52
+  },
+  "raro-gelo": {
+   "quadros": 16,
+   "fps": 12,
+   "lado": 128,
+   "buraco": 52
+  },
+  "raro-relampago": {
+   "quadros": 16,
+   "fps": 12,
+   "lado": 128,
+   "buraco": 52
+  },
+  "epico-sombrio": {
+   "quadros": 16,
+   "fps": 12,
+   "lado": 128,
+   "buraco": 52
+  },
+  "epico-sagrado": {
+   "quadros": 16,
+   "fps": 12,
+   "lado": 128,
+   "buraco": 52
+  },
+  "lendario-fogo": {
+   "quadros": 16,
+   "fps": 12,
+   "lado": 128,
+   "buraco": 52
+  },
+  "lendario-vento": {
+   "quadros": 16,
+   "fps": 12,
+   "lado": 128,
+   "buraco": 52
+  }
+ }
+}
