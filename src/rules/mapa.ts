@@ -6,6 +6,10 @@ import { validarObjetos, type ObjetoDoMapa } from '@/rules/objetosDoMapa';
  * Nas camadas de tiles (chão, objetos e acima do jogador), 0 é vazio e os outros números apontam para um tile (ver valorDoTile); na de
  * colisão, 1 bloqueia. Os objetos interativos (início, NPC, placa, baú, porta e área de monstros) ficam na lista
  * `objetos` (ver objetosDoMapa.ts); mapas antigos sem ela valem como "sem objetos".
+ *
+ * Mapa de imagem: o mapa pode ter um `fundo`, uma imagem inteira desenhada atrás das camadas (o desenho do chão, das construções e de tudo já pronto).
+ * A grade de tiles continua existindo para a colisão e os objetos, e as camadas de tiles (por exemplo "acima do jogador", para copas de árvore) ficam
+ * por cima da imagem. A grade cobre a imagem inteira: largura em tiles = ceil(largura da imagem / tile), e o mesmo na altura.
  */
 export const FORMATO_DO_MAPA = 1;
 export const LADO_MINIMO_DO_MAPA = 4;
@@ -16,6 +20,10 @@ export const LADO_MAXIMO_DO_MAPA = 256;
 export const TAMANHOS_DE_TILE = [16, 24, 32, 48, 64] as const;
 export const TILE_PADRAO = 32;
 export const MAIOR_TILE = 65_535;
+/** A imagem de fundo de um mapa de imagem: até 8192 px de lado, 40 milhões de pixels e 24 MB (PNG), guardada no armazenamento de arquivos. */
+export const LADO_MAXIMO_DA_IMAGEM_DO_MAPA = 8192;
+export const PIXELS_MAXIMOS_DA_IMAGEM_DO_MAPA = 40_000_000;
+export const BYTES_MAXIMOS_DA_IMAGEM_DO_MAPA = 24 * 1024 * 1024;
 export const MAXIMO_DE_TILESETS = 16;
 /** Cada tileset da lista do mapa ocupa um bloco de 4096 números: valor = posição do tileset × 4096 + tile + 1. */
 export const BLOCO_DO_TILESET = 4096;
@@ -43,6 +51,24 @@ export const NOME_DA_CAMADA: Readonly<Record<CamadaDoMapa, string>> = {
   colisao: 'Colisão',
 };
 
+/** A imagem de fundo do mapa: o endereço no armazenamento e o tamanho dela em pixels. */
+export interface FundoDoMapa {
+  url: string;
+  largura: number;
+  altura: number;
+}
+
+/** A chave (`mapas/<sha256>.png`) de um endereço de imagem de mapa, ou null se não tem esse formato. */
+export function chaveDaImagemDoMapaNoEndereco(endereco: string): string | null {
+  const m = /^https:\/\/[^\s?#]+?\/(mapas\/[0-9a-f]{64}\.png)$/.exec(endereco);
+  return m ? m[1] : null;
+}
+
+/** O tamanho da grade (em tiles) que cobre uma imagem com o tile escolhido. */
+export function gradeDaImagem(larguraPx: number, alturaPx: number, tamanhoDoTile: number): { largura: number; altura: number } {
+  return { largura: Math.ceil(larguraPx / tamanhoDoTile), altura: Math.ceil(alturaPx / tamanhoDoTile) };
+}
+
 export interface MapaDados {
   formato: typeof FORMATO_DO_MAPA;
   largura: number;
@@ -51,6 +77,8 @@ export interface MapaDados {
   tilesets: string[];
   camadas: Record<CamadaDoMapa, number[]>;
   objetos: ObjetoDoMapa[];
+  /** Só nos mapas de imagem. */
+  fundo?: FundoDoMapa;
 }
 
 export type ResultadoValidacao<T> = { ok: true; dados: T } | { ok: false; erros: string[] };
@@ -91,7 +119,7 @@ export function validarMapa(bruto: unknown): ResultadoValidacao<MapaDados> {
   const erros: string[] = [];
   if (!ehObjeto(bruto)) return { ok: false, erros: ['O mapa precisa ser um objeto.'] };
 
-  const extras = chavesExtras(bruto, ['formato', 'largura', 'altura', 'tamanhoDoTile', 'tilesets', 'camadas', 'objetos']);
+  const extras = chavesExtras(bruto, ['formato', 'largura', 'altura', 'tamanhoDoTile', 'tilesets', 'camadas', 'objetos', 'fundo']);
   if (extras.length) erros.push(`Campos desconhecidos no mapa: ${extras.join(', ')}.`);
   if (bruto.formato !== FORMATO_DO_MAPA) erros.push(`Formato do mapa não suportado (esperado ${FORMATO_DO_MAPA}).`);
 
@@ -136,6 +164,28 @@ export function validarMapa(bruto: unknown): ResultadoValidacao<MapaDados> {
     }
   }
 
+  let fundo: FundoDoMapa | undefined;
+  if (bruto.fundo !== undefined) {
+    const f = bruto.fundo;
+    const permitidos = ['url', 'largura', 'altura'];
+    if (!ehObjeto(f) || chavesExtras(f, permitidos).length) {
+      erros.push('A imagem do mapa tem campos desconhecidos.');
+    } else if (typeof f.url !== 'string' || !chaveDaImagemDoMapaNoEndereco(f.url)) {
+      erros.push('O endereço da imagem do mapa não é de uma imagem enviada pelo painel.');
+    } else if (!inteiroEntre(f.largura, 1, LADO_MAXIMO_DA_IMAGEM_DO_MAPA) || !inteiroEntre(f.altura, 1, LADO_MAXIMO_DA_IMAGEM_DO_MAPA)) {
+      erros.push(`A imagem do mapa vai de 1 a ${LADO_MAXIMO_DA_IMAGEM_DO_MAPA} pixels de lado.`);
+    } else if (f.largura * f.altura > PIXELS_MAXIMOS_DA_IMAGEM_DO_MAPA) {
+      erros.push(`A imagem do mapa passa de ${PIXELS_MAXIMOS_DA_IMAGEM_DO_MAPA / 1_000_000} milhões de pixels.`);
+    } else if (ladoOk(largura) && ladoOk(altura) && (TAMANHOS_DE_TILE as readonly unknown[]).includes(tamanhoDoTile)) {
+      const g = gradeDaImagem(f.largura, f.altura, tamanhoDoTile as number);
+      if (g.largura !== largura || g.altura !== altura) {
+        erros.push(`Com tile de ${tamanhoDoTile} px, a imagem de ${f.largura} × ${f.altura} px pede um mapa de ${g.largura} × ${g.altura} tiles.`);
+      } else {
+        fundo = { url: f.url, largura: f.largura, altura: f.altura };
+      }
+    }
+  }
+
   const objetos = ladoOk(largura) && ladoOk(altura) ? validarObjetos(bruto.objetos, largura as number, altura as number, erros) : [];
 
   if (erros.length) return { ok: false, erros };
@@ -151,6 +201,7 @@ export function validarMapa(bruto: unknown): ResultadoValidacao<MapaDados> {
       tilesets: [...(tilesets as string[])],
       camadas: { chao: [...cam.chao!], objetos: [...cam.objetos!], acima: [...(cam.acima ?? vazia)], colisao: [...cam.colisao!] },
       objetos,
+      ...(fundo ? { fundo } : {}),
     },
   };
 }

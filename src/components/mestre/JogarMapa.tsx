@@ -13,7 +13,7 @@ import { NOCTHERA_THEME } from '@/theme/theme';
 import { chamar, OURO } from '@/components/mestre/comum';
 import { COR_DO_OBJETO } from '@/components/mestre/PainelDeObjetos';
 import { desenharMapaDeJogo } from '@/components/mestre/desenharMapaDeJogo';
-import { carregarTileset, type TilesetCarregado } from '@/components/mestre/carregarTileset';
+import { carregarImagem, carregarTileset, type TilesetCarregado } from '@/components/mestre/carregarTileset';
 
 type Token = () => Promise<string>;
 
@@ -22,6 +22,8 @@ interface MapaAberto {
   nome: string;
   mapa: MapaDados;
   tilesets: TilesetCarregado[];
+  /** Só nos mapas de imagem. */
+  fundo: HTMLImageElement | null;
 }
 
 async function abrirMapa(tokenFresco: Token, id: string): Promise<MapaAberto> {
@@ -30,7 +32,11 @@ async function abrirMapa(tokenFresco: Token, id: string): Promise<MapaAberto> {
   const conteudo = r.dados.conteudo as ConteudoDocumento;
   const mapa = conteudo.rascunho as MapaDados;
   mapa.objetos ??= [];
-  return { id, nome: conteudo.nome, mapa, tilesets: await Promise.all(mapa.tilesets.map((t) => carregarTileset(tokenFresco, t))) };
+  const [tilesets, fundo] = await Promise.all([
+    Promise.all(mapa.tilesets.map((t) => carregarTileset(tokenFresco, t))),
+    mapa.fundo ? carregarImagem(mapa.fundo.url) : Promise.resolve(null),
+  ]);
+  return { id, nome: conteudo.nome, mapa, tilesets, fundo };
 }
 
 const TECLAS: Readonly<Record<string, Direcao>> = {

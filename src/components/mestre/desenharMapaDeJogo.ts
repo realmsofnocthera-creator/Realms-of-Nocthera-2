@@ -8,6 +8,21 @@ export interface MapaParaDesenhar {
   mapa: MapaDados;
   /** Na ordem de `mapa.tilesets`; null/ausente: o tile não é desenhado. */
   tilesets: ({ dados: TilesetDados; imagem: HTMLImageElement } | null | undefined)[];
+  /** Só nos mapas de imagem: a imagem de fundo, já carregada. */
+  fundo?: HTMLImageElement | null;
+}
+
+/**
+ * Desenha o pedaço da imagem de fundo que aparece na tela (as imagens podem ter milhares de pixels: só o recorte visível vai para o canvas).
+ * `ox` e `oy` são o deslocamento da câmera, em pixels da tela; `escala` é pixels da tela por pixel da imagem.
+ */
+export function desenharFundoDoMapa(ctx: CanvasRenderingContext2D, imagem: HTMLImageElement, escala: number, ox: number, oy: number, largura: number, altura: number) {
+  const sx = Math.max(0, ox / escala);
+  const sy = Math.max(0, oy / escala);
+  const sw = Math.min(imagem.naturalWidth - sx, (largura + Math.min(0, ox)) / escala);
+  const sh = Math.min(imagem.naturalHeight - sy, (altura + Math.min(0, oy)) / escala);
+  if (sw <= 0 || sh <= 0) return;
+  ctx.drawImage(imagem, sx, sy, sw, sh, sx * escala - ox, sy * escala - oy, sw * escala, sh * escala);
 }
 
 /**
@@ -32,6 +47,7 @@ export function desenharMapaDeJogo(
   ctx.fillStyle = '#1A1612';
   ctx.fillRect(-ox, -oy, mapa.largura * lado, mapa.altura * lado);
   ctx.imageSmoothingEnabled = false;
+  if (aberto.fundo) desenharFundoDoMapa(ctx, aberto.fundo, lado / mapa.tamanhoDoTile, ox, oy, largura, altura);
 
   const desenharCamada = (c: 'chao' | 'objetos' | 'acima') => {
     const lista = mapa.camadas[c];
