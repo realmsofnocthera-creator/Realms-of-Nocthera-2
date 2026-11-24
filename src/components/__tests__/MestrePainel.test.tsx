@@ -72,8 +72,9 @@ describe('Mapas no painel (tela)', () => {
     expect(html).toContain('Mapas');
     expect(html).toContain('Tilesets');
     const importador = renderToStaticMarkup(<ImportarTileset tokenFresco={async () => 't'} criado={() => {}} />);
-    expect(importador).toContain('Escolher imagem');
+    expect(importador).toContain('Escolher imagens (pode marcar várias)');
     expect(importador).toContain('accept="image/*"');
+    expect(importador).toMatch(/<input[^>]*multiple/);
   });
 
   it('o editor abre carregando; o suporte só tem a ferramenta de mover e não tem Salvar', () => {
