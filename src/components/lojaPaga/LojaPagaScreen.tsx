@@ -9,7 +9,8 @@ import { getAvatarFaceStyle, resolveAvatarSrc } from '@/assets/avatars';
 import { TELAS_UI, GEMA_DA_RARIDADE } from '@/assets/telasSociaisUi';
 import { MolduraDoAvatar } from '@/components/perfil/MolduraDoAvatar';
 import { BarraVip } from '@/components/vip/BarraVip';
-import { EfeitoDeEntrada } from '@/components/cena/EfeitoDeEntrada';
+import { AuraDePersonagem, EfeitoDeEntrada, MolduraAnimada } from '@/components/cena/EfeitoDeEntrada';
+import { arteDaAura, arteDaMoldura, arteDaSkin } from '@/assets/cosmeticosArte';
 import { ANIMACAO_DO_HEROI } from '@/lib/cacadaArte';
 import { BANNER_DO_PASSE, ILUSTRACAO_DA_LOJA, MOLDURA_DO_MENSAL, type MolduraDaLoja } from '@/assets/lojaPagaArte';
 import { DEFINICOES_DOS_PASSES } from '@/rules/passes';
@@ -133,7 +134,7 @@ function Folha({ src, quadros, largura, altura, fps, escala, style }: { src: str
         backgroundImage: `url(${src})`,
         backgroundSize: `${quadros * 100}% 100%`,
         backgroundRepeat: 'no-repeat',
-        animation: `lp-folha ${(quadros / Math.max(1, fps)).toFixed(2)}s steps(${Math.max(1, quadros - 1)}, jump-none) infinite`,
+        animation: `lp-folha ${(quadros / Math.max(1, fps)).toFixed(2)}s steps(${Math.max(2, quadros)}, jump-none) infinite`,
         ...style,
       }}
     />
@@ -174,14 +175,17 @@ function PreviaDoCosmetico({ item, indice }: { item: ItemCosmetico; indice: numb
   switch (item.tipo) {
     case 'moldura': {
       const id = MOLDURAS_DE_PREVIA[item.raridade][item.tema === TEMAS_PROVISORIOS[item.raridade][0] ? 0 : 1];
+      const arte = arteDaMoldura(item.id);
+      // a moldura da loja (arte do Yuri) é desenhada com o buraco de 52 px no meio de 128 px: ela cabe inteira na caixa e o rosto ocupa 52/128 dela
+      const rosto = arte ? arte.buraco / arte.lado : 0.86;
       return (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="relative" style={{ width: '70%', aspectRatio: '1 / 1' }}>
-            <div className="absolute overflow-hidden rounded-full" style={{ left: '7%', top: '7%', width: '86%', height: '86%', backgroundColor: '#16120E' }}>
+          <div className="relative" style={{ width: arte ? '88%' : '70%', aspectRatio: '1 / 1' }}>
+            <div className="absolute overflow-hidden rounded-full" style={{ left: `${(1 - rosto) * 50}%`, top: `${(1 - rosto) * 50}%`, width: `${rosto * 100}%`, height: `${rosto * 100}%`, backgroundColor: '#16120E' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={resolveAvatarSrc(undefined, classe)} alt="" aria-hidden="true" draggable={false} className="w-full h-full" style={getAvatarFaceStyle(undefined, classe)} />
             </div>
-            <MolduraDoAvatar molduraId={id} />
+            {arte ? <MolduraAnimada id={item.id} rosto={rosto} /> : <MolduraDoAvatar molduraId={id} />}
           </div>
         </div>
       );
@@ -195,16 +199,27 @@ function PreviaDoCosmetico({ item, indice }: { item: ItemCosmetico; indice: numb
         </div>
       );
     case 'efeito':
-      // o efeito de entrada de verdade (o mesmo da luta), tocando em laço em volta do herói
+      // o efeito de entrada de verdade (o mesmo da luta, arte do Yuri), tocando em laço em volta do herói
       return (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="relative" style={{ height: '58%', aspectRatio: '61 / 103' }}>
-            <Heroi classe={classe} altura={66} style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }} />
-            <EfeitoDeEntrada id={item.id} repetir escala={1.45} />
+          <div className="relative" style={{ height: '50%', aspectRatio: '61 / 103' }}>
+            <Heroi classe={classe} altura={58} style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }} />
+            <EfeitoDeEntrada id={item.id} repetir />
           </div>
         </div>
       );
     case 'aura': {
+      // a aura de verdade (arte do Yuri): uma camada atrás do herói e outra na frente
+      if (arteDaAura(item.id)) {
+        return (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="relative" style={{ height: '50%', aspectRatio: '61 / 103' }}>
+              <AuraDePersonagem id={item.id} />
+              <Heroi classe={classe} altura={58} style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }} />
+            </div>
+          </div>
+        );
+      }
       const lendaria = item.raridade === 'lendario';
       return (
         <div className="absolute inset-0 flex items-center justify-center">
@@ -215,13 +230,21 @@ function PreviaDoCosmetico({ item, indice }: { item: ItemCosmetico; indice: numb
         </div>
       );
     }
-    case 'skin':
+    case 'skin': {
+      // a skin de verdade (arte do Yuri), de frente e parada; sem arte, o herói da classe com a cor do tema
+      const skin = arteDaSkin(item.id);
+      const a = skin?.frente;
       return (
         <div className="absolute inset-0 flex items-center justify-center">
           <div aria-hidden="true" className="absolute bottom-[12%] w-[60%] h-[10%] rounded-full" style={{ background: 'radial-gradient(ellipse, rgba(0,0,0,.65), transparent 70%)' }} />
-          <Heroi classe={classe} altura={78} style={{ position: 'relative', filter: `hue-rotate(${t.matiz}deg) saturate(1.35) brightness(1.05) drop-shadow(0 0 4px ${t.cor}88)` }} />
+          {a ? (
+            <Folha src={a.parado.src} quadros={a.parado.quadros} largura={a.largura} altura={a.altura} fps={1000 / (a.parado.ms.reduce((x, y) => x + y, 0) / a.parado.ms.length)} escala={84 / a.altura} style={{ position: 'relative' }} />
+          ) : (
+            <Heroi classe={classe} altura={78} style={{ position: 'relative', filter: `hue-rotate(${t.matiz}deg) saturate(1.35) brightness(1.05) drop-shadow(0 0 4px ${t.cor}88)` }} />
+          )}
         </div>
       );
+    }
     case 'decoracao':
       return (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-[8%]">

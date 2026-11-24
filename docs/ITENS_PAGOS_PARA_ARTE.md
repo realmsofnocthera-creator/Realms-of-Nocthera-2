@@ -2,30 +2,30 @@
 
 Gerada a partir do código (`src/rules/lojaPaga.ts`, `compras.ts`, `passes.ts`) em 23/11/2026. Os preços são os que você passou. **Os nomes dos cosméticos são provisórios** (use o que quiser) e **a quantidade de desenhos por tipo é uma proposta minha**: 2 por raridade, o 1º faz parte do conjunto. Diga se quer mais ou menos.
 
-## STATUS DAS ARTES (atualizado em 23/11/2026)
+## STATUS DAS ARTES (atualizado em 24/11/2026)
 
-**Já entregues e na Loja Premium: 34 itens ✅** (marcados com ✅ nas tabelas abaixo)
+**Já entregues e na Loja Premium: 56 itens ✅** (marcados com ✅ nas tabelas abaixo)
 - 6 pacotes de Diamantes (o 1º usa só um diamante; do 2º ao 6º, os montes que você mandou)
 - Pacote do Iniciante (baús com diamantes)
 - Vaga Extra de Expedição (ampulheta)
 - Expansão da Mochila: os 10 pacotes usam a mesma mochila (uma arte só)
 - 12 pacotes mensais (as 4 molduras I a IV valem para as 3 cadeias: Coleção, Ouro e Expedição)
 - 4 Passes (banners verticais: Premium, Deluxe, Invocador e Diamantes)
+- 8 Molduras de perfil animadas (16 quadros, 128x128, buraco de 52 px no centro)
+- 6 Efeitos de entrada em combate (30 quadros, 24 fps, 2 camadas: atrás e na frente do herói; valem para todos os personagens)
+- 4 Auras de personagem (24 quadros, 12 fps, 2 camadas; valem para todos os personagens)
+- 4 Skins de personagem, todas em cima do Samurai (frente e costas, parado e ataque). Skins das outras classes ainda não existem
 
-**FALTA FAZER: 52 itens**
+**FALTA FAZER: 30 itens**
 
 | # | O que falta | Qtd | Onde entra | Medida da arte |
 |---|---|---|---|---|
 | 1 | **Passe do Iniciante** (ícone ou banner) + **definir os benefícios** | 1 | Pacotes | banner vertical como os dos Passes (420x780) ou ícone 256x256 |
-| 2 | **Molduras de perfil** (cosméticos) | 8 | Cosméticos | 128x128, buraco do rosto em (64, 66) com raio 26; as épicas e lendárias podem ter loop `-anim` |
 | 3 | **Avatares alternativos** | 6 | Cosméticos | retrato 480x720, rosto na parte de cima |
-| 4 | **Efeitos de entrada em combate** (já existe uma versão feita em código, serve para todos os personagens; arte própria é opcional) | 6 | Cosméticos | camada transparente que se centra no herói e vale para qualquer classe: folha de quadros (como os efeitos de magia, ~158x142 por quadro, 26 quadros, 15 fps) ou animação WebP, 2 a 3 s, toca uma vez |
-| 5 | **Auras de personagem** | 4 | Cosméticos | camada animada em volta do herói, loop de 6 quadros, 128x160 |
-| 6 | **Skins de personagem** | 4 | Cosméticos | herói da classe (frente e costas, parado 6 quadros, ataque 9 quadros, 61x103) e retrato 480x720 |
 | 7 | **Decorações de chat e cores de nome** | 4 | Cosméticos | balão 9-slice até 64x64 e o código de cor do nome |
 | 8 | **Capas dos Conjuntos** (Raro, Épico e Lendário) | 3 | Conjuntos | 512x256 (os itens vêm dos tipos acima) |
 | 9 | **Recompensas de aparência do VIP** | 16 | Tela do VIP | molduras (5), títulos (4), skins (3), auras (1), efeitos (2), emblemas de chat (1), decoração (1); medidas na seção 7 |
-| | **Total que falta** | **52** | | |
+| | **Total que falta** | **30** | | |
 
 **O que também falta decidir (não é arte)**
 1. Passe do Iniciante: o que ele dá (hoje está "a definir").
