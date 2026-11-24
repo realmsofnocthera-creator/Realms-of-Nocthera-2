@@ -109,6 +109,7 @@ import {
   gastarTentativa,
   MENSAGEM_BLOQUEIO_BATALHA,
   montarOndas,
+  monstroDaBatalhaSangrenta,
   recompensaDaBatalha,
   sementeDaOnda,
   tentativasRestantes,
@@ -2318,7 +2319,8 @@ export async function executarBatalhaSangrenta(
     let ondasVencidas = 0;
     for (const [indice, onda] of plano.entries()) {
       const baseDoCodigo = MONSTROS_CACADA_MAP[onda.monstroId] ?? CHEFES_ESPECIAIS_MAP[onda.monstroId];
-      const monstro = (await monstroEfetivo(onda.monstroId, baseDoCodigo)) ?? baseDoCodigo;
+      // Nerf do modo: são 5 lutas seguidas com a vida passando de uma para a outra
+      const monstro = monstroDaBatalhaSangrenta((await monstroEfetivo(onda.monstroId, baseDoCodigo)) ?? baseDoCodigo);
       const combatente = combatenteDoPersonagem(current);
       combatente.hp = hpAtual;
       const resultado = resolverCombate(combatente, monstro, sementeDaOnda(opcoes.seed, indice));

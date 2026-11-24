@@ -9,7 +9,7 @@ import { CategoriaCorporal, TipoGolpe } from './corposMonstros';
 import { HabilidadeMonstro, MonsterDefinition } from './monsters';
 import { SUBESPECIES_CACADA, SubespecieCacada } from './cacadaSubespecies';
 import { XP_BASE_DA_CACADA } from './xpTable';
-import { categoriaDeEscala, escalarAtaque, escalarVida } from './escalaMonstros';
+import { ajusteDaEstrela, categoriaDeEscala, escalarAtaque, escalarVida } from './escalaMonstros';
 import { mapaDeEntradas } from '@/lib/mapaSeguro';
 
 /**
@@ -1396,11 +1396,13 @@ export function montarMonstroCacada(d: MonstroCacadaDados): MonsterDefinition {
   const perfil = PERFIS[d.perfil ?? 'normal'];
   const multHp = d.chave ? MULT_CHAVE.hp : 1;
   const multForca = d.chave ? MULT_CHAVE.forca : 1;
+  const categoria = categoriaDeEscala(d.perfil, d.chave === true);
+  const porEstrela = ajusteDaEstrela(d.estrela, categoria);
   const atributos: Attributes = {
     vigor: Math.round(p * 0.2),
     sorte: 0,
     // Balanceamento 2.3: o ataque sobe pela escala do nível e da categoria (normal, difícil, boss)
-    forca: escalarAtaque(Math.max(1, Math.round(p * perfil.forca * multForca * (1 + (d.forcaPercentual ?? 0) / 100))), nivel, categoriaDeEscala(d.perfil, d.chave === true)),
+    forca: Math.max(1, Math.round(escalarAtaque(Math.max(1, Math.round(p * perfil.forca * multForca * (1 + (d.forcaPercentual ?? 0) / 100))), nivel, categoria) * porEstrela.kf)),
     vitalidade: Math.round(p * perfil.vitalidade * (1 + (d.vitalidadePercentual ?? 0) / 100)),
     arcano: 0,
     inteligencia: 0,
@@ -1415,7 +1417,7 @@ export function montarMonstroCacada(d: MonstroCacadaDados): MonsterDefinition {
     id: d.id,
     nome: d.nome,
     nivel,
-    hp: escalarVida(Math.round(p * perfil.hp * multHp), nivel, categoriaDeEscala(d.perfil, d.chave === true)),
+    hp: Math.max(1, Math.round(escalarVida(Math.round(p * perfil.hp * multHp), nivel, categoria) * porEstrela.kh)),
     chefe: d.chave === true,
     ...(d.perfil === 'blindado' ? { blindado: true } : {}),
     categoriaCorporal: d.categoriaCorporal,

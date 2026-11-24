@@ -123,3 +123,20 @@ export function categoriaDeEscala(perfil: PerfilMonstro | undefined, chefe: bool
 
 export const escalarVida = (hp: number, nivel: number, categoria: CategoriaDeEscala): number => Math.max(1, Math.round(hp * escalaDoNivel(nivel, categoria).kh));
 export const escalarAtaque = (ataque: number, nivel: number, categoria: CategoriaDeEscala): number => Math.max(1, Math.round(ataque * escalaDoNivel(nivel, categoria).kf));
+
+/**
+ * Ajuste por estrela (a tabela acima é por nível e a Torre e as Provações usam os níveis dela, então o ajuste de uma estrela fica à parte e só vale para os
+ * monstros da Caçada daquela estrela). 6★ (nível 20 em diante): os jogadores não conseguiam enfrentar os monstros, em especial o monstro-chave (a tabela
+ * bruta tem um salto no nível 20: chefe a 29× de vida). PROPOSTA, a confirmar pelo Yuri; valores calibrados por simulação contra as estrelas vizinhas.
+ */
+export const AJUSTE_DE_ESTRELA: Readonly<Record<number, Record<CategoriaDeEscala, { kh: number; kf: number }>>> = {
+  6: {
+    normal: { kh: 0.8, kf: 0.85 },
+    dificil: { kh: 0.8, kf: 0.85 },
+    boss: { kh: 0.55, kf: 0.8 },
+  },
+};
+
+export function ajusteDaEstrela(estrela: number, categoria: CategoriaDeEscala): { kh: number; kf: number } {
+  return AJUSTE_DE_ESTRELA[estrela]?.[categoria] ?? { kh: 1, kf: 1 };
+}

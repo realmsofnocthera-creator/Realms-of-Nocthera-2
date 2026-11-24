@@ -90,6 +90,11 @@ export interface MonsterDefinition {
   imunidadesStatus?: EfeitoStatus[];
   /** Sobreescudo do início da luta, quando não sai do HP (Incursões: a vida é a global, o escudo é o de uma luta). */
   sobreescudoInicial?: number;
+  /**
+   * A vida que vale para os danos em % da vida máxima do monstro (Sangramento, Veneno, Queimadura, Maldição...). Os chefes de ranking (Mundial, Semanal) têm uma vida
+   * "sem fim" de 1 bilhão só para medir o dano; sem isto, 1% de vida máxima seria 10 milhões de dano grátis. Sem ela, vale a vida do monstro.
+   */
+  hpReferenciaDePercentuais?: number;
 }
 
 export const MONSTERS: readonly MonsterDefinition[] = [

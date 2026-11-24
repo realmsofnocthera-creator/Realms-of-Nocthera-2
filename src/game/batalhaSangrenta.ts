@@ -2,6 +2,7 @@ import { MONSTROS_CACADA_DADOS } from '@/rules/cacada';
 import { PROVACOES } from '@/rules/provacoes';
 import { SUBCLASSES } from '@/rules/subclasses';
 import { temId, mapaDeEntradas } from '@/lib/mapaSeguro';
+import type { MonsterDefinition } from '@/rules/monsters';
 
 /**
  * Provação de Batalha Sangrenta — regras puras (sem banco). Decididas pelo Yuri em 13/10/2026:
@@ -60,6 +61,24 @@ export const CHEFES_ESPECIAIS: Readonly<Record<DificuldadeBatalha, readonly stri
   muitoDificil: ['othrak-relicto-primordial'],
   inferno: ['varkhazar-dragao-da-carnificina', 'noctharion-dragao-do-eclipse-eterno'],
 };
+
+/**
+ * O Nerf de todos os monstros da Batalha Sangrenta (comuns e chefes Especiais): são 5 lutas seguidas e a vida passa de uma para a outra, então quase
+ * ninguém vencia as cinco. Vida e ataque dos monstros neste modo valem esta fração do que valem na Caçada. PROPOSTA, a confirmar pelo Yuri; calibrada por simulação.
+ */
+export const NERF_DA_BATALHA_SANGRENTA = { vida: 0.5, ataque: 0.6 } as const;
+
+/** O monstro como ele luta na Batalha Sangrenta (uma cópia: o monstro da Caçada não muda). O Sobreescudo, que é 10% da vida, acompanha a vida. */
+export function monstroDaBatalhaSangrenta(monstro: MonsterDefinition): MonsterDefinition {
+  const { vida, ataque } = NERF_DA_BATALHA_SANGRENTA;
+  const a = monstro.atributos;
+  return {
+    ...monstro,
+    hp: Math.max(1, Math.round(monstro.hp * vida)),
+    ...(monstro.sobreescudoInicial !== undefined ? { sobreescudoInicial: Math.round(monstro.sobreescudoInicial * vida) } : {}),
+    atributos: { ...a, forca: Math.max(a.forca > 0 ? 1 : 0, Math.round(a.forca * ataque)), inteligencia: Math.max(a.inteligencia > 0 ? 1 : 0, Math.round(a.inteligencia * ataque)) },
+  };
+}
 
 /** Nível pedido pela vitrine das Provações (src/rules/provacoes.ts). */
 export const NIVEL_BATALHA_SANGRENTA = PROVACOES.find((p) => p.id === 'batalha-sangrenta')?.nivelRequerido ?? 20;
