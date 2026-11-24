@@ -84,6 +84,7 @@ export function montarChefeSemanal(semana: string): MonsterDefinition {
     nivel: 30,
     hp: VIDA_DO_CHEFE_SEMANAL,
     sobreescudoInicial: Math.floor(vidaDeUmaLuta / 10),
+    hpReferenciaDePercentuais: vidaDeUmaLuta,
     chefe: true,
     categoriaCorporal: chefe.categoriaCorporal,
     atributos,

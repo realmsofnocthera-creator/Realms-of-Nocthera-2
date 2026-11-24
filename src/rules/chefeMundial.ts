@@ -76,6 +76,7 @@ export function montarChefeMundial(dia: string): MonsterDefinition {
     nivel: 25,
     hp: VIDA_DO_CHEFE_MUNDIAL,
     sobreescudoInicial: Math.floor(vidaDeUmaLuta / 10),
+    hpReferenciaDePercentuais: vidaDeUmaLuta,
     chefe: true,
     categoriaCorporal: chefe.categoriaCorporal,
     atributos,

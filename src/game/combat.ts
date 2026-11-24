@@ -363,6 +363,8 @@ export interface Combatente {
   nome: string;
   hp: number;
   hpMax: number;
+  /** Só chefes de ranking: a vida que vale para os danos em % da vida máxima (a vida deles é uma reserva sem fim). */
+  hpReferenciaDePercentuais?: number;
   sobreescudo: number;
   atributos: Attributes;
   racaId?: string;
@@ -4064,6 +4066,7 @@ export function montarCombatenteDoMonstro(monstro: MonsterDefinition): Combatent
     nome: monstro.nome,
     hp: monstro.hp,
     hpMax: monstro.hp,
+    ...(monstro.hpReferenciaDePercentuais !== undefined ? { hpReferenciaDePercentuais: monstro.hpReferenciaDePercentuais } : {}),
     sobreescudo: monstro.sobreescudoInicial ?? sobreescudoInicialDoMonstro(monstro.hp),
     atributos: { ...monstro.atributos },
     ouro: 0,
@@ -4731,7 +4734,7 @@ export function* motorDeCombate(
     if (tentativa.resultado === 'controle') {
       // Bloco C: dano imediato (se houver) e debuffs de controle no monstro
       const def = EFEITOS_STATUS[efeitoId];
-      const danoImediato = def.percentualHpMax > 0 ? calcularDanoEfeito(m.hpMax, def.percentualHpMax) : 0;
+      const danoImediato = def.percentualHpMax > 0 ? calcularDanoEfeito(m.hpReferenciaDePercentuais ?? m.hpMax, def.percentualHpMax) : 0;
       m.hp = Math.max(0, m.hp - danoImediato);
       aplicarEfeitoControle(m, efeitoId, p.equipamento?.emblemas?.duracaoStatus.controle ?? 0);
       lado.dispararEmblemas({ evento: 'controleAplicado' }, eventosEfeitosDoTurno);
@@ -4752,7 +4755,7 @@ export function* motorDeCombate(
       // Sangramento e Maldição: dano de uma vez, em % do HP máximo do monstro
       const bonusDanoInstantaneo = efeitoId === 'sangramento' ? p.equipamento?.emblemas?.danoStatus.sangramento ?? 0 : 0;
       const danoInstantaneo = Math.floor(
-        (calcularDanoEfeito(m.hpMax, EFEITOS_STATUS[efeitoId].percentualHpMax) * (100 + bonusDanoInstantaneo)) / 100
+        (calcularDanoEfeito(m.hpReferenciaDePercentuais ?? m.hpMax, EFEITOS_STATUS[efeitoId].percentualHpMax) * (100 + bonusDanoInstantaneo)) / 100
       );
       m.hp = Math.max(0, m.hp - danoInstantaneo);
       registrarEstadoDeLuta(m, efeitoId);
@@ -4921,7 +4924,7 @@ export function* motorDeCombate(
 
     // Dano contínuo no monstro (Sangramento Forçado do jogador)
     if (m.hp > 0 && efeitosMonstroStatus.size > 0) {
-      const tickMonstro = processarTickEfeitos(efeitosMonstroStatus, m.hpMax, lado.bonusDoDanoContinuo());
+      const tickMonstro = processarTickEfeitos(efeitosMonstroStatus, m.hpReferenciaDePercentuais ?? m.hpMax, lado.bonusDoDanoContinuo());
       efeitosMonstroStatus = tickMonstro.efeitos;
       for (const e of tickMonstro.eventos) {
         eventosEfeitosDoTurno.push({ ...e, alvo: m.nome });
