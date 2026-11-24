@@ -12,6 +12,7 @@ import { COR_RARIDADE_ARMA, type DetalheMinhaArmaTela, type EstadoNoForja, type 
 import { IconeCategoria } from './IconeDeCategoria';
 import { IconeDoMaterial, EtiquetaDeStatus } from './IconeDoMaterial';
 import { ICONE_BILHETE, ICONE_DANO_FISICO, ICONE_DANO_MAGICO } from '@/assets/forjaItens';
+import { ReciclarEquipamento } from './ReciclarEquipamento';
 import { AZUL_CLARO, BotaoDoKit, BotaoRedondo, DivisorDaForja, PainelDaForja, PlacaDeRaridade, SlotDeArma, TEXTO_PIXEL } from './KitDaForja';
 
 const VERDE = '#7BE08C';
@@ -130,13 +131,14 @@ export function LinhasDaArma({ tipoDano, subtipo, dano, danoBase, elementos, sta
 }
 
 /** O pop-up de uma arma que o personagem tem: reforjar (sorteia os pontos de novo) e, nas Míticas, customizar. */
-export function FolhaMinhaArma({ detalhe: d, ocupado, erro, onFechar, onReforjar, onCustomizar }: {
+export function FolhaMinhaArma({ detalhe: d, ocupado, erro, onFechar, onReforjar, onCustomizar, onReciclar }: {
   detalhe: DetalheMinhaArmaTela;
   ocupado: boolean;
   erro: string | null;
   onFechar: () => void;
   onReforjar: () => void;
   onCustomizar: (opcao: OpcaoCustomizacao) => void;
+  onReciclar: () => void;
 }) {
   const receita = [...d.reforja.materiais, ...(d.reforja.diversos ? [d.reforja.diversos] : [])];
   const cust = d.customizacao;
@@ -159,6 +161,7 @@ export function FolhaMinhaArma({ detalhe: d, ocupado, erro, onFechar, onReforjar
       <DivisorDaForja />
       <section aria-label="Reforjar" className="flex flex-col gap-1">
         <h3 className="font-cinzel font-extrabold uppercase text-[11px] tracking-wider text-[#E7C46A]">Reforjar ({d.reforja.percentual}% da receita)</h3>
+        <p className={`${TEXTO_PIXEL} text-[10px] text-[#8FB3D1]`}>Sorteia de novo o atributo e os pontos dele.</p>
         {receita.map((m) => <LinhaDeMaterial key={m.id} m={m} />)}
         <LinhaDeOuro tem={d.reforja.ouro.tem} precisa={d.reforja.ouro.precisa} ok={d.reforja.ouro.ok} />
         <BotaoDoKit disabled={!d.reforja.pode || ocupado} onClick={onReforjar} className="w-full py-1 mt-0.5">
@@ -196,6 +199,9 @@ export function FolhaMinhaArma({ detalhe: d, ocupado, erro, onFechar, onReforjar
       ) : (
         <p className={`${TEXTO_PIXEL} text-[10px] text-center text-[#8FB3D1]`}>Só as armas Míticas podem ser customizadas.</p>
       )}
+
+      <DivisorDaForja />
+      <ReciclarEquipamento nome={d.nome} devolve={d.reciclagem.devolve} equipada={d.reciclagem.equipada} ocupado={ocupado} onReciclar={onReciclar} />
 
       <Erro texto={erro} />
     </JanelaDaForja>

@@ -19,6 +19,9 @@ import { COR_RARIDADE_ARMA } from '@/lib/forjaTela';
 import { Abas, BarraDeTitulo, BotaoDoKit, FundoDaForja, OuroDaForja, PainelDaForja, PalcoDaForja, SlotDeArma, TEXTO_PIXEL } from './KitDaForja';
 import { IconeDePeca } from './IconeDoMaterial';
 import { PainelDaMinhaPeca, PainelDaPeca } from './PainelDaPeca';
+import { ReciclarEquipamento, resumoDoQueVoltou } from './ReciclarEquipamento';
+import { linhasDaReciclagem } from '@/lib/forjaTela';
+import { nomeDoItem } from '@/game/forja';
 
 interface ArmaduraScreenProps {
   character: CharacterDocument;
@@ -107,6 +110,22 @@ export function ArmaduraScreen({ character, onCharacterChange, tokenFresco }: Ar
     );
   const reforjar = (m: MinhaPecaTela) =>
     executar(() => chamar('/api/armadura/reforjar', { armaduraId: m.id }, tokenFresco), (a) => `${m.nome} reforjada: ${m.atributo} +${a.pontos}.`);
+  const reciclar = async (m: MinhaPecaTela) => {
+    if (ocupado) return;
+    setOcupado(true);
+    setErro(null);
+    setAviso(null);
+    try {
+      const r = await chamar<{ character: CharacterDocument; devolvido: Record<string, number> }>('/api/armadura/reciclar', { armaduraId: m.id }, tokenFresco);
+      onCharacterChange(r.character);
+      setMinhaSel(null);
+      setAviso(`${m.nome} reciclada: ${resumoDoQueVoltou(r.devolvido, nomeDoItem)}`);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Erro ao reciclar.');
+    } finally {
+      setOcupado(false);
+    }
+  };
   const usarOrbes = (m: MinhaPecaTela, orbes: Record<string, number>) =>
     executar(() => chamar('/api/armadura/orbes', { armaduraId: m.id, orbes }, tokenFresco), () => `${m.nome} recebeu os orbes.`);
 
@@ -207,6 +226,18 @@ export function ArmaduraScreen({ character, onCharacterChange, tokenFresco }: Ar
               {aba === 'inferior' && detalhe && <PainelDaPeca d={detalhe} />}
               {aba === 'minhas' && minha && pecaDaMinha && (
                 <PainelDaMinhaPeca key={minha.id} m={minha} espaco={pecaDaMinha.espaco} estrela={pecaDaMinha.estrela} character={character} ocupado={ocupado} onUsarOrbes={(orbes) => void usarOrbes(minha, orbes)} />
+              )}
+              {aba === 'minhas' && minha && pecaDaMinha && (
+                <div className="px-[1.2cqw] pb-[2cqw]">
+                  <ReciclarEquipamento
+                    key={`rec-${minha.id}`}
+                    nome={minha.nome}
+                    devolve={linhasDaReciclagem(pecaDaMinha.receita)}
+                    equipada={Object.values(character.equipamento?.armadura ?? {}).includes(minha.id)}
+                    ocupado={ocupado}
+                    onReciclar={() => void reciclar(minha)}
+                  />
+                </div>
               )}
             </div>
           </div>

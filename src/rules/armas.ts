@@ -172,7 +172,7 @@ function inteiroEntre(min: number, max: number, aleatorio: () => number): number
   return min + Math.min(max - min, Math.floor(aleatorio() * (max - min + 1)));
 }
 
-/** Tipo do atributo sorteado na primeira arma da árvore (depois fica fixo ao evoluir). */
+/** Tipo do atributo sorteado ao fabricar a primeira arma da árvore e a cada reforja (a evolução mantém o da arma anterior). */
 export function sortearAtributoDaArma(categoria: CategoriaArma, aleatorio: () => number): AttributeName {
   const opcoes = atributosSorteaveis(categoria);
   return opcoes[inteiroEntre(0, opcoes.length - 1, aleatorio)];

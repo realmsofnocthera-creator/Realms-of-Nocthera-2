@@ -121,6 +121,7 @@ import {
   sortearEmblemas,
 } from '@/game/guerreiro';
 import { diaDeBrasilia } from '@/game/batalhaSangrenta';
+import { MENSAGEM_BLOQUEIO_RECICLAGEM, planejarReciclagemArma, planejarReciclagemArmadura } from '@/game/reciclagem';
 import { emblemasNoCombate } from '@/game/emblemasEfeitos';
 import { EMBLEMA_RARIDADE_MAP } from '@/rules/emblemas';
 import { TIPO_EMBLEMA_MAP } from '@/rules/emblemasCatalogo';
@@ -2831,6 +2832,38 @@ export async function customizarArma(uid: string, armaId: unknown, opcao: unknow
     const plano = planejarCustomizacao(estadoForja(current), armaId, opcao);
     if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_FORJA[plano.motivo]);
     return gravarForja(ctx, current, plano, `Forja: Customização (${String(opcao)})`, 0, false);
+  });
+}
+
+/** O que a reciclagem devolve, para a tela contar o que voltou. */
+export interface RespostaReciclagem {
+  character: CharacterDocument;
+  /** id do item → quantidade que voltou para o inventário. */
+  devolvido: Record<string, number>;
+  nome: string;
+}
+
+/** Reciclar uma arma (não equipada): ela some e 30% dos materiais da receita voltam para o inventário. Tudo numa transação; sem ouro, sem leitura nova. */
+export async function reciclarArma(uid: string, armaId: unknown): Promise<RespostaReciclagem> {
+  await exigirSistemaLigado(uid, 'forja');
+  return repositorio.executarTransacao('forjaReciclar', async (ctx) => {
+    const current = await carregarPersonagem(ctx, uid);
+    const plano = planejarReciclagemArma({ inventario: current.inventario ?? {}, armas: current.armas ?? [], equipamento: current.equipamento }, armaId);
+    if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_RECICLAGEM[plano.motivo]);
+    const character = salvarPersonagem(ctx, current, { inventario: plano.inventario, armas: plano.armas });
+    return { character, devolvido: plano.devolucao, nome: plano.base.nomes[plano.arma.categoria] };
+  });
+}
+
+/** Reciclar uma peça de armadura (não equipada): ela some e 30% dos materiais da receita voltam para o inventário. */
+export async function reciclarArmadura(uid: string, armaduraId: unknown): Promise<RespostaReciclagem> {
+  await exigirSistemaLigado(uid, 'forja');
+  return repositorio.executarTransacao('armaduraReciclar', async (ctx) => {
+    const current = await carregarPersonagem(ctx, uid);
+    const plano = planejarReciclagemArmadura({ inventario: current.inventario ?? {}, armaduras: current.armaduras ?? [], equipamento: current.equipamento }, armaduraId);
+    if (!plano.ok) throw new Error(MENSAGEM_BLOQUEIO_RECICLAGEM[plano.motivo]);
+    const character = salvarPersonagem(ctx, current, { inventario: plano.inventario, armaduras: plano.armaduras });
+    return { character, devolvido: plano.devolucao, nome: plano.peca.nome };
   });
 }
 
