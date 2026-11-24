@@ -13,7 +13,7 @@ export function carregarImagem(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Não foi possível abrir a imagem do tileset.'));
+    img.onerror = () => reject(new Error('Não foi possível abrir a imagem.'));
     img.src = src;
   });
 }

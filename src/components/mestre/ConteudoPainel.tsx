@@ -31,6 +31,7 @@ import { NOCTHERA_THEME } from '@/theme/theme';
 import { Cartao, chamar, OURO, VERMELHO } from '@/components/mestre/comum';
 import type { SessaoDoPainel } from '@/components/mestre/MestrePainel';
 import { ImportarTileset } from '@/components/mestre/ImportarTileset';
+import { NovoMapaDeImagem } from '@/components/mestre/NovoMapaDeImagem';
 
 type Token = () => Promise<string>;
 
@@ -151,6 +152,7 @@ function Lista({ tipo, sessao, tokenFresco, abrir }: { tipo: TipoDeConteudo; ses
   return (
     <div className="flex flex-col gap-3">
       {podeEditar && tipo === 'mapa' && <NovoMapa tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
+      {podeEditar && tipo === 'mapa' && <NovoMapaDeImagem tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
       {podeEditar && tipo === 'missao' && <NovaMissao tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
       {podeEditar && tipo === 'cena' && <NovaCena tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}
       {podeEditar && tipo === 'anuncio' && <NovoAnuncio tokenFresco={tokenFresco} criado={(id) => abrir(id)} />}

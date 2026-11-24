@@ -30,7 +30,8 @@ import { COR_DO_OBJETO, PainelDeObjetos } from '@/components/mestre/PainelDeObje
 import type { ConteudoDocumento, ResumoConteudo } from '@/server/persistencia/tipos';
 import { NOCTHERA_THEME } from '@/theme/theme';
 import { chamar, OURO, VERMELHO } from '@/components/mestre/comum';
-import { carregarTileset, type TilesetCarregado } from '@/components/mestre/carregarTileset';
+import { carregarImagem, carregarTileset, type TilesetCarregado } from '@/components/mestre/carregarTileset';
+import { desenharFundoDoMapa } from '@/components/mestre/desenharMapaDeJogo';
 import type { SessaoDoPainel } from '@/components/mestre/MestrePainel';
 
 type Token = () => Promise<string>;
@@ -109,6 +110,9 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
   const [zoom, setZoom] = useState(1);
   const [grade, setGrade] = useState(true);
   const [mostrarColisao, setMostrarColisao] = useState(true);
+  /** Só nos mapas de imagem: a imagem de fundo carregada e se ela aparece. */
+  const [fundo, setFundo] = useState<HTMLImageElement | null>(null);
+  const [mostrarFundo, setMostrarFundo] = useState(true);
   const [sujo, setSujo] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState<{ texto: string; erro: boolean } | null>(null);
@@ -136,6 +140,10 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
       setNome(conteudo.nome);
       setRevisao(conteudo.revisao);
       try {
+        if (mapa.fundo) {
+          const img = await carregarImagem(mapa.fundo.url);
+          if (ativo) setFundo(img);
+        }
         const lista = await Promise.all(mapa.tilesets.map((t) => carregarTileset(tokenFresco, t)));
         if (ativo) setTilesets(lista);
       } catch (error) {
@@ -222,6 +230,7 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
 
     ctx.fillStyle = '#1A1612';
     ctx.fillRect(-ox, -oy, mapa.largura * lado, mapa.altura * lado);
+    if (fundo && mostrarFundo) desenharFundoDoMapa(ctx, fundo, lado / mapa.tamanhoDoTile, ox, oy, tamanho.largura, tamanho.altura);
 
     for (const c of ['chao', 'objetos', 'acima'] as const) {
       const lista = mapa.camadas[c] ?? [];
@@ -289,7 +298,7 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
         ctx.strokeRect(r.x * lado - ox + 0.5, r.y * lado - oy + 0.5, r.largura * lado - 1, r.altura * lado - 1);
       }
     }
-  }, [desenho, tamanho, lado, tilesets, grade, mostrarColisao, camada, modo, selecionado, carimbo]);
+  }, [desenho, tamanho, lado, tilesets, grade, mostrarColisao, camada, modo, selecionado, carimbo, fundo, mostrarFundo]);
 
   const limitarDeslocamento = useCallback(() => {
     const mapa = mapaRef.current;
@@ -708,6 +717,11 @@ export function EditorDeMapa({ id, sessao, tokenFresco }: { id: string; sessao: 
         <label className="inline-flex items-center gap-1 text-[11px] ml-1">
           <input type="checkbox" checked={mostrarColisao} onChange={(e) => setMostrarColisao(e.target.checked)} /> Ver colisão
         </label>
+        {mapaRef.current?.fundo && (
+          <label className="inline-flex items-center gap-1 text-[11px] ml-1">
+            <input type="checkbox" checked={mostrarFundo} onChange={(e) => setMostrarFundo(e.target.checked)} /> Ver a imagem
+          </label>
+        )}
       </div>
 
       {/* altura fixa: a mensagem aparecer não pode empurrar o mapa e fazer o próximo toque cair no tile errado */}

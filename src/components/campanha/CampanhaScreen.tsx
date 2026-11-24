@@ -73,7 +73,15 @@ async function abrirMundo(r: RespostaDoMundo): Promise<MundoAberto | null> {
       }
     })
   );
-  return { id: r.mapa.id, nome: r.mapa.nome, mapa: { ...r.mapa.dados, objetos: r.mapa.dados.objetos ?? [] }, tilesets };
+  let fundo: HTMLImageElement | null = null;
+  if (r.mapa.dados.fundo) {
+    try {
+      fundo = await carregarImagem(r.mapa.dados.fundo.url);
+    } catch {
+      fundo = null; // a imagem não abriu: o mapa é desenhado sem ela
+    }
+  }
+  return { id: r.mapa.id, nome: r.mapa.nome, mapa: { ...r.mapa.dados, objetos: r.mapa.dados.objetos ?? [] }, tilesets, fundo };
 }
 
 /**
