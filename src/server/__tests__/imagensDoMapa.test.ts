@@ -73,6 +73,11 @@ describe('Mapa de imagem: imagem no armazenamento (R2)', () => {
     const ok = await enviarRota(pedido('mes1'));
     expect(ok.status).toBe(201);
     expect((await ok.json()).imagem).toMatchObject({ largura: 64, altura: 64 });
+    // uma imagem de 8 MB (como as dos mapas grandes) passa pela rota inteira
+    const grande = new NextRequest('http://t/api/mestre/mapas/imagem', { method: 'POST', headers: { authorization: `Bearer ${tokenDeTeste('mes1')}`, 'content-type': 'image/png' }, body: png(64, 64, 8_000_000) as unknown as BodyInit });
+    const resposta = await enviarRota(grande);
+    expect(resposta.status).toBe(201);
+    expect((await resposta.json()).imagem.bytes).toBeGreaterThan(8_000_000);
     expect((await enviarRota(pedido(null))).status).toBe(401);
     expect((await enviarRota(pedido('sup1'))).status).toBe(403);
   });

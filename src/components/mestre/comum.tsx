@@ -32,6 +32,8 @@ export async function chamar(
     if (res.status === 401 && dados.sessaoExpirada === true && typeof window !== 'undefined') window.dispatchEvent(new Event(EVENTO_SESSAO_EXPIRADA));
     return { ok: res.ok, status: res.status, dados };
   } catch (error) {
-    return { ok: false, status: 0, dados: { error: error instanceof Error ? error.message : 'Sem conexão. Tente de novo.' } };
+    // o navegador só diz "Failed to fetch" / "Load failed" quando a conexão cai: troca por um texto que explica
+    const falhaDeRede = !(error instanceof Error) || /failed to fetch|load failed|networkerror|network request failed/i.test(error.message);
+    return { ok: false, status: 0, dados: { error: falhaDeRede ? 'A conexão com o servidor falhou. Confira a internet e tente de novo.' : (error as Error).message } };
   }
 }

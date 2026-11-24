@@ -43,9 +43,12 @@ function medirImagem(arquivo: Blob): Promise<{ largura: number; altura: number }
   });
 }
 
-/** PNG segue como está (sem recomprimir); outros formatos viram PNG pelo navegador. */
-async function prepararPng(arquivo: File): Promise<Blob> {
-  if (arquivo.type === 'image/png') return arquivo;
+/**
+ * PNG segue como está (sem recomprimir), mas copiado para a memória: mandar o próprio arquivo escolhido falha no celular ("Failed to fetch") quando ele vem da
+ * galeria ou da nuvem (o navegador perde a ligação com o arquivo antes do envio acabar). Outros formatos viram PNG pelo navegador.
+ */
+export async function prepararPng(arquivo: File): Promise<Blob> {
+  if (arquivo.type === 'image/png') return new Blob([await arquivo.arrayBuffer()], { type: 'image/png' });
   const { largura, altura } = await medirImagem(arquivo);
   const canvas = document.createElement('canvas');
   canvas.width = largura;
