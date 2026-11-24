@@ -99,6 +99,11 @@ export function ImportarTileset({ tokenFresco, criado }: { tokenFresco: Token; c
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  /** As folhas escolhidas de uma vez: cada uma vira um tileset, na ordem. `indiceLote` é a que está aberta agora. */
+  const [lote, setLote] = useState<File[]>([]);
+  const [indiceLote, setIndiceLote] = useState(0);
+  /** O último tileset criado nesta leva: quando a leva acaba (até pulando), a tela abre esse. */
+  const ultimoCriado = useRef<string | null>(null);
   const previa = useRef<HTMLCanvasElement>(null);
 
   const grade = lida ? gradeDoTileset(lida.largura, lida.altura, tile, margem, espacamento) : null;
@@ -156,6 +161,43 @@ export function ImportarTileset({ tokenFresco, criado }: { tokenFresco: Token; c
     setPontoA(null);
   };
 
+  /** Abre uma folha: lê a imagem e põe o nome do arquivo no tileset. Falha → mensagem e `false`. */
+  const abrirArquivo = async (arquivo: File): Promise<boolean> => {
+    try {
+      const nova = await lerImagem(arquivo);
+      setLida(nova);
+      setSelecao([]);
+      setPontoA(null);
+      setModoArea(false);
+      setZoom(Math.max(1, Math.floor(320 / nova.largura)));
+      const base = arquivo.name.replace(/\.[^.]+$/, '');
+      setNome(base.slice(0, 60));
+      setId(sugerirIdentificador(base));
+      setErro(null);
+      return true;
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível abrir a imagem.');
+      return false;
+    }
+  };
+
+  /** Abre a folha `i` do lote; se ela não abrir, passa para a próxima. Sem mais folhas, fecha o formulário. */
+  const abrirEm = async (arquivos: File[], i: number) => {
+    for (let k = i; k < arquivos.length; k++) {
+      setLote(arquivos);
+      setIndiceLote(k);
+      if (await abrirArquivo(arquivos[k])) return;
+    }
+    setLida(null);
+    setLote([]);
+    setIndiceLote(0);
+    if (ultimoCriado.current) {
+      const id = ultimoCriado.current;
+      ultimoCriado.current = null;
+      criado(id);
+    }
+  };
+
   const concluir = async (dados: TilesetDados) => {
     const v = validarTileset(dados);
     if (!v.ok) {
@@ -164,13 +206,22 @@ export function ImportarTileset({ tokenFresco, criado }: { tokenFresco: Token; c
     }
     const r = await chamar(tokenFresco, '/api/mestre/conteudo', { method: 'POST', body: JSON.stringify({ tipo: 'tileset', id, nome, dados }) });
     setOcupado(false);
-    if (r.ok) {
-      setLida(null);
-      setNome('');
-      setId('');
-      setSelecao([]);
-      criado(id);
-    } else setErro(String(r.dados.error ?? 'Não foi possível criar o tileset.'));
+    if (!r.ok) return setErro(String(r.dados.error ?? 'Não foi possível criar o tileset.'));
+    setSelecao([]);
+    ultimoCriado.current = id;
+    const proxima = indiceLote + 1;
+    // com mais folhas no lote, cria esta como rascunho e já abre a próxima; a tela só muda no fim da leva
+    if (proxima < lote.length) {
+      setAviso(`"${nome}" criado como rascunho. Próxima folha: ${proxima + 1} de ${lote.length}.`);
+      return abrirEm(lote, proxima);
+    }
+    setLida(null);
+    setNome('');
+    setId('');
+    setLote([]);
+    setIndiceLote(0);
+    ultimoCriado.current = null;
+    criado(id);
   };
 
   /** Envia um PNG para o armazenamento: o endereço, 'desligado' (503) ou um erro. */
@@ -248,33 +299,30 @@ export function ImportarTileset({ tokenFresco, criado }: { tokenFresco: Token; c
         {Math.round(BYTES_MAXIMOS_DO_PNG_NO_ARMAZENAMENTO / 1024)} KB e {TILES_POR_TILESET} tiles.
       </p>
       <label className="inline-flex items-center gap-1.5 self-start px-3 py-1.5 rounded border text-[12px] cursor-pointer" style={{ borderColor: OURO, color: '#E6C775' }}>
-        <ImagePlus className="w-4 h-4" /> Escolher imagem
+        <ImagePlus className="w-4 h-4" /> Escolher imagens (pode marcar várias)
         <input
           type="file"
+          multiple
           accept="image/*"
           className="sr-only"
           onChange={async (e) => {
-            const arquivo = e.target.files?.[0];
+            const arquivos = Array.from(e.target.files ?? []);
             e.target.value = '';
-            if (!arquivo) return;
+            if (arquivos.length === 0) return;
             setErro(null);
             setAviso(null);
-            try {
-              const nova = await lerImagem(arquivo);
-              setLida(nova);
-              setSelecao([]);
-              setPontoA(null);
-              setZoom(Math.max(1, Math.floor(320 / nova.largura)));
-              const base = arquivo.name.replace(/\.[^.]+$/, '');
-              if (!nome) setNome(base.slice(0, 60));
-              if (!id) setId(sugerirIdentificador(base));
-            } catch (error) {
-              setErro(error instanceof Error ? error.message : 'Não foi possível abrir a imagem.');
-            }
+            await abrirEm(arquivos, 0);
           }}
         />
       </label>
 
+      {lote.length > 1 && lida && (
+        <div className="flex flex-wrap items-center gap-2 text-[12px]" role="status" aria-label="Fila de folhas">
+          <span className="font-bold" style={{ color: '#E6C775' }}>Folha {indiceLote + 1} de {lote.length}</span>
+          <span style={{ color: colors.text.secondary }}>({lote.slice(indiceLote + 1).length} na fila)</span>
+          <button type="button" className={botao} style={{ borderColor: OURO, color: '#E6C775' }} disabled={ocupado} onClick={() => void abrirEm(lote, indiceLote + 1)}>Pular esta folha</button>
+        </div>
+      )}
       {lida && (
         <form
           className="flex flex-col gap-2"
