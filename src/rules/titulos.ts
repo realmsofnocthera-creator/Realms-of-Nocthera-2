@@ -12,6 +12,9 @@ export interface TituloDefinition {
 }
 
 export const TITULOS: readonly TituloDefinition[] = [
+  { id: 'vip-adepto', nome: 'Adepto', origem: 'Recompensa do VIP 2 (resgatar na tela do VIP)' },
+  { id: 'vip-especial', nome: 'Distinto', origem: 'Recompensa do VIP 9 (resgatar na tela do VIP)' },
+  { id: 'vip-transcendente', nome: 'Transcendente', origem: 'Recompensa do VIP 10 (resgatar na tela do VIP)' },
   { id: 'veterano-de-guerra', nome: 'Veterano de Guerra', origem: 'Conquista Vitórias, 5º degrau' },
   { id: 'matador-de-chefes', nome: 'Matador de Chefes', origem: 'Conquista Vitórias contra chefes, 5º degrau' },
   { id: 'conquistador-da-torre', nome: 'Conquistador da Torre', origem: 'Conquista Torre Celestial, 5º degrau' },

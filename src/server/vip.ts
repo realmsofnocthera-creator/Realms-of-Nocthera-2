@@ -1,10 +1,10 @@
-import { recompensasParaResgatar, type RecompensaDoVip } from '@/rules/vipRecompensas';
+import { recompensasParaResgatar, titulosDasRecompensas, type RecompensaDoVip } from '@/rules/vipRecompensas';
 import { comTitulos } from '@/rules/titulos';
 import { carregarPersonagem, salvarPersonagem } from '@/server/characterService';
 import { repositorio } from '@/server/persistencia';
 
 /**
- * O baú da tela VIP: resgata as recompensas de aparência dos níveis que o jogador tem (títulos, que abrem as molduras junto). Uma só gravação no
+ * O baú da tela VIP: resgata as recompensas de aparência dos níveis que o jogador tem (títulos e molduras; o resto espera o inventário de cosméticos). Uma só gravação no
  * personagem. Sem nada para resgatar, é erro 400 (e nada é gravado).
  */
 export class ErroDoVip extends Error {
@@ -27,7 +27,7 @@ export async function resgatarRecompensasDoVip(uid: string): Promise<ResultadoDo
     const eu = await carregarPersonagem(ctx, uid);
     const lista: RecompensaDoVip[] = recompensasParaResgatar(eu);
     if (!lista.length) throw new ErroDoVip('Não há recompensas do VIP para resgatar agora.');
-    const titulos = comTitulos(eu.titulos, lista.flatMap((x) => (x.entrega ? [x.entrega.titulo] : [])));
+    const titulos = comTitulos(eu.titulos, titulosDasRecompensas(lista));
     const vipResgatados = [...new Set([...(eu.vipResgatados ?? []), ...lista.map((x) => x.id)])];
     salvarPersonagem(ctx, eu, { titulos, vipResgatados });
     return {

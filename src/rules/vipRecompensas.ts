@@ -1,4 +1,5 @@
 import { ehTitulo } from './titulos';
+import { ehMoldura } from './molduras';
 import { nivelDoVip } from './vip';
 
 /**
@@ -25,35 +26,41 @@ export interface RecompensaDoVip {
   tipo: TipoDeRecompensaVip;
   /** Nome provisório. */
   nome: string;
-  /** O que o resgate entrega quando o item existir: hoje, só títulos (a moldura abre junto pelo título). */
-  entrega?: { titulo: string };
+  /** O que o resgate entrega quando o item existir: um título ou uma moldura (a moldura abre quando o id da recompensa entra em `vipResgatados`). */
+  entrega?: { titulo: string } | { moldura: string };
+  /** A arte já está pronta (a entrega espera o inventário de cosméticos): a tela mostra a arte e "Arte pronta". Ver `vipArte.ts`. */
+  arte?: true;
 }
 
-const r = (nivel: number, tipo: TipoDeRecompensaVip, nome: string): RecompensaDoVip => ({ id: `vip-${nivel}-${tipo}`, nivel, tipo, nome });
+const r = (nivel: number, tipo: TipoDeRecompensaVip, nome: string, extra: Pick<RecompensaDoVip, 'entrega' | 'arte'> = {}): RecompensaDoVip => ({ id: `vip-${nivel}-${tipo}`, nivel, tipo, nome, ...extra });
+const ARTE = { arte: true } as const;
 
 export const RECOMPENSAS_DO_VIP: readonly RecompensaDoVip[] = [
-  r(1, 'moldura', 'Moldura VIP'),
-  r(2, 'titulo', 'Título VIP: Adepto'),
-  r(3, 'moldura', 'Moldura VIP exclusiva'),
-  r(4, 'skin', 'Skin VIP'),
-  r(5, 'moldura', 'Moldura animada VIP'),
-  r(6, 'efeito', 'Efeito de entrada em combate VIP'),
-  r(7, 'emblema', 'Emblema VIP do chat e da guilda'),
-  r(7, 'skin', 'Skin VIP exclusiva'),
-  r(8, 'decoracao', 'Decoração VIP do chat'),
-  r(8, 'moldura', 'Moldura lendária animada VIP'),
-  r(9, 'aura', 'Aura VIP'),
-  r(9, 'titulo', 'Título VIP especial'),
-  r(10, 'skin', 'Skin mítica VIP'),
-  r(10, 'efeito', 'Efeito VIP especial no perfil'),
-  r(10, 'moldura', 'Moldura VIP Transcendente'),
-  r(10, 'titulo', 'Título VIP Transcendente'),
+  r(1, 'moldura', 'Moldura VIP', { entrega: { moldura: 'vip-1' } }),
+  r(2, 'titulo', 'Título VIP: Adepto', { entrega: { titulo: 'vip-adepto' } }),
+  r(3, 'moldura', 'Moldura VIP exclusiva', { entrega: { moldura: 'vip-3' } }),
+  r(4, 'skin', 'Skin VIP', ARTE),
+  r(5, 'moldura', 'Moldura animada VIP', { entrega: { moldura: 'vip-5' } }),
+  r(6, 'efeito', 'Efeito de entrada em combate VIP', ARTE),
+  r(7, 'emblema', 'Emblema VIP do chat e da guilda', ARTE),
+  r(7, 'skin', 'Skin VIP exclusiva', ARTE),
+  r(8, 'decoracao', 'Decoração VIP do chat', ARTE),
+  r(8, 'moldura', 'Moldura lendária animada VIP', { entrega: { moldura: 'vip-8' } }),
+  r(9, 'aura', 'Aura VIP', ARTE),
+  r(9, 'titulo', 'Título VIP especial', { entrega: { titulo: 'vip-especial' } }),
+  r(10, 'skin', 'Skin mítica VIP', ARTE),
+  r(10, 'efeito', 'Efeito VIP especial no perfil', ARTE),
+  r(10, 'moldura', 'Moldura VIP Transcendente', { entrega: { moldura: 'vip-10' } }),
+  r(10, 'titulo', 'Título VIP Transcendente', { entrega: { titulo: 'vip-transcendente' } }),
 ];
 
 export const recompensasDoNivel = (nivel: number): RecompensaDoVip[] => RECOMPENSAS_DO_VIP.filter((x) => x.nivel === nivel);
 
 /** A recompensa já pode ser entregue (existe o item no jogo)? Senão aparece "arte em produção". */
-export const recompensaDisponivel = (x: RecompensaDoVip): boolean => !!x.entrega && ehTitulo(x.entrega.titulo);
+export const recompensaDisponivel = (x: RecompensaDoVip): boolean => !!x.entrega && ('titulo' in x.entrega ? ehTitulo(x.entrega.titulo) : ehMoldura(x.entrega.moldura));
+
+/** Os títulos que as recompensas dadas entregam. */
+export const titulosDasRecompensas = (lista: readonly RecompensaDoVip[]): string[] => lista.flatMap((x) => (x.entrega && 'titulo' in x.entrega ? [x.entrega.titulo] : []));
 
 interface FichaDoVip {
   gastoReal?: number;

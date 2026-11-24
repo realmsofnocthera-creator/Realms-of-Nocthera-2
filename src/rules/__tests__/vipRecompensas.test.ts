@@ -19,9 +19,6 @@ describe('pontos VIP', () => {
 
 describe('recompensas do VIP', () => {
   const tabela = RECOMPENSAS_DO_VIP as RecompensaDoVip[];
-  const tamanho = tabela.length;
-  afterEach(() => { tabela.length = tamanho; for (const x of tabela) delete x.entrega; });
-
   it('cada recompensa é de um nível que existe, com id único; os 10 níveis com benefício de aparência têm o que mostrar', () => {
     expect(new Set(tabela.map((x) => x.id)).size).toBe(tabela.length);
     for (const x of tabela) expect(x.nivel).toBeGreaterThanOrEqual(1);
@@ -30,19 +27,26 @@ describe('recompensas do VIP', () => {
     expect(recompensasDoNivel(0)).toEqual([]);
   });
 
-  it('hoje nenhuma está pronta para resgatar (as artes ainda estão em produção)', () => {
-    expect(tabela.some(recompensaDisponivel)).toBe(false);
-    expect(recompensasParaResgatar({ gastoReal: 300_000 })).toEqual([]);
+  it('as 16 já têm arte (pacote do Yuri): títulos e molduras se resgatam agora; skins, aura, emblema, decoração e efeitos esperam o inventário de cosméticos', () => {
+    expect(tabela).toHaveLength(16);
+    const entregaveis = tabela.filter(recompensaDisponivel);
+    expect(entregaveis.map((x) => x.tipo).sort()).toEqual(['moldura', 'moldura', 'moldura', 'moldura', 'moldura', 'titulo', 'titulo', 'titulo']);
+    expect(tabela.filter((x) => !recompensaDisponivel(x)).every((x) => x.arte === true)).toBe(true);
+    expect(tabela.filter((x) => !recompensaDisponivel(x)).map((x) => x.tipo).sort()).toEqual(['aura', 'decoracao', 'efeito', 'efeito', 'emblema', 'skin', 'skin', 'skin']);
+    // o título e a moldura de cada uma existem no jogo
+    for (const x of entregaveis) {
+      if ('titulo' in x.entrega!) expect(TITULOS.some((t) => t.id === (x.entrega as { titulo: string }).titulo)).toBe(true);
+    }
   });
 
-  it('quando o título existe no jogo, a recompensa fica pronta só para quem tem o nível e ainda não resgatou', () => {
-    tabela.find((x) => x.id === 'vip-2-titulo')!.entrega = { titulo: TITULOS[0].id };
+  it('a recompensa fica pronta só para quem tem o nível e ainda não resgatou', () => {
     const nivel2 = 3_000; // nível 2
     expect(nivelDoVip(nivel2)).toBe(2);
-    const prontas = recompensasParaResgatar({ gastoReal: nivel2 }).filter((x) => x.entrega);
-    expect(prontas.map((x) => x.entrega!.titulo)).toEqual([TITULOS[0].id]);
-    expect(recompensasParaResgatar({ gastoReal: 1_000 }).filter((x) => x.entrega)).toEqual([]); // nível 1: ainda não
-    expect(recompensasParaResgatar({ gastoReal: nivel2, vipResgatados: ['vip-2-titulo'] }).filter((x) => x.entrega)).toEqual([]);
+    const prontas = recompensasParaResgatar({ gastoReal: nivel2 });
+    expect(prontas.map((x) => x.id).sort()).toEqual(['vip-1-moldura', 'vip-2-titulo']);
+    expect(recompensasParaResgatar({ gastoReal: 1_000 }).map((x) => x.id)).toEqual(['vip-1-moldura']); // nível 1
+    expect(recompensasParaResgatar({ gastoReal: 0 })).toEqual([]);
+    expect(recompensasParaResgatar({ gastoReal: nivel2, vipResgatados: ['vip-2-titulo', 'vip-1-moldura'] })).toEqual([]);
   });
 
   it('o documento só guarda ids da tabela', () => {

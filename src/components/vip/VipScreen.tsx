@@ -6,6 +6,8 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import { ARENA_UI } from '@/assets/arenaUi';
 import { TELAS_UI } from '@/assets/telasSociaisUi';
 import { BarraVip } from '@/components/vip/BarraVip';
+import { PreviaDaRecompensa } from '@/components/vip/PreviaDaRecompensa';
+import { previaDaRecompensa } from '@/assets/vipArte';
 import { NIVEIS_DO_VIP, nivelDoVip, NIVEL_MAXIMO_DO_VIP } from '@/rules/vip';
 import { NOME_DO_TIPO_DE_RECOMPENSA, recompensaDisponivel, recompensasDoNivel, recompensasParaResgatar, type RecompensaDoVip, type TipoDeRecompensaVip } from '@/rules/vipRecompensas';
 
@@ -29,14 +31,19 @@ const GEMA_POR_TIPO: Readonly<Record<TipoDeRecompensaVip, string>> = { moldura: 
 /** Uma recompensa do nível: medalhão com a moldura da Coleção, o tipo e o nome, e o estado (resgatada, pronta, arte em produção ou bloqueada). */
 function CartaoDeRecompensa({ x, nivelDoJogador, resgatada }: { x: RecompensaDoVip; nivelDoJogador: number; resgatada: boolean }) {
   const aberto = x.nivel <= nivelDoJogador;
+  const previa = previaDaRecompensa(x);
   const pronta = aberto && recompensaDisponivel(x) && !resgatada;
   const moldura = pronta ? TELAS_UI.molduraDourada : aberto ? TELAS_UI.molduraAzul : TELAS_UI.molduraCinza;
-  const estado = resgatada ? 'Resgatada' : !aberto ? 'Bloqueada' : recompensaDisponivel(x) ? 'Pronta para resgatar' : 'Arte em produção';
+  const estado = resgatada ? 'Resgatada' : !aberto ? 'Bloqueada' : recompensaDisponivel(x) ? 'Pronta para resgatar' : x.arte ? 'Arte pronta, entrega em breve' : 'Arte em produção';
   return (
     <li aria-label={`${NOME_DO_TIPO_DE_RECOMPENSA[x.tipo]}: ${x.nome}. ${estado}`} className="flex flex-col items-center gap-1 text-center">
       <div className={`relative w-full max-w-[110px] ${pronta ? 'vp-brilho' : ''}`} style={{ aspectRatio: '1 / 1' }}>
         <div className="absolute flex items-center justify-center overflow-hidden" style={{ inset: '10%', background: pronta ? 'radial-gradient(circle, rgba(243,177,60,.4), #2a1a06 70%)' : 'radial-gradient(circle, rgba(90,167,240,.18), #0e1418 70%)', filter: aberto ? undefined : 'grayscale(1) brightness(.55)' }}>
-          <span className={pronta ? 'vp-flutua' : ''} style={{ fontSize: 34, color: pronta ? '#FFE2A3' : '#BFE0FF', textShadow: `0 0 10px ${pronta ? '#F3B13C' : '#5AA7F0'}` }} aria-hidden="true">{GEMA_POR_TIPO[x.tipo]}</span>
+          {previa ? (
+            <PreviaDaRecompensa previa={previa} descricao={`${NOME_DO_TIPO_DE_RECOMPENSA[x.tipo]}: ${x.nome}`} />
+          ) : (
+            <span className={pronta ? 'vp-flutua' : ''} style={{ fontSize: 34, color: pronta ? '#FFE2A3' : '#BFE0FF', textShadow: `0 0 10px ${pronta ? '#F3B13C' : '#5AA7F0'}` }} aria-hidden="true">{GEMA_POR_TIPO[x.tipo]}</span>
+          )}
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={moldura} alt="" aria-hidden="true" draggable={false} className="vp-pix absolute inset-0 w-full h-full" />
