@@ -121,7 +121,7 @@ describe('Minhas armas: reforjar e customizar', () => {
     const { detalheDaMinhaArma } = await import('@/lib/forjaTela');
     const c = { ...personagem, armas: [armaComum] } as unknown as CharacterDocument;
     const d = detalheDaMinhaArma('a1', c)!;
-    const html = renderToStaticMarkup(<FolhaMinhaArma detalhe={d} ocupado={false} erro={null} onFechar={nada} onReforjar={nada} onCustomizar={nada} />);
+    const html = renderToStaticMarkup(<FolhaMinhaArma detalhe={d} ocupado={false} erro={null} onFechar={nada} onReforjar={nada} onCustomizar={nada} onReciclar={nada} />);
     expect(html).toContain('role="dialog"');
     expect(html).toContain('Reforjar (75% da receita)'); // 50% + 25% de uma reforja já feita
     expect(html).toContain('Falta material ou ouro');
@@ -141,7 +141,7 @@ describe('Minhas armas: reforjar e customizar', () => {
       armas: [{ id: 'm1', baseId: mitica.id, categoria: 'espadaGrande', atributo: 'forca', pontos: 120, reforjas: 0, customizacao: { dano: 3 }, criadaEm: '' }],
     } as unknown as CharacterDocument;
     const d = detalheDaMinhaArma('m1', c)!;
-    const html = renderToStaticMarkup(<FolhaMinhaArma detalhe={d} ocupado={false} erro={null} onFechar={nada} onReforjar={nada} onCustomizar={nada} />);
+    const html = renderToStaticMarkup(<FolhaMinhaArma detalhe={d} ocupado={false} erro={null} onFechar={nada} onReforjar={nada} onCustomizar={nada} onReciclar={nada} />);
     expect(html).toContain('Customização (3/20 pontos)');
     expect(html).toContain('Adicionar ponto em Dano');
     expect(html).toContain('Adicionar ponto em Atributo secundário');
@@ -155,7 +155,7 @@ describe('Minhas armas: reforjar e customizar', () => {
     const { FolhaMinhaArma } = await import('@/components/forja/ForjaScreen');
     const { detalheDaMinhaArma } = await import('@/lib/forjaTela');
     const c = { ...personagem, armas: [armaComum] } as unknown as CharacterDocument;
-    const html = renderToStaticMarkup(<FolhaMinhaArma detalhe={detalheDaMinhaArma('a1', c)!} ocupado={false} erro="Materiais insuficientes." onFechar={nada} onReforjar={nada} onCustomizar={nada} />);
+    const html = renderToStaticMarkup(<FolhaMinhaArma detalhe={detalheDaMinhaArma('a1', c)!} ocupado={false} erro="Materiais insuficientes." onFechar={nada} onReforjar={nada} onCustomizar={nada} onReciclar={nada} />);
     expect(html).toContain('role="alert"');
     expect(html).toContain('Materiais insuficientes.');
   });

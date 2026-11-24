@@ -4,7 +4,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { KIT_DA_FORJA } from '@/assets/forjaUi';
 import type { CharacterDocument } from '@/server/characterService';
-import type { ArmaPersonagem } from '@/game/forja';
+import { nomeDoItem, type ArmaPersonagem } from '@/game/forja';
+import { resumoDoQueVoltou } from './ReciclarEquipamento';
 import { CATEGORIAS_ARMA_MAP, type CategoriaArma, type OpcaoCustomizacao } from '@/rules/armas';
 import {
   type ArvoreForja,
@@ -162,11 +163,32 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco, categor
         raridade: d.raridade,
         categoria: d.categoria,
         baseId: d.baseId,
-        linhas: [{ rotulo: NOME_ATRIBUTO[r.arma.atributo] ?? r.arma.atributo, antes: `+${d.pontos}`, depois: `+${r.arma.pontos}`, subiu: r.arma.pontos === d.pontos ? null : r.arma.pontos > d.pontos }],
+        // o atributo também é sorteado de novo: se mudou, a linha mostra o atributo de antes e o de agora
+        linhas: [
+          (NOME_ATRIBUTO[r.arma.atributo] ?? r.arma.atributo) === d.atributo
+            ? { rotulo: NOME_ATRIBUTO[r.arma.atributo] ?? r.arma.atributo, antes: `+${d.pontos}`, depois: `+${r.arma.pontos}`, subiu: r.arma.pontos === d.pontos ? null : r.arma.pontos > d.pontos }
+            : { rotulo: 'Atributo', antes: `${d.atributo} +${d.pontos}`, depois: `${NOME_ATRIBUTO[r.arma.atributo] ?? r.arma.atributo} +${r.arma.pontos}`, subiu: null },
+        ],
       });
     } catch (e) {
       setAnimacao(null);
       setErro(e instanceof Error ? e.message : 'Erro na Forja.');
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  const reciclarArma = async (d: DetalheMinhaArmaTela) => {
+    if (ocupado) return;
+    setOcupado(true);
+    setErro(null);
+    try {
+      const r = await chamar<{ character: CharacterDocument; devolvido: Record<string, number>; nome: string }>('/api/forja/reciclar', { armaId: d.id }, 0);
+      onCharacterChange(r.character);
+      setMinhaAberta(false);
+      setAviso(`${d.nome} reciclada: ${resumoDoQueVoltou(r.devolvido, nomeDoItem)}`);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Erro ao reciclar.');
     } finally {
       setOcupado(false);
     }
@@ -310,6 +332,7 @@ export function ForjaScreen({ character, onCharacterChange, tokenFresco, categor
           onFechar={() => setMinhaAberta(false)}
           onReforjar={() => void reforjarArma(detalheMinha)}
           onCustomizar={(opcao) => void customizarArma(detalheMinha, opcao)}
+          onReciclar={() => void reciclarArma(detalheMinha)}
         />
       )}
       {animacao && <AnimacaoDeForja {...animacao} aoFechar={() => setAnimacao(null)} />}

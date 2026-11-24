@@ -16,6 +16,7 @@ import {
   podeCustomizar,
 } from '@/rules/armas';
 import { ARMAS_BASE, ARMAS_BASE_MAP } from '@/rules/armasCatalogo';
+import { devolucaoDaReceita } from '@/game/reciclagem';
 import { estadoDaEstrela } from '@/game/cacada';
 import { ATTRIBUTE_DISPLAY_NAMES } from '@/rules/attributeInfo';
 import { MATERIAIS_MAP } from '@/rules/materiais';
@@ -192,7 +193,7 @@ export interface LinhaReceitaTela {
   ok: boolean;
 }
 
-const COR_ITEM = (id: string): string => {
+export const COR_ITEM = (id: string): string => {
   const rar: RaridadeMaterial | undefined = MATERIAIS_MAP[id]?.raridade ?? MATERIAIS_MUNDO_MAP[id]?.raridade;
   return rar ? COR_RARIDADE[rar] : COR_RARIDADE.comum;
 };
@@ -390,7 +391,22 @@ export interface OpcaoCustomizacaoTela {
   disponivel: boolean;
 }
 
+/** Um material que volta ao reciclar. */
+export interface LinhaDaReciclagemTela {
+  id: string;
+  nome: string;
+  cor: string;
+  qtd: number;
+}
+
+/** O que a reciclagem devolve de uma receita, para a tela mostrar antes de confirmar. */
+export function linhasDaReciclagem(receita: ReceitaArma): LinhaDaReciclagemTela[] {
+  return Object.entries(devolucaoDaReceita(receita)).map(([id, qtd]) => ({ id, nome: nomeDoItem(id), cor: COR_ITEM(id), qtd }));
+}
+
 export interface DetalheMinhaArmaTela extends MinhaArmaTela {
+  /** Reciclar: o que volta (30% da receita) e se a arma está equipada (então não pode). */
+  reciclagem: { devolve: LinhaDaReciclagemTela[]; equipada: boolean };
   tipoDano: 'Dano físico' | 'Dano mágico';
   /** Dano fixo da arma já com a Customização em Dano. */
   danoFixo: number;
@@ -419,7 +435,7 @@ export interface DetalheMinhaArmaTela extends MinhaArmaTela {
 
 const formatarPontosPercentuais = (n: number) => `${n.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}`;
 
-export function detalheDaMinhaArma(armaId: string, c: Pick<CharacterDocument, 'armas' | 'inventario' | 'ouro'>): DetalheMinhaArmaTela | null {
+export function detalheDaMinhaArma(armaId: string, c: Pick<CharacterDocument, 'armas' | 'inventario' | 'ouro'> & Partial<Pick<CharacterDocument, 'equipamento'>>): DetalheMinhaArmaTela | null {
   const arma = (c.armas ?? []).find((a) => a.id === armaId);
   const resumo = arma ? minhaArmaTela(arma) : null;
   if (!arma || !resumo) return null;
@@ -477,6 +493,7 @@ export function detalheDaMinhaArma(armaId: string, c: Pick<CharacterDocument, 'a
     elementos: base.elementos.map((e) => NOME_ELEMENTO[e]),
     status: base.status.map((st) => EFEITOS_STATUS[st].nome),
     reforja: { percentual, ...receita, pode: pagaReforja },
+    reciclagem: { devolve: linhasDaReciclagem(base.receita), equipada: c.equipamento?.armaId === arma.id },
     customizacao,
   };
 }

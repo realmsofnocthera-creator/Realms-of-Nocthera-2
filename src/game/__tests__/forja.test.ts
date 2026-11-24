@@ -90,14 +90,30 @@ describe('Fabricar', () => {
 describe('Reforjar', () => {
   const arma: ArmaPersonagem = { id: 'a1', baseId: 'ferro-de-cacada', categoria: 'katana', atributo: 'sorte', pontos: 1, reforjas: 0, criadaEm: '' };
 
-  it('custa 50% da receita (arredondado para cima), sorteia os pontos de novo e mantém o tipo', () => {
+  it('custa 50% da receita (arredondado para cima), sorteia o atributo e os pontos de novo', () => {
     const r = planejarReforja({ inventario: { 'pelo-de-rato': 3, 'mundo-osso-bruto': 1, 'mundo-minerio-de-ferro-bruto': 1, 'mundo-fibra-silvestre': 1 }, ouro: 50, armas: [arma] }, 'a1', amb(0.999));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.percentual).toBe(50);
     expect(r.ouroGasto).toBe(50);
     expect(r.inventario).toEqual({});
-    expect(r.arma).toMatchObject({ atributo: 'sorte', pontos: 9, reforjas: 1 });
+    expect(r.arma).toMatchObject({ atributo: 'agilidade', pontos: 9, reforjas: 1 });
+  });
+
+  it('a mesma arma consegue outro atributo reforjando (o atributo vem do sorteio, só entre os que a categoria aceita)', () => {
+    const estado: EstadoForja = { inventario: { 'pelo-de-rato': 99, 'mundo-osso-bruto': 99, 'mundo-minerio-de-ferro-bruto': 99, 'mundo-fibra-silvestre': 99 }, ouro: 9999, armas: [arma] };
+    const vistos = new Set<string>();
+    for (let i = 0; i < 40; i++) {
+      const r = planejarReforja(estado, 'a1', amb(i / 40));
+      expect(r.ok).toBe(true);
+      if (r.ok) vistos.add(r.arma.atributo);
+    }
+    // a katana é física: nunca sai Força (é o dano fixo dela), e saem os outros seis
+    expect(vistos.has('forca')).toBe(false);
+    expect([...vistos].sort()).toEqual(['agilidade', 'arcano', 'inteligencia', 'sorte', 'vigor', 'vitalidade']);
+    // o resto da arma não muda: id, base, categoria
+    const r = planejarReforja(estado, 'a1', amb(0));
+    expect(r.ok && r.arma).toMatchObject({ id: 'a1', baseId: 'ferro-de-cacada', categoria: 'katana', atributo: 'vigor' });
   });
 
   it('a próxima reforja custa mais; arma inexistente é recusada', () => {

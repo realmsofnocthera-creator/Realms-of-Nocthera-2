@@ -7,7 +7,7 @@ import { MENSAGEM_BLOQUEIO_FORJA } from '@/game/forja';
 
 const ERROS_REGRA = new Set<string>(Object.values(MENSAGEM_BLOQUEIO_FORJA));
 
-/** Forja: reforja uma arma (sorteia de novo os pontos do atributo, mantendo o tipo). */
+/** Forja: reforja uma arma (sorteia de novo o atributo e os pontos dele). */
 export async function POST(req: NextRequest) {
   try {
     const limiteIp = limitarPorIp(req, 'escrita');

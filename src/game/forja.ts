@@ -26,7 +26,7 @@ import { temId, buscarNoMapa } from '@/lib/mapaSeguro';
  * tudo numa transação. Regras aprovadas pelo Yuri em 12/10/2026.
  */
 
-/** Arma que o personagem tem. O tipo do atributo sorteado fica fixo ao evoluir; os pontos são sorteados de novo. */
+/** Arma que o personagem tem. O atributo é sorteado ao fabricar, passa para a evolução e é sorteado de novo (com os pontos) a cada reforja. */
 export interface ArmaPersonagem {
   id: string;
   baseId: string;
@@ -200,7 +200,7 @@ export function planejarFabricacao(
   return { ok: true, inventario, ouroGasto: custo.ouro, armas, arma, base };
 }
 
-/** Reforjar: sorteia de novo os pontos do atributo (mantém o tipo), pagando parte da receita. */
+/** Reforjar: sorteia de novo o atributo e os pontos dele, pagando parte da receita. */
 export function planejarReforja(
   estado: EstadoForja,
   armaId: unknown,
@@ -216,7 +216,9 @@ export function planejarReforja(
   if (!inventario) return { ok: false, motivo: 'materiaisInsuficientes' };
   if (estado.ouro < custo.ouro) return { ok: false, motivo: 'ouroInsuficiente' };
 
-  const arma: ArmaPersonagem = { ...atual, pontos: sortearPontosDaArma(base.raridade, amb.aleatorio), reforjas: atual.reforjas + 1 };
+  // O atributo também é sorteado de novo (24/11/2026): é assim que a mesma arma consegue outro atributo, sem fabricar outra
+  const atributo = sortearAtributoDaArma(atual.categoria, amb.aleatorio);
+  const arma: ArmaPersonagem = { ...atual, atributo, pontos: sortearPontosDaArma(base.raridade, amb.aleatorio), reforjas: atual.reforjas + 1 };
   const armas = estado.armas.map((a) => (a.id === arma.id ? arma : a));
   return { ok: true, inventario, ouroGasto: custo.ouro, armas, arma, percentual };
 }
