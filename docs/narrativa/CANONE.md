@@ -318,7 +318,7 @@ A esposa e a filha de Godric; o pesquisador desaparecido e o segundo guardião d
 1. **Teste da escolha real.** Uma decisão só é "dobradiça" se, mesmo sem diálogo, mudar pelo menos **três** destes itens: informação disponível, cenas jogáveis, quem está presente, quem vive ou morre, estado do mundo, final. Escolhas que mudam só texto ficam no sistema de memórias.
 2. **Três camadas:** pontos fixos (a ameaça existe, o selo enfraquece, Godric perde a filha); dobradiças (cerca de 5, com consequências em 2 a 3 capítulos); memórias e relações.
 3. **Convergência com cicatriz:** as rotas se reencontram nos pontos fixos, mas chegam com companheiros, informações e feridas diferentes.
-4. **[ESTABELECIDO] O jogo tem 4 finais definitivos.** Cada final varia internamente conforme as escolhas do jogador (pessoas diferentes, mortes diferentes, acontecimentos finais diferentes), de modo que nem todo jogador vive o mesmo final. O final alcançado resulta das escolhas acumuladas da campanha, não de um menu solto no fim. Epílogos modulares: destino de cada personagem, estado do Sul, relação com a Igreja, nome do Guardião. Quais são os quatro finais: seção 9.4 (PROPOSTA).
+4. **[ESTABELECIDO] O jogo tem 4 finais definitivos.** Cada final varia internamente conforme as escolhas do jogador (pessoas diferentes, mortes diferentes, acontecimentos finais diferentes), de modo que nem todo jogador vive o mesmo final. O final alcançado resulta das escolhas acumuladas da campanha, não de um menu solto no fim. Epílogos modulares: destino de cada personagem, estado do Sul, relação com a Igreja, nome do Guardião. Quais são os quatro finais: seção 9.4.
 
 ### 9.2 Eixos de estado do mundo (propostos)
 
@@ -340,7 +340,7 @@ Verdade que a equipe conhece sobre os dragões · guerra Norte-Sul · poder da I
 - O Guardião descobre a verdade a tempo e o ancião morre por escolha própria.
 - O ancião sobrevive. **[EM ABERTO]** o que isso faz com o dragão demoníaco, a fissura e o Guardião (por exemplo, o Império o caçaria mesmo assim).
 
-### 9.4 Os quatro finais — **[PROPOSTA]** (aguardando aprovação)
+### 9.4 Os quatro finais — **[APROVADO — DIREÇÃO]** (nomes e detalhes provisórios)
 
 Princípio: cada final é uma resposta a "em quem o Guardião se deixa transformar e quem define o nome dele". **Ponto fixo em todos:** o dragão demoníaco morre em Althor e a fissura se abre no selo. O que muda é o resto.
 
@@ -353,7 +353,41 @@ Princípio: cada final é uma resposta a "em quem o Guardião se deixa transform
 
 Variação interna: cada final tem uma cena de clímax com 3 variantes (quem está ao lado, como o protetor foi tratado, estado da guerra) e cartas de epílogo (destino de cada personagem importante, Sul, Igreja e magia, selo, o nome do Guardião). No final 4, quem segura a coleira muda o mundo: Império e Igreja, Evelyne ou Alaric.
 
-Regras propostas: cada rota (A e B) alcança os quatro finais por caminhos diferentes; a decisão final oferece só os finais que o jogador ainda pode escolher (alguns estarão trancados pelo passado); nenhum final é "o bom" ou "o mau".
+Regras:
+
+- **[ESTABELECIDO]** O Guardião **não morre em nenhum final**.
+- **[ESTABELECIDO]** O final alcançado vale para as campanhas futuras. O jogo terá **8 atualizações de história após o lançamento**, mais curtas, e ainda existirão mais depois delas.
+- **[ESTABELECIDO]** Dependendo da rota, alguns finais **não aparecem**.
+- **[PROPOSTA]** Quais finais cada rota tranca (matriz abaixo).
+- **[PROPOSTA]** A decisão final oferece só os finais que o jogador ainda pode escolher; nenhum final é "o bom" ou "o mau".
+
+**Matriz de rotas [PROPOSTA]:**
+
+| Final | Rota A (Conselho) | Rota B (campo com Edran) |
+|---|---|---|
+| Laço | sim (Godric, Vesemir, irmã de Evelyne) | sim (Edran e a gente do campo) |
+| Saber | **sim** (via Godric e Vesemir) | não |
+| Fuga | não | **sim** (por exemplo, partir com Edran, que quer largar a vida de guardião) |
+| Poder | sim (via Conselho: Império e Igreja, Evelyne ou Alaric) | sim (só via caçadores imperiais e Igreja) |
+
+Cada rota alcança 3 dos 4 finais; Laço e Poder são comuns, mas por caminhos diferentes. O jogador precisa das duas rotas para ver os quatro.
+
+### 9.5 Herança para as atualizações pós-lançamento — **[PROPOSTA]**
+
+**[ESTABELECIDO]** O que o jogador escolhe agora vale para as campanhas futuras (8 atualizações curtas e outras depois).
+
+**[PROPOSTA]** Um registro de herança, gravado ao fim da campanha: final e variante; quem vive, morre ou partiu; estado do mundo (guerra, Sul, Igreja e magia, Nocthera, selo); alcunhas do Guardião; promessas cumpridas ou quebradas. Se os valores de relacionamento (0 a 50) também passam adiante **[EM ABERTO]**.
+
+**[PROPOSTA]** Cada atualização tem uma história-base comum e **camadas reativas** limitadas (quem está presente, o que os NPCs dizem, a postura das facções, uma ou duas cenas por final), para não multiplicar o conteúdo por quatro finais e suas variantes.
+
+**[PROPOSTA]** Premissa que cada final planta para as atualizações:
+
+- **Laço:** defender o que foi construído com os que ficaram.
+- **Saber:** o preço da cura e o conhecimento sobre a fissura.
+- **Fuga:** ser encontrado; o mundo vai buscar quem sumiu.
+- **Poder:** a ordem imposta e os dissidentes.
+
+**[PROPOSTA]** Separar personagens-âncora (persistem em qualquer final, por exemplo as figuras políticas) de personagens de campanha (podem morrer ou partir, e a ausência deles faz parte das atualizações).
 
 ---
 
@@ -414,6 +448,8 @@ Sem proposta ainda. Pode ser gancho para o arco do selo e da Zona do Caos.
 **Parasita:** transmissão, cura, destino dos parasitas se o dragão morrer.
 
 **Personagens:** nome e destino da irmã de Evelyne · postura de Evelyne · relação inicial Evelyne-Guardião · salvação de Vesemir · variações do destino de Godric por rota · alcunhas por grupo.
+
+**Finais e herança:** matriz de rotas por final · o que carrega para as atualizações · personagens-âncora · destino de Godric no final Saber · lugar da irmã de Evelyne no final Fuga (se ele só existe na Rota B).
 
 **Estrutura:** Rota B inteira · capítulos V a XV · desfecho e custos da dobradiça 3 · dobradiças 2, 4 e 5 · ataque do norte ao sul · destino final do selo · integração da trama dos dragões aos atos · valores do sistema de relacionamento.
 
