@@ -318,7 +318,7 @@ A esposa e a filha de Godric; o pesquisador desaparecido e o segundo guardião d
 1. **Teste da escolha real.** Uma decisão só é "dobradiça" se, mesmo sem diálogo, mudar pelo menos **três** destes itens: informação disponível, cenas jogáveis, quem está presente, quem vive ou morre, estado do mundo, final. Escolhas que mudam só texto ficam no sistema de memórias.
 2. **Três camadas:** pontos fixos (a ameaça existe, o selo enfraquece, Godric perde a filha); dobradiças (cerca de 5, com consequências em 2 a 3 capítulos); memórias e relações.
 3. **Convergência com cicatriz:** as rotas se reencontram nos pontos fixos, mas chegam com companheiros, informações e feridas diferentes.
-4. Os **finais emergem** da combinação dos eixos do mundo, não são escolhidos no fim. Epílogos modulares: destino de cada personagem, estado do Sul, relação com a Igreja, nome do Guardião.
+4. **[ESTABELECIDO] O jogo tem 4 finais definitivos.** Cada final varia internamente conforme as escolhas do jogador (pessoas diferentes, mortes diferentes, acontecimentos finais diferentes), de modo que nem todo jogador vive o mesmo final. O final alcançado resulta das escolhas acumuladas da campanha, não de um menu solto no fim. Epílogos modulares: destino de cada personagem, estado do Sul, relação com a Igreja, nome do Guardião. Quais são os quatro finais: seção 9.4 (PROPOSTA).
 
 ### 9.2 Eixos de estado do mundo (propostos)
 
@@ -339,6 +339,21 @@ Verdade que a equipe conhece sobre os dragões · guerra Norte-Sul · poder da I
 - Caçadores imperiais o matam, com o Guardião presente.
 - O Guardião descobre a verdade a tempo e o ancião morre por escolha própria.
 - O ancião sobrevive. **[EM ABERTO]** o que isso faz com o dragão demoníaco, a fissura e o Guardião (por exemplo, o Império o caçaria mesmo assim).
+
+### 9.4 Os quatro finais — **[PROPOSTA]** (aguardando aprovação)
+
+Princípio: cada final é uma resposta a "em quem o Guardião se deixa transformar e quem define o nome dele". **Ponto fixo em todos:** o dragão demoníaco morre em Althor e a fissura se abre no selo. O que muda é o resto.
+
+| Final | Ele escolhe | O que ganha | O que perde | Eixo filosófico |
+|---|---|---|---|---|
+| **1. Laço** | Ficar com as pessoas | Vínculos, um nome dado por quem ficou | Paz e anonimato | Humanismo, dever |
+| **2. Saber** | Seguir o conhecimento (via Godric) | Resposta ao parasita, poder de curar | A fissura se alarga; o preço volta depois | Obsessão pelo conhecimento |
+| **3. Fuga** | Sair de cena | A paz que sempre quis | Quem ficou paga; o nome vira lenda contraditória | Existencialismo, livre-arbítrio |
+| **4. Poder** | Aceitar o rótulo que o poder oferece | Fim imediato da guerra, ordem | Liberdade; vira instrumento | Pragmatismo × idealismo |
+
+Variação interna: cada final tem uma cena de clímax com 3 variantes (quem está ao lado, como o protetor foi tratado, estado da guerra) e cartas de epílogo (destino de cada personagem importante, Sul, Igreja e magia, selo, o nome do Guardião). No final 4, quem segura a coleira muda o mundo: Império e Igreja, Evelyne ou Alaric.
+
+Regras propostas: cada rota (A e B) alcança os quatro finais por caminhos diferentes; a decisão final oferece só os finais que o jogador ainda pode escolher (alguns estarão trancados pelo passado); nenhum final é "o bom" ou "o mau".
 
 ---
 
