@@ -565,3 +565,16 @@ A árvore ainda contém termos que as decisões posteriores corrigiram. Atualiza
 7. Registrar o parasita e o sistema de nomes do Guardião.
 8. "Devorador dos Nove Mundos" → **o Devorador**.
 9. Registrar o calendário **1252 D.E.P.** e o **segredo da Igreja** (seção 3.9) como informação oculta, com níveis de conhecimento por personagem.
+
+---
+
+## 15. Capítulo IV — decisões aprovadas (28/11/2026)
+
+Detalhes completos em `CAP_IV.md`. A árvore (`arvore_narrativa_nocthera.html`) já traz o capítulo como **Concluído**.
+
+- **[ESTABELECIDO]** Estrutura em três partes: comum (Wren, relatório, escolha), Rota A (Eldervar) e Rota B (Namar e a Chamada).
+- **[ESTABELECIDO]** O relatório (C+1, H+2 ou C+2), o testemunho do Guardião, o apoio de Godric e a pergunta de Alaric pesam no Conselho. Regra: H − C ≥ 2 leva a **R1** (Auxílio de Caça Imperial); C − H ≥ 2 leva a **R2** (Comissão de Investigação); caso contrário, **R3** (Caça sob Comando do Sul). Na Rota B a base é H+1.
+- **[ESTABELECIDO]** **A invasão do Ato IV é ponto fixo.** A resolução muda o pretexto, o preparo do Sul e quem está ao lado dele.
+- **[ESTABELECIDO]** **"A Chamada"** é o nome do chamado do dragão. **"Caverna Muda"** é o nome local da Caverna do Casulo.
+- **[ESTABELECIDO]** Lysenne chama o Guardião de **"Quieto"**; Evelyne, de **"o Sem-Nome"**.
+- **[ESTABELECIDO]** Pistas pequenas plantadas: Orlan e a "história escrita por quem não esteve lá"; Tamsyn e o silêncio de Nythara; Lucan que só omite; Bram e o pedido de silêncio de Nythara.
