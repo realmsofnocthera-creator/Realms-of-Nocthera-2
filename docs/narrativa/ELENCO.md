@@ -61,10 +61,10 @@ Pendentes de origem (fora de cena): **Loric Hawkins** (pai de Godric), **a irmã
 
 | Código | Papel | Aparece | Rota | Liga a |
 |---|---|---|---|---|
-| **EST-1** | **A Esposa de Godric.** Mostra o custo da obsessão; decide partir | II-IV | Ambas | Saber |
-| **EST-2** | **A Filha de Godric.** Vínculo do Guardião com a família Hawkins. Perdida no ataque (ponto fixo planejado) | II-IV | Ambas | Todos |
+| **EST-1** | **A Esposa de Godric.** Mostra o custo da obsessão; decide partir. Vive num **povoado próximo** da Estação **[ESTABELECIDO]** | II-IV | Ambas | Saber |
+| **EST-2** | **A Filha de Godric.** Vínculo do Guardião com a família Hawkins. Vive no povoado próximo da Estação. Perdida no ataque (ponto fixo planejado) | II-IV | Ambas | Todos |
 | **EST-3** | **O Segundo Guardião** (já presente no Ato I). Chefe de defesa da Estação; **crente sincero na Igreja**, o que o contrasta com Edran | I-IV | Ambas | Laço |
-| **EST-4** | **O Pesquisador Desaparecido** (Ato I). **[PROPOSTA]** primeiro hospedeiro humano: ouviu o som e partiu, o que explica o sumiço sem luta nem rastro. Reaparece no rastro ao norte e em Althor | V (rastro IV) | Ambas | Saber, a verdade |
+| **EST-4** | **O Pesquisador Desaparecido** (Ato I). **[APROVADO]** primeiro hospedeiro humano: ouviu o som e partiu, o que explica o sumiço sem luta nem rastro. Reaparece no rastro ao norte e em Althor | V (rastro IV) | Ambas | Saber, a verdade |
 
 **Regra de roteiro:** a filha precisa aparecer em **pelo menos três cenas** antes de ser perdida, e ter desejos próprios (por exemplo, admirar Edran). A morte dela só funciona se o jogador a conheceu.
 
@@ -166,8 +166,46 @@ Quem é · passado · desejo · medo · defeito e contradição · valores e lim
 
 ## 8. Em aberto
 
-- Onde moram a esposa e a filha de Godric (Estação ou povoado vizinho).
-- Se o pesquisador desaparecido é o primeiro hospedeiro (EST-4).
-- Se o fragmento troca de corpo ao longo dos séculos e se os outros três Arcebispos têm o mesmo mecanismo.
-- Nomes de todos os personagens.
+- Mecanismo exato do fragmento com os corpos humanos e da imortalidade dos outros três Arcebispos (a resposta do autor ficou ambígua; ver nota nas fichas).
+- Aprovação dos nomes propostos (seção 9).
 - Os 20 a 25 NPCs secundários (missões secundárias), em fase posterior.
+
+---
+
+## 9. Nomes **[PROPOSTA]**
+
+Convenção por cultura: Sul (nomes rurais e medievais) · Império (duros, eslavos e germânicos) · Nocthera (elegantes) · Nythara (gaélicos, aquáticos) · Ilhas (nórdicos) · Draconianos (sílabas duras) · Igreja (latinos).
+
+| Código | Nome | Nota |
+|---|---|---|
+| CAM-1 | **Rhys Ashcombe** | Jovem Guardião |
+| CAM-2 | **Nerys Aldermere** | Curandeira, de Namar |
+| CAM-3 | **Corvin Hask** | Caçador independente |
+| CAM-4 | **Odo Wickham** | Barqueiro de Elaris |
+| CAM-5 | **Zofia Karst** | Desertora imperial |
+| EST-1 | **Maren Hawkins** | Esposa de Godric |
+| EST-2 | **Wren Hawkins** | Filha de Godric |
+| EST-3 | **Halric Stroud** | Segundo guardião |
+| EST-4 | **Ansel Pryce** | Pesquisador desaparecido |
+| SUL-1 | **Brenna Rathmore** | Capitã-General |
+| SUL-2 | **Osric Delaval** | Chanceler |
+| SUL-3 | **Ilaria Veyrond** | Herdeira (neta de Alaric, **[PROPOSTA]**) |
+| SUL-4 | **Piers Tallowmere** | Mercador de Eldraven |
+| NOC-1 | **Lysenne Duskryn** | Irmã de Evelyne |
+| NOC-2 | **Orlan Mereth** | Arquimago conselheiro |
+| NOC-3 | **Caelith Ravenor** | Guarda-Sombra |
+| NOC-4 | **Tobias Quillon** | Mago refugiado |
+| IMP-1 | **Aurelian Vael** | Arcebispo, o Curador |
+| IMP-2 | **Cassian Torvell** | Arcebispo, o Inquisidor |
+| IMP-3 | **Lucan Ardelis** | Arcebispo, o Diplomata |
+| IMP-4 | **Ottilie Marrow** | Arcebispa, a Cronista |
+| IMP-5 | **Aldric Vorsk** | Marechal Imperial |
+| NYT-1 | **Ysmera, Oweth e Nerlith** | As Morvárias (Morvária é título) |
+| NYT-2 | **Tamsyn Ulwen** | Representante de Nythara |
+| NYT-3 | **Bram Ostrel** | Guardião das Lanternas |
+| ILH-1 | **Ingvar Skarholt** | Governante das Ilhas |
+| ILH-2 | **Sölva Brand** | Dissidente das Ilhas |
+| DRA-1 | **Thalvar Kess** | Draconiano exilado |
+| DRA-2 | **Orruveth** | Anciã dos Picos |
+| MIS-1 | **Ilse Corrow** | Cartomante |
+| (entidade) | **Kaldrun** | Nome draconiano do Dragão Ancião |

@@ -158,7 +158,7 @@ Princípio: cada facção tem razões legítimas, não é só obstáculo.
 - O dossiê diz que religiões e instituições distorcem a história; a verdade cosmológica não é a que as civilizações conhecem.
 
 **[EM ABERTO]**
-- Qual dos Quatro Arcebispos é o fragmento; se ele troca de corpo ao longo dos séculos; como a imortalidade aparece para o público.
+- Qual dos Quatro Arcebispos é o fragmento; se ele troca de corpo ao longo dos séculos; como a imortalidade aparece para o público. A resposta do autor ("usa corpos humanos para curar os primeiros hospedeiros") ficou ambígua e precisa ser esclarecida.
 - A origem da imortalidade dos outros três, que não sabem a verdade.
 - Como escapou do selo e quando fundou a Igreja.
 - Como manipula Severan e o Império.
