@@ -111,6 +111,7 @@ Participantes conhecidos: Severan Dravik (Valdren), Evelyne Duskryn (Nocthera), 
 - Persegue usuários de magia.
 - Recuperou o controle de outra folha de Yggdrasil (o Novo Mundo).
 - Vhaldoria ainda não é governada pela Igreja, apesar de sua influência.
+- **[ESTABELECIDO — SEGREDO]** Por trás dos panos, a Igreja **pertence a Lautrec** (seção 3.9).
 
 ### 3.6 Magia e perseguição
 
@@ -125,6 +126,42 @@ Participantes conhecidos: Severan Dravik (Valdren), Evelyne Duskryn (Nocthera), 
 - Têm **participação no arco, mas não forte**.
 
 **[EM ABERTO]** "Extremo noroeste" de quê? Presume-se de Vhaldoria. Devem permanecer distintos dos Altos de Kharven (noroeste da região sul) e das Montanhas Geladas de Althor, salvo decisão contrária.
+
+### 3.8 Facções — **[APROVADO — DIREÇÃO]** (posições provisórias)
+
+| Facção | Quer | Teme | Magia | Sobre o dragão | Papel nos finais |
+|---|---|---|---|---|---|
+| **Grande Império de Valdren** (Severan) | Unificar Vhaldoria sob um centro | Perder fronteiras | Persegue, via Igreja | Caçar | Poder (principal) |
+| **Igreja do Sol Resplandecente** | Governar Vhaldoria (ainda não governa) | Perder influência | Persegue | Caçar | Poder. **Segredo: seção 3.9** |
+| **O Sul** (Alaric, Eldervar) | Paz e sobrevivência | Ser absorvido | Cautela | Dividido, quer provas | Laço, Poder |
+| **Nocthera** (Evelyne) | Proteger o povo; magia livre | Ser a próxima perseguida | Livre | Pragmática, quer informação | Poder; a irmã na Fuga |
+| **Nythara** (Morvárias) | Ficar isolada | Ser vista | Livre | Silêncio | Saber (conhecimento do pântano) |
+| **Ilhas do Sol Negro** | Pureza e fechamento | Contágio externo | Perseguem, com preconceito racial | Caçar | **[EM ABERTO]** |
+| **Draconianos** | Sobreviver isolados | Serem caçados com o dragão | **[EM ABERTO]** | Contra a caça | Participação pequena |
+
+Princípio: cada facção tem razões legítimas, não é só obstáculo.
+
+### 3.9 O segredo da Igreja — **[ESTABELECIDO]**
+
+- **A Igreja do Sol Resplandecente pertence a Lautrec.** Por trás dos panos, é animada por **um pequeno fragmento da alma dele**.
+- É um **segredo**. Quem sabe, e o que sabe, **[EM ABERTO]**.
+
+**Apoios já existentes no lore (fatos, não decisões):**
+- A cosmologia diz que há rachaduras no selo que permitem passagens raras.
+- A classe Profeta (código) surgiu na transição Ouro-Prata, quando seguidores dos deuses ausentes receberam visões e sinais, e "nunca houve resposta definitiva se essas mensagens vêm realmente dos deuses ou de algo além deles".
+- A classe Feiticeiro (código): debate-se se o poder vem dos deuses ou do Caos.
+- O dossiê diz que religiões e instituições distorcem a história; a verdade cosmológica não é a que as civilizações conhecem.
+
+**[EM ABERTO]**
+- O que o fragmento quer: servir e libertar Lautrec, ter autonomia (recusa ser reabsorvido), ou não saber o que é.
+- Como escapou do selo e quando fundou a Igreja.
+- O que o clero e os fiéis sabem. Se Severan sabe.
+- Por que persegue a magia, e por que Nocthera e Nythara são as exceções.
+- Relação com o dragão demoníaco e com a caça ao dragão ancião.
+- Relação com a barreira do Novo Mundo e com Midgard.
+- Como isso muda os trechos aprovados da Guerra dos Três Sóis e do Dia em que Vhaldoria Sangrou.
+
+**[PROPOSTA]** Evitar "igreja malvada" simples: a maioria do clero e dos fiéis é sincera e a Igreja faz bem real (cura, proteção); o segredo se revela por pistas, não por exposição.
 
 ---
 
@@ -149,7 +186,9 @@ Relações entre raças (resumo do código): humanos têm desconfiança profunda
 
 - A ordem é **Ouro, Prata, Bronze**.
 - Classes e sinais históricos: a transição Ouro-Prata viu seguidores dos "deuses ausentes" receberem visões; na Era de Prata surgiram ordens guerreiras e mortais que descobriram forças remanescentes dos antigos deuses; na Era de Bronze, estradas de ladrões e mercenários.
-- **Era atual: [EM ABERTO]** (ver seção 12).
+- **[ESTABELECIDO]** A **Era de Ouro** vai do aprisionamento de Lautrec até a Era de Prata.
+- **[ESTABELECIDO]** Estamos no ano **1252 D.E.P.** (Depois da Era de Prata).
+- **[EM ABERTO]** Confirmar que o período após a Prata é a Era de Bronze (o código sugere isso).
 
 ### 4.3 Eventos passados citados nas cartas colecionáveis
 
@@ -163,6 +202,16 @@ Títulos de cartas lendárias que sugerem eventos históricos. **Só os títulos
 - Também: Coroa do Primeiro Soberano, Relicário das Sete Pragas, Coração Petrificado de um Deus, Fragmento da Chama Primordial, O Selo de Lautrec.
 
 **Ainda não lido do código:** descrições de monstros, chefes, armas e emblemas, que podem conter mais lore.
+
+### 4.4 Linha do tempo — **[APROVADO — DIREÇÃO]**
+
+1. **Antes da Era de Ouro:** o Caos e a Chama, Lautrec, o Primeiro Pecado (a Morte), Nimb vence Lautrec, Yggdrasil, o retorno de Lautrec, a Zona do Caos e o selo. O aprisionamento marca o início da Era de Ouro. *(cânone)*
+2. **Era de Ouro:** *(inferência)* criação de Gwyndolin e o devorar das folhas; recuo dos deuses.
+3. **Transição Ouro-Prata:** visões e sinais aos seguidores dos deuses ausentes. *(código)*
+4. **Era de Prata:** ordens guerreiras, feiticeiros, clãs disciplinados, queda de muitos reinos. *(código)* **A Guerra dos Três Sóis**, em Midgard: cisma entre três seitas ancestrais (Sol Resplandecente vencedor; Sol Negro derrotado, cujos exilados teriam dado nome às ilhas; um terceiro sol apagado da história). **[APROVADO — DIREÇÃO, a revisar com a seção 3.9]**
+5. **Fim da Prata (ano 0 D.E.P.):** queda parcial de Midgard, que explica as migrações humanas. *(proposta)*
+6. **0 a 1252 D.E.P.:** migrações ao Novo Mundo e ao Continente; ocupação de Vhaldoria por Vampiros Superiores e demônios; **O Dia em que Vhaldoria Sangrou**, a libertação que a Igreja reivindica e que magos de Nocthera lutaram **[APROVADO — DIREÇÃO, a revisar com a seção 3.9]**; fim das linhagens dos Vampiros Superiores *(inferência do código)*.
+7. **1252 D.E.P.:** o Conselho das Coroas e a campanha.
 
 ---
 
@@ -286,6 +335,22 @@ Localidades sugeridas (todas pendentes): Dornavel, Farol de Merídia, Enseada do
 A esposa e a filha de Godric; o pesquisador desaparecido e o segundo guardião do Cap. II; o representante de Nythara; o governante das Ilhas do Sol Negro; um personagem draconiano secundário **[PROPOSTA]**.
 
 **[ESTABELECIDO] Meta de elenco:** pelo menos **30 novos NPCs importantes** ao longo dos capítulos e **20 a 25 secundários** (missões secundárias e outros), além dos personagens já existentes.
+
+**[APROVADO — DIREÇÃO] Distribuição dos 30 importantes (sem nomes ainda):**
+
+| Grupo | Qtd |
+|---|---|
+| Companheiros e aliados de campo | 5 |
+| Estação de Velária (equipe, esposa e filha de Godric) | 4 |
+| O Sul (corte, militares) | 4 |
+| Nocthera (a irmã de Evelyne e outros) | 4 |
+| Império e Igreja | 5 |
+| Nythara e Namar (as Morvárias contam como um trio) | 3 |
+| Ilhas do Sol Negro | 2 |
+| Draconianos | 2 |
+| Mistério e Caos | 1 |
+
+**[PROPOSTA]** Cada ficha inclui um gatilho de morte ou partida ("o que acontece com ele se o jogador fizer X").
 
 ---
 
@@ -429,6 +494,8 @@ Cada rota alcança 3 dos 4 finais; Laço e Poder são comuns, mas por caminhos d
 
 O autor pediu propostas, **sem envolver Azgher**.
 
+**[APROVADO — DIREÇÃO, 28/11/2026]** As opções recomendadas foram aprovadas: Guerra dos Três Sóis A e O Dia em que Vhaldoria Sangrou B. A "Era atual" foi resolvida pelo calendário 1252 D.E.P. (seção 4.2). **As duas primeiras precisam ser revisadas à luz do segredo da Igreja (seção 3.9)**, porque o vencedor da guerra e a "libertação" reivindicada pela Igreja agora têm outra leitura.
+
 ### Era atual
 - **A. Era de Ferro**, seguindo o padrão das Eras. Seguro, previsível.
 - **B.** Sem nova Era: o presente é o fim da Era de Bronze. Mínima invenção.
@@ -449,7 +516,7 @@ Sem proposta ainda. Pode ser gancho para o arco do selo e da Zona do Caos.
 
 ## 13. Pontos em aberto (consolidados)
 
-**Mundo:** Vanaheim · governante das Ilhas do Sol Negro · representante e rostos das Morvárias · voto do Sul no Conselho · localização exata do "extremo noroeste" dos draconianos · fronteiras das quatro regiões · geografia das Montanhas de Althor · curso do rio principal · nomes das subdivisões do sul · Era atual.
+**Mundo:** o que o fragmento de Lautrec quer e o que cada grupo sabe do segredo da Igreja · Vanaheim · governante das Ilhas do Sol Negro · representante e rostos das Morvárias · voto do Sul no Conselho · localização exata do "extremo noroeste" dos draconianos · fronteiras das quatro regiões · geografia das Montanhas de Althor · curso do rio principal · nomes das subdivisões do sul · confirmar o nome da Era atual (Bronze).
 
 **Parasita:** transmissão, cura, destino dos parasitas se o dragão morrer.
 
@@ -475,3 +542,4 @@ A árvore ainda contém termos que as decisões posteriores corrigiram. Atualiza
 6. Registrar a **dobradiça 3** como aberta.
 7. Registrar o parasita e o sistema de nomes do Guardião.
 8. "Devorador dos Nove Mundos" → **o Devorador**.
+9. Registrar o calendário **1252 D.E.P.** e o **segredo da Igreja** (seção 3.9) como informação oculta, com níveis de conhecimento por personagem.
