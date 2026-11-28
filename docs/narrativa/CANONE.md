@@ -285,6 +285,8 @@ Localidades sugeridas (todas pendentes): Dornavel, Farol de Merídia, Enseada do
 
 A esposa e a filha de Godric; o pesquisador desaparecido e o segundo guardião do Cap. II; o representante de Nythara; o governante das Ilhas do Sol Negro; um personagem draconiano secundário **[PROPOSTA]**.
 
+**[ESTABELECIDO] Meta de elenco:** pelo menos **30 novos NPCs importantes** ao longo dos capítulos e **20 a 25 secundários** (missões secundárias e outros), além dos personagens já existentes.
+
 ---
 
 ## 8. O arco dos dragões e o parasita
@@ -358,10 +360,10 @@ Regras:
 - **[ESTABELECIDO]** O Guardião **não morre em nenhum final**.
 - **[ESTABELECIDO]** O final alcançado vale para as campanhas futuras. O jogo terá **8 atualizações de história após o lançamento**, mais curtas, e ainda existirão mais depois delas.
 - **[ESTABELECIDO]** Dependendo da rota, alguns finais **não aparecem**.
-- **[PROPOSTA]** Quais finais cada rota tranca (matriz abaixo).
+- **[APROVADO]** Quais finais cada rota tranca (matriz abaixo).
 - **[PROPOSTA]** A decisão final oferece só os finais que o jogador ainda pode escolher; nenhum final é "o bom" ou "o mau".
 
-**Matriz de rotas [PROPOSTA]:**
+**Matriz de rotas [APROVADO]:**
 
 | Final | Rota A (Conselho) | Rota B (campo com Edran) |
 |---|---|---|
@@ -376,7 +378,9 @@ Cada rota alcança 3 dos 4 finais; Laço e Poder são comuns, mas por caminhos d
 
 **[ESTABELECIDO]** O que o jogador escolhe agora vale para as campanhas futuras (8 atualizações curtas e outras depois).
 
-**[PROPOSTA]** Um registro de herança, gravado ao fim da campanha: final e variante; quem vive, morre ou partiu; estado do mundo (guerra, Sul, Igreja e magia, Nocthera, selo); alcunhas do Guardião; promessas cumpridas ou quebradas. Se os valores de relacionamento (0 a 50) também passam adiante **[EM ABERTO]**.
+**[PROPOSTA]** Um registro de herança, gravado ao fim da campanha: final e variante; quem vive, morre ou partiu; estado do mundo (guerra, Sul, Igreja e magia, Nocthera, selo); alcunhas do Guardião; promessas cumpridas ou quebradas. Os valores de relacionamento (0 a 50) **continuam** nas atualizações **[ESTABELECIDO]**.
+
+**[ESTABELECIDO]** Os detalhes das atualizações serão decididos quando elas forem planejadas. Por ora valem os finais definidos até aqui.
 
 **[PROPOSTA]** Cada atualização tem uma história-base comum e **camadas reativas** limitadas (quem está presente, o que os NPCs dizem, a postura das facções, uma ou duas cenas por final), para não multiplicar o conteúdo por quatro finais e suas variantes.
 
@@ -387,7 +391,9 @@ Cada rota alcança 3 dos 4 finais; Laço e Poder são comuns, mas por caminhos d
 - **Fuga:** ser encontrado; o mundo vai buscar quem sumiu.
 - **Poder:** a ordem imposta e os dissidentes.
 
-**[PROPOSTA]** Separar personagens-âncora (persistem em qualquer final, por exemplo as figuras políticas) de personagens de campanha (podem morrer ou partir, e a ausência deles faz parte das atualizações).
+**[ESTABELECIDO] Personagens-âncora:** só os **governantes** e o **Guardião** persistem em qualquer final. A maioria dos demais personagens **pode morrer por causa das escolhas do jogador**, e a ausência deles faz parte das atualizações. Os personagens-âncora podem ser usados de formas diferentes no futuro.
+
+**[EM ABERTO]** Se os governantes-âncora podem mudar por sucessão ou morte natural, sem que o jogador cause isso (por exemplo, Alaric, que é idoso, e Evelyne, cuja irmã é a sucessora).
 
 ---
 
@@ -449,7 +455,7 @@ Sem proposta ainda. Pode ser gancho para o arco do selo e da Zona do Caos.
 
 **Personagens:** nome e destino da irmã de Evelyne · postura de Evelyne · relação inicial Evelyne-Guardião · salvação de Vesemir · variações do destino de Godric por rota · alcunhas por grupo.
 
-**Finais e herança:** matriz de rotas por final · o que carrega para as atualizações · personagens-âncora · destino de Godric no final Saber · lugar da irmã de Evelyne no final Fuga (se ele só existe na Rota B).
+**Finais e herança:** conteúdo das 8 atualizações (decidir depois) · sucessão ou morte natural dos governantes-âncora · destino de Godric no final Saber · lugar da irmã de Evelyne no final Fuga (se ele só existe na Rota B).
 
 **Estrutura:** Rota B inteira · capítulos V a XV · desfecho e custos da dobradiça 3 · dobradiças 2, 4 e 5 · ataque do norte ao sul · destino final do selo · integração da trama dos dragões aos atos · valores do sistema de relacionamento.
 
