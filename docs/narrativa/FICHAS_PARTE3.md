@@ -121,8 +121,8 @@
 **Quem é.** Cerca de trinta e três anos; ex-oficial de logística do Império.
 **Desejo / Medo.** Evitar que o plano de queimar aldeias se cumpra. Teme ser julgada como traidora.
 **Contradição e limites.** Desertou por consciência, mas ainda acredita no Império. Não mente sobre números.
-**Sabe / Ignora.** Viu o plano da invasão: **queimar aldeias, com clérigos acompanhando**. Ignora quem deu a ordem.
-**Relações.** Aldric (serviu sob ele; acha que ele não sabia), Piers (contrabando).
+**Sabe / Ignora.** Viu o plano da invasão: **queimar aldeias, com clérigos acompanhando**, por ordem de Severan. Ignora o que o plano significa para a Igreja.
+**Relações.** Aldric (serviu sob ele; acha que ele só obedece e que se arrependerá), Piers (contrabando).
 **Relacionamento inicial.** 8/50. **Chama o Guardião de:** "civil".
 **Aparições.** IV-V.
 **Arco e gatilhos.** Avisa o Guardião antes da invasão. **Não impede a morte de Wren**, mas pode salvar outros. **Pode morrer.**
@@ -138,7 +138,7 @@
 **Quem são.** **[CÂNONE]** Três mulheres anciãs que governam Nythara. Ninguém vê o rosto delas há muitos anos.
 **Desejo / Medo.** Manter Nythara isolada. Temem serem vistas.
 **Contradição e limites.** Governam, mas nunca se mostram.
-**Por que ninguém vê o rosto.** **[EM ABERTO]** Opções: (1) é tabu e um véu; (2) algo mudou nelas; (3) as três morreram e alguém governa em nome delas. Escolha do autor.
+**Por que ninguém vê o rosto.** **[APROVADO]** É um **tabu**, e elas usam véu. O que está por trás do véu fica em aberto.
 **Aparições.** **Uma única cena direta**, em Namar (III-IV), por trás de um véu.
 **Chama o Guardião de:** "o Ausente".
 **Arco e gatilhos.** Âncora: o jogador não as mata.
@@ -172,11 +172,11 @@
 
 **Quem é.** Cerca de sessenta e cinco anos; governante duro.
 **Desejo / Medo.** Preservar a "pureza" das ilhas. Teme o contágio externo.
-**Contradição e limites.** O isolamento nasceu de uma razão de sobrevivência. Não negocia com a Igreja.
+**Contradição e limites.** O isolamento nasceu de uma razão de sobrevivência. **[APROVADO]** Hoje as ilhas aceitam a fé do Sol Resplandecente, e ele é devoto.
 **Relacionamento inicial.** 3/50. **Chama o Guardião de:** "forasteiro".
 **Aparições.** **A:** Conselho (IV).
 **Arco e gatilhos.** Âncora.
-**Pista (proposta).** O mito de fundação das ilhas diz que seus ancestrais foram expulsos por "ver o escuro do sol". É uma memória distorcida do segredo da Igreja, endurecida em xenofobia.
+**Pista [APROVADO].** O mito de fundação diz que os ancestrais foram expulsos por "ver o escuro do sol". Era a memória do segredo da Igreja. Hoje as ilhas aceitam a fé do Sol Resplandecente e ensinam o "Sol Negro" como a sombra dos hereges. A verdade virou xenofobia e depois esquecimento.
 
 ## ILH-2: SÖLVA BRAND — Dissidente das Ilhas
 
@@ -204,7 +204,7 @@
 
 **Quem é.** **[CÂNONE]** Os draconianos vivem isolados em montanhas no extremo noroeste.
 **Desejo / Medo.** Que a gente dela sobreviva. Teme ser caçada junto com o dragão.
-**Sabe / Ignora.** Sabe quem Kaldrun foi. **[EM ABERTO]** Se conhece a ligação com o "Dragão das Raízes Eternas".
+**Sabe / Ignora.** Sabe quem Kaldrun foi. **[APROVADO]** Na tradição draconiana, o primeiro dragão, o **Dragão das Raízes Eternas**, enrolou-se nas raízes de Yggdrasil para segurar o selo. Seus descendentes nascem com o dever de vigiar "o que sobe das raízes". Kaldrun cumpria esse dever, e o dragão demoníaco é uma perversão disso. Os draconianos se tornaram mal vistos porque os humanos esqueceram. Se o Dragão das Raízes ainda existe: **[EM ABERTO]**.
 **Relacionamento inicial.** 5/50. **Chama o Guardião de:** "o Caminhante".
 **Aparições.** IV-V.
 **Arco e gatilhos.** Guia, bloqueia ou ignora o Guardião na rota ao norte.
@@ -216,7 +216,7 @@
 ## MIS-1: ILSE CORROW — A Cartomante
 
 **Quem é.** **[CÂNONE]** Deu a profecia a Vesemir. **[PROPOSTA]** Cerca de sessenta anos.
-**Origem.** **[EM ABERTO]** Pode estar ligada às Morvárias ou aos videntes de Jotuheim.
+**Origem.** **[APROVADO]** Foi vidente de Nythara. Quebrou o tabu ao ver o rosto das Morvárias, fugiu e vive no Sul vendendo previsões. O que viu fica em aberto. A profecia a Vesemir foi uma visão verdadeira, ambígua de propósito.
 **Aparições.** III (cena opcional); pós-campanha.
 **Chama o Guardião de:** "o Que Procura".
 **Pista.** Nunca esclarece o que "aquilo que todo homem busca" significa.
@@ -241,8 +241,4 @@
 
 # Pendências
 
-1. **Quem comanda a unidade que queima Salgueira?** Proponho uma vanguarda imperial com clérigos de Cassian. Aldric não deu a ordem, e o destino dele depende de descobrir e de como reage.
-2. **Por que ninguém vê o rosto das Morvárias?** Opções acima.
-3. **Revisão da Guerra dos Três Sóis.** Proponho: o Sol Negro era a seita que percebeu a falsidade do Sol Resplandecente; foi derrotada e exilada, e seus descendentes fundaram as ilhas, onde a verdade se fossilizou em xenofobia.
-4. **A origem de Ilse Corrow.**
-5. **Osric:** sincero ou traidor.
+Todas resolvidas: Severan deu a ordem de queimar aldeias e a vanguarda leva clérigos de Cassian; tabu e véu das Morvárias; Guerra dos Três Sóis revisada (as ilhas hoje aceitam a fé do Sol Resplandecente); origens de Ilse e de Orruveth criadas; Osric é sincero.

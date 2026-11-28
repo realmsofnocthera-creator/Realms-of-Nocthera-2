@@ -81,7 +81,7 @@ O autor é a autoridade final. Nada marcado como PROPOSTA vale como cânone sem 
 **[ESTABELECIDO]**
 
 1. **Grande Império de Valdren**: o **Império do Norte**, governado por Severan Dravik. (Antes chamado "Grande Reino de Valdren"; o nome oficial agora é Império.)
-2. **Ilhas do Sol Negro**: região insular, especialmente perigosa para usuários de magia, com preconceito contra outras raças. Governante **[EM ABERTO]**.
+2. **Ilhas do Sol Negro**: região insular, especialmente perigosa para usuários de magia, com preconceito contra outras raças. **[ESTABELECIDO]** As ilhas **aceitam a fé do Sol Resplandecente**. Governante **[EM ABERTO]** (proposta: Ingvar Skarholt).
 3. **Ducado de Nocthera**: governado pela duquesa Evelyne Duskryn. É ducado, não reino. A magia faz parte do cotidiano de quase toda a população.
 4. **Pântano de Nythara**: governado por **As Morvárias**, três mulheres anciãs praticamente desconhecidas. Ninguém vê o rosto delas há muitos anos. Os **Charcos de Namar** (pântanos do sul) **pertencem a Nythara**.
 
@@ -169,7 +169,7 @@ Princípio: cada facção tem razões legítimas, não é só obstáculo.
 - Por que persegue a magia, e por que Nocthera e Nythara são as exceções.
 - Relação com o dragão demoníaco e com a caça ao dragão ancião.
 - Relação com a barreira do Novo Mundo e com Midgard.
-- Como isso muda a Guerra dos Três Sóis.
+- (Resolvido) A Guerra dos Três Sóis foi revisada na seção 4.4.
 
 **[PROPOSTA]** Evitar "igreja malvada" simples: a maioria do clero e dos fiéis é sincera e a Igreja faz bem real (cura, proteção); o segredo se revela por pistas, não por exposição.
 
@@ -225,7 +225,7 @@ Títulos de cartas lendárias que sugerem eventos históricos. **Só os títulos
 1. **Antes da Era de Ouro:** o Caos e a Chama, Lautrec, o Primeiro Pecado (a Morte), Nimb vence Lautrec, Yggdrasil, o retorno de Lautrec, a Zona do Caos e o selo. O aprisionamento marca o início da Era de Ouro. *(cânone)*
 2. **Era de Ouro:** *(inferência)* criação de Gwyndolin e o devorar das folhas; recuo dos deuses.
 3. **Transição Ouro-Prata:** visões e sinais aos seguidores dos deuses ausentes. *(código)*
-4. **Era de Prata:** ordens guerreiras, feiticeiros, clãs disciplinados, queda de muitos reinos. *(código)* **A Guerra dos Três Sóis**, em Midgard: cisma entre três seitas ancestrais (Sol Resplandecente vencedor; Sol Negro derrotado, cujos exilados teriam dado nome às ilhas; um terceiro sol apagado da história). **[APROVADO — DIREÇÃO, a revisar com a seção 3.9]**
+4. **Era de Prata:** ordens guerreiras, feiticeiros, clãs disciplinados, queda de muitos reinos. *(código)* **A Guerra dos Três Sóis**, em Midgard: cisma entre três seitas ancestrais (Sol Resplandecente vencedor, com o fragmento de Lautrec por trás; Sol Negro, a seita que percebeu a falsidade do Sol Resplandecente, derrotada e exilada, cujos descendentes fundaram as ilhas, que **hoje aceitam a fé do Sol Resplandecente**; um terceiro sol apagado da história). **[APROVADO]**
 5. **Fim da Prata (ano 0 D.E.P.):** queda parcial de Midgard, que explica as migrações humanas. *(proposta)*
 6. **0 a 1252 D.E.P.:** migrações ao Novo Mundo e ao Continente; ocupação de Vhaldoria por Vampiros Superiores e demônios; **O Dia em que Vhaldoria Sangrou** (cerca de **60 anos atrás**, por volta de 1192 D.E.P. **[ESTABELECIDO]**), a libertação que a Igreja reivindica e que magos de Nocthera lutaram; por baixo dos panos, demônios e Vampiros Superiores seguem no subsolo (seção 3.10) **[ESTABELECIDO]**. A inferência anterior de que as linhagens dos Vampiros Superiores acabaram foi **retirada**.
 7. **1252 D.E.P.:** o Conselho das Coroas e a campanha.
@@ -342,7 +342,7 @@ Localidades sugeridas (todas pendentes): Dornavel, Farol de Merídia, Enseada do
 ### 7.5 Corte e política
 
 - **Alaric Veyrond** — Rei do Sul, soberano de Eldervar. Envelhecido, cauteloso, quer deixar um legado de paz. Teme ser o rei que perdeu o sul. **[ESTABELECIDO]** (nome provisório na árvore).
-- **Severan Dravik** — Imperador do Norte (Grande Império de Valdren). Expansionista, acredita que a guerra produz paz duradoura. **[ESTABELECIDO]** (nome provisório na árvore).
+- **Severan Dravik** — Imperador do Norte (Grande Império de Valdren). Expansionista, acredita que a guerra produz paz duradoura. **[ESTABELECIDO]** (nome provisório na árvore). **[ESTABELECIDO]** Ele deu a ordem de queimar aldeias do Sul na invasão.
 - **Evelyne Duskryn** — Duquesa de Nocthera. Pragmática, carismática, põe o povo acima de tudo. Quer que a irmã a suceda. **[APROVADO]** Postura sobre a perseguição: proteção prioritária do ducado, com cautela diplomática e ajuda discreta a magos perseguidos. Relação inicial com o Guardião: curiosidade, sem conexão especial. Destino **[EM ABERTO]**.
 - **A irmã de Evelyne** — herdeira que rejeita a sucessão e quer fugir para viver livre. Nome, aparência, presença no Conselho, momento da fuga e destino **[EM ABERTO]**.
 - **As Morvárias** — três anciãs que governam Nythara. Rostos há muito tempo invisíveis. O motivo **[EM ABERTO]**. Quem as representa no Conselho **[EM ABERTO]**.
@@ -516,7 +516,7 @@ Cada rota alcança 3 dos 4 finais; Laço e Poder são comuns, mas por caminhos d
 
 O autor pediu propostas, **sem envolver Azgher**.
 
-**[APROVADO — DIREÇÃO, 28/11/2026]** As opções recomendadas foram aprovadas: Guerra dos Três Sóis A e O Dia em que Vhaldoria Sangrou B. A "Era atual" foi resolvida pelo calendário 1252 D.E.P. (seção 4.2). O Dia em que Vhaldoria Sangrou já foi revisado (seções 3.10 e 4.4). **A Guerra dos Três Sóis ainda precisa ser revisada à luz do segredo da Igreja (seção 3.9)**, porque o vencedor da guerra agora tem outra leitura.
+**[APROVADO — DIREÇÃO, 28/11/2026]** As opções recomendadas foram aprovadas: Guerra dos Três Sóis A e O Dia em que Vhaldoria Sangrou B. A "Era atual" foi resolvida pelo calendário 1252 D.E.P. (seção 4.2). O Dia em que Vhaldoria Sangrou e a Guerra dos Três Sóis já foram revisados à luz do segredo da Igreja (seções 3.10 e 4.4).
 
 ### Era atual
 - **A. Era de Ferro**, seguindo o padrão das Eras. Seguro, previsível.

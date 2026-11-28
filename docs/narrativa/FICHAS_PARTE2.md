@@ -30,7 +30,7 @@
 **Quem é.** **[CÂNONE]** Imperador. O nome está marcado como provisório na árvore.
 **Passado.** **[CÂNONE]** Herdou um império dividido por disputas internas e fronteiras ameaçadas; consolidou o poder por campanhas, acordos e reorganização das forças.
 **Desejo / Medo.** **[CÂNONE]** Expandir a influência imperial, incorporar territórios estratégicos e unificar Vhaldoria sob um centro. Teme perder as regiões conquistadas ou parecer incapaz de manter as fronteiras.
-**Contradição e limites.** **[CÂNONE]** Acredita que a guerra gera uma paz duradoura; busca estabilidade pela submissão. Tem um argumento legítimo: um mundo dividido não se protege. É manipulado pela Igreja sem saber. Não ataca sem pretexto jurídico.
+**Contradição e limites.** **[CÂNONE]** Acredita que a guerra gera uma paz duradoura; busca estabilidade pela submissão. Tem um argumento legítimo: um mundo dividido não se protege. É manipulado pela Igreja sem saber. Não ataca sem pretexto jurídico. **[ESTABELECIDO]** Ele deu a ordem de queimar aldeias do Sul na invasão, para forçar a submissão pelo terror.
 **Sabe / Ignora.** Sabe das fraquezas do Sul. Ignora que é peça de Lautrec.
 **Relações.** Lucan Ardelis (conselheiro), Aldric Vorsk (marechal), Alaric (rival respeitoso).
 **Vida fora das cenas.** Mantém uma mesa de mapas com as províncias perdidas marcadas a tinta.
@@ -237,7 +237,7 @@
 **Relações.** Severan, Lucan.
 **Relacionamento inicial.** 8/50. **Chama o Guardião de:** "soldado".
 **Aparições.** IV (invasão), V.
-**Arco e gatilhos.** Comanda a invasão. O jogador pode persuadi-lo a poupar certos alvos. **Pode morrer** na guerra.
+**Arco e gatilhos.** Comanda a invasão. Recebe de Severan a ordem de queimar aldeias, e a vanguarda leva clérigos de Cassian. Salgueira arde. Com provas (os documentos de Zofia), pode se voltar contra Severan; sem elas, endurece. O jogador pode persuadi-lo a poupar certos alvos. **Pode morrer** na guerra.
 
 ---
 
@@ -245,4 +245,5 @@
 
 - **Resolvidas:** datação do Dia que Sangrou (cerca de 60 anos); origem dos corpos (condenados da Inquisição, Rito da Renovação); postura de Evelyne; Wren morre quando o Império invade o Sul e as tropas queimam aldeões em suas casas.
 - **Identidade do fragmento:** registrada em `SEGREDOS_DO_AUTOR.md` (spoiler).
-- **Em aberto:** quem comanda a unidade que queima o povoado (ver Parte 3); a relação de Evelyne com Lysenne; Osric (proposta: sincero).
+- **Resolvidas:** Severan deu a ordem de queimar aldeias, e a vanguarda leva clérigos de Cassian; Osric é sincero.
+- **Em aberto:** a relação de Evelyne com Lysenne.
