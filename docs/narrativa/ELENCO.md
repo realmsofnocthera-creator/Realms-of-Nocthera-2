@@ -166,13 +166,12 @@ Quem é · passado · desejo · medo · defeito e contradição · valores e lim
 
 ## 8. Em aberto
 
-- Mecanismo exato do fragmento com os corpos humanos e da imortalidade dos outros três Arcebispos (a resposta do autor ficou ambígua; ver nota nas fichas).
-- Aprovação dos nomes propostos (seção 9).
+- Quais corpos humanos o fragmento usa e como (confirmado: ele mantém a imortalidade dos outros três).
 - Os 20 a 25 NPCs secundários (missões secundárias), em fase posterior.
 
 ---
 
-## 9. Nomes **[PROPOSTA]**
+## 9. Nomes **[APROVADO]**
 
 Convenção por cultura: Sul (nomes rurais e medievais) · Império (duros, eslavos e germânicos) · Nocthera (elegantes) · Nythara (gaélicos, aquáticos) · Ilhas (nórdicos) · Draconianos (sílabas duras) · Igreja (latinos).
 
@@ -189,7 +188,7 @@ Convenção por cultura: Sul (nomes rurais e medievais) · Império (duros, esla
 | EST-4 | **Ansel Pryce** | Pesquisador desaparecido |
 | SUL-1 | **Brenna Rathmore** | Capitã-General |
 | SUL-2 | **Osric Delaval** | Chanceler |
-| SUL-3 | **Ilaria Veyrond** | Herdeira (neta de Alaric, **[PROPOSTA]**) |
+| SUL-3 | **Ilaria Veyrond** | Herdeira (neta de Alaric) |
 | SUL-4 | **Piers Tallowmere** | Mercador de Eldraven |
 | NOC-1 | **Lysenne Duskryn** | Irmã de Evelyne |
 | NOC-2 | **Orlan Mereth** | Arquimago conselheiro |

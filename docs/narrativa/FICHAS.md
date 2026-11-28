@@ -49,7 +49,7 @@
 
 **Posição filosófica.** Humanismo, ética ecológica, obsessão pelo conhecimento.
 
-**Decisões necessárias.** (1) Godric pode morrer? (2) Confirma que ele encontrou o pai? (3) A loucura é inevitável ou só nos caminhos 2 e 3? (4) O Guardião pode impedir que ele fique perverso?
+**Decidido:** Godric pode morrer. **Em aberto:** (2) ele encontrou o pai? (3) a loucura é inevitável ou só nos caminhos 2 e 3? (4) o Guardião pode impedir que ele fique perverso?
 
 ---
 
@@ -92,7 +92,7 @@
 
 **Posição filosófica.** Memória e identidade, luto, perder-se ao tentar recuperar o que se perdeu.
 
-**Decisões necessárias.** (1) Vesemir pode morrer? (2) "Salvo, mas esvaziado" é a saída certa? (3) Na Rota B, ele parte sozinho?
+**Decidido:** Vesemir pode morrer; "salvo, mas esvaziado" é a saída certa. **Em aberto:** na Rota B, ele parte sozinho?
 
 ---
 
@@ -129,4 +129,4 @@
 
 **Posição filosófica.** Responsabilidade, humanidade, desencanto.
 
-**Decisões necessárias.** (1) Confirma o terreno perto de Trigalva? (2) Edran pode se infectar na Rota B? (3) Na Rota A, ele perdoa o Guardião se a promessa for cumprida?
+**Decidido:** o terreno fica perto de Trigalva. **Em aberto:** (2) Edran pode se infectar na Rota B? (3) na Rota A, ele perdoa o Guardião se a promessa for cumprida?

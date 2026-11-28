@@ -148,6 +148,7 @@ Princípio: cada facção tem razões legítimas, não é só obstáculo.
 - **[ESTABELECIDO]** O fragmento é uma parte de Lautrec com poder **extremamente fragmentado e fragilizado**, mas com **as mesmas vontades e princípios** dele. O que ele quer é o que Lautrec quer: **libertar-se do selo**.
 - **[ESTABELECIDO]** Ele age dentro de um grupo da própria Igreja, **os Quatro Arcebispos Imortais**.
 - **[ESTABELECIDO]** A identidade de Arcebispo do fragmento é **fabricada desde a fundação**, usando **corpos humanos**.
+- **[ESTABELECIDO]** O fragmento mantém a **imortalidade dos outros três Arcebispos** usando corpos humanos. Eles não sabem.
 - **[ESTABELECIDO]** As pistas durante a campanha são **pequenas e muito difíceis de notar**. O jogador só poderá saber a verdade mais adiante, conforme as atualizações derem mais pistas.
 - **[ESTABELECIDO]** O plano de Lautrec inclui **provocar a morte do dragão demoníaco** para abrir a fissura no selo.
 
@@ -158,7 +159,7 @@ Princípio: cada facção tem razões legítimas, não é só obstáculo.
 - O dossiê diz que religiões e instituições distorcem a história; a verdade cosmológica não é a que as civilizações conhecem.
 
 **[EM ABERTO]**
-- Qual dos Quatro Arcebispos é o fragmento; se ele troca de corpo ao longo dos séculos; como a imortalidade aparece para o público. A resposta do autor ("usa corpos humanos para curar os primeiros hospedeiros") ficou ambígua e precisa ser esclarecida.
+- Qual dos Quatro Arcebispos é o fragmento; como a imortalidade aparece para o público; que corpos humanos são usados e como.
 - A origem da imortalidade dos outros três, que não sabem a verdade.
 - Como escapou do selo e quando fundou a Igreja.
 - Como manipula Severan e o Império.
