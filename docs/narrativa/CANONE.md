@@ -578,3 +578,16 @@ Detalhes completos em `CAP_IV.md`. A árvore (`arvore_narrativa_nocthera.html`) 
 - **[ESTABELECIDO]** **"A Chamada"** é o nome do chamado do dragão. **"Caverna Muda"** é o nome local da Caverna do Casulo.
 - **[ESTABELECIDO]** Lysenne chama o Guardião de **"Quieto"**; Evelyne, de **"o Sem-Nome"**.
 - **[ESTABELECIDO]** Pistas pequenas plantadas: Orlan e a "história escrita por quem não esteve lá"; Tamsyn e o silêncio de Nythara; Lucan que só omite; Bram e o pedido de silêncio de Nythara.
+
+## 16. Capítulo V — decisões aprovadas (28/11/2026)
+
+Detalhes completos em `CAP_V.md`. A árvore traz o capítulo como **Concluído**.
+
+- **[ESTABELECIDO]** Título: **"O Silêncio Chama"**.
+- **[ESTABELECIDO]** **A Chamada chama sem nome, e quem é chamado pelo nome responde ao nome.** Esse é o princípio da cura.
+- **[ESTABELECIDO]** A cura exige **três coisas**: a **flor do fundo do lago** (Namar), a **resina do casulo** (Caverna Muda) e **a voz de quem conhece o doente**.
+- **[ESTABELECIDO]** **Rhys é infectado na Rota B** ao tocar a casca do casulo; o doente em A é Edran.
+- **[ESTABELECIDO]** Edran chama o Guardião de **"Novato"** (relacionamento abaixo de 25) ou **"Parceiro"** (a partir de 25).
+- **[ESTABELECIDO]** Aurelian Vael falha em curar Edran, não dorme à cabeceira dele e, em segredo, aponta Namar e Nerys.
+- **[ESTABELECIDO]** Primeiro contato com Kaldrun na Rota B, na boca da Caverna Muda; `kaldrun_bond` de 0 a 3.
+- **[ESTABELECIDO]** Os **turíbulos de brasa** dos clérigos são uma pista pequena que prefigura o fogo do Ato IV.

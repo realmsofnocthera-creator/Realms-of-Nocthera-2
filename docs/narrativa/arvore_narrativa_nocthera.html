@@ -115,8 +115,8 @@ const c1=chapter(acts[0],"c1","CAPÍTULO I — CHEGADA E DESCOBERTA","O Guardiã
 const c2=chapter(acts[0],"c2","CAPÍTULO II — OS RASTROS DO DESCONHECIDO","A expedição encontra vestígios de uma criatura desconhecida, um pesquisador desaparece e o grupo avista uma silhueta gigantesca.");
 const c3=chapter(acts[0],"c3","CAPÍTULO III — O ÚLTIMO DOS SEUS","O Guardião e Edran encontram uma criatura adulta e sua cria. A pequena morre na estação e seu corpo murcha como se sua vitalidade tivesse sido sugada.");
 const c4=chapter(acts[1],"c4","CAPÍTULO IV — CONSELHO DAS COROAS","A investigação chega às autoridades. O Sul, pelo rei de Eldervar, convoca o Conselho das Coroas na capital do Sul. A primeira grande escolha divide a campanha em duas rotas: a Rota A conhece a política; a Rota B, a doença.","Concluído");
-const c5=chapter(acts[1],"c5","CAPÍTULO V — O SILÊNCIO CHAMA","A doença e a causa ganham corpo. Na Rota A, o corpo de um amigo (Edran); na Rota B, o de um lugar (a Caverna Muda). As duas rotas descobrem por caminhos opostos que a Chamada chama sem nome, e que quem é chamado pelo nome responde ao nome. Traz a dobradiça 2 de cada rota.","Em desenvolvimento");
-const c6=chapter(acts[1],"c6","CAPÍTULO VI — A DEFINIR","Capítulo reservado para a continuação das rotas do Ato II.","Não desenvolvido");
+const c5=chapter(acts[1],"c5","CAPÍTULO V — O SILÊNCIO CHAMA","A doença e a causa ganham corpo. Na Rota A, o corpo de um amigo (Edran); na Rota B, o de um lugar (a Caverna Muda). As duas rotas descobrem por caminhos opostos que a Chamada chama sem nome, e que quem é chamado pelo nome responde ao nome. Traz a dobradiça 2 de cada rota.","Concluído");
+const c6=chapter(acts[1],"c6","CAPÍTULO VI — A NOITE DOS NOMES","Fecha o Ato II. As rotas convergem num acampamento aos pés da serra. Numa noite, a Chamada se intensifica e só um nome detém quem é chamado, mas quem ninguém chama, ninguém segura. O capítulo termina com uma conclusão errada e sólida: o dragão chama gente.","Em desenvolvimento");
 for(let i=7;i<=15;i++){let a=acts[Math.floor((i-1)/3)];chapter(a,"c"+i,`CAPÍTULO ${String(i).padStart(2,"0")} — A DEFINIR`,"Capítulo ainda não desenvolvido.","Não desenvolvido");}
 
 function event(parent,id,label,desc,status="Confirmado"){return add(parent,make(id,label,"event",desc,status))}
@@ -312,7 +312,7 @@ npcP(c4,"nerys","NERYS ALDERMERE","Curandeira de Namar","Cerca de trinta e oito 
 npcP(c4,"bram","BRAM OSTREL","Guardião das Lanternas de Namar","Cerca de sessenta anos; cuida das lanternas do lago, acesas para quem se perde à noite. Foi o primeiro a notar a Chamada.","Que ninguém mais ande para o norte à noite.","Ser o último.","Obedeceu ao pedido de silêncio de Nythara, mesmo vendo gente morrer.",["Nerys — aprendiz.","As Morvárias — a quem deve obediência."],"Conhece parte da cura. Pode morrer.");
 
 // ===== CAPÍTULO V — O SILÊNCIO CHAMA (PROPOSTA; detalhes em docs/narrativa/CAP_V.md). Valores são propostas. =====
-const Q="Planejado";
+const Q="Confirmado";
 const qopt=(p,id,l,d)=>add(p,make(id,l,"detail",d,Q));
 const qpick=(p,id,l,d,t="choice")=>add(p,make(id,l,t,d,Q));
 const qfate=(p,id,l,d,s="Condicional")=>add(p,make(id,l,"fate",d,s));
@@ -374,6 +374,65 @@ qnpc(c5,"aurelian","AURELIAN VAEL","Arcebispo Imortal, o Curador","Aparenta cerc
 qnpc(c5,"rhys","RHYS ASHCOMBE","Jovem Guardião da Estação","Cerca de dezenove anos. Admira Edran, quer ser conhecido e fazer nome.","Ser conhecido.","Passar despercebido para sempre.","Espelho invertido do Guardião. Respeita as ordens de Edran.",["Edran — mestre que ele idolatra.","Wren — como irmão mais velho."],"Rota B: ouve a Chamada (proposta). Pode morrer ou virar herói no ataque (Ato IV).");
 qnpc(c5,"corvin","CORVIN HASK","Caçador independente","Cerca de quarenta anos; contratado para caçar o ancião. Endividado.","Quitar uma dívida.","Ser esquecido.","Respeita a presa e não mata filhotes, mas caça por dinheiro.",["Cassian Torvell — contratante, via Igreja (R1).","O Guardião — encontro no caminho."],"Pode morrer diante de Kaldrun. Terceira saída da dobradiça 3.");
 qnpc(c5,"kaldrun","KALDRUN","O Dragão Ancião, o Protetor","Nome draconiano do ancião. Desvia as criaturas para o norte para tirá-las do alcance do som. Cicatrizes de fogo no peito.","Proteger.","Falhar.","Protege, mas a proteção cria o banquete que o dragão demoníaco aproveitará.",["Os draconianos — descendentes de sua linhagem.","O dragão demoníaco — a quem mantém preso."],"Dobradiça 3. Não fala; comunica-se pelo comportamento.");
+
+// ===== CAPÍTULO VI — A NOITE DOS NOMES (PROPOSTA; detalhes em docs/narrativa/CAP_VI.md). Valores são propostas. =====
+const WP="Planejado";
+const wopt=(p,id,l,d)=>add(p,make(id,l,"detail",d,WP));
+const wpick=(p,id,l,d,t="choice")=>add(p,make(id,l,t,d,WP));
+const wfate=(p,id,l,d,s="Condicional")=>add(p,make(id,l,"fate",d,s));
+const wev=(p,id,l,d)=>event(p,id,l,d,WP);
+const wnpc=(...a)=>{const n=npc(...a);n.status=WP;n.children.forEach(c=>{c.status=WP;c.children.forEach(g=>{g.status=WP})});return n};
+const wA=add(c6,make("w_routeA","ROTA A — A SERRA","routeA","O Guardião sobe à serra com o doente (Edran) ou com o mandato, conforme a dobradiça 2A.",WP));
+const wB=add(c6,make("w_routeB","ROTA B — A VOLTA A NAMAR","routeB","O Guardião leva Rhys a Namar para saber da cura e depois sobe à serra, onde reencontra Godric e Vesemir.",WP));
+const wComum=wev(c6,"w_comum","Os caminhos se encontram","As duas rotas convergem num acampamento aos pés da serra, onde se juntam a política (caçadores, comissão ou soldados), a doença e a lenda. Convergência com cicatriz: cada rota chega com companheiros, informações e feridas diferentes.");
+
+// ---- Rota A ----
+const aViagem=wev(wA,"w_a_viagem","A viagem à serra","O caminho muda conforme a dobradiça 2A: com Edran e Nerys (que leva as lanternas porque precisa da resina da caverna); com o mandato, enquanto Edran chega depois com Halric, Rhys e Nerys; ou com todos, em atraso.");
+wfate(aViagem,"w_a_v1","Ir a Namar com Edran","O Guardião, Edran e Nerys sobem juntos.");
+wfate(aViagem,"w_a_v2","Seguir com o mandato","O Guardião sobe com Godric e Vesemir; Edran chega depois, com Halric, Rhys e Nerys.");
+wfate(aViagem,"w_a_v3","Todos a Namar","Sobem todos, com atraso, e encontram os outros já instalados.");
+wev(aViagem,"w_a_godric","Godric e a ferida","Godric examina o calor que se move sob as costelas de Edran e diz, devagar, a palavra que evita: Fragmento do Caos. Se o relacionamento com o Guardião é de pelo menos 20, conta que o pai, Loric, arrancou os próprios olhos ‘para não ver mais’ (Godric +2). Se não, fecha-se: ‘Não é um assunto para esta tenda.’");
+
+// ---- Rota B ----
+const bNamar=wev(wB,"w_b_namar","Namar","Nerys examina Rhys e confirma: a Chamada. Explica as três coisas da cura e o princípio: ‘Quem é chamado por um nome responde ao nome.’ A voz precisa ser de quem conhece o doente. Edran: ‘Eu não sou nada dele.’ Nerys: ‘Você gritou o nome dele a noite toda.’");
+const bVolta=wev(bNamar,"w_b_volta","A volta à serra","Com Nerys e as lanternas, em marcha lenta; Rhys ardendo em febre.");
+const bReenc=wev(bVolta,"w_b_reencontro","O reencontro com Godric e Vesemir","O desfecho depende da dobradiça 2B.");
+wfate(bReenc,"w_b_re1","Local reportado","Godric: ‘Você fez o que eu faria.’ Os caçadores já estão a caminho.");
+wfate(bReenc,"w_b_re2","Segredo guardado","Godric descobre pela comparação das notas e o confronta (Godric −2): ‘Os fatos não são minha propriedade, nem sua.’ Depois reporta por conta própria.");
+wfate(bReenc,"w_b_re3","Contado a Godric e Vesemir","Godric agradece a confiança e reporta, com atraso.");
+
+// ---- Comum ----
+const camp=wev(wComum,"w_acamp","O acampamento aos pés da serra","Barracas, fogueiras e, ao fundo, a serra sem um único pássaro.");
+wfate(camp,"w_acamp_r1","R1 — Caçadores e turíbulos","A companhia de Corvin Hask, com turíbulos de brasa; os clérigos bendizem o acampamento.");
+wfate(camp,"w_acamp_r2","R2 — A comissão","O mago de Orlan, os observadores imperiais e o selo de Tamsyn. Corvin está nas bordas, contratado em particular, sem poder entrar na caverna.");
+wfate(camp,"w_acamp_r3","R3 — A coluna do Sul","A coluna sob o tenente de Brenna; Corvin e batedores imperiais sob as ordens dele.");
+const cler=wev(camp,"w_clerigo","O clérigo e a curandeira","O irmão Teodor Wick, jovem clérigo, vê Nerys e a chama de ‘bruxa do brejo’. Cassian está longe, mas o relatório de Teodor chegaria a ele.");
+const clerChoice=wpick(cler,"w_clerigo_choice","ESCOLHA IMPORTANTE — O CLÉRIGO E A CURANDEIRA","Efeitos propostos.","importantChoice");
+wopt(clerChoice,"w_cler_a","Interceder: ‘Ela cura, e eu respondo por ela.’","Nerys +2. camp_trust +1: o acampamento respeita quem salva gente. Teodor reporta o caso (church_knows_nerys).");
+wopt(clerChoice,"w_cler_b","Deixar Godric argumentar com fatos","Nerys +1. Neutro.");
+wopt(clerChoice,"w_cler_c","Dizer que ela é da Igreja","Só funciona com aurelian_secret (a carta de Aurelian a protege): camp_trust +1, sem relatório. Sem a carta, Teodor expõe a mentira: Nerys −2, camp_trust −1, church_knows_nerys.");
+const menina=wev(cler,"w_menina","A menina no acampamento","Wren, escondida num carroção de Halric, chega ao acampamento para ver Edran ou Rhys. Maren mandou um bilhete: ‘Traga-a de volta.’ Wren tem um caderno novo: os pássaros pararam, e os desenhos têm uma única direção. Terceira cena de Wren.");
+const wrenProm=wpick(menina,"w_menina_choice","ESCOLHA IMPORTANTE — A PROMESSA A WREN","Efeitos propostos.","importantChoice");
+wopt(wrenProm,"w_menina_a","Prometer ensiná-la a rastrear","Wren +3. Flag promise_wren_teach: pode ser cumprida em cenas curtas nos Caps. VII a IX, antes do Ato IV.");
+wopt(wrenProm,"w_menina_b","Prometer levá-la ao norte um dia","Wren +3. Flag promise_wren_north: não pode ser cumprida, pois ela morre no Ato IV. É a promessa que fica.");
+wopt(wrenProm,"w_menina_c","Mandá-la de volta, sem prometer","Wren 0. Halric a leva ao amanhecer.");
+const noite=wev(menina,"w_noite","A Noite dos Nomes","Na madrugada, a Chamada aumenta. Os doentes se levantam: o doente do Guardião (Edran, na A; Rhys, na B) e os dois batedores locais, Tomm Brack e Pell, que chegaram perto da caverna dias antes. Soldados acordam, clérigos rezam, cães uivam. O Guardião vê o que a Rota B já sabia: o nome detém. Mas quem ninguém chama pelo nome, ninguém segura.");
+const noiteChoice=wpick(noite,"w_noite_choice","ESCOLHA IMPORTANTE — QUEM O GUARDIÃO CHAMA PRIMEIRO","Efeitos propostos.","importantChoice");
+wopt(noiteChoice,"w_noite_a","O amigo (Edran ou Rhys)","Ele é contido, sem mudar de estágio. Tomm e Pell caminham para o escuro.");
+wopt(noiteChoice,"w_noite_b","Os batedores","Pell é detido (o nome está no alforje); Tomm, que ninguém conhece, se perde. O amigo piora um estágio (Godric, Vesemir e Nerys o seguram com a lanterna).");
+wopt(noiteChoice,"w_noite_c","Organizar o acampamento para chamar cada um pelo nome","Com camp_trust de pelo menos 1, todos são detidos. Sem confiança, o amigo piora e Tomm se perde.");
+const kal=wev(noite,"w_kaldrun","Kaldrun ao amanhecer","O Guardião, com Vesemir (que insiste em ver ‘a criatura’), vai à boca da caverna recuperar o corpo ou ver o que a noite deixou. Kaldrun está lá. Na Rota A é o primeiro contato; na Rota B, o segundo. Kaldrun vê o corpo ressecado e recua para dentro.");
+const kalA=wpick(kal,"w_kaldrun_choice","ESCOLHA IMPORTANTE — O PRIMEIRO CONTATO (ROTA A)","Efeitos propostos. kaldrun_bond vai de 0 a 3.","importantChoice");
+wopt(kalA,"w_kal_a","Ficar imóvel","kaldrun_bond +2. Vesemir +1.");
+wopt(kalA,"w_kal_b","Recuar devagar","kaldrun_bond +1.");
+wopt(kalA,"w_kal_c","Aproximar-se de mãos abertas","kaldrun_bond +3. Vesemir +2: ‘Eu esperava medo. É outra coisa.’");
+wfate(kal,"w_kal_rb","Rota B — o segundo contato","Sem escolha: o kaldrun_bond da boca da caverna decide. Com 2 ou mais, Kaldrun deixa o Guardião levar o corpo; com 3, baixa a cabeça. Se o Guardião diz em voz alta o nome do morto, ele exala um sopro quente.");
+wev(kal,"w_fim","Fim do Ato II: ‘Amanhã, a toca’","No acampamento, todos viram o que a noite fez e onde o corpo caiu, a poucos passos da boca da caverna. Os caçadores (R1) concluem: ‘Ele chama gente. Mate-o.’ A comissão (R2) pede mais um dia; a coluna (R3) aperta o prazo. Godric e Vesemir discordam. Corvin, se Tomm se perdeu, jura. Todos olham para o Guardião, o único a ter visto o animal de perto. Fim do Ato II.");
+
+// ---- Personagens ----
+wnpc(c6,"teodor","IRMÃO TEODOR WICK","Jovem clérigo do acampamento (secundário)","Cerca de vinte e cinco anos. Foi enviado com os caçadores ou a comissão para bendizer o acampamento. Acredita no que diz.","Servir bem e ser visto servindo.","Que a bruxaria entre no acampamento.","Sincero, mas o medo o faz denunciar.",["Cassian Torvell — superior distante.","Nerys — a quem denuncia."],"Pode ser o primeiro a duvidar da Igreja se os eventos o obrigarem.");
+wnpc(c6,"tomm","TOMM BRACK","Batedor local","Cerca de trinta anos; contratado pelo acampamento como guia. Sem família conhecida, e ninguém ali o chama pelo nome.","Terminar o contrato e ir embora.","Não ter ninguém.","Fala pouco; é só ‘o batedor’.",["Pell — colega.","Corvin Hask — contratante."],"Se perde na Noite dos Nomes se o Guardião falha em organizar o acampamento.");
+wnpc(c6,"pell","PELL","Batedor local","Cerca de dezessete anos; de Arvend. O nome está bordado no alforje.","Ganhar dinheiro para a família.","Decepcionar a mãe.","Ousado demais para a idade.",["Tomm — colega.","A mãe, em Arvend."],"Detido se o Guardião o chama primeiro, ou se o acampamento se organiza.");
 
 // Act II placeholders and open future acts are intentionally empty but present.
 
@@ -454,6 +513,17 @@ byId.v_b_cave.kids=[byId.v_b_reading_choice,byId.v_b_kaldrun];byId.v_b_reading_c
 byId.v_b_kaldrun.kids=[byId.v_b_kaldrun_choice,byId.v_b_decisao];byId.v_b_kaldrun_choice.kids=[...byId.v_b_kaldrun_choice.children];
 byId.v_b_decisao.kids=[byId.v_b_dobradica,byId.v_b_chamada2];byId.v_b_dobradica.kids=[...byId.v_b_dobradica.children];
 byId.v_b_chamada2.kids=[byId.v_b_end];
+// Capítulo VI
+const g6=make('c6_np','Personagens','group','Personagens apresentados neste capítulo.','');g6.kids=[byId.teodor,byId.tomm,byId.pell];byId.c6_np=g6;
+byId.c6.kids=[byId.w_routeA,byId.w_routeB,byId.w_comum,byId.c6_np];
+byId.w_routeA.kids=[byId.w_a_viagem];byId.w_a_viagem.kids=[byId.w_a_v1,byId.w_a_v2,byId.w_a_v3,byId.w_a_godric];
+byId.w_routeB.kids=[byId.w_b_namar];byId.w_b_namar.kids=[byId.w_b_volta];byId.w_b_volta.kids=[byId.w_b_reencontro];byId.w_b_reencontro.kids=[byId.w_b_re1,byId.w_b_re2,byId.w_b_re3];
+byId.w_comum.kids=[byId.w_acamp];
+byId.w_acamp.kids=[byId.w_acamp_r1,byId.w_acamp_r2,byId.w_acamp_r3,byId.w_clerigo];
+byId.w_clerigo.kids=[byId.w_clerigo_choice,byId.w_menina];byId.w_clerigo_choice.kids=[...byId.w_clerigo_choice.children];
+byId.w_menina.kids=[byId.w_menina_choice,byId.w_noite];byId.w_menina_choice.kids=[...byId.w_menina_choice.children];
+byId.w_noite.kids=[byId.w_noite_choice,byId.w_kaldrun];byId.w_noite_choice.kids=[...byId.w_noite_choice.children];
+byId.w_kaldrun.kids=[byId.w_kaldrun_choice,byId.w_kal_rb,byId.w_fim];byId.w_kaldrun_choice.kids=[...byId.w_kaldrun_choice.children];
 const TL={root:'Campanha',act:'Ato',chapter:'Capítulo',event:'Acontecimento',npc:'Personagem',detail:'Contexto narrativo',choice:'Escolha',importantChoice:'Escolha importante',fate:'Destino',routeA:'Rota A',routeB:'Rota B',system:'Sistema',group:'Grupo'};
 const COL={root:'#c7a66c',act:'#e0bd7e',chapter:'#5aa0d6',event:'#6fb88a',npc:'#a58ee0',detail:'#9aabba',choice:'#f0c050',importantChoice:'#ff7b9c',fate:'#e0707f',routeA:'#56b4ff',routeB:'#b08cff',system:'#e0a66b',group:'#8798ad'};
 const PATH={
@@ -497,7 +567,7 @@ const PATH={
  close:'M18 6 6 18|M6 6l12 12',legend:'M8 6h13|M8 12h13|M8 18h13|M3 6h.01|M3 12h.01|M3 18h.01',collapse:'M4 14h6v6|M20 10h-6V4|M14 10l7-7|M3 21l7-7',expand:'M15 3h6v6|M9 21H3v-6|M21 3l-7 7|M3 21l7-7',moon:'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'};
 const ico=(k,sz=18)=>`<svg viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${(PATH[k]||PATH.detail).split('|').map(d=>`<path d="${d}"/>`).join('')}</svg>`;
 const ST={'Confirmado':['ok','#6fb88a'],'Concluído':['ok','#6fb88a'],'Em desenvolvimento':['pen','#e0bd7e'],'Planejado':['clock','#56b4ff'],'Em aberto':['help','#ff7b9c'],'Não desenvolvido':['dash','#7d8ea6'],'Condicional':['choice','#b08cff'],'Destino condicional':['choice','#b08cff']};
-const BYID={alaric:'crown',v_a_open:'route',v_a_estacao:'landmark',v_a_rastro:'pulse',v_a_aurelian:'heart',v_a_decisao:'warn',v_a_namar:'landmark',v_a_end:'chat',v_b_open:'route',v_b_rhys:'chat',v_b_cave:'skull',v_b_kaldrun:'crown',v_b_decisao:'warn',v_b_chamada2:'pulse',v_b_end:'chat',e4_wren:'chat',e4_hosts:'landmark',e4_garden:'sparkle',e4_orlan:'chat',e4_alaric_private:'crown',e4_resolution:'crown',e4_closing:'history',b_salgueira:'landmark',b_namar:'landmark',b_chamada:'pulse',severan:'crown',evelyne:'crown',e4_arrival:'route',e4_city:'landmark',e4_evelyne_meeting:'chat',e4_evelyne_impression:'sparkle',e4_preparation:'list',e4_council_session:'crown',e4_departure:'route',e1prophecy:'sparkle',a_dies:'skull',a_survives:'heart',a_disease:'pulse',a_edran_hurt:'chat',a_edran_memory:'bookmark',a_edran_dialogue:'chat',a_edran_promise:'bookmark',rel_range:'system',rel_hidden:'lock',rel_choices:'choice',rel_fates:'hourglass',rel_trust:'heart',rel_distrust:'eyeoff',rel_rules:'check',rel_feedback:'eye',rel_memory:'bookmark',rel_data:'db',rel_open:'help',rel_implementation:'code',e4_road_conversation:'chat',e4_vesemir_private:'chat',nocthera_society:'sparkle',sun_church:'landmark'};
+const BYID={alaric:'crown',w_comum:'route',w_a_viagem:'route',w_a_godric:'chat',w_b_namar:'landmark',w_b_volta:'route',w_b_reencontro:'chat',w_acamp:'landmark',w_clerigo:'chat',w_menina:'sparkle',w_noite:'pulse',w_kaldrun:'crown',w_fim:'history',v_a_open:'route',v_a_estacao:'landmark',v_a_rastro:'pulse',v_a_aurelian:'heart',v_a_decisao:'warn',v_a_namar:'landmark',v_a_end:'chat',v_b_open:'route',v_b_rhys:'chat',v_b_cave:'skull',v_b_kaldrun:'crown',v_b_decisao:'warn',v_b_chamada2:'pulse',v_b_end:'chat',e4_wren:'chat',e4_hosts:'landmark',e4_garden:'sparkle',e4_orlan:'chat',e4_alaric_private:'crown',e4_resolution:'crown',e4_closing:'history',b_salgueira:'landmark',b_namar:'landmark',b_chamada:'pulse',severan:'crown',evelyne:'crown',e4_arrival:'route',e4_city:'landmark',e4_evelyne_meeting:'chat',e4_evelyne_impression:'sparkle',e4_preparation:'list',e4_council_session:'crown',e4_departure:'route',e1prophecy:'sparkle',a_dies:'skull',a_survives:'heart',a_disease:'pulse',a_edran_hurt:'chat',a_edran_memory:'bookmark',a_edran_dialogue:'chat',a_edran_promise:'bookmark',rel_range:'system',rel_hidden:'lock',rel_choices:'choice',rel_fates:'hourglass',rel_trust:'heart',rel_distrust:'eyeoff',rel_rules:'check',rel_feedback:'eye',rel_memory:'bookmark',rel_data:'db',rel_open:'help',rel_implementation:'code',e4_road_conversation:'chat',e4_vesemir_private:'chat',nocthera_society:'sparkle',sun_church:'landmark'};
 const FICO={identity:'user',history:'history',dream:'sparkle',fear:'warn',contradiction:'shuffle',relations:'link',destiny:'hourglass'};
 function iconFor(n){if(BYID[n.id])return BYID[n.id];
  const m=n.id.match(/_(identity|history|dream|fear|contradiction|relations|destiny)$/);if(m)return FICO[m[1]];
@@ -510,7 +580,7 @@ const SPLIT=new Set(['act','chapter','importantChoice','routeA','routeB']);
 function parts(n){const p=pretty(n.label),i=p.indexOf(' — ');
  if(i>0&&SPLIT.has(n.type)){const r=p.slice(i+3);return [p.slice(0,i),r.charAt(0).toUpperCase()+r.slice(1)]}
  return [n.seq?`${TL[n.type]} ${n.seq}`:(TL[n.type]||''),p]}
-const DEF=['act3','act4','act5','c5_np','v_a_open','v_b_open','v_wren_choice','v_aurelian_choice','v_a_dobradica','v_b_reading_choice','v_b_kaldrun_choice','v_b_dobradica','relationship_system','a_nocthera_context','e4_arrival_choice','e4_evelyne_first_choice','e4_preparation_choice','c4_np','e4_wren_choice','e4_report_choice','e4_testimony_choice','e4_garden_choice','e4_alaric_choice','e4_resolution','b_family_choice','b_salgueira_choice','b_chamada_choice','b_council_news','c1_ev','c1_np','c2_ev','c2_np','c3_ev','c3_np'];
+const DEF=['act3','act4','act5','c6_np','w_a_viagem','w_b_reencontro','w_acamp','w_clerigo_choice','w_menina_choice','w_noite_choice','w_kaldrun_choice','c5_np','v_a_open','v_b_open','v_wren_choice','v_aurelian_choice','v_a_dobradica','v_b_reading_choice','v_b_kaldrun_choice','v_b_dobradica','relationship_system','a_nocthera_context','e4_arrival_choice','e4_evelyne_first_choice','e4_preparation_choice','c4_np','e4_wren_choice','e4_report_choice','e4_testimony_choice','e4_garden_choice','e4_alaric_choice','e4_resolution','b_family_choice','b_salgueira_choice','b_chamada_choice','b_council_news','c1_ev','c1_np','c2_ev','c2_np','c3_ev','c3_np'];
 const collapsed=new Set(DEF);
 const vis=n=>collapsed.has(n.id)?[]:n.kids;
 const reach=new Set(),par={};

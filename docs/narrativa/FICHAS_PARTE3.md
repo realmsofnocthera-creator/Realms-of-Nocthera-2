@@ -78,7 +78,7 @@
 **Relações.** Edran (admira), Wren (como irmão mais velho).
 **Relacionamento inicial.** 12/50. **Chama o Guardião de:** "veterano".
 **Aparições.** II-IV.
-**Arco e gatilhos.** No ataque, pode morrer ou virar herói. No caminho Poder, a Igreja ou o Império o usam como herói oficial.
+**Arco e gatilhos.** No ataque, pode morrer ou virar herói. No caminho Poder, a Igreja ou o Império o usam como herói oficial. **[APROVADO]** Na Rota B, ouve a Chamada na Caverna Muda (Cap. V) e passa a ser o doente cuja cura depende da voz de Edran.
 **Filosofia.** Existencialismo (o contrário do Guardião).
 
 ## CAM-2: NERYS ALDERMERE — Curandeira Itinerante
