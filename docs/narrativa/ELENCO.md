@@ -62,7 +62,7 @@ Pendentes de origem (fora de cena): **Loric Hawkins** (pai de Godric), **a irmã
 | Código | Papel | Aparece | Rota | Liga a |
 |---|---|---|---|---|
 | **EST-1** | **A Esposa de Godric.** Mostra o custo da obsessão; decide partir. Vive num **povoado próximo** da Estação **[ESTABELECIDO]** | II-IV | Ambas | Saber |
-| **EST-2** | **A Filha de Godric.** Vínculo do Guardião com a família Hawkins. Vive no povoado próximo da Estação. Perdida no ataque (ponto fixo planejado) | II-IV | Ambas | Todos |
+| **EST-2** | **A Filha de Godric.** Vínculo do Guardião com a família Hawkins. Vive no povoado próximo da Estação. Morre na invasão do Sul, quando as tropas incendeiam as casas do povoado **[ESTABELECIDO]** | II-IV | Ambas | Todos |
 | **EST-3** | **O Segundo Guardião** (já presente no Ato I). Chefe de defesa da Estação; **crente sincero na Igreja**, o que o contrasta com Edran | I-IV | Ambas | Laço |
 | **EST-4** | **O Pesquisador Desaparecido** (Ato I). **[APROVADO]** primeiro hospedeiro humano: ouviu o som e partiu, o que explica o sumiço sem luta nem rastro. Reaparece no rastro ao norte e em Althor | V (rastro IV) | Ambas | Saber, a verdade |
 

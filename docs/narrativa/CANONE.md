@@ -149,6 +149,8 @@ Princípio: cada facção tem razões legítimas, não é só obstáculo.
 - **[ESTABELECIDO]** Ele age dentro de um grupo da própria Igreja, **os Quatro Arcebispos Imortais**.
 - **[ESTABELECIDO]** A identidade de Arcebispo do fragmento é **fabricada desde a fundação**, usando **corpos humanos**.
 - **[ESTABELECIDO]** O fragmento mantém a **imortalidade dos outros três Arcebispos** usando corpos humanos. Eles não sabem.
+- **[ESTABELECIDO]** Os corpos usados são os dos **condenados da Inquisição**, que somem antes da pira, por meio de um **Rito da Renovação** que os Arcebispos tomam por bênção do Sol.
+- **[ESTABELECIDO]** A identidade do fragmento entre os Quatro Arcebispos está registrada em `docs/narrativa/SEGREDOS_DO_AUTOR.md` (spoiler: não copiar para materiais voltados ao jogador).
 - **[ESTABELECIDO]** As pistas durante a campanha são **pequenas e muito difíceis de notar**. O jogador só poderá saber a verdade mais adiante, conforme as atualizações derem mais pistas.
 - **[ESTABELECIDO]** O plano de Lautrec inclui **provocar a morte do dragão demoníaco** para abrir a fissura no selo.
 
@@ -159,7 +161,7 @@ Princípio: cada facção tem razões legítimas, não é só obstáculo.
 - O dossiê diz que religiões e instituições distorcem a história; a verdade cosmológica não é a que as civilizações conhecem.
 
 **[EM ABERTO]**
-- Qual dos Quatro Arcebispos é o fragmento; como a imortalidade aparece para o público; que corpos humanos são usados e como.
+- Como a imortalidade aparece para o público.
 - A origem da imortalidade dos outros três, que não sabem a verdade.
 - Como escapou do selo e quando fundou a Igreja.
 - Como manipula Severan e o Império.
@@ -225,7 +227,7 @@ Títulos de cartas lendárias que sugerem eventos históricos. **Só os títulos
 3. **Transição Ouro-Prata:** visões e sinais aos seguidores dos deuses ausentes. *(código)*
 4. **Era de Prata:** ordens guerreiras, feiticeiros, clãs disciplinados, queda de muitos reinos. *(código)* **A Guerra dos Três Sóis**, em Midgard: cisma entre três seitas ancestrais (Sol Resplandecente vencedor; Sol Negro derrotado, cujos exilados teriam dado nome às ilhas; um terceiro sol apagado da história). **[APROVADO — DIREÇÃO, a revisar com a seção 3.9]**
 5. **Fim da Prata (ano 0 D.E.P.):** queda parcial de Midgard, que explica as migrações humanas. *(proposta)*
-6. **0 a 1252 D.E.P.:** migrações ao Novo Mundo e ao Continente; ocupação de Vhaldoria por Vampiros Superiores e demônios; **O Dia em que Vhaldoria Sangrou**, a libertação que a Igreja reivindica e que magos de Nocthera lutaram; por baixo dos panos, demônios e Vampiros Superiores seguem no subsolo (seção 3.10) **[ESTABELECIDO]**. A inferência anterior de que as linhagens dos Vampiros Superiores acabaram foi **retirada**.
+6. **0 a 1252 D.E.P.:** migrações ao Novo Mundo e ao Continente; ocupação de Vhaldoria por Vampiros Superiores e demônios; **O Dia em que Vhaldoria Sangrou** (cerca de **60 anos atrás**, por volta de 1192 D.E.P. **[ESTABELECIDO]**), a libertação que a Igreja reivindica e que magos de Nocthera lutaram; por baixo dos panos, demônios e Vampiros Superiores seguem no subsolo (seção 3.10) **[ESTABELECIDO]**. A inferência anterior de que as linhagens dos Vampiros Superiores acabaram foi **retirada**.
 7. **1252 D.E.P.:** o Conselho das Coroas e a campanha.
 
 ---
@@ -321,7 +323,7 @@ Localidades sugeridas (todas pendentes): Dornavel, Farol de Merídia, Enseada do
 
 **[ESTABELECIDO]** Fechou-se ao mundo e à família. Pesquisa a Chama Primordial e os Fragmentos do Caos, acreditando que o conhecimento unificará os reinos. **Medo:** enlouquecer como o pai, Loric, que arrancou os próprios olhos. **Contradição:** deseja paz, mas sacrificaria tudo pelo conhecimento; ama a esposa e a filha e está ausente.
 
-**[PLANEJADO]** Num ataque do norte ao sul, perde a filha. A esposa o abandona. Ele deixa o posto e pesquisa obsessivamente o Caos e a Chama, podendo tornar-se louco e perverso. Variações entre rotas **[EM ABERTO]**.
+**[PLANEJADO]** Num ataque do norte ao sul, perde a filha, Wren, **[ESTABELECIDO]** quando o Império invade o Sul e as tropas matam aldeões incendiando suas casas. A esposa o abandona. Ele deixa o posto e pesquisa obsessivamente o Caos e a Chama, podendo tornar-se louco e perverso. Variações entre rotas **[EM ABERTO]**.
 
 **[PROPOSTA]** Os parasitas seriam fragmentos do Caos, e Godric seria o primeiro a percebê-lo.
 
@@ -341,7 +343,7 @@ Localidades sugeridas (todas pendentes): Dornavel, Farol de Merídia, Enseada do
 
 - **Alaric Veyrond** — Rei do Sul, soberano de Eldervar. Envelhecido, cauteloso, quer deixar um legado de paz. Teme ser o rei que perdeu o sul. **[ESTABELECIDO]** (nome provisório na árvore).
 - **Severan Dravik** — Imperador do Norte (Grande Império de Valdren). Expansionista, acredita que a guerra produz paz duradoura. **[ESTABELECIDO]** (nome provisório na árvore).
-- **Evelyne Duskryn** — Duquesa de Nocthera. Pragmática, carismática, põe o povo acima de tudo. Quer que a irmã a suceda. Postura sobre a perseguição, destino e relação inicial com o Guardião **[EM ABERTO]**.
+- **Evelyne Duskryn** — Duquesa de Nocthera. Pragmática, carismática, põe o povo acima de tudo. Quer que a irmã a suceda. **[APROVADO]** Postura sobre a perseguição: proteção prioritária do ducado, com cautela diplomática e ajuda discreta a magos perseguidos. Relação inicial com o Guardião: curiosidade, sem conexão especial. Destino **[EM ABERTO]**.
 - **A irmã de Evelyne** — herdeira que rejeita a sucessão e quer fugir para viver livre. Nome, aparência, presença no Conselho, momento da fuga e destino **[EM ABERTO]**.
 - **As Morvárias** — três anciãs que governam Nythara. Rostos há muito tempo invisíveis. O motivo **[EM ABERTO]**. Quem as representa no Conselho **[EM ABERTO]**.
 

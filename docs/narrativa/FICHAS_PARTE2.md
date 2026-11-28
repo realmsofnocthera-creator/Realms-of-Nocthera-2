@@ -4,7 +4,7 @@
 
 **Convenção:** o que está marcado **[CÂNONE]** já foi estabelecido. **Todo o resto é [PROPOSTA]**, sem repetir a marca em cada linha. Os relacionamentos (0 a 50) são ocultos ao jogador. A linha "Chama o Guardião de" aplica o sistema de nomes: cada grupo dá um nome diferente a ele.
 
-**Pendência de datação:** várias fichas supõem que **O Dia em que Vhaldoria Sangrou aconteceu há cerca de 60 anos**, dentro da memória de pessoas vivas. Isso ainda não foi decidido (ver decisões no fim).
+**Datação [APROVADO]:** O Dia em que Vhaldoria Sangrou aconteceu há cerca de 60 anos (por volta de 1192 D.E.P.), dentro da memória de pessoas vivas.
 
 ---
 
@@ -45,7 +45,7 @@
 **Passado.** Governa depois de herdar um ducado em que a magia é cotidiana. Viu o Dia que Sangrou de longe, e hoje desconfia da "vitória".
 **Desejo / Medo.** **[CÂNONE]** Quer que a irmã seja a próxima duquesa. **[PROPOSTA]** Teme ter de escolher entre a liberdade de Lysenne e a segurança do povo.
 **Contradição e limites.** Ama a irmã, mas a trata como instrumento da sucessão. Pragmática: não se alia à Igreja nem a quem persegue a magia, mas não declara guerra por isso.
-**Postura diante da perseguição.** **[EM ABERTO]** Proponho: proteção prioritária do ducado, com cautela diplomática, e ajuda discreta a magos perseguidos.
+**Postura diante da perseguição.** **[APROVADO]** Proteção prioritária do ducado, com cautela diplomática, e ajuda discreta a magos perseguidos.
 **Sabe / Ignora.** Sabe que a magia é a defesa de Nocthera. Ignora o segredo da Igreja.
 **Relações.** Lysenne, Orlan (conselheiro), Alaric e Severan (cada um, uma ameaça diferente).
 **Vida fora das cenas.** Escreve a Lysenne cartas que a irmã devolve sem abrir.
@@ -136,7 +136,7 @@
 
 ## NOC-2: ORLAN MERETH — Arquimago conselheiro
 
-**Quem é.** Cerca de oitenta anos. Veterano do Dia que Sangrou (**depende da datação**).
+**Quem é.** Cerca de oitenta anos. Veterano do Dia que Sangrou (há cerca de 60 anos).
 **Passado.** Viu os demônios recuarem para a terra, e não serem destruídos.
 **Desejo / Medo.** Que a verdade do que viu seja ouvida. Teme morrer como um velho dado como senil.
 **Contradição e limites.** Leal a Evelyne, mas duvida do pragmatismo dela. Não ensina magia destrutiva a quem não conhece.
@@ -223,7 +223,7 @@
 **Quem é.** Aparenta sessenta anos. Guarda a história oficial.
 **Desejo / Medo.** Que o registro seja verdadeiro. Teme esquecer.
 **Contradição e limites.** Tem mil anos de memória que contradizem em pequenos pontos o arquivo oficial; atribui as diferenças à idade. Nunca destrói um documento.
-**Sabe / Ignora.** Conhece os arquivos. Ignora que a própria memória pode estar sendo editada.
+**Sabe / Ignora.** Conhece os arquivos. Em cena, comporta-se como quem não nota que a própria memória contradiz o arquivo (ver `SEGREDOS_DO_AUTOR.md`).
 **Relacionamento inicial.** 12/50. **Chama o Guardião de:** "o Anônimo".
 **Aparições.** III; pós-campanha.
 **Arco e gatilhos.** Dá textos a Godric (caminho "corrompido"). É a fonte principal de pistas nas atualizações.
@@ -241,11 +241,8 @@
 
 ---
 
-## Decisões necessárias
+## Decisões
 
-1. **Quando foi o Dia em que Vhaldoria Sangrou?** Proponho há cerca de 60 anos, dentro da memória de pessoas vivas (afeta Orlan, Cassian e o povo de Nocthera).
-2. **Qual dos quatro Arcebispos é o fragmento?** O autor decide em segredo; vou registrá-lo apenas se pedir.
-3. **De onde vêm os corpos?** Proponho que sejam os corpos dos condenados da Inquisição, que somem antes da pira (a pista de Tobias), por meio de um "Rito da Renovação" que os Arcebispos tomam por bênção.
-4. **Quem é responsável pela morte de Wren no ataque?** Aldric não a ordena? Uma unidade sob influência da Igreja?
-5. **A postura de Evelyne** diante da perseguição e a relação com Lysenne.
-6. **Osric:** sincero ou traidor? Proponho sincero.
+- **Resolvidas:** datação do Dia que Sangrou (cerca de 60 anos); origem dos corpos (condenados da Inquisição, Rito da Renovação); postura de Evelyne; Wren morre quando o Império invade o Sul e as tropas queimam aldeões em suas casas.
+- **Identidade do fragmento:** registrada em `SEGREDOS_DO_AUTOR.md` (spoiler).
+- **Em aberto:** quem comanda a unidade que queima o povoado (ver Parte 3); a relação de Evelyne com Lysenne; Osric (proposta: sincero).
