@@ -147,6 +147,9 @@ Princípio: cada facção tem razões legítimas, não é só obstáculo.
 - É um **segredo**: **ninguém além de Lautrec sabe a verdade sobre a Igreja**. Ele manipula todos (clero, fiéis, o Império).
 - **[ESTABELECIDO]** O fragmento é uma parte de Lautrec com poder **extremamente fragmentado e fragilizado**, mas com **as mesmas vontades e princípios** dele. O que ele quer é o que Lautrec quer: **libertar-se do selo**.
 - **[ESTABELECIDO]** Ele age dentro de um grupo da própria Igreja, **os Quatro Arcebispos Imortais**.
+- **[ESTABELECIDO]** A identidade de Arcebispo do fragmento é **fabricada desde a fundação**, usando **corpos humanos**.
+- **[ESTABELECIDO]** As pistas durante a campanha são **pequenas e muito difíceis de notar**. O jogador só poderá saber a verdade mais adiante, conforme as atualizações derem mais pistas.
+- **[ESTABELECIDO]** O plano de Lautrec inclui **provocar a morte do dragão demoníaco** para abrir a fissura no selo.
 
 **Apoios já existentes no lore (fatos, não decisões):**
 - A cosmologia diz que há rachaduras no selo que permitem passagens raras.
@@ -155,11 +158,11 @@ Princípio: cada facção tem razões legítimas, não é só obstáculo.
 - O dossiê diz que religiões e instituições distorcem a história; a verdade cosmológica não é a que as civilizações conhecem.
 
 **[EM ABERTO]**
-- Qual dos Quatro Arcebispos é o fragmento e como ele se apresenta (corpo possuído ou identidade fabricada).
+- Qual dos Quatro Arcebispos é o fragmento; se ele troca de corpo ao longo dos séculos; como a imortalidade aparece para o público.
 - A origem da imortalidade dos outros três, que não sabem a verdade.
 - Como escapou do selo e quando fundou a Igreja.
 - Como manipula Severan e o Império.
-- Quando e como o jogador descobre o segredo.
+- Quais são as pistas da campanha e das atualizações (mapa de pistas, Fase 5).
 - Por que persegue a magia, e por que Nocthera e Nythara são as exceções.
 - Relação com o dragão demoníaco e com a caça ao dragão ancião.
 - Relação com a barreira do Novo Mundo e com Midgard.
@@ -170,7 +173,8 @@ Princípio: cada facção tem razões legítimas, não é só obstáculo.
 ### 3.10 O subsolo de Vhaldoria — **[ESTABELECIDO]**
 
 - O Dia em que Vhaldoria Sangrou continua sendo uma **libertação**, mas **por baixo dos panos**: hoje **demônios e Vampiros Superiores vivem abaixo da terra, em cavernas subterrâneas, esperando o dia certo**.
-- **[EM ABERTO]** Onde ficam as cavernas e suas entradas; o que é "o dia certo" (a fissura é o sinal?); se algum deles age antes disso; se há relação com a Caverna do Casulo.
+- **[ESTABELECIDO]** A fissura **não** é "o dia certo". Uma **missão secundária pós-campanha** mostra o primeiro sinal: **um demônio é encontrado**. (A frase do autor sobre o que a missão mostra foi interrompida; completar.)
+- **[EM ABERTO]** Onde ficam as cavernas e suas entradas; o que é "o dia certo"; se há relação com a Caverna do Casulo.
 - **[PROPOSTA]** Nocthera desconfia da "vitória" porque seus magos lutaram e viram as criaturas recuarem, sem saber a verdade.
 
 ---
@@ -364,6 +368,8 @@ A esposa e a filha de Godric; o pesquisador desaparecido e o segundo guardião d
 
 **[EM ABERTO]** Os Quatro Arcebispos Imortais ocupam quase todos os 5 lugares de Império e Igreja. Como o mínimo é 30, o grupo pode ser ampliado.
 
+**[ESTABELECIDO]** O mapa de papéis e aparições dos NPCs principais está em `docs/narrativa/ELENCO.md` (conteúdo ainda em PROPOSTA).
+
 ---
 
 ## 8. O arco dos dragões e o parasita
@@ -381,6 +387,7 @@ A esposa e a filha de Godric; o pesquisador desaparecido e o segundo guardião d
 - **[ESTABELECIDO] O dragão ancião desvia as criaturas para o norte.** Isso resolve a contradição entre o som que atrai (casulo no sul) e a migração para o norte.
 - **[ESTABELECIDO] A enfermidade** é uma criatura que vive dentro do hospedeiro e drena sua energia vital até a morte; depois **segue para o dragão demoníaco**. Humanos e criaturas são afetados de forma parecida.
 - **[APROVADO — DIREÇÃO]** Hospedeiros humanos começam a **ouvir o som** inaudível do dragão (sintoma perceptível pelo jogador). A cria do Cap. III era hospedeira. A criatura que consome Vesemir é parente do parasita.
+- **[ESTABELECIDO]** O plano de Lautrec inclui provocar a morte do dragão demoníaco para abrir a fissura no selo (seção 3.9). Em todos os finais a fissura se abre.
 - **[PROPOSTA]** A morte do ancião libera muita energia, e o demoníaco, ao absorvê-la, amadurece. A falsa vitória alimentaria o vilão.
 - **[PROPOSTA]** A migração para o norte, orientada pelo ancião, tira as criaturas do alcance do som. Quando o demoníaco foge para Althor, ele segue o rebanho. A proteção cria o banquete.
 - **[PROPOSTA]** A migração de outros dragões ancestrais para o norte, após a morte do primeiro, seria a continuação dessa proteção.
