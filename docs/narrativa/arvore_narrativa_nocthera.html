@@ -1,0 +1,527 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Realms of Nocthera — Árvore Narrativa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--bg:#0a0f17;--panel:#111a27;--line:#2b3a50;--gold:#c7a66c;--text:#eef1f6;--muted:#9fadc0;--serif:'Spectral',Georgia,serif;--sans:'Figtree',system-ui,Arial,sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font:14px/1.4 var(--sans);overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+svg{display:block}
+#top{position:fixed;inset:0 0 auto 0;z-index:10;background:#0d1520ee;border-bottom:1px solid var(--line);padding:calc(8px + env(safe-area-inset-top,0px)) 10px 8px;backdrop-filter:blur(8px)}
+.bar{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.bar h1{font:600 16px var(--serif);color:var(--gold);margin:0;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.sw{position:relative;flex:1}
+.sw svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+#search{width:100%;padding:8px 10px 8px 34px;border:1px solid #435670;border-radius:10px;background:#0b121c;color:#fff;font:inherit}
+#search:focus{outline:2px solid var(--gold);outline-offset:1px}
+#res{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 10px 30px #000b;max-height:50vh;overflow-y:auto}
+#res button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid #ffffff0d;padding:8px 10px}
+#res button:last-child{border:0}#res .em{padding:10px;color:var(--muted)}
+#res small{display:block;color:var(--muted);font-size:11px}
+.ic{flex:0 0 auto;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--bc);background:color-mix(in srgb,var(--bc) 16%,transparent);border:1px solid color-mix(in srgb,var(--bc) 35%,transparent)}
+.ic b{font:700 15px var(--serif)}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
+.chips button{flex:0 0 auto;display:flex;align-items:center;gap:6px;font-size:12px;background:#17243a;border:1px solid #435670;border-radius:99px;padding:5px 11px 5px 8px;min-height:32px}
+.chips button svg{color:var(--c,var(--gold))}
+.chips button:active,.chips button:focus-visible{border-color:var(--gold);outline:0}
+.chips .sep{flex:0 0 1px;background:var(--line);margin:4px 2px}
+#vp{position:fixed;inset:0;touch-action:none;cursor:grab;background:radial-gradient(circle at 20% 0,#16233a,#0a0f17 65%)}
+#world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+#world>svg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.n{position:absolute;width:232px;height:76px;display:flex;align-items:center;gap:10px;padding:8px 14px 8px 9px;background:var(--bg2);border:1px solid #ffffff1a;border-left:4px solid var(--bc);border-radius:12px;user-select:none;box-shadow:0 3px 10px #0009}
+.n .tx{min-width:0;flex:1}
+.n .tag{font-size:11px;color:var(--bc);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.n .lb{font:600 13px/1.25 var(--serif);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-top:1px}
+.n .stt{position:absolute;right:8px;top:6px;opacity:.9}
+.n.sel{box-shadow:0 0 0 3px #fff5,0 3px 10px #0009}
+.n.hit{animation:pulse 1s 3}
+@keyframes pulse{50%{box-shadow:0 0 0 8px #c7a66c99}}
+.n.ghost{border-style:dashed;border-left-style:solid;opacity:.55}
+.n.importantChoice{box-shadow:0 0 16px #ff7b9c40,0 3px 10px #0009}
+.n.choice,.n.routeA,.n.routeB,.n.importantChoice{border-color:color-mix(in srgb,var(--bc) 55%,transparent);border-left-width:5px}
+.n.group{height:56px;border-radius:99px;border-left-width:1px;border-style:dashed;background:#121b28}
+.n.group .ic{width:28px;height:28px;border-radius:99px}
+.n.group .lb{font:500 12.5px var(--sans);margin:0}.n.group .tag{display:none}
+.tg{position:absolute;right:-13px;top:50%;transform:translateY(-50%);min-width:26px;height:26px;border-radius:99px;border:1px solid var(--bc);background:#0d1520;color:var(--text);font-size:12px;font-weight:600;line-height:24px;text-align:center;padding:0 6px;z-index:2}
+.root{--bc:#c7a66c;--bg2:#2a2418}.act{--bc:#e0bd7e;--bg2:#2b2418}.chapter{--bc:#5aa0d6;--bg2:#15283a}
+.event{--bc:#6fb88a;--bg2:#13271d}.npc{--bc:#a58ee0;--bg2:#241d3a}.detail{--bc:#9aabba;--bg2:#1b2936}.choice{--bc:#f0c050;--bg2:#2f2711}.importantChoice{--bc:#ff7b9c;--bg2:#351827}
+.fate{--bc:#e0707f;--bg2:#331a20}.routeA{--bc:#56b4ff;--bg2:#12283d}.routeB{--bc:#b08cff;--bg2:#241a3d}.system{--bc:#e0a66b;--bg2:#302116}.group{--bc:#8798ad;--bg2:#121b28}
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:20;max-height:58vh;overflow:auto;background:var(--panel);border-top:3px solid var(--bc,#c7a66c);border-radius:16px 16px 0 0;padding:14px 16px calc(24px + env(safe-area-inset-bottom,0px));transform:translateY(105%);transition:transform .22s;box-shadow:0 -8px 24px #000b;max-width:760px;margin:0 auto}
+#sheet.open{transform:none}
+#sheet .x{position:absolute;right:10px;top:10px;background:#1b2a3c;border:1px solid #435670;border-radius:99px;width:36px;height:36px;display:grid;place-items:center}
+.sh{display:flex;gap:12px;align-items:center;margin-right:44px}
+.sh h2{margin:0;font:600 18px/1.25 var(--serif);color:var(--bc)}
+.crumb{font-size:11.5px;color:var(--muted);margin:10px 0 8px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 10px 3px 8px;border-radius:99px;background:#1c2a3b;margin:0 6px 10px 0}
+#sheet p{margin:0 0 10px;color:#d6deea;font-size:14.5px;line-height:1.55;max-width:66ch}
+#sheet h3{display:flex;align-items:center;gap:7px;margin:14px 0 4px;font:600 13px var(--sans);color:var(--gold)}
+#sheet ul{margin:0;padding-left:18px;color:#d6deea}
+.kids{display:flex;flex-wrap:wrap;gap:6px}
+.kids button{display:flex;align-items:center;gap:6px;text-align:left;background:#17243a;border:1px solid #435670;border-left:3px solid var(--bc);border-radius:8px;padding:5px 9px;font-size:12px;max-width:100%}
+.kids button svg{color:var(--bc);flex:0 0 auto}
+#zoom{position:fixed;right:10px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9;display:flex;flex-direction:column;gap:6px}
+#zoom button{width:42px;height:42px;border-radius:50%;border:1px solid #435670;background:#17243a;display:grid;place-items:center}
+#legend{position:fixed;right:60px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;max-height:60vh;overflow:auto;box-shadow:0 10px 30px #000b;font-size:12px}
+#legend h4{margin:8px 0 5px;font:600 12px var(--sans);color:var(--gold)}#legend h4:first-child{margin-top:0}
+#legend div{display:flex;align-items:center;gap:8px;padding:2px 0;color:var(--text)}
+#legend .ic{width:24px;height:24px;border-radius:7px}#legend .ic b{font-size:12px}
+[hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){.n.hit{animation:none}#sheet{transition:none}}
+</style></head><body>
+<div id="top"><div class="bar"><h1 id="ttl"></h1><div class="sw"><span id="sico"></span><input id="search" type="search" placeholder="Buscar capítulo, personagem ou acontecimento" autocomplete="off"><div id="res" hidden></div></div></div>
+<div class="chips" id="chips"></div></div>
+<div id="vp"><div id="world"></div></div>
+<div id="zoom"><button id="lg" aria-label="Legenda"></button><button id="zi" aria-label="Aproximar"></button><button id="zo" aria-label="Afastar"></button></div>
+<div id="legend" hidden></div>
+<div id="sheet"></div>
+<script>
+const $=id=>document.getElementById(id);
+const make=(id,label,type,desc="",status="Confirmado",extra={})=>({id,label,type,desc,status,extra,children:[]});
+const data=make("root","REALMS OF NOCTHERA","root","Primeira fase da campanha — cinco atos e quinze capítulos.");
+function add(parent,node){parent.children.push(node);return node}
+const acts=[
+ ["act1","ATO I — CHEGADA E DESCOBERTA"],["act2","ATO II — PRIMEIRA ESCOLHA"],["act3","ATO III — CONSEQUÊNCIAS"],["act4","ATO IV — RUPTURA"],["act5","ATO V — DESTINOS"]
+].map(([id,label])=>add(data,make(id,label,"act","Três capítulos neste ato.",id==="act1"?"Concluído":id==="act2"?"Em desenvolvimento":"Planejado")));
+
+// Sistemas globais da campanha — aplicam-se a todos os atos e rotas.
+const systems=add(data,make("systems","SISTEMAS NARRATIVOS","system","Regras sistêmicas que afetam a campanha inteira, independentemente do ato ou da rota.","Em desenvolvimento"));
+const relationshipSystem=add(systems,make("relationship_system","SISTEMA DE RELACIONAMENTO","system","Cada personagem importante possui um relacionamento individual com o Guardião, com pontuação oculta de 0 a 50. As escolhas do jogador podem alterar essa pontuação e produzir consequências narrativas.","Confirmado"));
+const relRules=add(relationshipSystem,make("rel_rules","REGRAS CONFIRMADAS","detail","Definições já aprovadas para o sistema.","Confirmado"));
+add(relRules,make("rel_range","Pontuação individual de 0 a 50","detail","Cada personagem importante possui seu próprio valor de relacionamento com o Guardião. O valor nunca ultrapassa 0 nem 50.","Confirmado"));
+add(relRules,make("rel_hidden","Pontuação oculta","detail","O jogador não vê o número exato. A interface comunica a relação por sinais narrativos, especialmente confiança e desconfiança.","Confirmado"));
+add(relRules,make("rel_choices","Escolhas com consequências","detail","Escolhas de diálogo, decisões e atitudes do jogador podem aumentar ou diminuir o relacionamento de cada personagem.","Confirmado"));
+add(relRules,make("rel_fates","Consequências narrativas","detail","Relacionamento e escolhas podem influenciar ajuda, diálogos, alianças, hostilidade, afastamento, abandono, sobrevivência e morte de personagens. Cada consequência precisa ser definida na narrativa; não é automática apenas por atingir um número.","Confirmado"));
+const relFeedback=add(relationshipSystem,make("rel_feedback","COMO O JOGADOR PERCEBE A RELAÇÃO","detail","A pontuação fica oculta, mas o comportamento dos personagens comunica mudanças.","Confirmado"));
+add(relFeedback,make("rel_trust","Sinais de confiança","detail","O personagem demonstra consideração, compartilha informações, confia tarefas ao Guardião, revela assuntos pessoais ou oferece ajuda.","Confirmado"));
+add(relFeedback,make("rel_distrust","Sinais de desconfiança","detail","O personagem fica reservado, questiona as intenções do Guardião, evita assuntos pessoais, esconde informações ou recusa ajuda.","Confirmado"));
+const relMemory=add(relationshipSystem,make("rel_memory","MEMÓRIA DE ACONTECIMENTOS","detail","O jogo também registra fatos específicos da história. Essas memórias são independentes da pontuação e não desaparecem simplesmente porque o relacionamento melhora.","Confirmado"));
+add(relMemory,make("rel_flags","Registro de acontecimentos e promessas","detail","Guardar flags como: promessa feita, promessa cumprida ou quebrada, personagem abandonado, investigação compartilhada interrompida, informação revelada ou escondida, ajuda oferecida ou recusada.","Confirmado"));
+add(relMemory,make("rel_independent","Memória não é pontuação","detail","Um personagem pode voltar a confiar no Guardião e ainda se lembrar de uma promessa quebrada, de uma traição ou de uma decisão dolorosa. O relacionamento não apaga o passado.","Confirmado"));
+const relData=add(relationshipSystem,make("rel_data","DADOS QUE O JOGO PRECISA ARMAZENAR","detail","Estrutura conceitual necessária para implementar o sistema no jogo.","Em desenvolvimento"));
+add(relData,make("rel_data_score","relationship[characterId]","detail","Valor numérico individual entre 0 e 50. O valor inicial de cada personagem ainda precisa ser definido.","Em desenvolvimento"));
+add(relData,make("rel_data_flags","storyFlags / characterMemories","detail","Lista de acontecimentos e condições persistentes associados ao personagem e à campanha, separados do valor de relacionamento.","Em desenvolvimento"));
+add(relData,make("rel_data_choice","choiceHistory","detail","Registro da escolha feita, do contexto, das opções disponíveis e dos efeitos aplicados. Permite consultar decisões anteriores e evitar contradições.","Em desenvolvimento"));
+add(relData,make("rel_data_effects","Efeitos de cada opção","detail","Cada opção de diálogo ou decisão deve declarar quais relacionamentos altera e quais memórias/flags registra. Os valores exatos de cada alteração ainda serão definidos cena por cena.","Em desenvolvimento"));
+const relOpen=add(relationshipSystem,make("rel_open","CONFIGURAÇÕES AINDA NÃO DEFINIDAS","detail","Pontos que precisam ser decididos antes da implementação final no jogo.","Em aberto"));
+add(relOpen,make("rel_initial","Valores iniciais por personagem","detail","Definir com quanto começam Godric, Vesemir, Edran, Evelyne e os demais personagens importantes.","Em aberto"));
+add(relOpen,make("rel_delta","Magnitude das alterações","detail","Definir quantos pontos cada tipo de escolha pode acrescentar ou retirar. Não há valores fixos aprovados ainda.","Em aberto"));
+add(relOpen,make("rel_thresholds","Limiares de confiança e desconfiança","detail","Definir se haverá faixas internas para desbloquear reações e condições. Os números não serão mostrados ao jogador.","Em aberto"));
+add(relOpen,make("rel_recovery","Recuperação e limites de reparação","detail","Definir se toda relação pode ser recuperada e quais acontecimentos são irreversíveis, mesmo com pontuação alta.","Em aberto"));
+add(relOpen,make("rel_ui","Apresentação visual no jogo","detail","Definir como confiança e desconfiança serão comunicadas na interface, sem revelar a pontuação numérica.","Em aberto"));
+add(relationshipSystem,make("rel_implementation","ESTADO DA IMPLEMENTAÇÃO","detail","Esta árvore documenta as regras, os dados e os efeitos narrativos necessários. A mecânica executável ainda precisará ser implementada no código do jogo: persistência dos valores, aplicação dos efeitos das escolhas, consulta de condições e atualização da interface.","Planejado"));
+function chapter(act,id,label,desc,status="Concluído"){return add(act,make(id,label,"chapter",desc,status))}
+const c1=chapter(acts[0],"c1","CAPÍTULO I — CHEGADA E DESCOBERTA","O Guardião chega à Estação Ecológica de Velária, conhece Godric e Vesemir e recebe a primeira missão.");
+const c2=chapter(acts[0],"c2","CAPÍTULO II — OS RASTROS DO DESCONHECIDO","A expedição encontra vestígios de uma criatura desconhecida, um pesquisador desaparece e o grupo avista uma silhueta gigantesca.");
+const c3=chapter(acts[0],"c3","CAPÍTULO III — O ÚLTIMO DOS SEUS","O Guardião e Edran encontram uma criatura adulta e sua cria. A pequena morre na estação e seu corpo murcha como se sua vitalidade tivesse sido sugada.");
+const c4=chapter(acts[1],"c4","CAPÍTULO IV — CONSELHO DAS COROAS","A investigação chega às autoridades. O Sul, pelo rei de Eldervar, convoca o Conselho das Coroas na capital do Sul. A primeira grande escolha divide a campanha em duas rotas: a Rota A conhece a política; a Rota B, a doença.","Em desenvolvimento");
+const c5=chapter(acts[1],"c5","CAPÍTULO V — A DEFINIR","Capítulo reservado para as ramificações que surgirem da primeira escolha.","Não desenvolvido");
+const c6=chapter(acts[1],"c6","CAPÍTULO VI — A DEFINIR","Capítulo reservado para a continuação das rotas do Ato II.","Não desenvolvido");
+for(let i=7;i<=15;i++){let a=acts[Math.floor((i-1)/3)];chapter(a,"c"+i,`CAPÍTULO ${String(i).padStart(2,"0")} — A DEFINIR`,"Capítulo ainda não desenvolvido.","Não desenvolvido");}
+
+function event(parent,id,label,desc,status="Confirmado"){return add(parent,make(id,label,"event",desc,status))}
+function npc(parent,id,label,role,history,dream,fear,contradiction,relationships,destiny){
+ const n=add(parent,make(id,label,"npc",role,"Personagem conhecido",{role,history,dream,fear,contradiction,relationships,destiny}));
+ add(n,make(id+"_identity","Quem é","detail",role));
+ add(n,make(id+"_history","História e passado","detail",history));
+ add(n,make(id+"_dream","Sonhos e desejos","detail",dream));
+ add(n,make(id+"_fear","Medos","detail",fear));
+ add(n,make(id+"_contradiction","Contradições e defeitos","detail",contradiction));
+ const rel=add(n,make(id+"_relations","Relações","detail","Conexões conhecidas com outros personagens."));
+ (Array.isArray(relationships)?relationships:String(relationships||"").split(/(?<=\.)\s+/).filter(Boolean)).forEach((r,i)=>add(rel,make(id+"_rel_"+i,r,"detail",r,"Planejado")));
+ add(n,make(id+"_destiny","Caminhos e possíveis destinos","fate",destiny,"Planejado"));
+ return n;
+}
+
+// Chapter I events and NPCs
+event(c1,"e1a","Viagem para Velária","O Guardião viaja de carroça para seu primeiro dia de trabalho.");
+event(c1,"e1b","Emboscada na estrada","Criaturas incomuns atacam a carroça; o transporte é destruído.");
+event(c1,"e1c","Chegada à Estação Ecológica","O Guardião atravessa a floresta a pé e encontra a estação movimentada.");
+event(c1,"e1d","Primeira missão","Vesemir explica a migração e pede investigação dos rastros.");
+const god=npc(c1,"godric","GODRIC HAWKINS","Comandante da Estação Ecológica de Velária","Fechou-se ao mundo e à família, passando os dias no escritório escrevendo e pesquisando. Procura conhecimento sobre a Chama Primordial e os Fragmentos do Caos.","Encontrar a Chama Primordial e os Fragmentos do Caos; acredita que esse conhecimento pode unificar os reinos e permitir convivência entre humanos e espécies nativas.","Enlouquecer como seu pai, Loric Hawkins, que arrancou os próprios olhos após encontrar conhecimento de outra dimensão.","Deseja paz, mas sacrificaria tudo e todos pelo conhecimento. Ama esposa e filha, mas está emocionalmente ausente e não fala com elas há meses.",["Loric Hawkins — pai que enlouqueceu.","Esposa e filha — ama ambas, mas se afastou.","Vesemir Novak — pesquisador-chefe da base.","Guardião — funcionário e participante da investigação."],"Destino planejado: perderá a filha durante um ataque do norte ao sul; a esposa o abandonará. Deixará o posto de comandante e pesquisará obsessivamente o Caos e a Chama, tornando-se louco e perverso. Variações por rota ainda não definidas.");
+const ves=npc(c1,"vesemir","VESEMIR NOVAK","Pesquisador-chefe da Estação de Velária","Dedica a vida a uma busca motivada por uma profecia. As fronteiras políticas impediram sua viagem ao norte, mas seu cargo permite que tente.","Encontrar nas montanhas mais gélidas do norte aquilo que a cartomante disse que o aguarda: aquilo que todo homem busca.","Descobrir o que procura e não ter mais um propósito depois da descoberta.","Sua busca é a razão da vida; teme perdê-la. Sua ética com crianças é marcada pela culpa de ter causado acidentalmente a morte da irmã mais nova.","Irmã mais nova — morreu em acidente causado por ele durante uma brincadeira. Godric — comandante e colega. Guardião — integrante das expedições.","Destino planejado: encontra algo que acredita ser sua irmã. Na verdade, é uma criatura que começa a consumir suas memórias para se alimentar e controlar seu corpo. Possibilidade de salvamento ainda em aberto.");
+event(c1,"e1prophecy","A profecia da cartomante","“Ao norte, nas montanhas mais gélidas, aquilo que todo homem busca aguarda a sua chegada.”","Confirmado");
+
+// Chapter II
+event(c2,"e2a","Expedição à floresta","O Guardião parte com pesquisadores e dois guardiões experientes.");
+event(c2,"e2b","Vestígios incomuns","Árvores marcadas, animais mortos sem ferimentos, herbívoros fora de território e ausência de sons.");
+event(c2,"e2c","Desaparecimento do pesquisador","Equipamentos espalhados, mas sem sangue, luta ou marcas de arrastamento.");
+event(c2,"e2d","Silhueta gigantesca","O grupo avista algo enorme cruzando rapidamente a vegetação.");
+event(c2,"e2e","Resíduo desconhecido","Encontram marcas profundas e um resíduo que não conseguem identificar.");
+const ed=npc(c2,"edran","EDRAN VALTOR","Guardião veterano e rastreador","Anos de trabalho como guardião fizeram Edran testemunhar mortes e perigos. É amargo, desconfiado e usa humor seco para esconder apatia emocional.","Abandonar a vida de guardião, juntar dinheiro e comprar uma pequena propriedade no interior de Vhaldoria para envelhecer tranquilamente.","Perder a própria humanidade, enxergar vidas como números e criaturas apenas como ameaças. Também teme criar laços e depois enterrar as pessoas.","Diz não se importar, mas arrisca a vida por desconhecidos. Critica pesquisadores, mas os ensina a sobreviver. Quer abandonar a profissão, mas não recusa missão quando alguém pode morrer sem sua ajuda.","Guardião — começa vendo-o como inexperiente, mas reconhece nele uma forma menos condicionada de enxergar o mundo. Pesquisadores — critica, mas protege. Sua palavra e responsabilidade são valores centrais.","Rota A: magoa-se com a escolha do Guardião, pesquisa sozinho, contrai a enfermidade e pode morrer no Ato IV se não for tratado. Rota B: o Guardião o acompanha; jornada e destino ainda serão desenvolvidos.");
+// Chapter III
+event(c3,"e3a","Retorno à floresta","Guardião e Edran retornam para identificar espécies afetadas.");
+event(c3,"e3b","A mãe e sua cria","Encontram uma criatura adulta debilitada tentando proteger uma criatura jovem.");
+event(c3,"e3c","A morte da adulta","A criatura adulta morre ao lado da cria.");
+event(c3,"e3d","Tentativa de salvamento","O Guardião decide levar a pequena criatura à Estação de Velária.");
+event(c3,"e3e","Melhora temporária","A criatura come um pouco e consegue ficar em pé.");
+event(c3,"e3f","A deterioração","Na madrugada, deixa de comer e sua respiração se torna irregular.");
+event(c3,"e3g","A morte e o corpo murchando","A pequena morre; seu corpo perde a vitalidade, murcha e resseca de maneira inexplicável.");
+event(c3,"e3h","Preservação dos restos","Vesemir manda preservar o corpo e os registros para comparação.");
+event(c3,"e3i","Encerramento do Ato I","A origem do fenômeno permanece desconhecida. O Guardião fracassa em salvar a criatura.");
+
+// Chapter IV — a primeira escolha acontece no acampamento, antes da viagem.
+event(c4,"e4a","Convocação e relatório","Os acontecimentos de Velária chegam às autoridades, e o rei Alaric Veyrond, do Sul, convoca o Conselho das Coroas em Eldervar. Godric prepara um relatório sobre a migração, os animais mortos e a criatura encontrada.");
+event(c4,"e4b","Decisão de ampliar a investigação","A equipe discute os próximos passos. Vesemir defende aprofundar a investigação; Edran considera necessário retornar aos locais ainda não examinados. A convocação para Eldervar exige que o grupo decida como dividir suas tarefas.");
+const choice=add(c4,make("choice1","ESCOLHA IMPORTANTE — NO ACAMPAMENTO, ANTES DA VIAGEM","importantChoice","Antes de partir para Eldervar, o Guardião precisa decidir com quem seguirá: acompanhar Godric e Vesemir até o Conselho das Coroas ou permanecer com Edran para continuar a investigação em campo. Esta decisão abre duas rotas distintas. A escolha acontece no acampamento de Velária, antes de qualquer viagem.","Confirmado"));
+const routeA=add(choice,make("routeA","ROTA A — ACOMPANHAR GODRIC E VESEMIR","routeA","O Guardião parte com Godric e Vesemir para Eldervar. Edran permanece em Velária e continua sozinho a investigação que havia começado com o Guardião.","Confirmado"));
+const routeB=add(choice,make("routeB","ROTA B — ACOMPANHAR EDRAN","routeB","O Guardião permanece com Edran para continuar a investigação em campo. Godric e Vesemir seguem para Eldervar sem o Guardião. Nesta rota, Edran não fica sozinho por causa da escolha e a consequência da enfermidade da Rota A não deve ser aplicada automaticamente.","Confirmado"));
+
+// Rota A: a escolha provoca uma reação imediata de Edran e só então começa a viagem.
+const aImportantChoice=add(routeA,make("a_important_choice_edran","REAÇÃO À ESCOLHA — EDRAN SENTE-SE ABANDONADO","importantChoice","Edran interpreta a decisão como abandono da investigação que ele e o Guardião começaram juntos. Seu ressentimento não vem simplesmente de o Guardião viajar com outras pessoas: ele sente que o trabalho compartilhado foi deixado para trás. A resposta do Guardião na despedida pode alterar o relacionamento e registrar uma promessa ou outra memória.","Confirmado"));
+event(aImportantChoice,"a_edran_hurt","A despedida de Edran","Edran questiona a decisão do Guardião. Ele acredita que os dois deveriam continuar a investigação juntos e fica magoado ao perceber que o Guardião seguirá para Eldervar.");
+const edranRelationship=add(aImportantChoice,make("a_edran_relationship","CONSEQUÊNCIAS DE RELACIONAMENTO — EDRAN","detail","A reação emocional de Edran está definida: ele se sente abandonado. O efeito numérico depende da fala escolhida pelo jogador na despedida; a pontuação permanece oculta.","Confirmado"));
+add(edranRelationship,make("a_edran_memory","Memória registrada: investigação abandonada","detail","Registrar que o Guardião deixou a investigação compartilhada para seguir com Godric e Vesemir. Essa lembrança pode continuar afetando Edran mesmo que o relacionamento melhore.","Confirmado"));
+add(edranRelationship,make("a_edran_dialogue","Escolhas de diálogo na separação","choice","O jogador poderá reconhecer o trabalho que os dois fizeram, responder de maneira fria ou fazer uma promessa de voltar. Cada opção terá efeito próprio no relacionamento e poderá registrar uma memória ou promessa.","Planejado"));
+add(edranRelationship,make("a_edran_promise","Promessa de retornar","detail","Se o jogador prometer voltar para concluir a investigação, registrar a promessa. Cumpri-la ou quebrá-la poderá gerar consequências futuras. A promessa só existe se o jogador escolher essa fala.","Planejado"));
+add(edranRelationship,make("a_edran_effect","Alteração de relacionamento","detail","A resposta escolhida pode aumentar ou diminuir o relacionamento com Edran. A pontuação exata de cada opção ainda será definida; o jogador nunca verá o número.","Em aberto"));
+const edranSolo=event(aImportantChoice,"a_edran_alone","Edran continua a investigação sozinho","Depois da despedida, Edran retorna à investigação sem o Guardião. A exposição durante essa pesquisa o leva a contrair a enfermidade que afeta as criaturas.","Confirmado");
+const disease=add(edranSolo,make("a_disease","Edran contrai a enfermidade","fate","Edran contrai a mesma enfermidade que afeta as criaturas. O jogador poderá perceber sintomas por interações ao longo da campanha. Esta consequência pertence à Rota A, pois decorre de Edran investigar sozinho.","Confirmado"));
+const cure=add(disease,make("a_cure_choice","O jogador encontra tratamento?","choice","Missões secundárias podem oferecer itens e tratamento para a enfermidade.","Condicional"));
+add(cure,make("a_survives","Edran é tratado e sobrevive","fate","Desfecho possível caso o jogador encontre e utilize o tratamento a tempo.","Condicional"));
+add(cure,make("a_dies","Edran morre no Ato IV","fate","Se não for curado, a enfermidade progride e Edran morre no Ato IV.","Destino condicional"));
+
+// A viagem e o Conselho são conteúdos exclusivos da Rota A, posteriores à escolha no acampamento.
+const departure=event(routeA,"e4_departure","Partida de Velária","Após a despedida, Godric, Vesemir e o Guardião organizam os documentos e equipamentos e partem rumo a Eldervar. Edran permanece em Velária para investigar sozinho.");
+event(departure,"e4_road_conversation","O que pode acontecer no Conselho","Durante a estrada, Godric explica que os governantes avaliarão a crise também por interesses políticos, fronteiras e consequências para seus territórios. Vesemir pondera que cada soberano poderá interpretar as evidências de maneira diferente. Godric insiste que precisam apresentar fatos concretos.");
+const vesemirPrivate=event(departure,"e4_vesemir_private","Uma conversa reservada com Vesemir","Enquanto Godric descansa, Vesemir pergunta ao Guardião por que insistiu em levar a pequena criatura à Estação de Velária, mesmo quando Edran acreditava que não havia mais nada a fazer. Ele quer compreender como o Guardião enxerga a vida e suas responsabilidades.");
+const vesemirChoice=add(vesemirPrivate,make("e4_vesemir_choice","ESCOLHA IMPORTANTE — COMO O GUARDIÃO RESPONDE A VESEMIR?","importantChoice","A resposta do Guardião altera a relação com Vesemir. Godric está dormindo e não ouve a conversa, portanto seu relacionamento não muda nesta escolha. O número permanece oculto para o jogador.","Confirmado"));
+add(vesemirChoice,make("e4_vesemir_a","A — ‘Porque ainda estava viva. Não podia simplesmente deixá-la morrer.’","detail","Vesemir percebe compaixão e respeito pela vida na resposta. Relacionamento com Vesemir: +2. Relacionamento com Godric: 0 (não ouviu a conversa). Registrar a memória: o Guardião não quis abandonar uma criatura que ainda respirava.","Confirmado"));
+add(vesemirChoice,make("e4_vesemir_b","B — ‘Eu não sabia se conseguiríamos salvá-la. Só queria tentar.’","detail","Vesemir valoriza a honestidade e a humildade do Guardião diante do desconhecido. Relacionamento com Vesemir: +3. Relacionamento com Godric: 0 (não ouviu a conversa). Registrar a memória: o Guardião reconheceu que não tinha certeza, mas decidiu tentar mesmo assim.","Confirmado"));
+add(vesemirChoice,make("e4_vesemir_c","C — ‘Não sei. Talvez tenha sido apenas um impulso.’","detail","Vesemir aceita a sinceridade, mas percebe que o Guardião ainda não compreende completamente suas próprias motivações. Relacionamento com Vesemir: +1. Relacionamento com Godric: 0 (não ouviu a conversa). Registrar a memória: o Guardião descreveu sua decisão como um impulso.","Confirmado"));
+const travelContinues=event(departure,"e4_travel_continues","A estrada continua","Depois da conversa, a viagem prossegue. Eldervar se aproxima e, com ela, o Conselho das Coroas.");
+const arrival=event(routeA,"e4_arrival","Chegada a Eldervar","Depois de alguns dias de viagem, a comitiva chega à capital do maior reino do Sul. O Guardião conhece a dimensão da cidade e acompanha Godric e Vesemir durante a recepção oficial.","Planejado");
+event(arrival,"e4_city","A entrada na capital","A comitiva atravessa os portões de Eldervar e é recebida por guardas responsáveis por encaminhar representantes oficiais. O movimento da capital e a presença de pessoas de diferentes regiões revelam a importância política da cidade.","Planejado");
+const arrivalQuestions=add(arrival,make("e4_arrival_choice","ESCOLHA — O QUE O GUARDIÃO QUER SABER SOBRE ELDERVAR?","choice","Durante a chegada, o jogador escolhe como o Guardião reage ao novo ambiente. As respostas ainda não têm efeitos de relacionamento definidos.","Planejado"));
+add(arrivalQuestions,make("e4_arrival_godric","Perguntar a Godric sobre a importância política de Eldervar","detail","O Guardião procura compreender por que a cidade é o centro de poder do Sul. Godric +1; ele fala de política com franqueza.","Planejado"));
+add(arrivalQuestions,make("e4_arrival_vesemir","Perguntar a Vesemir sobre os representantes do Conselho","detail","O Guardião procura saber quem estará presente e que interesses estão em jogo. Vesemir +1; ele revela que teme que o Conselho queira sangue.","Planejado"));
+add(arrivalQuestions,make("e4_arrival_observe","Não fazer perguntas e apenas observar a cidade","detail","O Guardião prefere conhecer Eldervar por conta própria. Sem efeito de relacionamento. Flag eldervar_observada: ele nota estandartes da Igreja por toda parte e ruas vazias ao entardecer.","Planejado"));
+const evelyneMeeting=event(arrival,"e4_evelyne_meeting","Encontro com Evelyne Duskryn","Antes do Conselho, num terraço, o Guardião encontra Evelyne Duskryn. Ela já conhece Godric e Vesemir e quer ver o guarda que carregou a criatura. Pergunta o nome dele. Ele responde: ‘Guardião’. Ela: ‘Isso é um ofício, não um nome.’ A partir daí chama-o de ‘o Sem-Nome’, sem desprezo, por curiosidade. Não há conexão especial.","Planejado");
+const evelyneChoice=add(evelyneMeeting,make("e4_evelyne_first_choice","ESCOLHA — PRIMEIRA IMPRESSÃO DE EVELYNE","choice","O jogador decide como o Guardião se apresenta à Duquesa. A impressão inicial poderá ser relevante para interações futuras, mas os efeitos específicos ainda não foram definidos.","Planejado"));
+add(evelyneChoice,make("e4_evelyne_intro","Apresentar-se formalmente e explicar sua função na expedição","detail","Evelyne +2. Ela o registra como alguém que cumpre o papel.","Planejado"));
+add(evelyneChoice,make("e4_evelyne_reserved","Manter uma postura reservada e deixar Godric explicar sua presença","detail","Evelyne +1. Ela observa o silêncio dele e o nota.","Planejado"));
+add(evelyneChoice,make("e4_evelyne_nocthera","Demonstrar curiosidade sobre Nocthera e sua Duquesa","detail","Evelyne +3. Mas Lucan Ardelis nota a simpatia dele pela magia (flag lucan_notice).","Planejado"));
+const eveFirstImpression=add(evelyneMeeting,make("e4_evelyne_impression","Primeira impressão entre Evelyne e o Guardião","detail","Em todas as opções ela o chama de ‘o Sem-Nome’. A relação inicial é de curiosidade; não há conexão especial.","Planejado"));
+const preparation=event(arrival,"e4_preparation","Preparação para o Conselho","Após o encontro, a comitiva retorna às acomodações. Godric organiza os documentos e prepara a apresentação das descobertas de Velária, enquanto Vesemir demonstra preocupação com o que poderá ser revelado durante a reunião.","Planejado");
+const preparationChoice=add(preparation,make("e4_preparation_choice","ESCOLHA — COMO O GUARDIÃO PASSA O TEMPO?","choice","O jogador decide como o Guardião utiliza o período antes do Conselho. Consequências ainda não definidas.","Planejado"));
+add(preparationChoice,make("e4_help_godric","Ajudar Godric a organizar os registros da investigação","detail","Godric +2. Flag godric_support: C+1 no Conselho.","Planejado"));
+add(preparationChoice,make("e4_talk_vesemir","Conversar com Vesemir sobre suas expectativas para o Conselho","detail","Vesemir +2. Ele confessa o medo de que o Conselho queira sangue.","Planejado"));
+add(preparationChoice,make("e4_rest","Descansar e aguardar a reunião","detail","Sem efeito de relacionamento. Ele acorda antes dos outros e vê a cidade acordar.","Planejado"));
+const council=event(arrival,"e4_council_session","O Conselho das Coroas","Os representantes das grandes regiões se reúnem em Eldervar. O Guardião acompanha Godric e Vesemir como integrante da delegação do Sul. A investigação de Velária é apresentada e os governantes discutem possíveis respostas políticas e estratégicas à crise.","Planejado");
+const al=npc(council,"alaric","ALARIC VEYROND","Rei do Sul — soberano de Eldervar (nome provisório)","Rei envelhecido e experiente. Seu reinado atravessou conflitos territoriais, crises comerciais e tensões com os reinos vizinhos, e impediu que as disputas virassem guerra generalizada. Convocou o Conselho das Coroas, o ato mais ousado do reinado, movido pelo medo.","Preservar a estabilidade dos reinos meridionais e deixar um legado de paz.","Ser lembrado como o rei que perdeu o sul; ver Eldervar submetido à influência imperial; morrer antes de estabilizar a região.","Deseja a paz, mas a cautela excessiva pode permitir que ameaças cresçam enquanto hesita em agir.",["Ilaria Veyrond — neta e herdeira.","Brenna Rathmore e Osric Delaval — conselheiros em desacordo.","Severan Dravik — rival respeitoso."],"Âncora: o jogador não o mata; a história pode trocá-lo por sucessão ou morte natural. A resolução do Conselho define o rumo do Sul.");
+const sev=npc(council,"severan","SEVERAN DRAVIK","Imperador do Norte, do Grande Império de Valdren (nome provisório)","Herdou um império dividido por disputas internas e fronteiras ameaçadas. Consolidou o poder por campanhas militares, acordos políticos e reorganização das forças imperiais.","Expandir a influência imperial, submeter ou incorporar territórios estratégicos e unificar Vhaldoria sob autoridade central.","Perder o controle das regiões conquistadas ou ser visto como imperador incapaz de manter suas fronteiras.","Acredita que a guerra produz uma paz duradoura e busca estabilidade pela submissão. Tem um argumento legítimo: um mundo dividido não se protege. Não ataca sem pretexto jurídico; o Auxílio de Caça é o pretexto.",["Alaric Veyrond — rival respeitoso.","Lucan Ardelis — conselheiro.","Aldric Vorsk — o Marechal Imperial."],"Âncora. Ordena queimar aldeias do Sul na invasão (Ato IV).");
+const eve=npc(council,"evelyne","EVELYNE DUSKRYN","Duquesa de Nocthera — soberana do Ducado de Nocthera","Soberana extremamente pragmática e carismática. Coloca seu povo acima de tudo e de todos. Governa um ducado onde a magia é cotidiana e desconfia da vitória no Dia em que Vhaldoria Sangrou.","Ver sua irmã tornar-se a próxima duquesa de Nocthera.","Ter de escolher entre a liberdade da irmã e a segurança do povo.","Ama a irmã, mas a trata como instrumento da sucessão. Postura diante da perseguição: proteção prioritária do ducado, com cautela diplomática e ajuda discreta a magos perseguidos.",["Lysenne Duskryn — a irmã que quer fugir.","Orlan Mereth — conselheiro.","Alaric e Severan — cada um, uma ameaça diferente."],"Âncora. Aliada, rival ou saída conforme o final; no final Poder pode segurar a coleira do Guardião.");
+npc(council,"nocthera_heir","LYSENNE DUSKRYN — IRMÃ DE EVELYNE","Herdeira de Nocthera e a maga mais talentosa da geração","Cerca de vinte e quatro anos. É a sucessora destinada ao trono, mas não quer assumi-lo. O talento a faz sentir o trono mais pesado.","Fugir de Nocthera e viver livre, escolhendo o próprio caminho.","Que a liberdade custe a vida da irmã ou do povo.","Rejeita o dever, mas é quem mais ama a magia de Nocthera. Ingênua quanto à brutalidade do mundo exterior.",["Evelyne — amor e ressentimento.","Caelith Ravenor — a Guarda-Sombra, quase irmã.","Orlan Mereth — mestre.","Ilaria Veyrond — outra herdeira."],"É a primeira a dar um nome ao Guardião (‘Quieto’). Na Fuga parte com ele; no Laço volta por escolha; no Poder é forçada a suceder. Pode morrer se a Igreja a alcança.");
+const noctheraContext=add(council,make("a_nocthera_context","CONTEXTO DE NOCTHERA NA ROTA A","detail","Os tópicos abaixo pertencem ao desenvolvimento desta ramificação e só ficam disponíveis depois que o jogador escolhe acompanhar Godric e Vesemir e chega ao Conselho.","Planejado"));
+event(noctheraContext,"nocthera_society","Nocthera — sociedade mágica","Nocthera é um ducado no qual o conhecimento e o uso da magia fazem parte do cotidiano de quase toda a população.","Confirmado");
+event(noctheraContext,"nocthera_outside","A magia fora de Nocthera","Em muitos outros territórios, a magia é vista como algo que não pertence aos humanos ou como algo sujo. Usuários de magia podem ser perseguidos e mortos.","Confirmado");
+event(noctheraContext,"sun_church","Igreja do Sol Resplandecente","Principal instituição do mundo, exceto em Nythara e Nocthera, com forte vínculo com o Império do Norte. Persegue usuários de magia.","Confirmado");
+event(noctheraContext,"islands_persecution","Perseguição nas Ilhas do Sol Negro","As Ilhas do Sol Negro também são especialmente perigosas para usuários de magia. Há preconceito contra outras raças além da perseguição aos praticantes de magia.","Confirmado");
+event(noctheraContext,"nocthera_stance_open","Postura de Evelyne diante da perseguição","Proteção prioritária do ducado, com cautela diplomática e ajuda discreta a magos perseguidos.","Confirmado");
+event(noctheraContext,"sister_council_presence","Lysenne no Conselho","Lysenne Duskryn não participa da sessão: foge da sala e é encontrada no jardim. A recusa à sucessão é privada, não pública.","Planejado");
+event(noctheraContext,"evelyne_guardian","Primeira relação com o Guardião","Curiosidade. Ela o chama de ‘o Sem-Nome’. Não existe conexão especial.","Planejado");
+
+// Rota B: o Guardião permanece em campo com Edran; a viagem de Eldervar não é parte desta rota.
+
+// ===== CAPÍTULO IV — CONCLUSÃO (PROPOSTA; detalhes em docs/narrativa/CAP_IV.md). Valores de relacionamento e pesos H/C são propostas. =====
+const P="Planejado";
+const opt=(p,id,l,d)=>add(p,make(id,l,"detail",d,P));
+const pick=(p,id,l,d,t="choice")=>add(p,make(id,l,t,d,P));
+const fateN=(p,id,l,d,s="Condicional")=>add(p,make(id,l,"fate",d,s));
+const npcP=(...a)=>{const n=npc(...a);n.status=P;n.children.forEach(c=>{c.status=P;c.children.forEach(g=>{g.status=P})});return n};
+
+// ---- Parte comum ----
+const wren1=event(c4,"e4_wren","A menina e a cria preservada","Na véspera da partida, o Guardião encontra Wren Hawkins, filha de Godric (cerca de treze anos), na sala onde a cria está preservada. Ela entrou escondida e desenha o corpo ressecado num caderno. Vesemir entra, fica rígido e pede que ela saia, sem conseguir olhá-la. Wren sussurra que os pássaros pararam de cantar semanas antes de qualquer adulto notar e mostra as datas anotadas. Primeira de pelo menos três cenas com Wren antes do ataque do Ato IV.",P);
+const wrenChoice=pick(wren1,"e4_wren_choice","ESCOLHA — O QUE O GUARDIÃO FAZ COM WREN","Efeitos propostos; os números são ocultos ao jogador.");
+opt(wrenChoice,"e4_wren_a","Deixá-la terminar o desenho","Wren +2. Ela se lembra de quem não a mandou embora. Memória: o Guardião a deixou ficar.");
+opt(wrenChoice,"e4_wren_b","Perguntar sobre o caderno e as datas","Wren +3. Registra o flag wren_notebook: as datas e a direção do silêncio ajudam a localizar a caverna nos próximos capítulos.");
+opt(wrenChoice,"e4_wren_c","Levá-la de volta para a mãe","Wren 0, Maren +1, Vesemir +1 (aliviado). Wren fica ressentida.");
+const report=event(c4,"e4_report","Fechando o relatório","Antes de partir, Godric precisa decidir como o relatório descreve a criatura. Há três posições: tratá-la como desconhecida (Godric), dizer que é provavelmente um dragão (Vesemir) ou dar peso às vítimas (Edran). A palavra que o Conselho lerá primeiro molda a discussão.",P);
+const reportChoice=pick(report,"e4_report_choice","ESCOLHA IMPORTANTE — COMO O RELATÓRIO DESCREVE A CRIATURA","O Guardião opina e o relatório sai com a redação escolhida. H = peso a favor da caça; C = peso a favor da investigação e da cautela. Valores propostos.","importantChoice");
+opt(reportChoice,"e4_report_a","Criatura desconhecida; pedir tempo","Godric +2. C+1.");
+opt(reportChoice,"e4_report_b","Provavelmente um dragão","Vesemir +2. H+2. Flag report_dragon.");
+opt(reportChoice,"e4_report_c","Dar peso às vítimas: a cria que murchou e os animais mortos sem ferimentos","Edran +2. C+2. Flag report_victims.");
+
+// ---- Rota A ----
+const hosts=event(arrival,"e4_hosts","Os anfitriões do Sul","Em Eldervar, a corte do Sul os recebe. Osric Delaval, o chanceler, é cortês e sonda. Brenna Rathmore, a capitã-general, é direta: ‘Quantos homens essa coisa devora?’. Ilaria Veyrond, neta e herdeira de Alaric, quer saber como era a cria. O Sul explica por que convocou o Conselho: não pode carregar a crise sozinho e não esperava que o Império respondesse tão rápido. A corte está dividida: Brenna quer fortificar; Osric quer negociar. Relacionamentos iniciais propostos: Brenna 12, Osric 10, Ilaria 10.",P);
+event(council,"e4_c_open","Abertura: por que o Sul convocou o Conselho","No Salão das Coroas, Alaric abre a sessão: ‘Chamei esta mesa porque o Sul não carrega sozinho o que vem do Sul’. Severan Dravik está com Lucan Ardelis, Arcebispo Imortal e conselheiro, ao ombro. Ingvar Skarholt, das Ilhas, está rígido. Tamsyn Ulwen, de Nythara, encapuzada, fala sempre em ‘nós’. Evelyne Duskryn chega com Orlan Mereth.",P);
+event(council,"e4_c_present","A apresentação de Velária","Godric lê os fatos; Vesemir mostra as amostras. Ingvar pergunta se era um dragão. Godric: ‘Não sabemos.’ O relatório pesa na sala conforme foi redigido (H/C do capítulo).",P);
+const testimony=pick(council,"e4_testimony_choice","ESCOLHA IMPORTANTE — O TESTEMUNHO DO GUARDIÃO","Severan se volta: ‘O guarda que a carregou. Fale.’ Ser ouvido em público é ser conhecido, o oposto do que o Guardião quer.","importantChoice");
+opt(testimony,"e4_testimony_a","Humanizar: ‘Estava pedindo ajuda. A mãe morreu protegendo-a.’","C+2. Vesemir +2. Evelyne repara.");
+opt(testimony,"e4_testimony_b","Dados frios: ‘Morreu em uma noite e o corpo secou.’","Godric +2. Sem efeito em H/C.");
+opt(testimony,"e4_testimony_c","Alertar: ‘Seja o que for, matou sem tocar. Pode fazer o mesmo conosco.’","H+2. Vesemir −1. Severan +1.");
+opt(testimony,"e4_testimony_d","Recusar: ‘Godric fala por mim.’","Godric +1. Sem efeito em H/C. O Guardião continua desconhecido, mas Severan nota a esquiva.");
+event(council,"e4_c_positions","As posições dos governantes","Império e Ilhas: caçar. Severan: ‘Um mundo dividido não se protege.’ Ingvar apoia, em nome do Sol. Evelyne: ‘Antes de caçar, saber; quem mata o que não entende raramente sai ganhando.’ Tamsyn: ‘Nythara já viu o que o guarda descreve. Nythara não dirá mais.’ Evelyne a encara. Alaric, calado. Lucan fala em bênção e proteção, sem nunca afirmar nada que possa ser desmentido.",P);
+event(council,"e4_c_proposal","A proposta imperial: o Auxílio de Caça","Severan formaliza: caçadores e tropas imperiais podem atravessar as fronteiras do Sul por noventa dias, com clérigos para bendizer a caçada. É ajuda e é uma porta aberta. Alaric pede recesso até a manhã.",P);
+const after=event(council,"e4_after","Depois da sessão","A sessão suspensa, o Guardião vive três momentos: o jardim, uma frase de Orlan e a audiência privada com Alaric.",P);
+const garden=event(after,"e4_garden","O jardim: Lysenne","Fugindo da sala, o Guardião encontra Lysenne Duskryn, irmã de Evelyne, sentada num muro. Caelith Ravenor, a Guarda-Sombra, está numa árvore, imóvel. Lysenne: ‘Você também fugiu da sala?’ Em todas as opções ela o chama de ‘Quieto’, o primeiro nome que alguém lhe dá por conta própria, com tons diferentes. Ela deixa escapar uma frase torta sobre velhos escolhendo a hora de quem morre.",P);
+const gardenChoice=pick(garden,"e4_garden_choice","ESCOLHA — A PERGUNTA DE LYSENNE","Efeitos propostos.");
+opt(gardenChoice,"e4_garden_a","‘Precisava de ar.’","Lysenne +2. Ela sorri; o apelido sai em tom de brincadeira.");
+opt(gardenChoice,"e4_garden_b","‘Eu não fujo. Só não quero ser visto.’","Lysenne +3. Ela o reconhece: ‘Então somos dois’. Flag lysenne_bond.");
+opt(gardenChoice,"e4_garden_c","Ficar em silêncio","Lysenne +1. Ela ri baixinho e diz que o silêncio dele fala mais do que a sala toda.");
+event(after,"e4_orlan","Orlan Mereth","O arquimago fala com o Guardião de passagem: ‘Não gosto de quem escreve a história de quem não esteve lá. Eu estive.’ Olha para Lucan Ardelis. Pista pequena, sem explicação.",P);
+const alaricPriv=event(after,"e4_alaric_private","A audiência privada com Alaric","À noite, o rei chama ‘o rapaz de Velária’ e faz uma única pergunta: ‘Se fosse a sua casa, abriria a porta?’ O Guardião não decide o Conselho; ele pesa.",P);
+const alaricChoice=pick(alaricPriv,"e4_alaric_choice","ESCOLHA IMPORTANTE — A PERGUNTA DO REI","Efeitos propostos. Alaric decide sozinho; a resposta apenas pesa.","importantChoice");
+opt(alaricChoice,"e4_alaric_a","‘Aceite a ajuda. Eles têm homens e nós não.’","H+2. Osric aprova; Brenna reprova.");
+opt(alaricChoice,"e4_alaric_b","‘Recuse. Quem entra em casa alheia depois não sai.’","C+2. Alaric +2.");
+opt(alaricChoice,"e4_alaric_c","‘Não sei. Mas decida olhando para quem vai pagar.’","Alaric +3. Sem efeito em H/C; desempata para R3.");
+const resolution=event(after,"e4_resolution","A resolução do Conselho","Na manhã seguinte, Alaric anuncia a decisão. Regra proposta: H − C ≥ 2 leva a R1; C − H ≥ 2 leva a R2; caso contrário, R3. Soma: relatório (C+1, H+2 ou C+2), testemunho (C+2, 0, H+2 ou 0), apoio de Godric (C+1) e audiência (H+2, C+2 ou 0). A invasão do Ato IV é ponto fixo; a resolução muda o pretexto, o preparo do Sul e quem está ao lado dele.",P);
+fateN(resolution,"e4_res_r1","R1 — O Auxílio de Caça Imperial","Caçadores e tropas do Império, com clérigos, podem operar no Sul por noventa dias. Pretexto jurídico sólido para a invasão. Brenna furiosa, Osric satisfeito, Evelyne se afasta. Aldric Vorsk posiciona batedores. A dobradiça 3 se inclina para a morte do ancião por caçadores imperiais.");
+fateN(resolution,"e4_res_r2","R2 — A Comissão de Investigação","Comissão conjunta do Sul, de Nocthera, de Nythara (observadora) e de dois imperiais, por sessenta dias. O grupo recebe cartas de mandato e acesso a Namar e a Orlan. Severan fica ressentido e buscará outro pretexto. Nocthera se aproxima do Sul. Caçadores particulares ainda entram.");
+fateN(resolution,"e4_res_r3","R3 — A Caça sob Comando do Sul","Os caçadores entram sob o comando de Brenna, com prazo de trinta dias. O Sul se prepara; espiões imperiais circulam. Tensão máxima.");
+event(after,"e4_closing","Carta de Velária: Edran não voltou","Ao amanhecer, com o mandato em mãos, chega um cavaleiro de Halric Stroud: Edran saiu para o norte há quatro dias e não voltou. Disse que ouvia ‘um zumbido nas árvores’ que mais ninguém ouvia. Se o Guardião prometeu voltar, a carta acrescenta: ‘Ele disse que você viria.’ Lysenne acena de longe. Fim do capítulo na Rota A.",P);
+
+// ---- Rota B ----
+const bFarewell=event(routeB,"b_godric_vesemir","Godric e Vesemir partem sem o Guardião","Despedida no acampamento. Godric: ‘Volte com fatos.’ Vesemir deixa seu caderno de campo. Os dois seguem para o Conselho sem ele; o resultado será decidido por flags e relações.",P);
+const familyChoice=pick(bFarewell,"b_family_choice","ESCOLHA — O QUE O GUARDIÃO PEDE A GODRIC","Efeitos propostos.");
+opt(familyChoice,"b_family_a","Pedir que escreva à esposa","Flag godric_letter. Godric reage com desconforto, mas anota. Se escrever, a partida de Maren dói menos depois.");
+opt(familyChoice,"b_family_b","Pedir que diga a verdade ao Conselho, mesmo que doa","Godric +2. C+1.");
+opt(familyChoice,"b_family_c","Não pedir nada","Sem efeito.");
+const bJourney=event(routeB,"b_journey","Continuação da investigação com Edran","O Guardião acompanha Edran de volta à região dos rastros. A rota passa pelo povoado de Salgueira, pelos locais ainda não examinados e pela fronteira de Namar. Edran não fica sozinho por causa da escolha; a enfermidade da Rota A não se aplica automaticamente.",P);
+const salg=event(bJourney,"b_salgueira","Salgueira","O caminho passa pelo povoado. Maren Hawkins oferece pão e pergunta se Godric mandou algo. Edran ensina Wren a rastrear: segunda cena dela. A despedida é leve e a plateia sabe o que está por vir.",P);
+const salgChoice=pick(salg,"b_salgueira_choice","ESCOLHA — A MENSAGEM DE GODRIC","Efeitos propostos.");
+opt(salgChoice,"b_salgueira_a","Entregar o que Godric disse e a promessa da carta","Se houver godric_letter, Maren +2. Ela guarda a esperança.");
+opt(salgChoice,"b_salgueira_b","Contar só o que ele disse","Maren +1.");
+opt(salgChoice,"b_salgueira_c","Calar","Maren 0. Ela percebe e não pergunta mais.");
+const unexamined=event(bJourney,"b_unexamined","Os locais não examinados","Um leito seco; um bosque vazio de animais; uma trilha de herbívoros todos na mesma direção. Edran: ‘Isso não é fuga, é procissão.’ Num trecho, pegadas de botas em linha reta, sem pressa e sem desvio. Edran: ‘É o pesquisador.’ Ele andou como quem foi chamado.",P);
+event(unexamined,"b_night_edran","A noite: Edran e o terreno","Perto do fogo, Edran mostra o mapa dobrado do terreno que quer comprar, perto de Trigalva. Ele não pede nada. Se o Guardião pergunta, Edran +2. É a primeira vez que ele fala de um futuro.",P);
+const namar=event(unexamined,"b_namar","A fronteira de Namar","As pegadas de Ansel Pryce se juntam a outras, de camponeses, nos Charcos de Namar, território de Nythara. Vigias detêm os dois. Bram Ostrel, o Guardião das Lanternas, e Nerys Aldermere, curandeira, reconhecem a bota: ‘Esse também andou.’",P);
+const chamada=event(namar,"b_chamada","A Chamada","À noite, um pescador se levanta do leito e caminha para o norte, com os olhos vazios. Bram acende as lanternas do lago; às vezes a luz o faz parar. Hospedeiros ouvem o som do dragão; os outros não.",P);
+const chamadaChoice=pick(chamada,"b_chamada_choice","ESCOLHA IMPORTANTE — O HOMEM QUE ANDA PARA O NORTE","Efeitos propostos.","importantChoice");
+opt(chamadaChoice,"b_chamada_a","Segurá-lo à força","Ele vive esta noite; algo se move sob a pele dele, e Nerys sente. Nerys +3. Edran +2.");
+opt(chamadaChoice,"b_chamada_b","Segui-lo sem interferir","Eles veem a fila de caminhantes e o homem cair ao pé de uma serra, seco como a cria. Descobrem o caminho da Caverna Muda. Nerys −2. Edran endurece (flag edran_hardened).");
+opt(chamadaChoice,"b_chamada_c","Entregar a Bram","O homem para junto das lanternas e vive, mas fica doente. Bram +2.");
+const knows=event(chamada,"b_namar_knows","O que Namar sabe","Há meses a Chamada leva gente do povoado. Nythara pediu silêncio (‘o véu vê o que a lanterna não vê’) e Namar obedeceu, o que liga a frase de Tamsyn Ulwen no Conselho. Nerys descreve ‘um bicho que mora dentro’; ao ouvir da cria que secou, entende. Pede amostras de Vesemir.",P);
+const news=event(knows,"b_council_news","Notícias do Conselho","Chegam cartas de Godric (dados) e de Vesemir (o que foi sentido). A resolução é decidida sem o Guardião, por flags: relatório, despedida e relações. Na Rota B a base é mais favorável à caça (H+1), pois há menos quem defenda a cautela.",P);
+fateN(news,"b_res_r1","R1 — O Auxílio de Caça Imperial","Caçadores imperiais já estão no campo no Capítulo V.");
+fateN(news,"b_res_r2","R2 — A Comissão de Investigação","O grupo recebe cartas de mandato; Orlan se oferece para ajudar.");
+fateN(news,"b_res_r3","R3 — A Caça sob Comando do Sul","Caçadores sob o comando de Brenna; tensão no campo.");
+event(news,"b_end","Fim: o caminho da Caverna Muda","Nerys indica o caminho até a serra. Edran: ‘Vamos de manhã.’ Fim do capítulo na Rota B.",P);
+
+// ---- Personagens novos do capítulo ----
+npcP(c4,"lucan","LUCAN ARDELIS","Arcebispo Imortal, o Diplomata; conselheiro de Severan","Aparenta cerca de quarenta e cinco anos. É um dos Quatro Arcebispos Imortais da Igreja do Sol Resplandecente e viveu o Dia em que Vhaldoria Sangrou. É a voz da Igreja junto ao Império.","Unir a Igreja e o Império.","Um cisma entre a Igreja e o Império.","Prega humildade e ama o poder. Nunca mente diretamente: omite e redireciona.",["Severan Dravik — conselheiro e voz religiosa.","Osric Delaval — negocia em segredo com ele.","Aldric Vorsk — o Marechal Imperial."],"Imortal; não morre na campanha. Propõe o Auxílio de Caça no Conselho.");
+npcP(c4,"ingvar","INGVAR SKARHOLT","Governante das Ilhas do Sol Negro (âncora; nome proposto)","Cerca de sessenta e cinco anos; governante duro. As ilhas hoje aceitam a fé do Sol Resplandecente; o mito de fundação fala de ancestrais expulsos por ‘ver o escuro do sol’.","Preservar a pureza e o fechamento das ilhas.","O contágio externo.","O isolamento nasceu de uma razão de sobrevivência, mas virou intolerância. É devoto da Igreja.",["Severan Dravik — aliado de circunstância.","Lucan Ardelis — a Igreja é a fé dele."],"Âncora: o jogador não o mata. Apoia a caça no Conselho.");
+npcP(c4,"tamsyn","TAMSYN ULWEN","Representante de Nythara no Conselho","Cerca de quarenta anos; encapuzada; fala sempre em ‘nós’, pelas Morvárias. As Morvárias são três anciãs cujo rosto ninguém vê há muitos anos (tabu e véu).","Evitar que Nythara entre na guerra.","Que descubram a verdade sobre o véu.","Fala pelas Morvárias e não revela o rosto delas.",["As Morvárias — governantes de Nythara.","Evelyne Duskryn — troca olhares com ela no Conselho."],"Pista: ‘Nythara já viu o que o guarda descreve. Nythara não dirá mais.’");
+npcP(c4,"osric","OSRIC DELAVAL","Chanceler de Alaric","Cerca de sessenta anos; polido; administra a agenda do rei. Acha que o Sul não vence uma guerra e negocia em segredo.","Salvar o máximo de vidas.","Que a resistência destrua o Sul.","Ama o Sul, mas negociaria sua independência. Não trai Alaric pessoalmente.",["Alaric — rei a quem serve.","Brenna Rathmore — rival.","Lucan Ardelis — negocia em segredo.","Ilaria Veyrond — tutor."],"Sincero, não traidor. Apoia o Auxílio de Caça.");
+npcP(c4,"brenna","BRENNA RATHMORE","Capitã-General de Eldervar","Cerca de cinquenta e cinco anos; veterana de escaramuças de fronteira. Acha Alaric cauteloso demais.","Fortificar o Sul antes que seja tarde.","Perder o exército numa guerra sem saída.","Leal, mas pensa em agir sem ordens. Nunca abandona civis.",["Alaric — amigo frustrado.","Ilaria — mentora.","Osric — rival.","Halric Stroud — serviu sob ela."],"Pode morrer na defesa de Eldervar (Ato IV). Reprova o Auxílio de Caça.");
+npcP(c4,"ilaria","ILARIA VEYROND","Neta e herdeira de Alaric","Cerca de vinte e dois anos; idealista; cresceu à sombra do avô, aprendendo política por osmose.","Uma paz que não se construa sobre o medo.","Ser a rainha que precise trair os próprios princípios.","Idealista que nunca foi testada. Recusa ferir civis.",["Alaric — adora.","Brenna — mentora.","Osric — tutor.","Lysenne Duskryn — duas herdeiras com visões opostas do trono."],"Pode morrer no ataque (Ato IV); então a linhagem de Alaric acaba e a sucessão vira crise.");
+npcP(c4,"orlan","ORLAN MERETH","Arquimago conselheiro de Evelyne","Cerca de oitenta anos; veterano do Dia em que Vhaldoria Sangrou (cerca de sessenta anos atrás). Viu os demônios recuarem para a terra sem serem destruídos.","Que a verdade do que viu seja ouvida.","Morrer como um velho dado como senil.","Leal a Evelyne, mas duvida do pragmatismo dela. Não ensina magia destrutiva a quem não conhece.",["Evelyne — conselheiro.","Lysenne — aluna.","Lucan Ardelis — desconfia da Igreja."],"Com relacionamento ≥ 25, conta o que viu. Pode morrer protegendo Lysenne.");
+npcP(c4,"wren","WREN HAWKINS","Filha de Godric e Maren","Cerca de treze anos; curiosa; sobe em árvores. Desenha animais num caderno e deu nome a cada um. Notou o silêncio dos pássaros antes dos adultos.","Ser guardiã ou naturalista.","Que o pai nunca a veja.","Quer ir à floresta, mas obedece quando a mãe pede de verdade.",["Maren — mãe.","Godric — pai ausente.","Edran e Rhys — admira.","Vesemir — tenta se aproximar; ele a evita."],"Morre quando o Império invade o Sul e as tropas incendeiam as casas do povoado (Ato IV). Ponto fixo.");
+npcP(c4,"maren","MAREN HAWKINS","Esposa de Godric; professora do povoado de Salgueira","Cerca de quarenta e cinco anos. Casou com um homem que ainda falava com ela; hoje ele passa meses sem escrever.","Que Godric volte para casa.","Que Wren siga o caminho do pai e desapareça no trabalho.","Tolera a ausência por amor e a recusa por orgulho.",["Godric — marido.","Wren — filha.","Halric Stroud — vizinho e amigo."],"Abandona Godric depois da morte da filha. Pode morrer se estiver na casa errada.");
+npcP(c4,"nerys","NERYS ALDERMERE","Curandeira de Namar","Cerca de trinta e oito anos; de Namar. Reconhece os sinais do parasita como ‘a Chamada’.","Impedir que a doença chegue a Namar.","Perder a tradição de cura.","Cura qualquer um, mas não sob ameaça. Evita a Igreja, que a chamaria de bruxa.",["Bram Ostrel — mestre.","Edran — paciente (Rota A)."],"Chave da cura de Edran. Chama o Guardião de ‘Pé-Leve’. Pode morrer.");
+npcP(c4,"bram","BRAM OSTREL","Guardião das Lanternas de Namar","Cerca de sessenta anos; cuida das lanternas do lago, acesas para quem se perde à noite. Foi o primeiro a notar a Chamada.","Que ninguém mais ande para o norte à noite.","Ser o último.","Obedeceu ao pedido de silêncio de Nythara, mesmo vendo gente morrer.",["Nerys — aprendiz.","As Morvárias — a quem deve obediência."],"Conhece parte da cura. Pode morrer.");
+
+// Act II placeholders and open future acts are intentionally empty but present.
+
+
+
+const NW=232,NH=76,COLG=46,ROWG=12;
+const byId={};(function w(n){byId[n.id]=n;n.children.forEach(w)})(data);
+Object.values(byId).forEach(n=>n.kids=[]);
+data.kids=[...data.children];
+acts.forEach(a=>a.kids=[...a.children]);
+systems.kids=[...systems.children];relationshipSystem.kids=[...relationshipSystem.children];
+[relRules,relFeedback,relMemory,relData,relOpen].forEach(n=>n.kids=[...n.children]);
+[relRules,relFeedback,relMemory,relData,relOpen].forEach(n=>n.children.forEach(c=>c.kids=[...c.children]));
+// Grupos por capítulo: acontecimentos em sequência e personagens, em vez de uma corrente horizontal longa.
+[c1,c2,c3].forEach(ch=>{
+ const ev=ch.children.filter(c=>c.type==='event'),np=ch.children.filter(c=>c.type==='npc');
+ const mk=(id,l,d,arr)=>{const g=make(id,l,'group',d,'');g.kids=arr;byId[id]=g;return g};
+ ev.forEach((e,i)=>e.seq=i+1);ch.kids=[];
+ if(ev.length)ch.kids.push(mk(ch.id+'_ev','Acontecimentos','Sequência de acontecimentos do capítulo, na ordem em que ocorrem.',ev));
+ if(np.length)ch.kids.push(mk(ch.id+'_np','Personagens','Personagens apresentados neste capítulo.',np));
+});
+// No Capítulo IV, a convocação, a cena de Wren e o relatório são comuns. A escolha no acampamento abre as duas rotas.
+const g4=make('c4_np','Personagens','group','Personagens apresentados neste capítulo.','');
+g4.kids=[byId.alaric,byId.severan,byId.evelyne,byId.nocthera_heir,byId.lucan,byId.ingvar,byId.tamsyn,byId.osric,byId.brenna,byId.ilaria,byId.orlan,byId.wren,byId.maren,byId.nerys,byId.bram];byId.c4_np=g4;
+byId.c4.kids=[byId.e4a];
+byId.e4a.kids=[byId.e4b];byId.e4b.kids=[byId.e4_wren];
+byId.e4_wren.kids=[byId.e4_wren_choice,byId.e4_report];byId.e4_wren_choice.kids=[...byId.e4_wren_choice.children];
+byId.e4_report.kids=[byId.e4_report_choice,byId.choice1];byId.e4_report_choice.kids=[...byId.e4_report_choice.children];
+byId.choice1.kids=[byId.routeA,byId.routeB];
+byId.routeA.kids=[byId.a_important_choice_edran];
+byId.a_important_choice_edran.kids=[byId.a_edran_hurt,byId.a_edran_alone,byId.e4_departure];
+byId.a_edran_hurt.kids=[byId.a_edran_relationship];
+byId.a_edran_relationship.kids=[...byId.a_edran_relationship.children];
+byId.a_edran_alone.kids=[byId.a_disease];byId.a_disease.kids=[byId.a_cure_choice];byId.a_cure_choice.kids=[...byId.a_cure_choice.children];
+byId.e4_departure.kids=[byId.e4_road_conversation,byId.e4_vesemir_private];
+byId.e4_vesemir_private.kids=[byId.e4_vesemir_choice];byId.e4_vesemir_choice.kids=[...byId.e4_vesemir_choice.children];
+byId.e4_road_conversation.kids=[byId.e4_travel_continues];byId.e4_travel_continues.kids=[byId.e4_arrival];
+byId.e4_arrival.kids=[byId.e4_city];
+byId.e4_city.kids=[byId.e4_arrival_choice,byId.e4_hosts];
+byId.e4_hosts.kids=[byId.e4_evelyne_meeting];
+byId.e4_arrival_choice.kids=[...byId.e4_arrival_choice.children];
+byId.e4_evelyne_meeting.kids=[byId.e4_evelyne_first_choice,byId.e4_evelyne_impression,byId.e4_preparation];
+byId.e4_evelyne_first_choice.kids=[...byId.e4_evelyne_first_choice.children];
+byId.e4_preparation.kids=[byId.e4_preparation_choice,byId.e4_council_session];byId.e4_preparation_choice.kids=[...byId.e4_preparation_choice.children];
+byId.e4_council_session.kids=[byId.e4_c_open,byId.c4_np,byId.a_nocthera_context];
+byId.e4_c_open.kids=[byId.e4_c_present];
+byId.e4_c_present.kids=[byId.e4_testimony_choice,byId.e4_c_positions];byId.e4_testimony_choice.kids=[...byId.e4_testimony_choice.children];
+byId.e4_c_positions.kids=[byId.e4_c_proposal];
+byId.e4_c_proposal.kids=[byId.e4_after];
+byId.e4_after.kids=[byId.e4_garden,byId.e4_orlan,byId.e4_alaric_private];
+byId.e4_garden.kids=[byId.e4_garden_choice];byId.e4_garden_choice.kids=[...byId.e4_garden_choice.children];
+byId.e4_alaric_private.kids=[byId.e4_alaric_choice,byId.e4_resolution];byId.e4_alaric_choice.kids=[...byId.e4_alaric_choice.children];
+byId.e4_resolution.kids=[byId.e4_res_r1,byId.e4_res_r2,byId.e4_res_r3,byId.e4_closing];
+byId.a_nocthera_context.kids=[...byId.a_nocthera_context.children];
+byId.routeB.kids=[byId.b_godric_vesemir];
+byId.b_godric_vesemir.kids=[byId.b_family_choice,byId.b_journey];byId.b_family_choice.kids=[...byId.b_family_choice.children];
+byId.b_journey.kids=[byId.b_salgueira];
+byId.b_salgueira.kids=[byId.b_salgueira_choice,byId.b_unexamined];byId.b_salgueira_choice.kids=[...byId.b_salgueira_choice.children];
+byId.b_unexamined.kids=[byId.b_night_edran,byId.b_namar];
+byId.b_namar.kids=[byId.b_chamada];
+byId.b_chamada.kids=[byId.b_chamada_choice,byId.b_namar_knows];byId.b_chamada_choice.kids=[...byId.b_chamada_choice.children];
+byId.b_namar_knows.kids=[byId.b_council_news];
+byId.b_council_news.kids=[byId.b_res_r1,byId.b_res_r2,byId.b_res_r3,byId.b_end];
+const TL={root:'Campanha',act:'Ato',chapter:'Capítulo',event:'Acontecimento',npc:'Personagem',detail:'Contexto narrativo',choice:'Escolha',importantChoice:'Escolha importante',fate:'Destino',routeA:'Rota A',routeB:'Rota B',system:'Sistema',group:'Grupo'};
+const COL={root:'#c7a66c',act:'#e0bd7e',chapter:'#5aa0d6',event:'#6fb88a',npc:'#a58ee0',detail:'#9aabba',choice:'#f0c050',importantChoice:'#ff7b9c',fate:'#e0707f',routeA:'#56b4ff',routeB:'#b08cff',system:'#e0a66b',group:'#8798ad'};
+const PATH={
+ root:'M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z|M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z',
+ act:'M12 2 2 7l10 5 10-5-10-5z|M2 17l10 5 10-5|M2 12l10 5 10-5',
+ chapter:'M4 19.5A2.5 2.5 0 0 1 6.5 17H20|M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
+ event:'M13 2 3 14h9l-1 8 10-12h-9l1-8z',
+ npc:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2|M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+ user:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2|M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+ users:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2|M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z|M23 21v-2a4 4 0 0 0-3-3.87|M16 3.13a4 4 0 0 1 0 7.75',
+ list:'M8 6h13|M8 12h13|M8 18h13|M3 6h.01|M3 12h.01|M3 18h.01',
+ detail:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z|M12 16v-4|M12 8h.01',
+ choice:'M16 3h5v5|M8 3H3v5|M12 22v-8.3a4 4 0 0 0-1.17-2.83L3 3|M15 9l6-6',
+ importantChoice:'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+ fate:'M5 22h14|M5 2h14|M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22|M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2',
+ hourglass:'M5 22h14|M5 2h14|M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22|M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2',
+ system:'M4 21v-7|M4 10V3|M12 21v-9|M12 8V3|M20 21v-5|M20 12V3|M1 14h6|M9 8h6|M17 16h6',
+ group:'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+ crown:'M2 20h20|M4 17 2 7l6 5 4-8 4 8 6-5-2 10z',
+ landmark:'M3 21h18|M5 21V9|M19 21V9|M9 21v-8|M15 21v-8|M12 3 2 8h20z',
+ route:'M5 12h14|M13 6l6 6-6 6',
+ sparkle:'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z|M19 17v4|M17 19h4',
+ skull:'M9 12h.01|M15 12h.01|M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5|M12 2a8 8 0 0 0-8 8c0 2.5 1.1 4.3 3 5.5V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.5c1.9-1.2 3-3 3-5.5a8 8 0 0 0-8-8z',
+ heart:'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z',
+ pulse:'M22 12h-4l-3 9L9 3l-3 9H2',
+ bookmark:'M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z',
+ chat:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
+ lock:'M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z|M7 11V7a5 5 0 0 1 10 0v4',
+ eye:'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z|M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+ eyeoff:'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94|M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19|M1 1l22 22',
+ db:'M12 8c4.97 0 9-1.34 9-3s-4.03-3-9-3-9 1.34-9 3 4.03 3 9 3z|M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5|M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3',
+ help:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z|M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3|M12 17h.01',
+ check:'M9 11l3 3L22 4|M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
+ code:'M16 18l6-6-6-6|M8 6l-6 6 6 6',
+ history:'M3 12a9 9 0 1 0 3-6.7L3 8|M3 3v5h5|M12 7v5l4 2',
+ warn:'M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z|M12 9v4|M12 17h.01',
+ shuffle:'M16 3h5v5|M4 20 21 3|M21 16v5h-5|M15 15l6 6|M4 4l5 5',
+ link:'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71|M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
+ ok:'M20 6 9 17l-5-5',pen:'M12 20h9|M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z',clock:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z|M12 6v6l4 2',dash:'M5 12h14',
+ search:'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z|M21 21l-4.35-4.35',plus:'M12 5v14|M5 12h14',minus:'M5 12h14',fit:'M8 3H5a2 2 0 0 0-2 2v3|M21 8V5a2 2 0 0 0-2-2h-3|M3 16v3a2 2 0 0 0 2 2h3|M16 21h3a2 2 0 0 0 2-2v-3',
+ close:'M18 6 6 18|M6 6l12 12',legend:'M8 6h13|M8 12h13|M8 18h13|M3 6h.01|M3 12h.01|M3 18h.01',collapse:'M4 14h6v6|M20 10h-6V4|M14 10l7-7|M3 21l7-7',expand:'M15 3h6v6|M9 21H3v-6|M21 3l-7 7|M3 21l7-7',moon:'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'};
+const ico=(k,sz=18)=>`<svg viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${(PATH[k]||PATH.detail).split('|').map(d=>`<path d="${d}"/>`).join('')}</svg>`;
+const ST={'Confirmado':['ok','#6fb88a'],'Concluído':['ok','#6fb88a'],'Em desenvolvimento':['pen','#e0bd7e'],'Planejado':['clock','#56b4ff'],'Em aberto':['help','#ff7b9c'],'Não desenvolvido':['dash','#7d8ea6'],'Condicional':['choice','#b08cff'],'Destino condicional':['choice','#b08cff']};
+const BYID={alaric:'crown',e4_wren:'chat',e4_hosts:'landmark',e4_garden:'sparkle',e4_orlan:'chat',e4_alaric_private:'crown',e4_resolution:'crown',e4_closing:'history',b_salgueira:'landmark',b_namar:'landmark',b_chamada:'pulse',severan:'crown',evelyne:'crown',e4_arrival:'route',e4_city:'landmark',e4_evelyne_meeting:'chat',e4_evelyne_impression:'sparkle',e4_preparation:'list',e4_council_session:'crown',e4_departure:'route',e1prophecy:'sparkle',a_dies:'skull',a_survives:'heart',a_disease:'pulse',a_edran_hurt:'chat',a_edran_memory:'bookmark',a_edran_dialogue:'chat',a_edran_promise:'bookmark',rel_range:'system',rel_hidden:'lock',rel_choices:'choice',rel_fates:'hourglass',rel_trust:'heart',rel_distrust:'eyeoff',rel_rules:'check',rel_feedback:'eye',rel_memory:'bookmark',rel_data:'db',rel_open:'help',rel_implementation:'code',e4_road_conversation:'chat',e4_vesemir_private:'chat',nocthera_society:'sparkle',sun_church:'landmark'};
+const FICO={identity:'user',history:'history',dream:'sparkle',fear:'warn',contradiction:'shuffle',relations:'link',destiny:'hourglass'};
+function iconFor(n){if(BYID[n.id])return BYID[n.id];
+ const m=n.id.match(/_(identity|history|dream|fear|contradiction|relations|destiny)$/);if(m)return FICO[m[1]];
+ if(n.type==='group')return n.id.endsWith('_np')?'users':'list';
+ if(n.type==='routeA')return 'A';if(n.type==='routeB')return 'B';return n.type}
+const icoN=(n,sz)=>{const k=iconFor(n);return k.length===1?`<b>${k}</b>`:ico(k,sz)};
+const SM=new Set('de da do das dos e a o as os no na nos nas ao à em com por para of'.split(' '));
+function pretty(t){if(t!==t.toUpperCase())return t;return t.toLowerCase().split(' ').map((w,i)=>/^[ivxl]+$/.test(w)?w.toUpperCase():(i&&SM.has(w)?w:w.charAt(0).toUpperCase()+w.slice(1))).join(' ')}
+const SPLIT=new Set(['act','chapter','importantChoice','routeA','routeB']);
+function parts(n){const p=pretty(n.label),i=p.indexOf(' — ');
+ if(i>0&&SPLIT.has(n.type)){const r=p.slice(i+3);return [p.slice(0,i),r.charAt(0).toUpperCase()+r.slice(1)]}
+ return [n.seq?`${TL[n.type]} ${n.seq}`:(TL[n.type]||''),p]}
+const DEF=['act3','act4','act5','relationship_system','a_nocthera_context','e4_arrival_choice','e4_evelyne_first_choice','e4_preparation_choice','c4_np','e4_wren_choice','e4_report_choice','e4_testimony_choice','e4_garden_choice','e4_alaric_choice','e4_resolution','b_family_choice','b_salgueira_choice','b_chamada_choice','b_council_news','c1_ev','c1_np','c2_ev','c2_np','c3_ev','c3_np'];
+const collapsed=new Set(DEF);
+const vis=n=>collapsed.has(n.id)?[]:n.kids;
+const reach=new Set(),par={};
+(function w(n,p){reach.add(n.id);par[n.id]=p;n.kids.forEach(c=>w(c,n))})(data,null);
+const world=$('world'),vp=$('vp');
+let all=[],cur=0,W=0,H=0,sel=null;
+function layout(n,d){const k=vis(n);n.x=24+d*(NW+COLG);all.push(n);
+ if(!k.length){n.y=cur;cur+=NH+ROWG;return}
+ k.forEach(c=>layout(c,d+1));n.y=(k[0].y+k[k.length-1].y)/2}
+function draw(){
+ all=[];cur=24;layout(data,0);
+ W=Math.max(...all.map(n=>n.x))+NW+50;H=cur+24;
+ world.innerHTML='';world.style.width=W+'px';world.style.height=H+'px';
+ let p='';
+ all.forEach(n=>vis(n).forEach(c=>{const x1=n.x+NW,y1=n.y+NH/2,x2=c.x,y2=c.y+NH/2,mx=(x1+x2)/2,big=/choice|route/i.test(c.type);
+  p+=`<path d="M${x1} ${y1}C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}" stroke="${COL[c.type]}" stroke-opacity="${big?.85:.55}" stroke-width="${big?2.6:1.6}" fill="none"${c.type==='npc'?' stroke-dasharray="5 5"':''}/>`}));
+ world.insertAdjacentHTML('beforeend',`<svg width="${W}" height="${H}">${p}</svg>`);
+ all.forEach(n=>{
+  const [tag,title]=parts(n),st=ST[n.status];
+  const d=document.createElement('div');d.className='n '+n.type+(n.status==='Não desenvolvido'?' ghost':'')+(sel===n.id?' sel':'');
+  d.dataset.id=n.id;d.style.left=n.x+'px';d.style.top=n.y+'px';d.title=pretty(n.label);
+  d.innerHTML=`<span class="ic">${icoN(n,n.type==='group'?15:18)}</span><div class="tx"><div class="tag"></div><div class="lb"></div></div>`+(st&&n.type!=='root'?`<span class="stt" style="color:${st[1]}" title="${n.status}">${ico(st[0],13)}</span>`:'');
+  d.querySelector('.tag').textContent=tag;d.querySelector('.lb').textContent=title;
+  if(n.kids.length){const t=document.createElement('div');t.className='tg';t.dataset.tg=n.id;t.textContent=collapsed.has(n.id)?'+'+n.kids.length:'−';d.appendChild(t)}
+  world.appendChild(d)});
+}
+let s=.8,tx=0,ty=0;
+function apply(){world.style.transform=`translate(${tx}px,${ty}px) scale(${s})`}
+function centerOn(n,sc){s=sc||s;tx=Math.min(16,innerWidth*.3-n.x*s);ty=innerHeight*.36-(n.y+NH/2)*s;apply()}
+function fit(){s=Math.min(innerWidth/W,(innerHeight-150)/H,1);tx=(innerWidth-W*s)/2;ty=130;apply()}
+function zoomAt(x,y,ns){ns=Math.max(.15,Math.min(2,ns));tx=x-(x-tx)*ns/s;ty=y-(y-ty)*ns/s;s=ns;apply()}
+const ptrs=new Map();let moved=0,down=null,pd=0,pinched=false;
+vp.addEventListener('pointerdown',e=>{vp.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});if(ptrs.size===1){moved=0;pinched=false;down=e.target}else{pinched=true;const [a,b]=[...ptrs.values()];pd=Math.hypot(a.x-b.x,a.y-b.y)}});
+vp.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(!p)return;
+ if(ptrs.size===1){const dx=e.clientX-p.x,dy=e.clientY-p.y;moved+=Math.abs(dx)+Math.abs(dy);tx+=dx;ty+=dy;apply()}
+ else if(ptrs.size===2){const o=[...ptrs.entries()].find(([id])=>id!==e.pointerId)[1];const nx={x:e.clientX,y:e.clientY};
+  const nd=Math.hypot(nx.x-o.x,nx.y-o.y);if(pd)zoomAt((nx.x+o.x)/2,(nx.y+o.y)/2,s*nd/pd);pd=nd;
+  tx+=((nx.x-p.x)/2);ty+=((nx.y-p.y)/2);apply()}
+ p.x=e.clientX;p.y=e.clientY});
+function up(e){ptrs.delete(e.pointerId);
+ if(e.type==='pointerup'&&ptrs.size===0&&!pinched&&moved<10&&down){
+  const t=down.closest&&down.closest('[data-tg]');
+  if(t){const id=t.dataset.tg;collapsed.has(id)?collapsed.delete(id):collapsed.add(id);const n=byId[id];const oy=n.y*s+ty,ox=n.x*s+tx;draw();tx=ox-n.x*s;ty=oy-n.y*s;apply();return}
+  const nd=down.closest&&down.closest('[data-id]');
+  if(nd)openSheet(nd.dataset.id);else{closeSheet();$('legend').hidden=true;$('res').hidden=true}}
+ if(ptrs.size===1){pd=0}}
+vp.addEventListener('pointerup',up);vp.addEventListener('pointercancel',up);
+vp.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,s*(e.deltaY<0?1.12:.89))},{passive:false});
+const sheet=$('sheet');
+const FIELDS=[['history','História e passado'],['dream','Sonhos e desejos'],['fear','Medos'],['contradiction','Contradições e defeitos'],['relationships','Relações'],['destiny','Caminhos e possíveis destinos']];
+const FK={history:'history',dream:'sparkle',fear:'warn',contradiction:'shuffle',relationships:'link',destiny:'hourglass'};
+function esc(t){return String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function openSheet(id){
+ const n=byId[id];sel=id;document.querySelectorAll('.n.sel').forEach(x=>x.classList.remove('sel'));
+ const el=world.querySelector(`[data-id="${id}"]`);if(el)el.classList.add('sel');
+ const trail=[];for(let p=par[id];p&&p!==data;p=par[p.id])trail.unshift(parts(p)[0]===TL[p.type]||p.type==='group'?pretty(p.label):parts(p).join(' — '));
+ const st=ST[n.status];
+ let h=`<button class="x" id="cx" aria-label="Fechar">${ico('close',16)}</button><div class="sh"><span class="ic">${icoN(n,20)}</span><div><div style="font-size:11.5px;color:var(--bc);font-weight:600">${esc(parts(n)[0])}</div><h2>${esc(parts(n)[1])}</h2></div></div>`;
+ if(trail.length)h+=`<div class="crumb">${trail.map(esc).join(' › ')}</div>`;
+ if(st&&n.status)h+=`<span class="chip" style="color:${st[1]}">${ico(st[0],14)}<span style="color:var(--text)">${esc(n.status)}</span></span>`;
+ if(n.desc)h+=`<p>${esc(n.desc)}</p>`;
+ if(n.type==='npc'){FIELDS.forEach(([k,l])=>{let v=n.extra[k];if(!v)return;
+  h+=`<h3>${ico(FK[k],15)}${l}</h3>`;
+  if(k==='relationships'){const a=Array.isArray(v)?v:String(v).split(/(?<=\.)\s+/).filter(Boolean);h+=`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`}
+  else h+=`<p>${esc(v)}</p>`})}
+ if(n.kids.length&&n.type!=='npc')h+=`<h3>${ico('act',15)}Conteúdo deste item (${n.kids.length})</h3><div class="kids">${n.kids.map(c=>`<button data-g="${c.id}" style="--bc:${COL[c.type]}">${icoN(c,14)}<span>${esc(parts(c)[1].slice(0,60))}</span></button>`).join('')}</div>`;
+ sheet.style.setProperty('--bc',COL[n.type]);
+ sheet.innerHTML=h;sheet.scrollTop=0;sheet.classList.add('open');$('cx').onclick=closeSheet}
+sheet.addEventListener('click',e=>{const b=e.target.closest('[data-g]');if(b){goto(b.dataset.g);openSheet(b.dataset.g)}});
+function closeSheet(){sheet.classList.remove('open');sel=null;document.querySelectorAll('.n.sel').forEach(x=>x.classList.remove('sel'))}
+function goto(id){const n=byId[id];if(!n||!reach.has(id))return;
+ for(let p=par[id];p;p=par[p.id])collapsed.delete(p.id);
+ draw();centerOn(n,.85);const el=world.querySelector(`[data-id="${id}"]`);if(el)el.classList.add('hit')}
+// Barra superior
+$('ttl').innerHTML=ico('moon',18)+'Realms of Nocthera';$('sico').innerHTML=ico('search',16);
+$('zi').innerHTML=ico('plus');$('zo').innerHTML=ico('minus');$('lg').innerHTML=ico('legend');
+const CH=[['fit','Ver tudo','fit'],['act1','Ato I','act'],['c3','Cap. III','chapter'],['c4','Cap. IV','chapter'],['choice1','Escolha','importantChoice'],['relationship_system','Relacionamentos','system'],['routeA','Rota A','routeA'],['routeB','Rota B','routeB'],['act2','Ato II','act'],['act3','Ato III','act'],['act4','Ato IV','act'],['act5','Ato V','act'],['|'],['exp','Expandir tudo','expand'],['col','Recolher','collapse']];
+$('chips').innerHTML=CH.map(([id,l,k])=>id==='|'?'<span class="sep"></span>':`<button data-c="${id}" style="--c:${COL[k]||'#c7a66c'}">${k==='routeA'?'<b style="font-family:var(--serif)">A</b>':k==='routeB'?'<b style="font-family:var(--serif)">B</b>':ico(k,15)}${l}</button>`).join('');
+$('chips').onclick=e=>{const b=e.target.closest('[data-c]');if(!b)return;const c=b.dataset.c;
+ if(c==='fit')fit();else if(c==='exp'){collapsed.clear();draw();fit()}else if(c==='col'){collapsed.clear();DEF.forEach(i=>collapsed.add(i));draw();fit()}else goto(c)};
+$('zi').onclick=()=>zoomAt(innerWidth/2,innerHeight/2,s*1.25);$('zo').onclick=()=>zoomAt(innerWidth/2,innerHeight/2,s/1.25);
+// Legenda
+$('legend').innerHTML='<h4>Tipos</h4>'+['act','chapter','group','event','npc','choice','importantChoice','routeA','routeB','fate','system','detail'].map(t=>`<div style="--bc:${COL[t]}"><span class="ic">${t==='routeA'?'<b>A</b>':t==='routeB'?'<b>B</b>':ico(t==='group'?'list':t,13)}</span>${TL[t]}</div>`).join('')+'<h4>Status</h4>'+[['Confirmado','ok','#6fb88a'],['Em desenvolvimento','pen','#e0bd7e'],['Planejado','clock','#56b4ff'],['Em aberto','help','#ff7b9c'],['Condicional','choice','#b08cff'],['Não desenvolvido','dash','#7d8ea6']].map(([l,k,c])=>`<div><span style="color:${c};display:grid">${ico(k,15)}</span>${l}</div>`).join('')+'<h4>Linhas</h4><div>Linha tracejada: personagem</div><div>Linha grossa: escolha ou rota</div>';
+$('lg').onclick=()=>{$('legend').hidden=!$('legend').hidden};
+// Busca com lista de resultados
+const res=$('res');
+$('search').addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();if(q.length<2){res.hidden=true;return}
+ const m=[...reach].map(i=>byId[i]).filter(n=>n!==data&&n.type!=='group'&&(n.label+' '+n.desc).toLowerCase().includes(q)).slice(0,8);
+ res.hidden=false;res.innerHTML=m.length?'':'<div class="em">Nada encontrado.</div>';
+ m.forEach(n=>{const b=document.createElement('button');b.style.setProperty('--bc',COL[n.type]);
+  b.innerHTML=`<span class="ic">${icoN(n,16)}</span><span><span></span><small></small></span>`;
+  b.querySelector('span span').textContent=parts(n)[1];b.querySelector('small').textContent=parts(n)[0];
+  b.onclick=()=>{res.hidden=true;$('search').blur();goto(n.id);openSheet(n.id)};res.appendChild(b)})});
+draw();centerOn(data,.8);apply();
+</script></body></html>
