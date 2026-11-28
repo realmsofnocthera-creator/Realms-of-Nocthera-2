@@ -144,7 +144,9 @@ Princípio: cada facção tem razões legítimas, não é só obstáculo.
 ### 3.9 O segredo da Igreja — **[ESTABELECIDO]**
 
 - **A Igreja do Sol Resplandecente pertence a Lautrec.** Por trás dos panos, é animada por **um pequeno fragmento da alma dele**.
-- É um **segredo**. Quem sabe, e o que sabe, **[EM ABERTO]**.
+- É um **segredo**: **ninguém além de Lautrec sabe a verdade sobre a Igreja**. Ele manipula todos (clero, fiéis, o Império).
+- **[ESTABELECIDO]** O fragmento é uma parte de Lautrec com poder **extremamente fragmentado e fragilizado**, mas com **as mesmas vontades e princípios** dele. O que ele quer é o que Lautrec quer: **libertar-se do selo**.
+- **[ESTABELECIDO]** Ele age dentro de um grupo da própria Igreja, **os Quatro Arcebispos Imortais**.
 
 **Apoios já existentes no lore (fatos, não decisões):**
 - A cosmologia diz que há rachaduras no selo que permitem passagens raras.
@@ -153,15 +155,23 @@ Princípio: cada facção tem razões legítimas, não é só obstáculo.
 - O dossiê diz que religiões e instituições distorcem a história; a verdade cosmológica não é a que as civilizações conhecem.
 
 **[EM ABERTO]**
-- O que o fragmento quer: servir e libertar Lautrec, ter autonomia (recusa ser reabsorvido), ou não saber o que é.
+- Qual dos Quatro Arcebispos é o fragmento e como ele se apresenta (corpo possuído ou identidade fabricada).
+- A origem da imortalidade dos outros três, que não sabem a verdade.
 - Como escapou do selo e quando fundou a Igreja.
-- O que o clero e os fiéis sabem. Se Severan sabe.
+- Como manipula Severan e o Império.
+- Quando e como o jogador descobre o segredo.
 - Por que persegue a magia, e por que Nocthera e Nythara são as exceções.
 - Relação com o dragão demoníaco e com a caça ao dragão ancião.
 - Relação com a barreira do Novo Mundo e com Midgard.
-- Como isso muda os trechos aprovados da Guerra dos Três Sóis e do Dia em que Vhaldoria Sangrou.
+- Como isso muda a Guerra dos Três Sóis.
 
 **[PROPOSTA]** Evitar "igreja malvada" simples: a maioria do clero e dos fiéis é sincera e a Igreja faz bem real (cura, proteção); o segredo se revela por pistas, não por exposição.
+
+### 3.10 O subsolo de Vhaldoria — **[ESTABELECIDO]**
+
+- O Dia em que Vhaldoria Sangrou continua sendo uma **libertação**, mas **por baixo dos panos**: hoje **demônios e Vampiros Superiores vivem abaixo da terra, em cavernas subterrâneas, esperando o dia certo**.
+- **[EM ABERTO]** Onde ficam as cavernas e suas entradas; o que é "o dia certo" (a fissura é o sinal?); se algum deles age antes disso; se há relação com a Caverna do Casulo.
+- **[PROPOSTA]** Nocthera desconfia da "vitória" porque seus magos lutaram e viram as criaturas recuarem, sem saber a verdade.
 
 ---
 
@@ -188,7 +198,7 @@ Relações entre raças (resumo do código): humanos têm desconfiança profunda
 - Classes e sinais históricos: a transição Ouro-Prata viu seguidores dos "deuses ausentes" receberem visões; na Era de Prata surgiram ordens guerreiras e mortais que descobriram forças remanescentes dos antigos deuses; na Era de Bronze, estradas de ladrões e mercenários.
 - **[ESTABELECIDO]** A **Era de Ouro** vai do aprisionamento de Lautrec até a Era de Prata.
 - **[ESTABELECIDO]** Estamos no ano **1252 D.E.P.** (Depois da Era de Prata).
-- **[EM ABERTO]** Confirmar que o período após a Prata é a Era de Bronze (o código sugere isso).
+- **[ESTABELECIDO]** O período após a Prata é a **Era de Bronze**.
 
 ### 4.3 Eventos passados citados nas cartas colecionáveis
 
@@ -210,7 +220,7 @@ Títulos de cartas lendárias que sugerem eventos históricos. **Só os títulos
 3. **Transição Ouro-Prata:** visões e sinais aos seguidores dos deuses ausentes. *(código)*
 4. **Era de Prata:** ordens guerreiras, feiticeiros, clãs disciplinados, queda de muitos reinos. *(código)* **A Guerra dos Três Sóis**, em Midgard: cisma entre três seitas ancestrais (Sol Resplandecente vencedor; Sol Negro derrotado, cujos exilados teriam dado nome às ilhas; um terceiro sol apagado da história). **[APROVADO — DIREÇÃO, a revisar com a seção 3.9]**
 5. **Fim da Prata (ano 0 D.E.P.):** queda parcial de Midgard, que explica as migrações humanas. *(proposta)*
-6. **0 a 1252 D.E.P.:** migrações ao Novo Mundo e ao Continente; ocupação de Vhaldoria por Vampiros Superiores e demônios; **O Dia em que Vhaldoria Sangrou**, a libertação que a Igreja reivindica e que magos de Nocthera lutaram **[APROVADO — DIREÇÃO, a revisar com a seção 3.9]**; fim das linhagens dos Vampiros Superiores *(inferência do código)*.
+6. **0 a 1252 D.E.P.:** migrações ao Novo Mundo e ao Continente; ocupação de Vhaldoria por Vampiros Superiores e demônios; **O Dia em que Vhaldoria Sangrou**, a libertação que a Igreja reivindica e que magos de Nocthera lutaram; por baixo dos panos, demônios e Vampiros Superiores seguem no subsolo (seção 3.10) **[ESTABELECIDO]**. A inferência anterior de que as linhagens dos Vampiros Superiores acabaram foi **retirada**.
 7. **1252 D.E.P.:** o Conselho das Coroas e a campanha.
 
 ---
@@ -344,13 +354,15 @@ A esposa e a filha de Godric; o pesquisador desaparecido e o segundo guardião d
 | Estação de Velária (equipe, esposa e filha de Godric) | 4 |
 | O Sul (corte, militares) | 4 |
 | Nocthera (a irmã de Evelyne e outros) | 4 |
-| Império e Igreja | 5 |
+| Império e Igreja (inclui os Quatro Arcebispos Imortais) | 5 |
 | Nythara e Namar (as Morvárias contam como um trio) | 3 |
 | Ilhas do Sol Negro | 2 |
 | Draconianos | 2 |
 | Mistério e Caos | 1 |
 
 **[PROPOSTA]** Cada ficha inclui um gatilho de morte ou partida ("o que acontece com ele se o jogador fizer X").
+
+**[EM ABERTO]** Os Quatro Arcebispos Imortais ocupam quase todos os 5 lugares de Império e Igreja. Como o mínimo é 30, o grupo pode ser ampliado.
 
 ---
 
@@ -458,7 +470,7 @@ Cada rota alcança 3 dos 4 finais; Laço e Poder são comuns, mas por caminhos d
 
 **[ESTABELECIDO] Personagens-âncora:** só os **governantes** e o **Guardião** persistem em qualquer final. A maioria dos demais personagens **pode morrer por causa das escolhas do jogador**, e a ausência deles faz parte das atualizações. Os personagens-âncora podem ser usados de formas diferentes no futuro.
 
-**[EM ABERTO]** Se os governantes-âncora podem mudar por sucessão ou morte natural, sem que o jogador cause isso (por exemplo, Alaric, que é idoso, e Evelyne, cuja irmã é a sucessora).
+**[PROPOSTA — adotada como padrão]** O jogador não pode matar os governantes-âncora, mas a história pode trocá-los por sucessão ou morte natural (por exemplo, Alaric, que é idoso, e Evelyne, cuja irmã é a sucessora). O autor corrige se discordar.
 
 ---
 
@@ -494,7 +506,7 @@ Cada rota alcança 3 dos 4 finais; Laço e Poder são comuns, mas por caminhos d
 
 O autor pediu propostas, **sem envolver Azgher**.
 
-**[APROVADO — DIREÇÃO, 28/11/2026]** As opções recomendadas foram aprovadas: Guerra dos Três Sóis A e O Dia em que Vhaldoria Sangrou B. A "Era atual" foi resolvida pelo calendário 1252 D.E.P. (seção 4.2). **As duas primeiras precisam ser revisadas à luz do segredo da Igreja (seção 3.9)**, porque o vencedor da guerra e a "libertação" reivindicada pela Igreja agora têm outra leitura.
+**[APROVADO — DIREÇÃO, 28/11/2026]** As opções recomendadas foram aprovadas: Guerra dos Três Sóis A e O Dia em que Vhaldoria Sangrou B. A "Era atual" foi resolvida pelo calendário 1252 D.E.P. (seção 4.2). O Dia em que Vhaldoria Sangrou já foi revisado (seções 3.10 e 4.4). **A Guerra dos Três Sóis ainda precisa ser revisada à luz do segredo da Igreja (seção 3.9)**, porque o vencedor da guerra agora tem outra leitura.
 
 ### Era atual
 - **A. Era de Ferro**, seguindo o padrão das Eras. Seguro, previsível.
@@ -516,13 +528,13 @@ Sem proposta ainda. Pode ser gancho para o arco do selo e da Zona do Caos.
 
 ## 13. Pontos em aberto (consolidados)
 
-**Mundo:** o que o fragmento de Lautrec quer e o que cada grupo sabe do segredo da Igreja · Vanaheim · governante das Ilhas do Sol Negro · representante e rostos das Morvárias · voto do Sul no Conselho · localização exata do "extremo noroeste" dos draconianos · fronteiras das quatro regiões · geografia das Montanhas de Althor · curso do rio principal · nomes das subdivisões do sul · confirmar o nome da Era atual (Bronze).
+**Mundo:** qual Arcebispo é o fragmento e a origem da imortalidade dos outros três · como o fragmento manipula o Império · localização e entradas das cavernas subterrâneas · Vanaheim · governante das Ilhas do Sol Negro · representante e rostos das Morvárias · voto do Sul no Conselho · localização exata do "extremo noroeste" dos draconianos · fronteiras das quatro regiões · geografia das Montanhas de Althor · curso do rio principal · nomes das subdivisões do sul · confirmar o nome da Era atual (Bronze).
 
 **Parasita:** transmissão, cura, destino dos parasitas se o dragão morrer.
 
 **Personagens:** nome e destino da irmã de Evelyne · postura de Evelyne · relação inicial Evelyne-Guardião · salvação de Vesemir · variações do destino de Godric por rota · alcunhas por grupo.
 
-**Finais e herança:** conteúdo das 8 atualizações (decidir depois) · sucessão ou morte natural dos governantes-âncora · destino de Godric no final Saber · lugar da irmã de Evelyne no final Fuga (se ele só existe na Rota B).
+**Finais e herança:** conteúdo das 8 atualizações (decidir depois) · destino de Godric no final Saber · lugar da irmã de Evelyne no final Fuga (se ele só existe na Rota B).
 
 **Estrutura:** Rota B inteira · capítulos V a XV · desfecho e custos da dobradiça 3 · dobradiças 2, 4 e 5 · ataque do norte ao sul · destino final do selo · integração da trama dos dragões aos atos · valores do sistema de relacionamento.
 
